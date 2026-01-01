@@ -45,6 +45,29 @@
   - 런타임: Node.js `24.12.0` (프론트 빌드), Python `3.14.0` (백엔드)
   - 실행: Cloud Run (권장) / 로컬 개발
 
+### 1.1 코드 품질(린트/포맷/타입체크) 도구 버전 (SSOT)
+
+> 아래 버전은 **2026-01-01 기준 “최신 안정(latest)”**을 레지스트리에서 직접 조회한 값이며,
+> 실제 프로젝트에서는 lockfile/설정으로 고정합니다.
+>
+> - npm: `npm view <package> version`
+> - PyPI: `python -m pip index versions <package>`
+
+- **Frontend**
+  - pnpm `10.27.0` (권장: `package.json`에 `packageManager: "pnpm@10.27.0"` 명시)
+  - ESLint `9.39.2` + `@eslint/js 9.39.2`
+  - typescript-eslint `8.51.0`
+  - eslint-plugin-react `7.37.5`
+  - eslint-plugin-react-hooks `7.0.1`
+  - eslint-plugin-unused-imports `4.3.0`
+  - eslint-config-prettier `10.1.8`
+  - globals `16.5.0`
+  - Prettier `3.7.4`
+
+- **Backend**
+  - Ruff `0.14.10`
+  - Pyright `1.1.407`
+
 ## 2. 기술 선택 매트릭스 (압축)
 
 | PRD 요구사항                   | 선택 기술                       | 핵심 이유 (3~4단어) |
