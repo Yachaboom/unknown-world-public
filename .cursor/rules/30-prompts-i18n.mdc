@@ -1,0 +1,168 @@
+---
+applyTo: "**/prompts/**/*.md"
+description: "프롬프트/시스템 메시지 관리 규칙: ko/en 분리, 버전/정책 메타, 스키마 정합, 프롬프트 노출 금지"
+priority: medium
+tags: [prompts, i18n, structured-output, safety, gemini]
+---
+
+# 프롬프트(i18n/스키마) 세부 지침
+
+## 적용 대상
+
+- `**/prompts/**/*.md`  
+  (권장 위치: `backend/prompts/**`)
+
+## Core 규칙 연계 (SSOT)
+
+- 이 문서는 `.cursor/rules/00-core-critical.mdc`의 아래 규칙을 **프롬프트 작성 관점에서 구체화**합니다:
+  - RULE-003 (JSON Schema 계약과의 정합)
+  - RULE-004 (스키마 실패/복구 루프를 줄이기 위한 명확한 계약)
+  - RULE-006 (ko/en 분리 및 혼합 출력 방지)
+  - RULE-007 (비밀정보/키/토큰 노출 금지)
+  - RULE-008 (프롬프트 원문/내부추론 노출 금지)
+  - RULE-010 (버전/정책/모델 라벨의 고정 및 메타 기록)
+- 충돌 시: `00-core-critical.mdc`의 RULE이 우선합니다.
+
+## 규칙
+
+### 규칙 1: 프롬프트는 언어별 파일로 분리한다(ko/en)
+
+**설명**: 언어 혼합 출력을 방지하기 위해 프롬프트는 locale별 파일로 관리합니다.
+
+**올바른 예시** (PRD 예시 구조):
+
+```text
+backend/prompts/system/game_master.ko.md
+backend/prompts/system/game_master.en.md
+backend/prompts/turn/turn_output_instructions.ko.md
+backend/prompts/turn/turn_output_instructions.en.md
+backend/prompts/image/scene_prompt.ko.md
+backend/prompts/image/scene_prompt.en.md
+```
+
+**잘못된 예시**:
+
+```text
+game_master.md (한 파일에서 ko/en을 섞어 쓰고, 규칙이 자주 어긋남)
+```
+
+**이유**: PRD 3.2는 언어별 프롬프트 분리(권장)와 혼합 출력 방지를 요구합니다. (참조: `vibe/prd.md`)
+
+---
+
+### 규칙 2: 프롬프트 파일 상단에 “목적/입력/출력 계약/버전”을 명시한다
+
+**설명**: 프롬프트는 장기 운영/핫리로드를 전제하므로 메타데이터가 필요합니다.
+
+**올바른 예시**:
+
+```markdown
+# [Prompt] Game Master System (ko-KR)
+
+- prompt_id: game_master_system
+- language: ko-KR
+- version: 0.1.0
+- last_updated: YYYY-MM-DD
+
+## 목적
+- 에이전트형 Game Master로서 TurnOutput(JSON)을 생성한다.
+
+## 입력
+- TurnInput(language, text, click, client, economy_snapshot)
+- WorldState(요약/핀/룰/인벤토리/히스토리)
+
+## 출력 계약(요약)
+- 반드시 JSON Schema를 만족하는 TurnOutput만 출력한다.
+- language는 입력과 동일하게 고정한다.
+```
+
+**잘못된 예시**:
+
+```text
+- 파일 맥락/버전 없이 본문만 존재 (언제/왜 바뀌었는지 추적 불가)
+```
+
+**이유**: PRD 10.4는 프롬프트 버저닝/메타 기록을 요구합니다. (참조: `vibe/prd.md`)
+
+---
+
+### 규칙 3: 구조화 출력 스키마와 “정합”되게 쓴다 (키/enum/required 준수)
+
+**설명**: 프롬프트에서 요구하는 출력 형식은 실제 JSON Schema와 일치해야 합니다.
+
+**올바른 예시**:
+
+```text
+- “TurnOutput에는 economy.cost와 economy.balance_after를 포함하라”
+- “bbox는 [ymin,xmin,ymax,xmax] (0~1000)”
+```
+
+**잘못된 예시**:
+
+```text
+- 프롬프트는 box=[x,y,w,h]를 요구하는데, 스키마는 box_2d=[ymin,xmin,ymax,xmax]
+- language 필드를 “선택”으로 표현
+```
+
+**이유**: 스키마/프롬프트 불일치는 repair loop를 상시 유발해 비용/지연을 악화시킵니다. (참조: `vibe/ref/structured-outputs-guide.md`)
+
+---
+
+### 규칙 4: 프롬프트 원문은 UI/로그로 노출하지 않는다
+
+**설명**: 데모/운영에서 프롬프트 원문을 노출하면 “챗봇 래퍼”로 보이거나 보안 리스크가 됩니다.
+
+**올바른 예시**:
+
+```text
+- UI에는 단계/배지/정책 라벨(FAST/QUALITY/REF)만 노출
+- 로그에는 prompt_version 정도만 기록
+```
+
+**잘못된 예시**:
+
+```text
+- SSE 스트림에 시스템 프롬프트를 그대로 포함
+```
+
+**이유**: PRD 9/10장은 “프롬프트 노출 금지”를 명시합니다. (참조: `vibe/prd.md`)
+
+---
+
+### 규칙 5: 이미지 프롬프트는 “장면 서술” 중심 + 일관성(캐릭터/톤)을 우선한다
+
+**설명**: 키워드 나열보다 서술형 장면 묘사를 우선하며, “부정 프롬프트”는 금지어 나열보다 **원하는 장면을 긍정적으로** 서술합니다.
+
+**올바른 예시**:
+
+```text
+- 카메라/구도/조명을 최소한으로 명시(wide shot, low-angle, rim light)
+- 참조 이미지가 있으면 “스타일/캐릭터 일관성 유지”를 명확히 지시
+```
+
+**잘못된 예시**:
+
+```text
+- 금지어 100개 나열
+- 매 장면마다 스타일이 랜덤하게 바뀜
+```
+
+**이유**: PRD는 “장면 일관성 + 멀티턴 편집”을 요구합니다. (참조: `vibe/prd.md`)
+
+## 예외 처리
+
+- 단일 프롬프트 내 언어 분기는 “긴급” 상황에서만 허용하며, 기본은 언어별 파일 분리입니다.
+
+## 체크리스트
+
+- [ ] ko/en 파일이 분리되어 있는가?
+- [ ] 상단 메타(버전/업데이트일/목적/계약)가 있는가?
+- [ ] 스키마 키/좌표/언어 정책과 충돌이 없는가?
+- [ ] 프롬프트 원문 노출 위험(UI/로그)이 없는가?
+
+## 관련 지침
+
+- `.cursor/rules/00-core-critical.mdc`
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+

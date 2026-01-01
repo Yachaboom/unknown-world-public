@@ -2,7 +2,7 @@
 
 The Gemini API can generate text output from various inputs, including text, images, video, and audio.
 
-Here's a basic example that takes a single text input:  
+Here's a basic example that takes a single text input:
 
 ### Python
 
@@ -133,7 +133,7 @@ Here's a basic example that takes a single text input:
 
 Gemini models often have["thinking"](https://ai.google.dev/gemini-api/docs/thinking)enabled by default which allows the model to reason before responding to a request.
 
-Each model supports different thinking configurations which gives you control over cost, latency, and intelligence. For more details, see the[thinking guide](https://ai.google.dev/gemini-api/docs/thinking#set-budget).  
+Each model supports different thinking configurations which gives you control over cost, latency, and intelligence. For more details, see the[thinking guide](https://ai.google.dev/gemini-api/docs/thinking#set-budget).
 
 ### Python
 
@@ -288,7 +288,7 @@ Each model supports different thinking configurations which gives you control ov
 
 ## System instructions and other configurations
 
-You can guide the behavior of Gemini models with system instructions. To do so, pass a[`GenerateContentConfig`](https://ai.google.dev/api/generate-content#v1beta.GenerationConfig)object.  
+You can guide the behavior of Gemini models with system instructions. To do so, pass a[`GenerateContentConfig`](https://ai.google.dev/api/generate-content#v1beta.GenerationConfig)object.
 
 ### Python
 
@@ -449,7 +449,7 @@ You can guide the behavior of Gemini models with system instructions. To do so, 
     }
 
 The[`GenerateContentConfig`](https://ai.google.dev/api/generate-content#v1beta.GenerationConfig)object also lets you override default generation parameters, such as[temperature](https://ai.google.dev/api/generate-content#v1beta.GenerationConfig).
-When using Gemini 3 models, we strongly recommend keeping the`temperature`at its default value of 1.0. Changing the temperature (setting it below 1.0) may lead to unexpected behavior, such as looping or degraded performance, particularly in complex mathematical or reasoning tasks.  
+When using Gemini 3 models, we strongly recommend keeping the`temperature`at its default value of 1.0. Changing the temperature (setting it below 1.0) may lead to unexpected behavior, such as looping or degraded performance, particularly in complex mathematical or reasoning tasks.
 
 ### Python
 
@@ -617,7 +617,7 @@ Refer to the[`GenerateContentConfig`](https://ai.google.dev/api/generate-content
 
 ## Multimodal inputs
 
-The Gemini API supports multimodal inputs, allowing you to combine text with media files. The following example demonstrates providing an image:  
+The Gemini API supports multimodal inputs, allowing you to combine text with media files. The following example demonstrates providing an image:
 
 ### Python
 
@@ -819,7 +819,7 @@ For alternative methods of providing images and more advanced image processing, 
 
 By default, the model returns a response only after the entire generation process is complete.
 
-For more fluid interactions, use streaming to receive[`GenerateContentResponse`](https://ai.google.dev/api/generate-content#v1beta.GenerateContentResponse)instances incrementally as they're generated.  
+For more fluid interactions, use streaming to receive[`GenerateContentResponse`](https://ai.google.dev/api/generate-content#v1beta.GenerateContentResponse)instances incrementally as they're generated.
 
 ### Python
 
@@ -964,7 +964,7 @@ For more fluid interactions, use streaming to receive[`GenerateContentResponse`]
 ## Multi-turn conversations (chat)
 
 Our SDKs provide functionality to collect multiple rounds of prompts and responses into a chat, giving you an easy way to keep track of the conversation history.
-**Note:** Chat functionality is only implemented as part of the SDKs. Behind the scenes, it still uses the[`generateContent`](https://ai.google.dev/api/generate-content#method:-models.generatecontent)API. For multi-turn conversations, the full conversation history is sent to the model with each follow-up turn.  
+**Note:** Chat functionality is only implemented as part of the SDKs. Behind the scenes, it still uses the[`generateContent`](https://ai.google.dev/api/generate-content#method:-models.generatecontent)API. For multi-turn conversations, the full conversation history is sent to the model with each follow-up turn.
 
 ### Python
 
@@ -1160,7 +1160,7 @@ Our SDKs provide functionality to collect multiple rounds of prompts and respons
       console.log(content);
     }
 
-Streaming can also be used for multi-turn conversations.  
+Streaming can also be used for multi-turn conversations.
 
 ### Python
 

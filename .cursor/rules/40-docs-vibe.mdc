@@ -1,0 +1,136 @@
+---
+applyTo: "vibe/**/*.md"
+description: "vibe 문서 작업 규칙: PRD/Tech-stack SSOT, Progress/Roadmap/Architecture 동기화, 용어/버전/상태 일관성"
+priority: medium
+tags: [docs, vibe, prd, tech-stack, roadmap, progress]
+---
+
+# 문서(vibe) 세부 지침
+
+## 적용 대상
+
+- `vibe/**/*.md`
+
+## 규칙
+
+### 규칙 1: 문서 SSOT는 PRD/Tech-stack이다 (추측 금지)
+
+**설명**: 제품 요구는 `vibe/prd.md`, 기술 선택/버전은 `vibe/tech-stack.md`가 단일 출처입니다.
+
+**올바른 예시**:
+
+```text
+- 새로운 기능/변경을 문서에 반영할 때:
+  1) 실제 구현/런북/코드 근거 확인
+  2) PRD/Tech-stack와 용어/정책 정합성 체크
+  3) 필요한 문서에만 최소 변경으로 반영
+```
+
+**잘못된 예시**:
+
+```text
+- “아마도 이렇게 되어 있을 것”이라는 추측으로 PRD/Tech-stack를 수정
+```
+
+**이유**: 문서가 구현과 어긋나면 에이전트/팀이 즉시 오작동합니다.
+
+---
+
+### 규칙 2: 구현 완료 후 문서 동기화는 `doc-update` 흐름을 따른다
+
+**설명**: 구현이 끝나면 문서 갱신을 자동화된 체크리스트로 수행합니다.
+
+**올바른 예시**:
+
+```text
+- 참조: vibe/commands/doc-update.md
+- (요약) Repomix → 런북/코드 분석 → Progress/Roadmap 갱신 → (조건부) Architecture/PRD/Tech-stack 갱신
+```
+
+**잘못된 예시**:
+
+```text
+- 코드만 바꾸고 문서를 “나중에”로 미룸
+```
+
+**이유**: PRD/Tech-stack가 SSOT인 만큼, 변경 즉시 추적 가능하게 동기화해야 합니다.
+
+---
+
+### 규칙 3: Progress/Roadmap는 “최신 상태가 위로” 오도록 관리한다
+
+**설명**: 진행 문서는 최신 항목을 최상단에 두어 읽기 비용을 줄입니다.
+
+**올바른 예시**:
+
+```text
+- vibe/progress.md: 최신 완료 항목을 문서 최상단에 추가
+- vibe/roadmap.md: 상태(대기/진행/완료)와 진행률을 최신화
+```
+
+**잘못된 예시**:
+
+```text
+- 최신 항목을 문서 하단에 추가(히스토리 탐색 비용 증가)
+```
+
+**이유**: `vibe/commands/doc-update.md`가 명시한 기본 규칙입니다.
+
+---
+
+### 규칙 4: 용어는 PRD 용어를 그대로 사용한다(동의어 난립 금지)
+
+**설명**: 문서 전반에서 같은 개념은 같은 이름을 씁니다.
+
+**필수 용어 예시**:
+
+```text
+- Signal, Memory Shard
+- WorldState, Economy Ledger
+- Action Deck, Rule Board, Memory Pin, Agent Console
+- Schema OK / Economy OK / Safety OK / Consistency OK
+```
+
+**이유**: 동일 개념을 다른 단어로 부르면 i18n/스키마/코드 경계가 깨집니다.
+
+---
+
+### 규칙 5: PRD/Tech-stack 수정은 “조건부”이며 근거를 남긴다
+
+**설명**: 구현이 PRD 요구를 변경/확정했거나, 의존성/버전이 변할 때만 수정합니다.
+
+**올바른 예시**:
+
+```text
+- PRD: FR/NFR의 구현 상태(✅)와 검증 결과(런북 링크)만 최소 추가
+- Tech-stack: 버전/도구 변경을 반영하고 기준일/락 정책을 유지
+```
+
+**잘못된 예시**:
+
+```text
+- 요구사항을 임의로 삭제/완화
+- 버전 핀을 제거하거나 “latest”로 둠
+```
+
+**이유**: PRD/Tech-stack는 팀/에이전트의 기준점입니다.
+
+## 예외 처리
+
+- 긴급 핫픽스/데모 대응으로 문서 동기화가 늦어지면, 최소한 `vibe/progress.md`에 “임시 기록”을 남기고 즉시 추적 가능하게 합니다.
+
+## 체크리스트
+
+- [ ] PRD/Tech-stack 근거 없이 추측을 쓰지 않았는가?
+- [ ] 구현 변경이 있다면 doc-update 흐름을 따랐는가?
+- [ ] Progress/Roadmap의 최신 상태가 문서 상단/요약에 반영되었는가?
+- [ ] 용어가 PRD와 일치하는가?
+- [ ] PRD/Tech-stack 변경 시 이유/영향/검증 근거가 있는가?
+
+## 관련 지침
+
+- `.cursor/rules/00-core-critical.mdc`
+- `vibe/commands/doc-update.md`
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+

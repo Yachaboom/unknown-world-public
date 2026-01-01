@@ -255,27 +255,23 @@ RED-LINE > 사양서 > 의존성 개발보고 > 기술스택 > 아키텍처 > �
 ### 2.1 환경 준비
 
 ```bash
-# 의존성 설치 (필요시)
-npm install
-# 또는
-pip install -r requirements.txt
+# 의존성 설치 (프로젝트 기술 스택에 맞는 명령어 사용)
+[의존성 설치 명령어] # 예: npm install, pip install -r requirements.txt 등
 ```
 
 ### 2.2 의존 유닛 확인 (해당 시)
 
 ```bash
 # 의존 유닛의 서비스가 실행 중인지 확인
-curl http://localhost:3000/health
+[상태 확인 명령어] # 예: curl http://localhost:3000/health 등
 # 또는 의존 모듈 import 테스트
-node -e "require('./path/to/dependency')"
+[임포트 테스트 명령어] # 예: node -e "require('./path')" 또는 python -c "import path" 등
 ```
 
 ### 2.3 즉시 실행
 
 ```bash
-npm start
-# 또는
-python main.py
+[실행 명령어] # 예: npm start, python main.py, cargo run 등
 ```
 
 ### 2.4 첫 화면/결과 확인

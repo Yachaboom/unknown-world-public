@@ -123,8 +123,8 @@
 
 ```yaml
 ---
-applyTo: "<적용_범위_패턴>"
-description: "이 지침이 다루는 내용에 대한 간단한 설명"
+applyTo: '<적용_범위_패턴>'
+description: '이 지침이 다루는 내용에 대한 간단한 설명'
 priority: <high|medium|low>
 tags: [태그1, 태그2, 태그3]
 ---
@@ -201,8 +201,8 @@ tags: [태그1, 태그2, 태그3]
 
 ```markdown
 ---
-applyTo: "<적용할 파일/컨텍스트 패턴>"
-description: "<이 지침의 목적을 한 문장으로>"
+applyTo: '<적용할 파일/컨텍스트 패턴>'
+description: '<이 지침의 목적을 한 문장으로>'
 priority: medium
 tags: [관련태그1, 관련태그2]
 ---
@@ -442,8 +442,8 @@ interface ApiResponse<T> {
 
 ````markdown
 ---
-applyTo: "**/*.test.ts"
-description: "테스트 코드 작성 규칙"
+applyTo: '**/*.test.ts'
+description: '테스트 코드 작성 규칙'
 priority: high
 tags: [testing, quality]
 ---
@@ -457,10 +457,10 @@ tags: [testing, quality]
 **AAA 패턴 사용** (Arrange-Act-Assert):
 
 ```typescript
-describe("UserService", () => {
-  it("should create a new user", async () => {
+describe('UserService', () => {
+  it('should create a new user', async () => {
     // Arrange: 테스트 데이터 준비
-    const userData = { name: "홍길동", email: "hong@example.com" };
+    const userData = { name: '홍길동', email: 'hong@example.com' };
 
     // Act: 실행
     const user = await userService.create(userData);

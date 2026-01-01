@@ -16,7 +16,7 @@
 
 ---
 
-##  필수 분석 자료
+## 필수 분석 자료
 
 지침 생성의 기반이 되는 핵심 문서입니다.
 
@@ -43,6 +43,7 @@ Gemini CLI는 여러 `GEMINI.md` 파일을 계층적으로 결합합니다. (특
 이 시스템은 **`<!-- Imported from: ... -->` 주석 기반의 정적 컨텍스트 포함 방식**을 사용합니다.
 
 **구조 예시:**
+
 ```
 project/
 ├── .geminiignore             # 컨텍스트 제외 파일/폴더 (예: node_modules)
@@ -54,14 +55,17 @@ project/
 ```
 
 **[계층 1] .gemini/GEMINI.md 내 Import 예시:**
+
 ```markdown
 ## 5. 모듈별 세부 규칙 (Contextual Imports)
 
 ### 네트워킹 작업 시 [networking, p2p, webrtc, multiplayer]
+
 <!-- Imported from: .gemini/rules/*.md/networking-rules.md -->
 <!-- End of import from: .gemini/rules/*.md/networking-rules.md -->
 
 ### 렌더링 작업 시 [rendering, graphics, webgl, shader]
+
 <!-- Imported from: .gemini/rules/*.md/rendering-rules.md -->
 <!-- End of import from: .gemini/rules/*.md/rendering-rules.md -->
 ```
@@ -74,17 +78,19 @@ project/
 
 <analysis_framework>
 제공된 `vibe/prd.md` 및 `vibe/tech-stack.md`를 분석하여 다음을 식별합니다:
+
 - **핵심 요구사항**: 프로젝트의 주 목적과 성공 기준
 - **기술/도메인 제약**: 반드시 따라야 할 기술 스택 및 아키텍처
 - **주요 작업 유형**: 반복적으로 발생하는 작업 (예: API 개발, UI 렌더링, DB 쿼리)
-</analysis_framework>
+  </analysis_framework>
 
 ### 단계 2: 지침 설계 (모듈화)
 
 <design_principles>
+
 - **전역 지침 (계층 1)**: 모든 작업에 공통적인 원칙 (예: 코드 스타일, 톤앤매너)
 - **세부 지침 (계층 2)**: '주요 작업 유형'별로 분리된 구체적인 규칙
-</design_principles>
+  </design_principles>
 
 ### 단계 3: Import 섹션 구성
 
@@ -110,17 +116,19 @@ project/
 ## 2. 핵심 원칙 (Core Principles)
 
 <core_principles>
+
 - **원칙 1**: [간결하고 명확한 최우선 원칙 (예: 성능 최우선)]
 - **원칙 2**: [두 번째 원칙 (예: 코드 가독성 유지)]
 - **원칙 3**: [세 번째 원칙 (예: 엄격한 타입 준수)]
-</core_principles>
+  </core_principles>
 
 ## 3. 일반 규칙 (General Rules)
 
 <general_rules>
+
 - [모든 작업에 공통으로 적용되는 표준 1 (예: TypeScript strict 모드 사용)]
 - [모든 작업에 공통으로 적용되는 표준 2 (예: ESLint/Prettier 규칙 준수)]
-</general_rules>
+  </general_rules>
 
 ## 4. 금지사항 (Prohibitions)
 
@@ -134,14 +142,17 @@ project/
 > **[중요]** AI는 사용자의 작업 요청 시, 아래 컨텍스트 키워드와 일치하는 규칙 파일을 참조합니다.
 
 ### [작업유형1] 작업 시 [키워드1, 키워드2, 키워드3]
+
 <!-- Imported from: .gemini/rules/*.md/규칙파일1.md -->
 <!-- End of import from: .gemini/rules/*.md/규칙파일1.md -->
 
 ### [작업유형2] 작업 시 [키워드4, 키워드5]
+
 <!-- Imported from: .gemini/rules/*.md/규칙파일2.md -->
 <!-- End of import from: .gemini/rules/*.md/규칙파일2.md -->
 
 ### [파일타입] 파일 작업 시 [*.확장자1, *.확장자2]
+
 <!-- Imported from: .gemini/rules/*.md/규칙파일3.md -->
 <!-- End of import from: .gemini/rules/*.md/규칙파일3.md -->
 
@@ -150,11 +161,13 @@ project/
 > **[중요]** AI는 아래에 정의된 트리거 키워드가 프롬프트에 포함될 경우, 지정된 파일을 `read_file`로 읽어 해당 지침을 추가 컨텍스트로 활용합니다. 이 규칙은 AI 에이전트에게 직접 지시하는 자연어 명령입니다.
 
 <dynamic_loading_rules>
+
 - **[트리거: "작업명"]**: `.gemini/rules/*.md/작업명-rules.md` 파일을 읽고 작업을 수행할 것.
 - **[트리거: "다른 작업명"]**: `.gemini/rules/*.md/다른작업-rules.md` 파일을 읽고 작업을 수행할 것.
-</dynamic_loading_rules>
+  </dynamic_loading_rules>
 
 ## 6. 참조 문서
+
 - [주요 요구사항 문서]
 - [기술 아키텍처 문서]
 - [Gemini CLI Cheatsheet (Context Loading)](https://www.philschmid.de/gemini-cli-cheatsheet#context-files-geminimd)
@@ -167,7 +180,7 @@ project/
 # [영역명] 세부 지침
 
 > **[적용 컨텍스트]**: [키워드1, 키워드2, 키워드3]
-> 
+>
 > **[설명]**: [이 지침의 목적을 한 문장으로 요약]
 >
 > **[참조]**: (이 규칙이 `.gemini/GEMINI.md`의 '어떤 키워드'에 의해 임포트되는지 명시)
@@ -184,12 +197,16 @@ project/
 
 **올바른 예시 (Do ✅)**:
 ```
+
 [권장하는 방식의 좋은 예시 코드/텍스트]
+
 ```
 
 **잘못된 예시 (Don't ❌)**:
 ```
+
 [피해야 하는 방식의 나쁜 예시 코드/텍스트]
+
 ```
 
 ### 규칙 2: [두 번째 규칙 제목]
@@ -243,7 +260,7 @@ AI가 이 템플릿을 기반으로 지침을 생성할 때, 다음 원칙을 �
 
 2.  **`.geminiignore`**
     - `node_modules`, `dist` 등 AI가 컨텍스트로 참조할 필요 없는 파일/폴더를 제외하기 위해 프로젝트 루트에 `.geminiignore` 파일을 생성하세요. (
-    `.gitignore`와 문법 동일)
+      `.gitignore`와 문법 동일)
 
 3.  **`/init`**
     - 새 프로젝트 시작 시, ` /init` 명령어로 프로젝트용 기본 `GEMINI.md` 파일을 생성할 수 있습니다.

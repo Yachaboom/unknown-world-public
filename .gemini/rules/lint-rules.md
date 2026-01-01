@@ -1,212 +1,86 @@
-# Codrag 코드 품질 지침 (Lint / Format / Type Check)
+# 코드 품질 규칙(엔트리) — Unknown World
 
-> **[적용 컨텍스트]**: lint, format, type-check, ruff, pyright, uv, ci, gitlab, quality  
->
-> **[설명]**: Codrag는 **Ruff(린트+포맷)** + **Pyright(타입체크)** 를 표준 도구로 사용합니다.  
-> 이 문서는 “무엇을/왜/어떻게”를 한 번에 확인할 수 있도록 **설정(SSOT) 발췌 + 실행 명령어 + 자동화(CI/Hook) 통합 방법**을 제공합니다.
+이 파일은 `.gemini/commands/lint-check.toml` 및 `vibe/commands/lint-check.md`가 참조하는 **단일 엔트리 규칙**입니다.
 
----
+세부 지침은 아래 3개 파일로 분리되어 있습니다(필수):
+- `format.md` — 포맷(Prettier/Ruff format)
+- `lint.md` — 린트(ESLint/Ruff check)
+- `type-check.md` — 타입 체크(tsc/Pyright)
 
-## 1. 분석 요약 (프로젝트에 맞는 선택)
+## 0. 근거(SSOT)
 
-- **주 사용 언어/프레임워크**
-  - **Backend**: Python + FastAPI (`codrag/main.py`)
-  - **Frontend**: 빌드 없는 정적 HTML/CSS/JS (`static/`)
-- **품질 도구(현행)**
-  - **Ruff**: 린트 + 포맷 (근거: `docs/tech-stack.md`, `vibe/tech-stack.md`, `pyproject.toml`)
-  - **Pyright**: 타입체크(basic) (근거: `docs/tech-stack.md`, `vibe/tech-stack.md`, `pyproject.toml`)
-  - **uv**: 개발/CI 패키지 매니저 (근거: `README.md`, `.gitlab-ci.yml`)
-- **기존 코드 컨벤션(설정 기반)**
-  - **라인 길이 88**, **double quotes**, import 정렬 포함 (근거: `pyproject.toml`의 Ruff 설정)
-  - 타입체크는 **basic 모드** (근거: `pyproject.toml`의 Pyright 설정)
-- **전역 지침 정합성**
-  - 단일 FastAPI + 정적 프론트 + 파일 영속화 구조 유지 (근거: `.gemini/rules/red-line.md`, `.gemini/GEMINI.md`)
-  - “재현 가능성”을 위해 CI는 **`uv sync --frozen`** 로 lock 기반 설치 (근거: `.gitlab-ci.yml`)
+- `vibe/prd.md` > `vibe/tech-stack.md` > `vibe/ref/*` > `.gemini/GEMINI.md`
 
----
+## 1. 분석 요약(언어/프레임워크/컨벤션)
 
-## 2. 사용 도구 및 설정(SSOT) — 설정 파일 내용 발췌
+- **Frontend**: React 19 + Vite 7 + TypeScript 5.9 (`vibe/tech-stack.md`)
+- **Backend**: Python 3.14 + FastAPI + Pydantic (`vibe/tech-stack.md`)
+- **현재 상태**: 코드/설정 파일이 아직 없으므로(`package.json`, `tsconfig.json`, `pyproject.toml` 미존재),
+  아래 커맨드/템플릿은 문서가 예상하는 구조(`frontend/`, `backend/`)를 전제로 한 “초기 표준(bootstrap)”입니다.
+  - 구조 근거: `vibe/ref/frontend-style-guide.md`, `vibe/prd.md`의 디렉토리 예시
 
-### 2.1 Ruff (Lint + Format)
+## 1.1 패키지 매니저(pnpm) 사양
 
-- **설정 위치**: `pyproject.toml`
-- **근거**: `docs/tech-stack.md` / `vibe/tech-stack.md` 에서 Code Quality 도구로 Ruff를 채택
+- **Frontend 패키지 매니저**: **pnpm 고정** (`vibe/tech-stack.md`)
+- **lockfile**: `pnpm-lock.yaml` (CI에서는 `pnpm install --frozen-lockfile` 사용)
+- **권장(재현성/Windows 포함)**: Node(Corepack) 기반으로 pnpm 활성화 → `corepack enable`
 
-```toml
-# pyproject.toml (발췌)
-[tool.ruff]
-line-length = 88
-target-version = "py312"
-exclude = [
-    ".venv",
-    ".git",
-    "__pycache__",
-    ".pytest_cache",
-    ".gemini",
-    "codrag/prompts",
-    "data",
-    "memory-bank",
-    "ready-prompts",
-    "tmp"
-]
+## 2. 사용 도구 및 설정 파일(템플릿 위치)
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
-ignore = ["E501"]
+### 2.1 Frontend
 
-[tool.ruff.format]
-quote-style = "double"
-```
+- **Formatter**: Prettier
+  - 설정 템플릿: `.editorconfig`, `prettier.config.cjs` (→ `format.md`)
+- **Linter**: ESLint(Flat config)
+  - 설정 템플릿: `frontend/eslint.config.mjs` (→ `lint.md`)
+- **Type check**: TypeScript(`tsc --noEmit`)
+  - 설정 템플릿: `frontend/tsconfig.json` (→ `type-check.md`)
 
-### 2.2 Pyright (Type Check)
+### 2.2 Backend
 
-- **설정 위치**: `pyproject.toml`
-- **근거**: `docs/tech-stack.md` / `vibe/tech-stack.md` 에서 Type Checker 도구로 Pyright를 채택
+- **Formatter/Linter**: Ruff (`ruff format`, `ruff check`)
+  - 설정 템플릿: `backend/pyproject.toml` 내 `[tool.ruff]` (→ `format.md`, `lint.md`)
+- **Type check**: Pyright(권장)
+  - 설정 템플릿: `backend/pyrightconfig.json` (→ `type-check.md`)
 
-```toml
-# pyproject.toml (발췌)
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-typeCheckingMode = "basic"
-exclude = [".venv", "**/__pycache__", "data", ".uv_cache"]
-```
+## 3. 표준 실행 순서(권장)
 
-### 2.3 CI에서의 “표준 커맨드”(사실상 SSOT)
+`vibe/commands/lint-check.md`의 표준 절차와 정합되게, 아래 순서를 기본으로 합니다:
 
-- **설정 위치**: `.gitlab-ci.yml`
-- **근거**: CI가 실제로 실행하는 커맨드가 “정답”이며, 로컬도 동일 커맨드로 맞추는 것이 가장 안전
+1. **Formatting** (자동)
+2. **Linting & Fix** (자동 수정 우선)
+3. **Static Analysis / Type Check** (잔여 오류를 “원인별”로 분리)
 
-```yaml
-# .gitlab-ci.yml (발췌)
-before_script:
-  - uv sync --frozen --all-extras --dev
+## 4. 실행 명령어(표준 커맨드)
 
-lint:
-  script:
-    - uv run ruff check .
-    - uv run ruff format --check .
+> 표준 커맨드의 목적은 “자동화/CI/에이전트 실행”에서 일관된 인터페이스를 만드는 것입니다.
+> 본 프로젝트는 **pnpm 고정 사양**입니다. (`vibe/tech-stack.md`)
 
-type-check:
-  script:
-    - uv run pyright
-```
+### 4.1 Formatter Command
 
----
+- **Frontend**: `cd frontend && pnpm run format`
+- **Backend**: `cd backend && ruff format .`
 
-## 3. 실행 명령어 (로컬)
+### 4.2 Lint Command
 
-> 아래 커맨드는 **레포 루트**에서 실행합니다.
+- **Frontend(검사)**: `cd frontend && pnpm run lint`
+- **Frontend(자동 수정)**: `cd frontend && pnpm run lint:fix`
+- **Backend(검사)**: `cd backend && ruff check .`
+- **Backend(자동 수정)**: `cd backend && ruff check . --fix`
 
-### 3.1 개발 도구 설치/동기화
+### 4.3 Type Check Command
 
-- **권장(개발/품질 도구 포함)**:
+- **Frontend**: `cd frontend && pnpm run typecheck`
+- **Backend**: `cd backend && pyright`
 
-```bash
-pip install uv
-uv sync --all-extras --dev
-```
+## 5. 자동화 통합 방법(scripts / hooks / CI)
 
-- **재현성 강제(선택)**: `uv.lock`만으로 설치하고 싶다면(예: CI와 동일 재현)
-
-```bash
-uv sync --frozen --all-extras --dev
-```
-
-### 3.2 포맷(자동 수정)
-
-```bash
-uv run ruff format .
-```
-
-### 3.3 린트
-
-- **검사(수정 없음)**:
-
-```bash
-uv run ruff check .
-```
-
-- **자동 수정(가능한 항목만)**:
-
-```bash
-uv run ruff check --fix .
-```
-
-### 3.4 타입체크
-
-```bash
-uv run pyright
-```
-
-### 3.5 권장 실행 순서(로컬 표준 플로우)
-
-```bash
-uv run ruff format .
-uv run ruff check --fix .
-uv run ruff check .
-uv run ruff format --check .
-uv run pyright
-```
-
----
-
-## 4. 주요 규칙(무엇을 강제하는가) + 근거
-
-- **Ruff로 “린트+포맷”을 통합**
-  - **이유**: 도구 수를 줄여 로컬/CI 불일치 가능성을 줄임
-  - **근거**: `docs/tech-stack.md`, `vibe/tech-stack.md`(Code Quality: Ruff)
-- **라인 길이 88 + `E501`(line too long) 무시**
-  - **이유**: 포매터가 기본 스타일을 책임지고, 린트는 버그/품질 규칙에 집중
-  - **근거**: `pyproject.toml` → `[tool.ruff] line-length=88`, `[tool.ruff.lint] ignore=["E501"]`
-- **선택된 린트 규칙 셋**
-  - **E/F**: 기본 문법/오류
-  - **I**: import 정렬(= isort 역할)
-  - **B**: 버그성 패턴(Bugbear)
-  - **UP**: 최신 Python 권장 패턴(업그레이드)
-  - **근거**: `pyproject.toml` → `[tool.ruff.lint] select=[...]`
-- **Pyright는 `basic` 모드**
-  - **이유**: 운영 속도/노이즈를 과도하게 올리지 않으면서 타입 안정성 확보(점진 강화 가능)
-  - **근거**: `pyproject.toml` → `[tool.pyright] typeCheckingMode="basic"`
-- **Frontend(JS/HTML/CSS)는 “빌드 없는 정적” 원칙 유지**
-  - **이유**: 번들러/TS 도입은 아키텍처/운영 복잡도를 증가시키므로 기본값으로 두지 않음
-  - **근거**: `.gemini/rules/red-line.md`(정적 프론트 유지), `.gemini/rules/static-frontend-style.md`
-
----
-
-## 5. 자동화 통합 방법 (scripts, hooks, CI)
-
-### 5.1 Scripts(로컬/팀 표준화)
-
-- **추천**: “CI와 동일한 커맨드”를 팀 표준으로 사용합니다.
-  - Lint: `uv run ruff check .`
-  - Format check: `uv run ruff format --check .`
-  - Type check: `uv run pyright`
-- **참고**: `vibe/commands/lint-check.md`는 이 파일(`.gemini/rules/lint-rules.md`)을 SSOT로 사용하도록 작성되어 있습니다.
-
-### 5.2 Git Hooks(선택)
-
-> 별도 도구를 추가하지 않고도 `.git/hooks/pre-commit`에 스크립트를 두어 실행할 수 있습니다.  
-> (자동 수정이 발생하면 `git add`가 다시 필요할 수 있습니다.)
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-uv run ruff format .
-uv run ruff check --fix .
-uv run ruff check .
-uv run ruff format --check .
-uv run pyright
-```
-
-### 5.3 CI(현행: GitLab CI)
-
-- **현행 파이프라인**: `.gitlab-ci.yml`
-  - 설치: `uv sync --frozen --all-extras --dev`
-  - 린트: `uv run ruff check .`
-  - 포맷 검사: `uv run ruff format --check .`
-  - 타입체크: `uv run pyright`
-- **원칙**: CI가 “통과” 기준이며, 로컬은 CI 커맨드로 재현 가능해야 합니다.
-
+- **scripts**
+  - `format`, `format:check`, `lint`, `lint:fix`, `typecheck`를 표준 스크립트명으로 고정(도구 교체 시에도 인터페이스 유지)
+- **hooks**
+  - 커밋 전: staged 파일에만 포맷/자동수정 린트 적용(빠르게)
+  - 타입체크/전체 린트는 CI에서 강제(느릴 수 있음)
+- **CI**
+  - PR마다 `format:check` + `lint` + `typecheck`를 실행해 회귀를 조기 차단
+  - 예시 YAML/스크립트는 `format.md`, `lint.md`, `type-check.md`에 포함
 

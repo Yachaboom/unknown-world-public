@@ -14,7 +14,7 @@ You can provide images as input to Gemini using two methods:
 
 You can pass inline image data in the request to`generateContent`. You can provide image data as Base64 encoded strings or by reading local files directly (depending on the language).
 
-The following example shows how to read an image from a local file and pass it to`generateContent`API for processing.  
+The following example shows how to read an image from a local file and pass it to`generateContent`API for processing.
 
 ### Python
 
@@ -114,7 +114,7 @@ The following example shows how to read an image from a local file and pass it t
         }]
     }' 2> /dev/null
 
-You can also fetch an image from a URL, convert it to bytes, and pass it to`generateContent`as shown in the following examples.  
+You can also fetch an image from a URL, convert it to bytes, and pass it to`generateContent`as shown in the following examples.
 
 ### Python
 
@@ -252,7 +252,7 @@ You can also fetch an image from a URL, convert it to bytes, and pass it to`gene
 
 ### Uploading images using the File API
 
-For large files or to be able to use the same image file repeatedly, use the Files API. The following code uploads an image file and then uses the file in a call to`generateContent`. See the[Files API guide](https://ai.google.dev/gemini-api/docs/files)for more information and examples.  
+For large files or to be able to use the same image file repeatedly, use the Files API. The following code uploads an image file and then uses the file in a call to`generateContent`. See the[Files API guide](https://ai.google.dev/gemini-api/docs/files)for more information and examples.
 
 ### Python
 
@@ -391,7 +391,7 @@ For large files or to be able to use the same image file repeatedly, use the Fil
 
 ## Prompting with multiple images
 
-You can provide multiple images in a single prompt by including multiple image`Part`objects in the`contents`array. These can be a mix of inline data (local files or URLs) and File API references.  
+You can provide multiple images in a single prompt by including multiple image`Part`objects in the`contents`array. These can be a mix of inline data (local files or URLs) and File API references.
 
 ### Python
 
@@ -570,7 +570,7 @@ You can provide multiple images in a single prompt by including multiple image`P
 
 ## Object detection
 
-From Gemini 2.0 onwards, models are further trained to detect objects in an image and get their bounding box coordinates. The coordinates, relative to image dimensions, scale to \[0, 1000\]. You need to descale these coordinates based on your original image size.  
+From Gemini 2.0 onwards, models are further trained to detect objects in an image and get their bounding box coordinates. The coordinates, relative to image dimensions, scale to \[0, 1000\]. You need to descale these coordinates based on your original image size.
 
 ### Python
 
@@ -619,7 +619,7 @@ For more examples, check following notebooks in the[Gemini Cookbook](https://git
 Starting with Gemini 2.5, models not only detect items but also segment them and provide their contour masks.
 
 The model predicts a JSON list, where each item represents a segmentation mask. Each item has a bounding box ("`box_2d`") in the format`[y0, x0, y1, x1]`with normalized coordinates between 0 and 1000, a label ("`label`") that identifies the object, and finally the segmentation mask inside the bounding box, as base64 encoded png that is a probability map with values between 0 and 255. The mask needs to be resized to match the bounding box dimensions, then binarized at your confidence threshold (127 for the midpoint).
-**Note:** For better results, disable[thinking](https://ai.google.dev/gemini-api/docs/thinking)by setting the thinking budget to 0. See code sample below for an example.  
+**Note:** For better results, disable[thinking](https://ai.google.dev/gemini-api/docs/thinking)by setting the thinking budget to 0. See code sample below for an example.
 
 ### Python
 

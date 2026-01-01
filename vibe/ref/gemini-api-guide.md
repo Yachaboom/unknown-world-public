@@ -7,7 +7,7 @@ Gemini 3 is our most intelligent model family to date, built on a foundation of 
 
 Explore our[collection of Gemini 3 apps](https://aistudio.google.com/app/apps?source=showcase&showcaseTag=gemini-3)to see how the model handles advanced reasoning, autonomous coding, and complex multimodal tasks.
 
-Get started with a few lines of code:  
+Get started with a few lines of code:
 
 ### Python
 
@@ -61,13 +61,13 @@ Nano Banana Pro (also known as Gemini 3 Pro Image) is our highest quality image 
 
 All Gemini 3 models are currently in preview.
 
-|            Model ID            | Context Window (In / Out) | Knowledge Cutoff |            Pricing (Input / Output)\*             |
-|--------------------------------|---------------------------|------------------|---------------------------------------------------|
+| Model ID                       | Context Window (In / Out) | Knowledge Cutoff | Pricing (Input / Output)\*                        |
+| ------------------------------ | ------------------------- | ---------------- | ------------------------------------------------- |
 | **gemini-3-pro-preview**       | 1M / 64k                  | Jan 2025         | $2 / $12 (\<200k tokens) $4 / $18 (\>200k tokens) |
 | **gemini-3-flash-preview**     | 1M / 64k                  | Jan 2025         | $0.50 / $3                                        |
 | **gemini-3-pro-image-preview** | 65k / 32k                 | Jan 2025         | $2 (Text Input) / $0.134 (Image Output)\*\*       |
 
-*\* Pricing is per 1 million tokens unless otherwise noted.* *\*\* Image pricing varies by resolution. See the[pricing page](https://ai.google.dev/gemini-api/docs/pricing)for details.*
+_\* Pricing is per 1 million tokens unless otherwise noted._ _\*\* Image pricing varies by resolution. See the[pricing page](https://ai.google.dev/gemini-api/docs/pricing)for details._
 
 For detailed limits, pricing, and additional information, see the[models page](https://ai.google.dev/gemini-api/docs/models/gemini).
 
@@ -95,6 +95,7 @@ In addition to the levels above, Gemini 3 Flash also supports the following thin
 - `minimal`: Matches the "no thinking" setting for most queries. The model may think very minimally for complex coding tasks. Minimizes latency for chat or high throughput applications.
 
   | **Note:** Circulation of[thought signatures](https://ai.google.dev/gemini-api/docs/gemini-3#thought_signatures)is required even when thinking level is set to`minimal`for Gemini 3 Flash.
+
 - `medium`: Balanced thinking for most tasks.
 
 ### Python
@@ -159,14 +160,14 @@ You can now set the resolution to`media_resolution_low`,`media_resolution_medium
 
 **Recommended settings**
 
-|      Media Type       |                 Recommended Setting                 |   Max Tokens    |                                                                                  Usage Guidance                                                                                   |
-|-----------------------|-----------------------------------------------------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Media Type            | Recommended Setting                                 | Max Tokens      | Usage Guidance                                                                                                                                                                    |
+| --------------------- | --------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Images**            | `media_resolution_high`                             | 1120            | Recommended for most image analysis tasks to ensure maximum quality.                                                                                                              |
 | **PDFs**              | `media_resolution_medium`                           | 560             | Optimal for document understanding; quality typically saturates at`medium`. Increasing to`high`rarely improves OCR results for standard documents.                                |
 | **Video**(General)    | `media_resolution_low`(or`media_resolution_medium`) | 70 (per frame)  | **Note:** For video,`low`and`medium`settings are treated identically (70 tokens) to optimize context usage. This is sufficient for most action recognition and description tasks. |
 | **Video**(Text-heavy) | `media_resolution_high`                             | 280 (per frame) | Required only when the use case involves reading dense text (OCR) or small details within video frames.                                                                           |
 
-**Note:** The`media_resolution`parameter maps to different token counts depending on the input type. While images scale linearly (`media_resolution_low`: 280,`media_resolution_medium`: 560,`media_resolution_high`: 1120), Video is compressed more aggressively. For Video, both`media_resolution_low`and`media_resolution_medium`are capped at 70 tokens per frame, and`media_resolution_high`is capped at 280 tokens. See full details[here](https://ai.google.dev/gemini-api/docs/media-resolution#token-counts)  
+**Note:** The`media_resolution`parameter maps to different token counts depending on the input type. While images scale linearly (`media_resolution_low`: 280,`media_resolution_medium`: 560,`media_resolution_high`: 1120), Video is compressed more aggressively. For Video, both`media_resolution_low`and`media_resolution_medium`are capped at 70 tokens per frame, and`media_resolution_high`is capped at 280 tokens. See full details[here](https://ai.google.dev/gemini-api/docs/media-resolution#token-counts)
 
 ### Python
 
@@ -266,6 +267,7 @@ Gemini 3 uses[Thought signatures](https://ai.google.dev/gemini-api/docs/thought-
 - **Function Calling (Strict):**The API enforces strict validation on the "Current Turn". Missing signatures will result in a 400 error.
 
   | **Note:** Circulation of thought signatures is required even when[thinking level](https://ai.google.dev/gemini-api/docs/gemini-3#thinking_level)is set to`minimal`for Gemini 3 Flash.
+
 - **Text/Chat:**Validation is not strictly enforced, but omitting signatures will degrade the model's reasoning and answer quality.
 
 - **Image generation/editing (Strict)** : The API enforces strict validation on all Model parts including a`thoughtSignature`. Missing signatures will result in a 400 error.
@@ -297,10 +299,10 @@ For`gemini-3-pro-image-preview`, thought signatures are critical for conversatio
 
 #### Multi-step Function Calling (Sequential)
 
-The user asks a question requiring two separate steps (Check Flight -\> Book Taxi) in one turn.  
+The user asks a question requiring two separate steps (Check Flight -\> Book Taxi) in one turn.
 
-**Step 1: Model calls Flight Tool.**   
-The model returns a signature`<Sig_A>`  
+**Step 1: Model calls Flight Tool.**  
+The model returns a signature`<Sig_A>`
 
 ```java
 // Model Response (Turn 1, Step 1)
@@ -315,28 +317,28 @@ The model returns a signature`<Sig_A>`
   }
 ```
 
-**Step 2: User sends Flight Result**   
-We must send back`<Sig_A>`to keep the model's train of thought.  
+**Step 2: User sends Flight Result**  
+We must send back`<Sig_A>`to keep the model's train of thought.
 
 ```java
 // User Request (Turn 1, Step 2)
 [
   { "role": "user", "parts": [{ "text": "Check flight AA100..." }] },
-  { 
-    "role": "model", 
+  {
+    "role": "model",
     "parts": [
-      { 
-        "functionCall": { "name": "check_flight", "args": {...} }, 
+      {
+        "functionCall": { "name": "check_flight", "args": {...} },
         "thoughtSignature": "<Sig_A>" // REQUIRED
-      } 
+      }
     ]
   },
   { "role": "user", "parts": [{ "functionResponse": { "name": "check_flight", "response": {...} } }] }
 ]
 ```
 
-**Step 3: Model calls Taxi Tool**   
-The model remembers the flight delay via`<Sig_A>`and now decides to book a taxi. It generates a*new* signature`<Sig_B>`.  
+**Step 3: Model calls Taxi Tool**  
+The model remembers the flight delay via`<Sig_A>`and now decides to book a taxi. It generates a*new* signature`<Sig_B>`.
 
 ```java
 // Model Response (Turn 1, Step 3)
@@ -351,33 +353,33 @@ The model remembers the flight delay via`<Sig_A>`and now decides to book a taxi.
 }
 ```
 
-**Step 4: User sends Taxi Result**   
-To complete the turn, you must send back the entire chain:`<Sig_A>`AND`<Sig_B>`.  
+**Step 4: User sends Taxi Result**  
+To complete the turn, you must send back the entire chain:`<Sig_A>`AND`<Sig_B>`.
 
 ```java
 // User Request (Turn 1, Step 4)
 [
   // ... previous history ...
-  { 
-    "role": "model", 
+  {
+    "role": "model",
     "parts": [
-       { "functionCall": { "name": "check_flight", ... }, "thoughtSignature": "<Sig_A>" } 
+       { "functionCall": { "name": "check_flight", ... }, "thoughtSignature": "<Sig_A>" }
     ]
   },
   { "role": "user", "parts": [{ "functionResponse": {...} }] },
-  { 
-    "role": "model", 
+  {
+    "role": "model",
     "parts": [
-       { "functionCall": { "name": "book_taxi", ... }, "thoughtSignature": "<Sig_B>" } 
+       { "functionCall": { "name": "book_taxi", ... }, "thoughtSignature": "<Sig_B>" }
     ]
   },
   { "role": "user", "parts": [{ "functionResponse": {...} }] }
 ]
-```  
+```
 
 #### Parallel Function Calling
 
-The user asks: "Check the weather in Paris and London." The model returns two function calls in one response.  
+The user asks: "Check the weather in Paris and London." The model returns two function calls in one response.
 
 ```java
 // User Request (Sending Parallel Results)
@@ -394,12 +396,12 @@ The user asks: "Check the weather in Paris and London." The model returns two fu
       // 1. First Function Call has the signature
       {
         "functionCall": { "name": "check_weather", "args": { "city": "Paris" } },
-        "thoughtSignature": "<Signature_A>" 
+        "thoughtSignature": "<Signature_A>"
       },
       // 2. Subsequent parallel calls DO NOT have signatures
       {
         "functionCall": { "name": "check_weather", "args": { "city": "London" } }
-      } 
+      }
     ]
   },
   {
@@ -415,21 +417,21 @@ The user asks: "Check the weather in Paris and London." The model returns two fu
     ]
   }
 ]
-```  
+```
 
 #### Text/In-Context Reasoning (No Validation)
 
-The user asks a question that requires in-context reasoning without external tools. While not strictly validated, including the signature helps the model maintain the reasoning chain for follow-up questions.  
+The user asks a question that requires in-context reasoning without external tools. While not strictly validated, including the signature helps the model maintain the reasoning chain for follow-up questions.
 
 ```java
 // User Request (Follow-up question)
 [
-  { 
-    "role": "user", 
-    "parts": [{ "text": "What are the risks of this investment?" }] 
+  {
+    "role": "user",
+    "parts": [{ "text": "What are the risks of this investment?" }]
   },
-  { 
-    "role": "model", 
+  {
+    "role": "model",
     "parts": [
       {
         "text": "I need to calculate the risk step-by-step. First, I'll look at volatility...",
@@ -437,16 +439,16 @@ The user asks a question that requires in-context reasoning without external too
       }
     ]
   },
-  { 
-    "role": "user", 
-    "parts": [{ "text": "Summarize that in one sentence." }] 
+  {
+    "role": "user",
+    "parts": [{ "text": "Summarize that in one sentence." }]
   }
 ]
-```  
+```
 
 #### Image Generation \& Editing
 
-For image generation, signatures are strictly validated. They appear on the**first part** (text or image) and**all subsequent image parts**. All must be returned in the next turn.  
+For image generation, signatures are strictly validated. They appear on the**first part** (text or image) and**all subsequent image parts**. All must be returned in the next turn.
 
 ```java
 // Model Response (Turn 1)
@@ -456,12 +458,12 @@ For image generation, signatures are strictly validated. They appear on the**fir
     // 1. First part ALWAYS has a signature (even if text)
     {
       "text": "I will generate a cyberpunk city...",
-      "thoughtSignature": "<Signature_D>" 
+      "thoughtSignature": "<Signature_D>"
     },
     // 2. ALL InlineData (Image) parts ALWAYS have signatures
     {
-      "inlineData": { ... }, 
-      "thoughtSignature": "<Signature_E>" 
+      "inlineData": { ... },
+      "thoughtSignature": "<Signature_E>"
     },
   ]
 }
@@ -498,7 +500,7 @@ To bypass strict validation in these specific scenarios, populate the field with
 
 ### Structured Outputs with tools
 
-Gemini 3 models allow you to combine[Structured Outputs](https://ai.google.dev/gemini-api/docs/structured-output)with built-in tools, including[Grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search),[URL Context](https://ai.google.dev/gemini-api/docs/url-context), and[Code Execution](https://ai.google.dev/gemini-api/docs/code-execution).  
+Gemini 3 models allow you to combine[Structured Outputs](https://ai.google.dev/gemini-api/docs/structured-output)with built-in tools, including[Grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search),[URL Context](https://ai.google.dev/gemini-api/docs/url-context), and[Code Execution](https://ai.google.dev/gemini-api/docs/code-execution).
 
 ### Python
 
@@ -524,7 +526,7 @@ Gemini 3 models allow you to combine[Structured Outputs](https://ai.google.dev/g
             ],
             "response_mime_type": "application/json",
             "response_json_schema": MatchResult.model_json_schema(),
-        },  
+        },
     )
 
     result = MatchResult.model_validate_json(response.text)
@@ -606,7 +608,7 @@ Gemini 3 Pro Image lets you generate and edit images from text prompts. It uses 
 - **Grounded generation:** Use the`google_search`tool to verify facts and generate imagery based on real-world information.
 - **Conversational editing:** Multi-turn image editing by simply asking for changes (e.g., "Make the background a sunset"). This workflow relies on**Thought Signatures**to preserve visual context between turns.
 
-For complete details on aspect ratios, editing workflows, and configuration options, see the[Image Generation guide](https://ai.google.dev/gemini-api/docs/image-generation).  
+For complete details on aspect ratios, editing workflows, and configuration options, see the[Image Generation guide](https://ai.google.dev/gemini-api/docs/image-generation).
 
 ### Python
 

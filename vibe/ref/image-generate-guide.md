@@ -167,7 +167,7 @@ All generated images include a[SynthID watermark](https://ai.google.dev/responsi
 
 Provide an image and use text prompts to add, remove, or modify elements, change the style, or adjust the color grading.
 
-The following example demonstrates uploading base64 encoded images. For multiple images, larger payloads, and supported MIME types, check the[Image understanding](https://ai.google.dev/gemini-api/docs/image-understanding)page.  
+The following example demonstrates uploading base64 encoded images. For multiple images, larger payloads, and supported MIME types, check the[Image understanding](https://ai.google.dev/gemini-api/docs/image-understanding)page.
 
 ### Python
 
@@ -377,7 +377,7 @@ The following example demonstrates uploading base64 encoded images. For multiple
 
 ### Multi-turn image editing
 
-Keep generating and editing images conversationally. Chat or multi-turn conversation is the recommended way to iterate on images. The following example shows a prompt to generate an infographic about photosynthesis.  
+Keep generating and editing images conversationally. Chat or multi-turn conversation is the recommended way to iterate on images. The following example shows a prompt to generate an infographic about photosynthesis.
 
 ### Python
 
@@ -563,7 +563,7 @@ Keep generating and editing images conversationally. Chat or multi-turn conversa
 
 ![AI-generated infographic about photosynthesis](https://ai.google.dev/static/gemini-api/docs/images/infographic-eng.png)AI-generated infographic about photosynthesis
 
-You can then use the same chat to change the language on the graphic to Spanish.  
+You can then use the same chat to change the language on the graphic to Spanish.
 
 ### Python
 
@@ -655,7 +655,7 @@ You can then use the same chat to change the language on the graphic to Spanish.
         .build();
 
     response = chat.sendMessage(
-        "Update this infographic to be in Spanish. " + 
+        "Update this infographic to be in Spanish. " +
         "Do not change any other elements of the image.",
         config);
 
@@ -997,7 +997,7 @@ Gemini 3 Pro Preview lets you to mix up to 14 reference images. These 14 images 
 
 Use the[Google Search tool](https://ai.google.dev/gemini-api/docs/google-search)to generate images based on real-time information, such as weather forecasts, stock charts, or recent events.
 
-Note that when using Grounding with Google Search with image generation, image-based search results are not passed to the generation model and are excluded from the response.  
+Note that when using Grounding with Google Search with image generation, image-based search results are not passed to the generation model and are excluded from the response.
 
 ### Python
 
@@ -1095,8 +1095,8 @@ Note that when using Grounding with Google Search with image generation, image-b
 
           GenerateContentResponse response = client.models.generateContent(
               "gemini-3-pro-image-preview", """
-                  Visualize the current weather forecast for the next 5 days 
-                  in San Francisco as a clean, modern weather chart. 
+                  Visualize the current weather forecast for the next 5 days
+                  in San Francisco as a clean, modern weather chart.
                   Add a visual on what I should wear each day
                   """,
               config);
@@ -1141,14 +1141,14 @@ The response includes`groundingMetadata`which contains the following required fi
 
 Gemini 3 Pro Image generates 1K images by default but can also output 2K and 4K images. To generate higher resolution assets, specify the`image_size`in the`generation_config`.
 
-You must use an uppercase 'K' (e.g., 1K, 2K, 4K). Lowercase parameters (e.g., 1k) will be rejected.  
+You must use an uppercase 'K' (e.g., 1K, 2K, 4K). Lowercase parameters (e.g., 1k) will be rejected.
 
 ### Python
 
     from google import genai
     from google.genai import types
 
-    prompt = "Da Vinci style anatomical sketch of a dissected Monarch butterfly. Detailed drawings of the head, wings, and legs on textured parchment with notes in English." 
+    prompt = "Da Vinci style anatomical sketch of a dissected Monarch butterfly. Detailed drawings of the head, wings, and legs on textured parchment with notes in English."
     aspect_ratio = "1:1" # "1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9","21:9"
     resolution = "1K" # "1K", "2K", "4K"
 
@@ -1333,7 +1333,7 @@ The Gemini 3 Pro Image Preview model is a thinking model and uses a reasoning pr
 
 The model generates up to two interim images to test composition and logic. The last image within Thinking is also the final rendered image.
 
-You can check the thoughts that lead to the final image being produced.  
+You can check the thoughts that lead to the final image being produced.
 
 ### Python
 
@@ -1370,7 +1370,7 @@ Here is how thought signatures work:
 - If there are some text parts at the beginning (before any image) right after the thoughts, the first text part should also have a signature.
 - Thoughts do not have signatures; If`inline_data`parts with image`mimetype`are part of thoughts, they will not have signatures.
 
-The following code shows an example of where thought signatures are included:  
+The following code shows an example of where thought signatures are included:
 
     [
       {
@@ -1446,6 +1446,7 @@ Check the[Batch API image generation documentation](https://ai.google.dev/gemini
 ## Prompting guide and strategies
 
 Mastering image generation starts with one fundamental principle:
+
 > **Describe the scene, don't just list keywords.**The model's core strength is its deep language understanding. A narrative, descriptive paragraph will almost always produce a better, more coherent image than a list of disconnected words.
 
 ### Prompts for generating images
@@ -1454,7 +1455,7 @@ The following strategies will help you create effective prompts to generate exac
 
 #### 1. Photorealistic scenes
 
-For realistic images, use photography terms. Mention camera angles, lens types, lighting, and fine details to guide the model toward a photorealistic result.  
+For realistic images, use photography terms. Mention camera angles, lens types, lighting, and fine details to guide the model toward a photorealistic result.
 
 ### Template
 
@@ -1477,7 +1478,7 @@ For realistic images, use photography terms. Mention camera angles, lens types, 
 ### Python
 
     from google import genai
-    from google.genai import types    
+    from google.genai import types
 
     client = genai.Client()
 
@@ -1629,7 +1630,7 @@ For realistic images, use photography terms. Mention camera angles, lens types, 
 
 #### 2. Stylized illustrations \& stickers
 
-To create stickers, icons, or assets, be explicit about the style and request a transparent background.  
+To create stickers, icons, or assets, be explicit about the style and request a transparent background.
 
 ### Template
 
@@ -1793,7 +1794,7 @@ To create stickers, icons, or assets, be explicit about the style and request a 
 
 #### 3. Accurate text in images
 
-Gemini excels at rendering text. Be clear about the text, the font style (descriptively), and the overall design. Use Gemini 3 Pro Image Preview for professional asset production.  
+Gemini excels at rendering text. Be clear about the text, the font style (descriptively), and the overall design. Use Gemini 3 Pro Image Preview for professional asset production.
 
 ### Template
 
@@ -1808,7 +1809,7 @@ Gemini excels at rendering text. Be clear about the text, the font style (descri
 ### Python
 
     from google import genai
-    from google.genai import types    
+    from google.genai import types
 
     client = genai.Client()
 
@@ -1976,7 +1977,7 @@ Gemini excels at rendering text. Be clear about the text, the font style (descri
 
 #### 4. Product mockups \& commercial photography
 
-Perfect for creating clean, professional product shots for e-commerce, advertising, or branding.  
+Perfect for creating clean, professional product shots for e-commerce, advertising, or branding.
 
 ### Template
 
@@ -2148,7 +2149,7 @@ Perfect for creating clean, professional product shots for e-commerce, advertisi
 
 #### 5. Minimalist \& negative space design
 
-Excellent for creating backgrounds for websites, presentations, or marketing materials where text will be overlaid.  
+Excellent for creating backgrounds for websites, presentations, or marketing materials where text will be overlaid.
 
 ### Template
 
@@ -2167,7 +2168,7 @@ Excellent for creating backgrounds for websites, presentations, or marketing mat
 ### Python
 
     from google import genai
-    from google.genai import types    
+    from google.genai import types
 
     client = genai.Client()
 
@@ -2315,7 +2316,7 @@ Excellent for creating backgrounds for websites, presentations, or marketing mat
 
 #### 6. Sequential art (Comic panel / Storyboard)
 
-Builds on character consistency and scene description to create panels for visual storytelling. For accuracy with text and storytelling ability, these prompts work best with Gemini 3 Pro Image Preview.  
+Builds on character consistency and scene description to create panels for visual storytelling. For accuracy with text and storytelling ability, these prompts work best with Gemini 3 Pro Image Preview.
 
 ### Template
 
@@ -2519,12 +2520,12 @@ Builds on character consistency and scene description to create panels for visua
       | base64 --decode > comic_panel.jpg
 
 |------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input                                                                                                            | Output                                                                                                                                                                         |
+| Input | Output |
 | ![Man in white glasses](https://ai.google.dev/static/gemini-api/docs/images/man_in_white_glasses.jpg)Input image | ![Make a 3 panel comic in a gritty, noir art style...](https://ai.google.dev/static/gemini-api/docs/images/comic_panel.jpg)Make a 3 panel comic in a gritty, noir art style... |
 
 #### 7. Grounding with Google Search
 
-Use Google Search to generate images based on recent or real-time information. This is useful for news, weather, and other time-sensitive topics.  
+Use Google Search to generate images based on recent or real-time information. This is useful for news, weather, and other time-sensitive topics.
 
 ### Prompt
 
@@ -2721,7 +2722,7 @@ These examples show how to provide images alongside your text prompts for editin
 
 #### 1. Adding and removing elements
 
-Provide an image and describe your change. The model will match the original image's style, lighting, and perspective.  
+Provide an image and describe your change. The model will match the original image's style, lighting, and perspective.
 
 ### Template
 
@@ -2938,12 +2939,12 @@ Provide an image and describe your change. The model will match the original ima
       | base64 --decode > cat_with_hat.png
 
 |---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input                                                   | Output                                                                                                                                                                                                                              |
+| Input | Output |
 | :cat:A photorealistic picture of a fluffy ginger cat... | ![Using the provided image of my cat, please add a small, knitted wizard hat...](https://ai.google.dev/static/gemini-api/docs/images/cat_with_hat.png)Using the provided image of my cat, please add a small, knitted wizard hat... |
 
 #### 2. Inpainting (Semantic masking)
 
-Conversationally define a "mask" to edit a specific part of an image while leaving the rest untouched.  
+Conversationally define a "mask" to edit a specific part of an image while leaving the rest untouched.
 
 ### Template
 
@@ -3162,12 +3163,12 @@ Conversationally define a "mask" to edit a specific part of an image while leavi
       | base64 --decode > living_room_edited.png
 
 |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input                                                                                                                                                                    | Output                                                                                                                                                                                                                                                                                                                          |
+| Input | Output |
 | ![A wide shot of a modern, well-lit living room...](https://ai.google.dev/static/gemini-api/docs/images/living_room.png)A wide shot of a modern, well-lit living room... | ![Using the provided image of a living room, change only the blue sofa to be a vintage, brown leather chesterfield sofa...](https://ai.google.dev/static/gemini-api/docs/images/living_room_edited.png)Using the provided image of a living room, change only the blue sofa to be a vintage, brown leather chesterfield sofa... |
 
 #### 3. Style transfer
 
-Provide an image and ask the model to recreate its content in a different artistic style.  
+Provide an image and ask the model to recreate its content in a different artistic style.
 
 ### Template
 
@@ -3384,12 +3385,12 @@ Provide an image and ask the model to recreate its content in a different artist
       | base64 --decode > city_style_transfer.png
 
 |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input                                                                                                                                                                                                       | Output                                                                                                                                                                                                                     |
+| Input | Output |
 | ![A photorealistic, high-resolution photograph of a busy city street...](https://ai.google.dev/static/gemini-api/docs/images/city.png)A photorealistic, high-resolution photograph of a busy city street... | ![Transform the provided photograph of a modern city street at night...](https://ai.google.dev/static/gemini-api/docs/images/city_style_transfer.png)Transform the provided photograph of a modern city street at night... |
 
 #### 4. Advanced composition: Combining multiple images
 
-Provide multiple images as context to create a new, composite scene. This is perfect for product mockups or creative collages.  
+Provide multiple images as context to create a new, composite scene. This is perfect for product mockups or creative collages.
 
 ### Template
 
@@ -3641,12 +3642,12 @@ Provide multiple images as context to create a new, composite scene. This is per
       | base64 --decode > fashion_ecommerce_shot.png
 
 |---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input 1                                                             | Input 2                                                                                                                                                                  | Output                                                                                                                                                                                |
+| Input 1 | Input 2 | Output |
 | :dress:A professionally shot photo of a blue floral summer dress... | ![Full-body shot of a woman with her hair in a bun...](https://ai.google.dev/static/gemini-api/docs/images/model.png)Full-body shot of a woman with her hair in a bun... | ![Create a professional e-commerce fashion photo...](https://ai.google.dev/static/gemini-api/docs/images/fashion_ecommerce_shot.png)Create a professional e-commerce fashion photo... |
 
 #### 5. High-fidelity detail preservation
 
-To ensure critical details (like a face or logo) are preserved during an edit, describe them in great detail along with your edit request.  
+To ensure critical details (like a face or logo) are preserved during an edit, describe them in great detail along with your edit request.
 
 ### Template
 
@@ -3900,12 +3901,12 @@ To ensure critical details (like a face or logo) are preserved during an edit, d
       | base64 --decode > woman_with_logo.png
 
 |----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input 1                                                                    | Input 2                                                                                                                                                                     | Output                                                                                                                                                                                                                                                         |
+| Input 1 | Input 2 | Output |
 | :woman:A professional headshot of a woman with brown hair and blue eyes... | ![A simple, modern logo with the letters 'G' and 'A'...](https://ai.google.dev/static/gemini-api/docs/images/logo.png)A simple, modern logo with the letters 'G' and 'A'... | ![Take the first image of the woman with brown hair, blue eyes, and a neutral expression...](https://ai.google.dev/static/gemini-api/docs/images/woman_with_logo.png)Take the first image of the woman with brown hair, blue eyes, and a neutral expression... |
 
 #### 6. Bring something to life
 
-Upload a rough sketch or drawing and ask the model to refine it into a finished image.  
+Upload a rough sketch or drawing and ask the model to refine it into a finished image.
 
 ### Template
 
@@ -4113,12 +4114,12 @@ Upload a rough sketch or drawing and ask the model to refine it into a finished 
       | base64 --decode > car_photo.png
 
 |-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| Input                                                                                                       | Output                                                                                                                            |
+| Input | Output |
 | ![Sketch of a car](https://ai.google.dev/static/gemini-api/docs/images/car-sketch.jpg)Rough sketch of a car | ![Output showing the final concept car](https://ai.google.dev/static/gemini-api/docs/images/car-photo.jpg)Polished photo of a car |
 
 #### 7. Character consistency: 360 view
 
-You can generate 360-degree views of a character by iteratively prompting for different angles. For best results, include previously generated images in subsequent prompts to maintain consistency. For complex poses, include a reference image of the desired pose.  
+You can generate 360-degree views of a character by iteratively prompting for different angles. For best results, include previously generated images in subsequent prompts to maintain consistency. For complex poses, include a reference image of the desired pose.
 
 ### Template
 
@@ -4326,7 +4327,7 @@ You can generate 360-degree views of a character by iteratively prompting for di
       | base64 --decode > man_right_profile.png
 
 |-----------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Input                                                                                                                                   | Output 1                                                                                                                                                                        | Output 2                                                                                                                                                                              |
+| Input | Output 1 | Output 2 |
 | ![Original input of a man in white glasses](https://ai.google.dev/static/gemini-api/docs/images/man_in_white_glasses.jpg)Original image | ![Output of a man in white glasses looking right](https://ai.google.dev/static/gemini-api/docs/images/man_in_white_glasses_looking_right.jpg)Man in white glasses looking right | ![Output of a man in white glasses looking forward](https://ai.google.dev/static/gemini-api/docs/images/man_in_white_glasses_looking_forward.jpg)Man in white glasses looking forward |
 
 ### Best Practices
@@ -4339,7 +4340,7 @@ To elevate your results from good to great, incorporate these professional strat
 - **Use Step-by-Step Instructions:**For complex scenes with many elements, break your prompt into steps. "First, create a background of a serene, misty forest at dawn. Then, in the foreground, add a moss-covered ancient stone altar. Finally, place a single, glowing sword on top of the altar."
 - **Use "Semantic Negative Prompts":**Instead of saying "no cars," describe the desired scene positively: "an empty, deserted street with no signs of traffic."
 - **Control the Camera:** Use photographic and cinematic language to control the composition. Terms like`wide-angle shot`,`macro shot`,`low-angle
-  perspective`.
+perspective`.
 
 ## Limitations
 
@@ -4356,7 +4357,7 @@ You can optionally configure the response modalities and aspect ratio of the mod
 
 ### Output types
 
-The model defaults to returning text and image responses (i.e.`response_modalities=['Text', 'Image']`). You can configure the response to return only images without text using`response_modalities=['Image']`.  
+The model defaults to returning text and image responses (i.e.`response_modalities=['Text', 'Image']`). You can configure the response to return only images without text using`response_modalities=['Image']`.
 
 ### Python
 
@@ -4414,7 +4415,7 @@ The model defaults to returning text and image responses (i.e.`response_modaliti
 
 ### Aspect ratios and image size
 
-The model defaults to matching the output image size to that of your input image, or otherwise generates 1:1 squares. You can control the aspect ratio of the output image using the`aspect_ratio`field under`image_config`in the response request, shown here:  
+The model defaults to matching the output image size to that of your input image, or otherwise generates 1:1 squares. You can control the aspect ratio of the output image using the`aspect_ratio`field under`image_config`in the response request, shown here:
 
 ### Python
 
@@ -4554,7 +4555,7 @@ The different ratios available and the size of the image generated are listed in
 **Gemini 2.5 Flash Image**
 
 | Aspect ratio | Resolution | Tokens |
-|--------------|------------|--------|
+| ------------ | ---------- | ------ |
 | 1:1          | 1024x1024  | 1290   |
 | 2:3          | 832x1248   | 1290   |
 | 3:2          | 1248x832   | 1290   |
@@ -4569,7 +4570,7 @@ The different ratios available and the size of the image generated are listed in
 **Gemini 3 Pro Image Preview**
 
 | Aspect ratio | 1K resolution | 1K tokens | 2K resolution | 2K tokens | 4K resolution | 4K tokens |
-|--------------|---------------|-----------|---------------|-----------|---------------|-----------|
+| ------------ | ------------- | --------- | ------------- | --------- | ------------- | --------- |
 | **1:1**      | 1024x1024     | 1120      | 2048x2048     | 1120      | 4096x4096     | 2000      |
 | **2:3**      | 848x1264      | 1120      | 1696x2528     | 1120      | 3392x5056     | 2000      |
 | **3:2**      | 1264x848      | 1120      | 2528x1696     | 1120      | 5056x3392     | 2000      |
@@ -4593,8 +4594,8 @@ Choose the model best suited for your specific use case.
 
 In addition to using Gemini's built-in image generation capabilities, you can also access[Imagen](https://ai.google.dev/gemini-api/docs/imagen), our specialized image generation model, through the Gemini API.
 
-|     Attribute     |                                                                                                                 Imagen                                                                                                                 |                                                                                                                                                                                               Gemini Native Image                                                                                                                                                                                                |
-|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Attribute         | Imagen                                                                                                                                                                                                                                 | Gemini Native Image                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Strengths         | Model specializes in image generation.                                                                                                                                                                                                 | **Default recommendation.** Unparalleled flexibility, contextual understanding, and simple, mask-free editing. Uniquely capable of multi-turn conversational editing.                                                                                                                                                                                                                                            |
 | Availability      | Generally available                                                                                                                                                                                                                    | Preview (Production usage allowed)                                                                                                                                                                                                                                                                                                                                                                               |
 | Latency           | **Low**. Optimized for near-real-time performance.                                                                                                                                                                                     | Higher. More computation is required for its advanced capabilities.                                                                                                                                                                                                                                                                                                                                              |
