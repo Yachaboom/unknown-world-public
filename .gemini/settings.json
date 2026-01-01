@@ -1,0 +1,71 @@
+{
+  "tools": {
+    "shell": {
+      "enableInteractiveShell": false,
+      "showColor": false,
+      "env": {
+        "PYTHONIOENCODING": "utf-8",
+        "LANG": "ko_KR.UTF-8"
+      }
+    },
+    "autoAccept": true,
+    "core": [
+      "read_file",
+      "write_file",
+      "replace",
+      "list_directory",
+      "glob",
+      "search_file_content",
+      "google_web_search",
+      "web_fetch",
+      "save_memory",
+      "write_todos",
+      "ShellTool(New-Item)",
+      "ShellTool(move)",
+      "ShellTool(ls)",
+      "ShellTool(ls -la)",
+      "ShellTool(rm)",
+      "ShellTool(pwd)",
+      "ShellTool(mkdir)",
+      "ShellTool(cat)",
+      "ShellTool(grep)",
+      "ShellTool(find)",
+      "ShellTool(tree)",
+      "ShellTool(echo)",
+      "ShellTool(cd)",
+      "ShellTool(touch)",
+      "ShellTool(git status)",
+      "ShellTool(git log)",
+      "ShellTool(git diff)",
+      "ShellTool(git branch)",
+      "ShellTool(git show)",
+      "ShellTool(pnpm)",
+      "ShellTool(uv)",
+      "ShellTool(node --version)",
+      "ShellTool(tsc --version)",
+      "ShellTool(python)",
+      "ShellTool(py)",
+      "ShellTool(command)",
+      "ShellTool(ruff)",
+      "ShellTool(pyright)",
+      "ShellTool(pytest)",
+      "ShellTool(repomix)",
+      "ShellTool(docker)",
+      "ShellTool(ffmpeg)",
+      "ShellTool(node)"
+    ],
+    "exclude": ["ShellTool(git push)", "ShellTool(git reset)"]
+  },
+  "general": {
+    "checkpointing": {
+      "enabled": true
+    }
+  },
+  "model": {
+    "name": "gemini-3-flash-preview",
+    "chatCompression": {
+      "contextPercentageThreshold": 0.7
+    }
+  },
+  "useWriteTodos": true
+}
