@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-106[Mmp]                        |
-| Phase     | MMP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | CP-MMP-01                         |
-| 우선순위  | High                              |
+| 항목      | 내용       |
+| --------- | ---------- |
+| Unit ID   | U-106[Mmp] |
+| Phase     | MMP        |
+| 예상 소요 | 75분       |
+| 의존성    | CP-MMP-01  |
+| 우선순위  | High       |
 
 ## 작업 목표
 
@@ -88,5 +88,3 @@ Agent Console을 “과정 가시화”를 넘어, TTFB/단계 소요시간/재�
 
 - `vibe/prd.md` - Demo Mode/관측 지표
 - `.cursor/rules/00-core-critical.mdc` - RULE-008
-
-

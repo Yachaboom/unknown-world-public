@@ -1,0 +1,171 @@
+# ============================================================================
+# Unknown World .gitignore
+# ============================================================================
+# RULE-007: 비밀정보(서비스 계정 키/토큰/쿠키) 커밋 금지
+# Reference: vibe/tech-stack.md, .gemini/rules/red-line.md
+# ============================================================================
+
+# ============================================================================
+# 🔐 SECURITY - CRITICAL (RULE-007)
+# ============================================================================
+# Vertex AI / GCP Service Account Keys
+*.json
+!package.json
+!tsconfig.json
+!pyrightconfig.json
+**/service-account*.json
+**/credentials*.json
+**/keyfile*.json
+**/gcp-*.json
+**/vertex-*.json
+
+# Environment variables
+.env
+.env.*
+!.env.example
+.envrc
+
+# API Keys / Tokens / Secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# ============================================================================
+# 📦 Dependencies
+# ============================================================================
+# Node.js / pnpm
+node_modules/
+.pnpm-store/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv/
+ENV/
+env/
+.python-version
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================================================================
+# 🛠️ Build & Cache
+# ============================================================================
+# Vite / Frontend Build
+frontend/dist/
+frontend/.vite/
+*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Ruff
+.ruff_cache/
+
+# ============================================================================
+# 💻 IDE & Editor
+# ============================================================================
+# VS Code / Cursor
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# 🖥️ OS Files
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# ============================================================================
+# 📊 Logs & Debug
+# ============================================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ============================================================================
+# 🎮 Game / Session Data (Local only)
+# ============================================================================
+# SaveGame files (JSON) - local development only
+savegames/
+*.savegame.json
+
+# Session/Replay data
+replays/
+sessions/
+
+# Generated images (can be regenerated)
+generated/
+.generated/
+
+# ============================================================================
+# 📝 Temporary Files
+# ============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+vibe/commands.md

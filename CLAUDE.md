@@ -172,5 +172,3 @@
 - `vibe/ref/structured-outputs-guide.md`
 - `vibe/commands/*.md` / `.cursor/commands/*.md`
 - `.gemini/rules/commit-rules.md`
-
-

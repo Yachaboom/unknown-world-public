@@ -1,7 +1,7 @@
 # 문서/SSOT/워크플로 세부 지침
 
-> **[적용 컨텍스트]**: docs, ssot, prd, tech-stack, vibe, runbook, unit-impl, doc-update, refactor, *.md, *.mdc
-> 
+> **[적용 컨텍스트]**: docs, ssot, prd, tech-stack, vibe, runbook, unit-impl, doc-update, refactor, _.md, _.mdc
+>
 > **[설명]**: PRD/tech-stack을 SSOT로 유지하고, 구현/문서/런북을 동기화한다.
 >
 > **[참조]**: `.gemini/GEMINI.md`의 “문서/SSOT/워크플로” 키워드 블록에 의해 임포트됨.
@@ -15,11 +15,13 @@
 ### 규칙 1: 문서 충돌 시 SSOT 우선순위를 적용하고, 불확실하면 질문한다
 
 **올바른 예시 (Do ✅)**:
+
 ```
 vibe/prd.md > vibe/tech-stack.md > vibe/ref/* > 기타
 ```
 
 **잘못된 예시 (Don't ❌)**:
+
 ```
 - 상충하는데도 추측으로 진행
 ```
@@ -27,12 +29,14 @@ vibe/prd.md > vibe/tech-stack.md > vibe/ref/* > 기타
 ### 규칙 2: “지침/가이드”는 실행 가능한 체크리스트 + 재현 가능한 런북을 포함한다
 
 **올바른 예시 (Do ✅)**:
+
 ```
 - unit-runbook에 수동 검증 시나리오(클릭/드래그/업로드/엔딩) 기록
 - 실패/복구 케이스도 포함
 ```
 
 **잘못된 예시 (Don't ❌)**:
+
 ```
 - 추상적인 문장만 있고 재현 방법이 없음
 ```
@@ -40,11 +44,13 @@ vibe/prd.md > vibe/tech-stack.md > vibe/ref/* > 기타
 ### 규칙 3: 변경이 모델/버전/정책에 영향을 주면 문서도 함께 업데이트한다
 
 **올바른 예시 (Do ✅)**:
+
 ```
 - 모델 ID/버전/의존성 변경 시 vibe/tech-stack.md 동기화
 ```
 
 **잘못된 예시 (Don't ❌)**:
+
 ```
 - 코드만 바꾸고 문서 SSOT는 오래된 상태로 방치
 ```
@@ -62,5 +68,3 @@ vibe/prd.md > vibe/tech-stack.md > vibe/ref/* > 기타
 - [ ] SSOT 충돌이 없고, 있으면 상위 문서 기준으로 정리했다
 - [ ] 런북(재현 가능한 수동 검증 시나리오)이 있다
 - [ ] 모델/버전/정책 변경 시 문서가 함께 업데이트되었다
-
-

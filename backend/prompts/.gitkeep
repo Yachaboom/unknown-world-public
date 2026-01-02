@@ -1,0 +1,4 @@
+# Prompts directory placeholder
+# Structure: backend/prompts/{system,turn,image}/{prompt_name}.{ko,en}.md
+# Reference: vibe/prd.md Section 3.2 (Prompt/Output Language Design)
+

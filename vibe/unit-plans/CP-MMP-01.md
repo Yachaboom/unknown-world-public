@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | CP-MMP-01                         |
-| Phase     | MMP                               |
-| 예상 소요 | 60분                              |
-| 의존성    | U-101,RU-010[Mmp]                 |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용              |
+| --------- | ----------------- |
+| Unit ID   | CP-MMP-01         |
+| Phase     | MMP               |
+| 예상 소요 | 60분              |
+| 의존성    | U-101,RU-010[Mmp] |
+| 우선순위  | ⚡ Critical       |
 
 ## 작업 목표
 
@@ -88,5 +88,3 @@ Cloud Run 배포 환경에서 “관측 가능성(Queue/Badges/Auto-repair) + Ha
 
 - `vibe/prd.md` - 관측/TTFB/데모 요구
 - `.cursor/rules/00-core-critical.mdc` - RULE-007/008/003/004
-
-

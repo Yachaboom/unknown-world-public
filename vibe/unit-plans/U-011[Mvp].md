@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-011[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-004                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-011[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-004       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -90,4 +90,3 @@ Inventory 패널을 구현하고, 아이템을 **드래그 가능한 엔티티**
 - `vibe/prd.md` - Inventory DnD 데모 요구
 - `vibe/tech-stack.md` - dnd-kit 버전
 - `.cursor/rules/10-frontend-game-ui.mdc` - DnD UX 규칙
-

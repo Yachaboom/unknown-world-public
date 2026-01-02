@@ -17,6 +17,7 @@
 #### 설정 파일 템플릿: `frontend/tsconfig.json` (권장)
 
 근거:
+
 - 프론트 스택이 React/Vite/TS로 고정되어 있음. (`vibe/tech-stack.md`)
 
 ```json
@@ -51,6 +52,7 @@
 #### 설정 파일 템플릿: `backend/pyrightconfig.json` (권장)
 
 근거:
+
 - 백엔드가 Python 3.14 + FastAPI/Pydantic 기반. (`vibe/tech-stack.md`)
 
 ```json
@@ -130,5 +132,3 @@ jobs:
           python -m pip install -U pip pyright
           pyright
 ```
-
-

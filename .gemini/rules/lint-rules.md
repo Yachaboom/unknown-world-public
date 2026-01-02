@@ -3,6 +3,7 @@
 이 파일은 `.gemini/commands/lint-check.toml` 및 `vibe/commands/lint-check.md`가 참조하는 **단일 엔트리 규칙**입니다.
 
 세부 지침은 아래 3개 파일로 분리되어 있습니다(필수):
+
 - `format.md` — 포맷(Prettier/Ruff format)
 - `lint.md` — 린트(ESLint/Ruff check)
 - `type-check.md` — 타입 체크(tsc/Pyright)
@@ -83,4 +84,3 @@
 - **CI**
   - PR마다 `format:check` + `lint` + `typecheck`를 실행해 회귀를 조기 차단
   - 예시 YAML/스크립트는 `format.md`, `lint.md`, `type-check.md`에 포함
-

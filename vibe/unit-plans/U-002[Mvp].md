@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-002[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 60분                              |
-| 의존성    | U-001                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-002[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 60분        |
+| 의존성    | U-001       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -95,5 +95,3 @@
 - `vibe/tech-stack.md` - 프론트 버전/도구 SSOT
 - `vibe/ref/frontend-style-guide.md` - CRT/단일 CSS 원칙
 - `.cursor/rules/10-frontend-game-ui.mdc` - 게임 UI 고정 규칙
-
-

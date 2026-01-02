@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | CP-MVP-02                         |
-| Phase     | MVP                               |
-| 예상 소요 | 45분                              |
-| 의존성    | RU-003[Mvp]                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | CP-MVP-02   |
+| Phase     | MVP         |
+| 예상 소요 | 45분        |
+| 의존성    | RU-003[Mvp] |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -92,4 +92,3 @@
 - `vibe/prd.md` - 데모 표면/조작 요구
 - `.cursor/rules/10-frontend-game-ui.mdc` - 클릭/드래그 UX 규칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-002/008/009
-

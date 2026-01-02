@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-108[Mmp]                        |
-| Phase     | MMP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | CP-MMP-01                         |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-108[Mmp]  |
+| Phase     | MMP         |
+| 예상 소요 | 75분        |
+| 의존성    | CP-MMP-01   |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -91,5 +91,3 @@
 - `.gemini/rules/red-line.md` - 보안/금지 규칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-007/008/004
 - `vibe/prd.md` - 안전/인젝션 대응
-
-

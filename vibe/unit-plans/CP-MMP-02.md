@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | CP-MMP-02                         |
-| Phase     | MMP                               |
-| 예상 소요 | 60분                              |
-| 의존성    | RU-011[Mmp],U-107                 |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용              |
+| --------- | ----------------- |
+| Unit ID   | CP-MMP-02         |
+| Phase     | MMP               |
+| 예상 소요 | 60분              |
+| 의존성    | RU-011[Mmp],U-107 |
+| 우선순위  | ⚡ Critical       |
 
 ## 작업 목표
 
@@ -88,5 +88,3 @@ Scenario Library를 기준으로 “대표 시나리오 회귀 100% 통과”를
 
 - `vibe/prd.md` - Replay/Hard gate 품질 게이트
 - `.cursor/rules/00-core-critical.mdc` - RULE-003~005, RULE-008
-
-

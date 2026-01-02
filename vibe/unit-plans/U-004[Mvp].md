@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-004[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 60분                              |
-| 의존성    | U-002                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-004[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 60분        |
+| 의존성    | U-002       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -92,5 +92,3 @@
 - `vibe/prd.md` - 데모 표면(UI/동작) 요구
 - `vibe/ref/frontend-style-guide.md` - CRT 스타일/레이아웃
 - `.cursor/rules/10-frontend-game-ui.mdc` - 프론트 UI 규칙
-
-

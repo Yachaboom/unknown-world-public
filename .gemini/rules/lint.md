@@ -28,54 +28,54 @@
 
 ```javascript
 // frontend/eslint.config.mjs
-import js from "@eslint/js";
-import globals from "globals";
-import tseslint from "typescript-eslint";
-import react from "eslint-plugin-react";
-import reactHooks from "eslint-plugin-react-hooks";
-import unusedImports from "eslint-plugin-unused-imports";
-import prettier from "eslint-config-prettier";
+import js from '@eslint/js';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import unusedImports from 'eslint-plugin-unused-imports';
+import prettier from 'eslint-config-prettier';
 
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettier, // formatting rule 충돌 방지(Prettier는 별도 실행)
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,
       },
     },
     settings: {
-      react: { version: "detect" },
+      react: { version: 'detect' },
     },
     plugins: {
       react,
-      "react-hooks": reactHooks,
-      "unused-imports": unusedImports,
+      'react-hooks': reactHooks,
+      'unused-imports': unusedImports,
     },
     rules: {
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
 
       // React 17+ new JSX transform(React 19 포함): React import 강제 금지
-      "react/react-in-jsx-scope": "off",
+      'react/react-in-jsx-scope': 'off',
 
       // TS가 타입을 가지므로 prop-types는 비활성
-      "react/prop-types": "off",
+      'react/prop-types': 'off',
 
       // unused import는 에러(자동 수정 가능)
-      "unused-imports/no-unused-imports": "error",
-      "unused-imports/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      "@typescript-eslint/no-unused-vars": "off",
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   {
-    ignores: ["dist/**", "build/**", "coverage/**", "node_modules/**"],
+    ignores: ['dist/**', 'build/**', 'coverage/**', 'node_modules/**'],
   },
 ];
 ```
@@ -189,5 +189,3 @@ jobs:
           python -m pip install -U pip ruff
           ruff check .
 ```
-
-

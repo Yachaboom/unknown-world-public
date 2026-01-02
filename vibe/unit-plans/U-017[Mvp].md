@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-017[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-016,U-005                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-017[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-016,U-005 |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -19,7 +19,7 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 **완료 기준**:
 
 - Gemini 호출 시 `response_mime_type=application/json` + `response_json_schema`(TurnOutput schema)를 사용한다.
-- 모델 응답 텍스트를 Pydantic으로 `model_validate_json` 검증하고, 실패는 즉시 “복구 대상”으로 분류한다(U-018).  
+- 모델 응답 텍스트를 Pydantic으로 `model_validate_json` 검증하고, 실패는 즉시 “복구 대상”으로 분류한다(U-018).
 - `language` 정책(입력 언어 고정)이 프롬프트/검증 흐름에 반영된다. (RULE-006)
 
 ## 영향받는 파일
@@ -46,7 +46,7 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 
 ### 1단계: 프롬프트 파일 로딩(ko/en 분리) 최소 구현
 
-- 언어별 프롬프트를 파일에서 읽어온다(코드 하드코딩 금지).  
+- 언어별 프롬프트를 파일에서 읽어온다(코드 하드코딩 금지).
 - 프롬프트에는 최소한 “출력은 TurnOutput 스키마를 반드시 만족”과 “language 고정”을 명시한다.
 
 ### 2단계: Structured Outputs 호출 구성
@@ -93,4 +93,3 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 - `vibe/prd.md` - 프롬프트 파일 관리/Structured Outputs
 - `.cursor/rules/30-prompts-i18n.mdc` - 프롬프트 언어 분리/메타 규칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-003/006/007/010
-

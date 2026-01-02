@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-022[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-011,U-021                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-022[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-011,U-021 |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -92,4 +92,3 @@ Scanner 슬롯(드랍존)을 UI에 추가하고, 이미지 업로드→분석 �
 - `vibe/prd.md` - Scanner 슬롯 요구
 - `.cursor/rules/10-frontend-game-ui.mdc` - 조작/피드백 UI 원칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-002/004/009
-

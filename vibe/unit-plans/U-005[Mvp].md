@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-005[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 60분                              |
-| 의존성    | U-003                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-005[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 60분        |
+| 의존성    | U-003       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -96,4 +96,3 @@
 - `vibe/prd.md` - Turn 계약/하드 게이트/좌표 규약
 - `vibe/ref/structured-outputs-guide.md` - JSON Schema 부분집합/스트리밍
 - `.cursor/rules/00-core-critical.mdc` - RULE-003/004/005/006/009
-

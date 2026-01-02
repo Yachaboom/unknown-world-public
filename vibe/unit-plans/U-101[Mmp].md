@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-101[Mmp]                        |
-| Phase     | MMP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-100                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-101[Mmp]  |
+| Phase     | MMP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-100       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -85,5 +85,3 @@ Cloud Run에 배포 가능한 형태로 백엔드(오케스트레이터)를 구�
 
 - `vibe/tech-stack.md` - Cloud Run/Vertex 인증
 - `.cursor/rules/00-core-critical.mdc` - RULE-007/010
-
-

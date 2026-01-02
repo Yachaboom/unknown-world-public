@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-001[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 45분                              |
-| 의존성    | None                              |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-001[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 45분        |
+| 의존성    | None        |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -83,11 +83,10 @@
 - [ ] **Q1**: 백엔드 파이썬 패키지 루트는 어떤 구조로 갈까?
   - Option A: `backend/src/unknown_world/` (권장: 패키지/임포트 경계 명확)
   - Option B: `backend/app/` (단순하지만 패키지/배포 시 정리 필요)
+    **A1**: Option A
 
 ## 참고 자료
 
 - `vibe/prd.md` - MVP 핵심 기능/데모 표면/하드 게이트
 - `vibe/tech-stack.md` - 고정 버전/모델 ID/도구
 - `.cursor/rules/00-core-critical.mdc` - 핵심 규칙(RULE-001~010)
-
-

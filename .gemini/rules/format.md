@@ -21,6 +21,7 @@
 ### 2.1 `.editorconfig` (레포 루트)
 
 근거:
+
 - Windows 포함 환경에서 editor/IDE 차이에 의한 공백/개행 흔들림을 최소화. (`.gemini/GEMINI.md`)
 
 ```editorconfig
@@ -45,6 +46,7 @@ indent_size = 4
 ### 2.2 `prettier.config.cjs` (레포 루트)
 
 근거:
+
 - 프론트는 React/Vite/TS 기반이며, 문서(ko/en 포함)는 reflow가 불필요한 경우가 많아 `proseWrap: preserve`를 기본으로 둡니다. (`vibe/tech-stack.md`, `vibe/prd.md`)
 
 ```javascript
@@ -54,13 +56,13 @@ module.exports = {
   printWidth: 100,
   semi: true,
   singleQuote: true,
-  trailingComma: "all",
-  arrowParens: "always",
+  trailingComma: 'all',
+  arrowParens: 'always',
   bracketSpacing: true,
-  endOfLine: "lf",
+  endOfLine: 'lf',
   overrides: [
     // 문서는 의미적 줄바꿈을 유지(특히 한국어 문서)
-    { files: ["*.md"], options: { proseWrap: "preserve" } },
+    { files: ['*.md'], options: { proseWrap: 'preserve' } },
   ],
 };
 ```
@@ -68,6 +70,7 @@ module.exports = {
 ### 2.3 (선택) `.gitattributes` (레포 루트)
 
 근거:
+
 - CRLF/LF 섞임은 PR diff를 오염시키고 리뷰 비용을 높입니다. Windows 포함 환경에서 특히 효과가 큽니다. (`.gemini/GEMINI.md`)
 
 ```gitattributes
@@ -78,6 +81,7 @@ module.exports = {
 ### 2.4 Ruff formatter 설정(`backend/pyproject.toml` 일부)
 
 근거:
+
 - 백엔드는 Python/FastAPI이며, 포맷을 고정해 코드리뷰/리플레이 회귀 디버깅 비용을 낮춥니다. (`vibe/tech-stack.md`, `vibe/prd.md`)
 
 ```toml
@@ -159,5 +163,3 @@ jobs:
           python -m pip install -U pip ruff
           ruff format --check .
 ```
-
-

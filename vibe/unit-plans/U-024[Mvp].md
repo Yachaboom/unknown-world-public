@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-024[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-018,U-023                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-024[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-018,U-023 |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -89,4 +89,3 @@
 
 - `vibe/prd.md` - Autopilot/Action Queue/관측 요구
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/008
-

@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | RU-003[Mvp]                       |
-| Phase     | MVP                               |
-| 예상 소요 | 45분                              |
-| 의존성    | U-012                             |
-| 우선순위  | High                              |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | RU-003[Mvp] |
+| Phase     | MVP         |
+| 예상 소요 | 45분        |
+| 의존성    | U-012       |
+| 우선순위  | High        |
 
 ## 작업 목표
 
@@ -95,4 +95,3 @@
 - `vibe/tech-stack.md` - Zustand
 - `vibe/ref/frontend-style-guide.md` - 단일 CSS/CRT 토큰
 - `.cursor/rules/10-frontend-game-ui.mdc` - UI 고정/채팅 금지
-

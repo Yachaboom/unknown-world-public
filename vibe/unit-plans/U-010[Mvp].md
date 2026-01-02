@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-010[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-004,U-008                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-010[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-004,U-008 |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -91,4 +91,3 @@ Scene Canvas(장면 영역)에 **핫스팟 오버레이**를 그리고, 핫스�
 - `vibe/prd.md` - 핫스팟/좌표 규약 요구
 - `.cursor/rules/10-frontend-game-ui.mdc` - 좌표 변환/렌더 원칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-009
-

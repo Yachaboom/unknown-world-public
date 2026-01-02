@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | RU-005[Mvp]                       |
-| Phase     | MVP                               |
-| 예상 소요 | 60분                              |
-| 의존성    | U-018                             |
-| 우선순위  | High                              |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | RU-005[Mvp] |
+| Phase     | MVP         |
+| 예상 소요 | 60분        |
+| 의존성    | U-018       |
+| 우선순위  | High        |
 
 ## 작업 목표
 
@@ -90,4 +90,3 @@
 - `vibe/prd.md` - 단계/배지/관측 UX
 - `.cursor/rules/20-backend-orchestrator.mdc` - SSE 단계 스트리밍
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/008
-

@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-105[Mmp]                        |
-| Phase     | MMP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-026                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-105[Mmp]  |
+| Phase     | MMP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-026       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -91,5 +91,3 @@
 
 - `vibe/prd.md` - Scenario Harness/Replay Runner
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/005/008
-
-

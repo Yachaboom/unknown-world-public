@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | CP-MVP-01                         |
-| Phase     | MVP                               |
-| 예상 소요 | 45분                              |
-| 의존성    | RU-002[Mvp]                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | CP-MVP-01   |
+| Phase     | MVP         |
+| 예상 소요 | 45분        |
+| 의존성    | RU-002[Mvp] |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -92,4 +92,3 @@
 
 - `vibe/prd.md` - Hard Gate, Demo Mode, TTFB 목표
 - `.cursor/rules/00-core-critical.mdc` - RULE-002/003/004/008/009
-

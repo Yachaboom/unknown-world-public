@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-007[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-005                             |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-007[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-005       |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -91,4 +91,3 @@
 - `vibe/prd.md` - Queue/Badges/TTFB/Auto-repair 요구
 - `.cursor/rules/20-backend-orchestrator.mdc` - SSE 구현 규칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-003/004/007/008/009
-

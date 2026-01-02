@@ -2,13 +2,13 @@
 
 ## 메타데이터
 
-| 항목      | 내용                              |
-| --------- | --------------------------------- |
-| Unit ID   | U-008[Mvp]                        |
-| Phase     | MVP                               |
-| 예상 소요 | 75분                              |
-| 의존성    | U-006,U-007                       |
-| 우선순위  | ⚡ Critical                        |
+| 항목      | 내용        |
+| --------- | ----------- |
+| Unit ID   | U-008[Mvp]  |
+| Phase     | MVP         |
+| 예상 소요 | 75분        |
+| 의존성    | U-006,U-007 |
+| 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
@@ -93,4 +93,3 @@
 - `vibe/prd.md` - Queue/Badges/Auto-repair UX
 - `.cursor/rules/10-frontend-game-ui.mdc` - Agent Console 상시 노출
 - `.cursor/rules/00-core-critical.mdc` - RULE-003/004/008
-
