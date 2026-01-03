@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml,html,css}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**, dist/**
+- Only files matching these patterns are included: **/*.{py,toml,json,yaml}
+- Files matching these patterns are excluded: **/node_modules/**, **/.venv/**, **/__pycache__/**, **/.pytest_cache/**, **/.ruff_cache/**, .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -45,48 +45,15 @@ The content is organized as follows:
 backend/pyproject.toml
 backend/pyrightconfig.json
 backend/src/unknown_world/__init__.py
-frontend/index.html
+backend/src/unknown_world/main.py
+backend/tests/integration/test_api.py
 frontend/package.json
-frontend/src/App.tsx
-frontend/src/main.tsx
-frontend/src/style.css
-frontend/src/vite-env.d.ts
 frontend/tsconfig.json
-frontend/vite.config.ts
+package.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="backend/pyproject.toml">
-# backend/pyproject.toml
-[project]
-name = "unknown-world-backend"
-version = "0.1.0"
-description = "Unknown World Backend"
-requires-python = ">=3.14"
-dependencies = [
-    "fastapi",
-    "pydantic",
-]
-
-[dependency-groups]
-dev = [
-    "ruff",
-    "pyright",
-]
-
-[tool.ruff]
-extend-exclude = [
-  "__pycache__",
-  ".ruff_cache",
-  ".venv",
-  "venv",
-  "dist",
-  "build",
-  "vibe"
-]
-</file>
 
 <file path="backend/pyrightconfig.json">
 {
@@ -95,188 +62,249 @@ extend-exclude = [
 }
 </file>
 
-<file path="frontend/index.html">
-<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Unknown World</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-</file>
+<file path="backend/src/unknown_world/main.py">
+"""Unknown World - FastAPI 애플리케이션 엔트리포인트
 
-<file path="frontend/src/App.tsx">
-/**
- * 메인 App 컴포넌트
- *
- * RULE-002 준수: 채팅 버블 UI 금지
- * - 이 컴포넌트는 최소 컨테이너 형태로 유지
- * - U-004에서 CRT 테마 및 고정 게임 UI로 확장 예정
- */
-function App() {
-  return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Unknown World</h1>
-      </header>
-      <main className="app-main">
-        <p>게임 UI가 여기에 렌더링됩니다.</p>
-        <p className="status">⚡ 개발 환경 초기화 완료</p>
-      </main>
-    </div>
-  );
-}
+이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
+MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
 
-export default App;
-</file>
+실행 방법:
+    cd backend
+    uvicorn unknown_world.main:app --reload
 
-<file path="frontend/src/main.tsx">
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import './style.css';
-import App from './App.tsx';
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
-</file>
-
-<file path="frontend/src/style.css">
-/**
- * Unknown World - 단일 CSS SSOT
- *
- * 스타일 원칙 (vibe/ref/frontend-style-guide.md):
- * - 모든 스타일은 이 파일에서 관리 (Tailwind 도입 금지)
- * - CSS 변수를 사용하여 테마 확장
- * - U-004에서 CRT 테마 토큰 추가 예정
- */
-
-/* ============================================
-   CSS Variables (테마 토큰)
-   U-004에서 CRT 테마로 확장 예정
-   ============================================ */
-:root {
-  /* 기본 색상 */
-  --color-bg: #0a0a0a;
-  --color-fg: #e0e0e0;
-  --color-accent: #00ff88;
-
-  /* 타이포그래피 */
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-size-base: 16px;
-  --line-height-base: 1.5;
-
-  /* 레이아웃 */
-  --spacing-unit: 8px;
-  --max-width: 1200px;
-}
-
-/* ============================================
-   Reset & Base
-   ============================================ */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-}
-
-body {
-  font-family: var(--font-family);
-  background-color: var(--color-bg);
-  color: var(--color-fg);
-  min-height: 100vh;
-}
-
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ============================================
-   App Layout (U-004에서 게임 UI로 확장)
-   ============================================ */
-.app-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.app-header {
-  padding: calc(var(--spacing-unit) * 2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.app-header h1 {
-  font-size: 1.5rem;
-  color: var(--color-accent);
-}
-
-.app-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: calc(var(--spacing-unit) * 2);
-  padding: calc(var(--spacing-unit) * 4);
-}
-
-.status {
-  color: var(--color-accent);
-  font-weight: 500;
-}
-</file>
-
-<file path="frontend/src/vite-env.d.ts">
-/// <reference types="vite/client" />
-</file>
-
-<file path="frontend/vite.config.ts">
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    strictPort: true,
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-});
-</file>
-
-<file path="backend/src/unknown_world/__init__.py">
-"""Unknown World - Backend Package
-
-This is the main package for the Unknown World backend.
-Architecture: FastAPI + Pydantic + SSE streaming
-
-Reference:
-- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
-- vibe/prd.md (Agent-based Game Master Engine)
+참조:
+    - vibe/tech-stack.md (버전 SSOT)
+    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
+    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
 """
 
-__version__ = "0.0.0"
+from typing import Literal
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from unknown_world import __version__
+
+# =============================================================================
+# FastAPI 앱 인스턴스
+# =============================================================================
+
+app = FastAPI(
+    title="Unknown World API",
+    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
+    version=__version__,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# =============================================================================
+# CORS 설정 (개발 환경용)
+# =============================================================================
+# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
+# RULE-011: 프론트엔드는 8001~8010 포트 사용
+# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
+
+ALLOWED_ORIGINS = [
+    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
+    *[f"http://localhost:{port}" for port in range(8001, 8011)],
+    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# =============================================================================
+# 응답 스키마 (Pydantic)
+# =============================================================================
+
+
+class HealthResponse(BaseModel):
+    """헬스체크 응답 스키마.
+
+    Attributes:
+        status: 서버 상태 ("ok" 또는 "degraded")
+        version: 백엔드 버전
+        service: 서비스 이름
+    """
+
+    status: Literal["ok", "degraded"]
+    version: str
+    service: str
+
+
+# =============================================================================
+# 라우트 정의
+# =============================================================================
+
+
+@app.get("/health", response_model=HealthResponse, tags=["System"])
+async def health_check() -> HealthResponse:
+    """서버 헬스체크 엔드포인트.
+
+    서버가 정상적으로 작동 중인지 확인합니다.
+    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
+
+    Returns:
+        HealthResponse: 서버 상태 정보
+    """
+    return HealthResponse(
+        status="ok",
+        version=__version__,
+        service="unknown-world-backend",
+    )
+
+
+@app.get("/", tags=["System"])
+async def root() -> dict[str, str]:
+    """루트 엔드포인트.
+
+    API 정보를 간략히 안내합니다.
+
+    Returns:
+        dict: 기본 안내 메시지
+    """
+    return {
+        "message": "Unknown World API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+</file>
+
+<file path="backend/tests/integration/test_api.py">
+from fastapi.testclient import TestClient
+
+from unknown_world.main import app
+
+client = TestClient(app)
+
+
+def test_health_check():
+    """/health 엔드포인트가 올바른 스키마와 상태를 반환하는지 테스트합니다."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert data["service"] == "unknown-world-backend"
+
+
+def test_root_endpoint():
+    """루트 엔드포인트가 정상 작동하는지 테스트합니다."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "message" in response.json()
+
+
+def test_cors_policy():
+    """RULE-011에 따른 CORS 정책이 올바르게 설정되었는지 테스트합니다."""
+    # 허용된 오리진 테스트 (포트 8001)
+    headers = {
+        "Origin": "http://localhost:8001",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = client.options("/health", headers=headers)
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:8001"
+
+    # 허용되지 않은 오리진 테스트 (포트 9000)
+    headers = {
+        "Origin": "http://localhost:9000",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = client.options("/health", headers=headers)
+    # FastAPI/Starlette CORS 미들웨어는 허용되지 않은 경우 origin 헤더를 반환하지 않음
+    assert "access-control-allow-origin" not in response.headers
+</file>
+
+<file path="package.json">
+{
+  "name": "unknown-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "scripts": {
+    "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
+    "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015",
+    "kill:front": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
+    "dev:front": "cd frontend && pnpm dev"
+  }
+}
+</file>
+
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.407",
+    "pytest>=9.0.2",
+    "httpx>=0.28.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
 </file>
 
 <file path="frontend/package.json">
@@ -347,6 +375,20 @@ __version__ = "0.0.0"
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
+</file>
+
+<file path="backend/src/unknown_world/__init__.py">
+"""Unknown World - Backend Package
+
+This is the main package for the Unknown World backend.
+Architecture: FastAPI + Pydantic + SSE streaming
+
+Reference:
+- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
+- vibe/prd.md (Agent-based Game Master Engine)
+"""
+
+__version__ = "0.1.0"
 </file>
 
 </files>

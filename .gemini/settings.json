@@ -52,7 +52,8 @@
       "ShellTool(repomix)",
       "ShellTool(docker)",
       "ShellTool(ffmpeg)",
-      "ShellTool(node)"
+      "ShellTool(node)",
+      "ShellTool(uvicorn)"
     ],
     "exclude": ["ShellTool(git push)", "ShellTool(git reset)"]
   },

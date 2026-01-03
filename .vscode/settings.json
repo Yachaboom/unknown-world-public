@@ -10,7 +10,7 @@
         "$env:UV_LINK_MODE='copy'; gemini --yolo"
       ]
     },
-    "✨Claude Code": {
+    "Claude Code": {
       "path": "pwsh.exe",
       "icon": "hubot",
       "args": [

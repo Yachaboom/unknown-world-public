@@ -1,5 +1,55 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 01:25] U-003[Mvp]: 백엔드 FastAPI 초기화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: FastAPI 0.128 + Python 3.14 기반 오케스트레이터 골격 구축
+- **추가 컴포넌트**: `backend/src/unknown_world/main.py` (엔트리포인트), `backend/tests/integration/test_api.py` (API 테스트)
+- **달성 요구사항**: [RULE-011] 백엔드 포트(8011) 및 CORS 정책 수립, [RULE-010] 기술 스택 버전 고정
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+
+- **FastAPI 0.128.0**: 비동기 오케스트레이터 API 프레임워크
+- **uv**: 고속 패키지 관리 및 의존성 고정 (`uv.lock`)
+- **Pydantic 2.12.5**: 헬스체크 응답 스키마 정의
+
+**설계 패턴 및 아키텍처 선택**:
+
+- **스키마 기반 헬스체크**: Pydantic 모델을 사용하여 구조화된 시스템 상태 반환
+- **포트 범위 CORS**: 프론트엔드 개발 서버(8001~8010)와의 연동을 위한 화이트리스트 기반 CORS 설정
+
+**코드 구조**:
+backend/
+├── pyproject.toml
+├── uv.lock
+├── src/
+│   └── unknown_world/
+│       ├── __init__.py
+│       └── main.py
+└── tests/
+    └── integration/
+        └── test_api.py
+
+### 성능 및 품질 지표
+
+- **API 안정성**: 통합 테스트 3종(Health, Root, CORS) 100% 통과
+- **문서화**: Swagger UI(`/docs`)를 통한 자동 API 명세서 생성 확인
+
+### 의존성 변경
+
+- `fastapi`, `uvicorn`, `pydantic` 고정 버전 추가
+- `ruff`, `pyright`, `pytest` 개발 의존성 추가
+
+### 다음 단계
+
+- [U-005[Mvp]] TurnInput/TurnOutput(Pydantic) 모델 추가
+- [U-007[Mvp]] `/api/turn` SSE 스트리밍 라우트 추가
+
+---
+
 ## [2026-01-03 14:45] U-002[Mvp]: 프론트 Vite+React+TS 초기화 완료
 
 ### 구현 완료 항목
