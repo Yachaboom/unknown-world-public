@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{py,toml,json,yaml}
-- Files matching these patterns are excluded: **/node_modules/**, **/.venv/**, **/__pycache__/**, **/.pytest_cache/**, **/.ruff_cache/**, .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**
+- Only files matching these patterns are included: frontend/src/**/*.{ts,tsx,css}, backend/src/**/*.py, package.json, frontend/package.json, backend/pyproject.toml
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -43,24 +43,18 @@ The content is organized as follows:
 
 <directory_structure>
 backend/pyproject.toml
-backend/pyrightconfig.json
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/main.py
-backend/tests/integration/test_api.py
 frontend/package.json
-frontend/tsconfig.json
+frontend/src/App.tsx
+frontend/src/main.tsx
+frontend/src/style.css
+frontend/src/vite-env.d.ts
 package.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="backend/pyrightconfig.json">
-{
-  "include": ["."],
-  "exclude": ["**/__pycache__", ".ruff_cache", ".venv", "venv", "dist", "build", "vibe"]
-}
-</file>
 
 <file path="backend/src/unknown_world/main.py">
 """Unknown World - FastAPI 애플리케이션 엔트리포인트
@@ -177,50 +171,21 @@ async def root() -> dict[str, str]:
     }
 </file>
 
-<file path="backend/tests/integration/test_api.py">
-from fastapi.testclient import TestClient
+<file path="frontend/src/main.tsx">
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './style.css';
+import App from './App.tsx';
 
-from unknown_world.main import app
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+</file>
 
-client = TestClient(app)
-
-
-def test_health_check():
-    """/health 엔드포인트가 올바른 스키마와 상태를 반환하는지 테스트합니다."""
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert "version" in data
-    assert data["service"] == "unknown-world-backend"
-
-
-def test_root_endpoint():
-    """루트 엔드포인트가 정상 작동하는지 테스트합니다."""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "message" in response.json()
-
-
-def test_cors_policy():
-    """RULE-011에 따른 CORS 정책이 올바르게 설정되었는지 테스트합니다."""
-    # 허용된 오리진 테스트 (포트 8001)
-    headers = {
-        "Origin": "http://localhost:8001",
-        "Access-Control-Request-Method": "GET",
-    }
-    response = client.options("/health", headers=headers)
-    assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "http://localhost:8001"
-
-    # 허용되지 않은 오리진 테스트 (포트 9000)
-    headers = {
-        "Origin": "http://localhost:9000",
-        "Access-Control-Request-Method": "GET",
-    }
-    response = client.options("/health", headers=headers)
-    # FastAPI/Starlette CORS 미들웨어는 허용되지 않은 경우 origin 헤더를 반환하지 않음
-    assert "access-control-allow-origin" not in response.headers
+<file path="frontend/src/vite-env.d.ts">
+/// <reference types="vite/client" />
 </file>
 
 <file path="package.json">
@@ -348,32 +313,840 @@ include = ["src"]
 }
 </file>
 
-<file path="frontend/tsconfig.json">
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
+<file path="frontend/src/App.tsx">
+/**
+ * Unknown World - 메인 게임 UI 레이아웃
+ *
+ * RULE-002 준수: 채팅 버블 UI 금지
+ * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
+ * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
+ *   Rule Board, Economy HUD, Agent Console, Scanner Slot
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ * @see vibe/prd.md 6.7/6.8/9장
+ */
 
-    /* Bundler mode */
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
+/**
+ * 패널 컴포넌트 - 공통 패널 레이아웃
+ */
+interface PanelProps {
+  title: string;
+  children?: React.ReactNode;
+  className?: string;
+}
 
-    /* Linting (엄격 모드) */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+function Panel({ title, children, className = '' }: PanelProps) {
+  return (
+    <div className={`panel ${className}`}>
+      <div className="panel-header">
+        <span className="panel-title">{title}</span>
+      </div>
+      <div className="panel-content">
+        {children || <p className="panel-placeholder">[ 준비 중 ]</p>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 내러티브 피드 - 게임 로그 형태 (채팅 버블 아님)
+ * RULE-002: 좌/우 버블 대신 턴 타임라인으로 배치
+ */
+function NarrativeFeed() {
+  const sampleEntries = [
+    { turn: 1, text: '미지의 세계에 오신 것을 환영합니다...' },
+    { turn: 2, text: '당신은 어둠 속에서 깨어났습니다.' },
+    { turn: 3, text: '희미한 녹색 빛이 주변을 비추고 있습니다.' },
+  ];
+
+  return (
+    <div className="narrative-feed">
+      {sampleEntries.map((entry) => (
+        <div key={entry.turn} className="narrative-entry">
+          <span className="narrative-timestamp">[TURN {entry.turn}]</span>
+          <span className="narrative-text">{entry.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 액션 덱 - 선택 가능한 행동 카드들
+ * PRD: 비용/위험/보상 표시
+ */
+function ActionDeck() {
+  const sampleActions = [
+    { id: 1, title: '탐색하기', cost: 1, risk: '낮음' },
+    { id: 2, title: '조사하기', cost: 2, risk: '중간' },
+    { id: 3, title: '대화하기', cost: 1, risk: '없음' },
+    { id: 4, title: '이동하기', cost: 1, risk: '낮음' },
+  ];
+
+  return (
+    <div className="action-deck">
+      {sampleActions.map((action) => (
+        <div key={action.id} className="action-card">
+          <div className="action-card-title">{action.title}</div>
+          <div className="action-card-cost">
+            ⚡ {action.cost} Signal | ⚠ {action.risk}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 헤더 - 타이틀, 상태, 재화 HUD
+ */
+function GameHeader() {
+  return (
+    <header className="game-header">
+      <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
+        UNKNOWN WORLD
+      </h1>
+      <div className="header-controls">
+        <div className="economy-hud">
+          <span className="signal-icon">⚡</span>
+          <span>Signal: 100</span>
+        </div>
+        <div className="connection-status">
+          <span className="status-indicator" />
+          <span>ONLINE</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * 메인 App 컴포넌트
+ * CSS Grid 기반 고정 레이아웃
+ */
+function App() {
+  return (
+    <>
+      {/* CRT 스캔라인 오버레이 */}
+      <div className="crt-overlay" aria-hidden="true" />
+
+      {/* 게임 레이아웃 */}
+      <div className="game-container">
+        {/* Header: 타이틀/상태/재화 */}
+        <GameHeader />
+
+        {/* Sidebar Left: Inventory / Quest / Rule Board */}
+        <aside className="sidebar-left">
+          <Panel title="Inventory" className="flex-1">
+            <p className="panel-placeholder">[ 드래그 앤 드롭 영역 ]</p>
+          </Panel>
+          <Panel title="Quest">
+            <p className="panel-placeholder">[ 목표/퀘스트 목록 ]</p>
+          </Panel>
+          <Panel title="Rule Board">
+            <p className="panel-placeholder">[ 월드 규칙/변형 타임라인 ]</p>
+          </Panel>
+        </aside>
+
+        {/* Center: Scene Canvas + Narrative Feed */}
+        <main className="game-center">
+          <div className="scene-canvas">
+            <div className="scene-placeholder">
+              <p>[ Scene Canvas ]</p>
+              <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
+            </div>
+          </div>
+          <NarrativeFeed />
+        </main>
+
+        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
+        <aside className="sidebar-right">
+          <Panel title="Agent Console" className="flex-1">
+            <p className="panel-placeholder">
+              [ Plan / Queue / Badges ]
+              <br />
+              Parse → Validate → Plan → Resolve
+            </p>
+          </Panel>
+          <Panel title="Memory Pin">
+            <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
+          </Panel>
+          <Panel title="Scanner">
+            <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
+          </Panel>
+        </aside>
+
+        {/* Footer: Action Deck + Command Input */}
+        <footer className="game-footer">
+          <ActionDeck />
+          <div className="command-input-area">
+            <span className="command-prompt">&gt;</span>
+            <input
+              type="text"
+              className="command-input"
+              placeholder="명령을 입력하세요..."
+              aria-label="게임 명령 입력"
+            />
+            <button type="button">EXECUTE</button>
+          </div>
+        </footer>
+      </div>
+    </>
+  );
+}
+
+export default App;
+</file>
+
+<file path="frontend/src/style.css">
+/**
+ * Unknown World - CRT 테마 스타일시트 (단일 CSS SSOT)
+ *
+ * RULE-002 준수: 채팅 버블 UI 금지 - 게임 로그/HUD 형태만 허용
+ * Frontend Style Guide 준수: CRT 터미널 레트로 미학
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ */
+
+/* ============================================
+   1. CRT 테마 토큰 (CSS Variables)
+   ============================================ */
+:root {
+  /* 기본 색상 - CRT 인광 녹색 테마 */
+  --bg-color: #0d0d0d; /* 배경: 거의 순수한 검정 */
+  --text-color: #33ff00; /* 주 텍스트: 인광 녹색 (CRT 그린) */
+  --text-dim: #1a8000; /* 보조 텍스트: 어두운 녹색 */
+  --accent-color: #ff00ff; /* 강조색: 마젠타 */
+  --border-color: #33ff00; /* 테두리: 인광 녹색 */
+  --panel-bg: rgba(0, 20, 0, 0.3); /* 패널 배경: 투명 녹색 */
+  --warning-color: #ffaa00; /* 경고: 주황색 */
+  --error-color: #ff3333; /* 에러: 붉은색 */
+
+  /* CRT 효과 */
+  --crt-scanline: rgba(18, 16, 16, 0.1);
+  --crt-flicker: 0.03;
+  --glow-intensity: 5px;
+
+  /* 타이포그래피 */
+  --font-main: 'NeoDunggeunmo', 'VT323', monospace;
+  --font-size-base: 16px;
+  --font-size-lg: 1.2rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --line-height-base: 1.5;
+
+  /* 레이아웃 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --border-radius: 4px;
+  --max-width: 1400px;
+
+  /* 그리드 레이아웃 */
+  --header-height: 60px;
+  --footer-height: 120px;
+  --sidebar-width: 320px;
+}
+
+/* ============================================
+   2. 폰트 정의
+   ============================================ */
+@font-face {
+  font-family: 'NeoDunggeunmo';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.3/NeoDunggeunmo.woff')
+    format('woff');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* ============================================
+   3. Reset & Base
+   ============================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  overflow: hidden;
+  text-shadow: 0 0 var(--glow-intensity) var(--text-dim);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   4. CRT 오버레이 효과
+   ============================================ */
+
+/* 스캔라인 오버레이 */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: flicker 0.15s infinite;
+}
+
+/* 플리커(깜빡임) 애니메이션 */
+@keyframes flicker {
+  0% {
+    opacity: 0.97;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.98;
+  }
+}
+
+/* 글리치 효과 (타이틀용) */
+.glitch {
+  position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  left: 2px;
+  text-shadow: -1px 0 #ff0000;
+  clip-path: inset(0 0 0 0);
+  animation: glitch-anim-1 5s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+  left: -2px;
+  text-shadow: -1px 0 #0000ff;
+  clip-path: inset(0 0 0 0);
+  animation: glitch-anim-2 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim-1 {
+  0%,
+  100% {
+    clip-path: inset(0 0 95% 0);
+  }
+  20% {
+    clip-path: inset(30% 0 50% 0);
+  }
+  40% {
+    clip-path: inset(10% 0 70% 0);
+  }
+  60% {
+    clip-path: inset(80% 0 5% 0);
+  }
+  80% {
+    clip-path: inset(45% 0 35% 0);
+  }
+}
+
+@keyframes glitch-anim-2 {
+  0%,
+  100% {
+    clip-path: inset(95% 0 0 0);
+  }
+  20% {
+    clip-path: inset(50% 0 30% 0);
+  }
+  40% {
+    clip-path: inset(70% 0 10% 0);
+  }
+  60% {
+    clip-path: inset(5% 0 80% 0);
+  }
+  80% {
+    clip-path: inset(35% 0 45% 0);
+  }
+}
+
+/* ============================================
+   5. 게임 레이아웃 (CSS Grid)
+   - RULE-002: 채팅 UI가 아닌 게임 UI 고정
+   ============================================ */
+
+.game-container {
+  display: grid;
+  grid-template-areas:
+    'header header header'
+    'sidebar-left center sidebar-right'
+    'footer footer footer';
+  grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
+  grid-template-rows: var(--header-height) 1fr var(--footer-height);
+  height: 100vh;
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+/* ============================================
+   6. Header 영역
+   - Title, Language Toggle, Theme Toggle,
+     Connection Status, Economy HUD
+   ============================================ */
+
+.game-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.5),
+    0 0 10px var(--text-dim);
+}
+
+.game-title {
+  font-size: var(--font-size-2xl);
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.economy-hud {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--text-dim);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.economy-hud .signal-icon {
+  color: var(--accent-color);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.875rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-color);
+  box-shadow: 0 0 6px var(--text-color);
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.offline {
+  background-color: var(--error-color);
+  box-shadow: 0 0 6px var(--error-color);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   7. Sidebar (Left) 영역
+   - Inventory, Quest/Objective, Rule Board
+   ============================================ */
+
+.sidebar-left {
+  grid-area: sidebar-left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  overflow-y: auto;
+}
+
+/* ============================================
+   8. Center 영역
+   - Scene Canvas, Narrative Feed (로그 형태)
+   ============================================ */
+
+.game-center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  overflow: hidden;
+}
+
+.scene-canvas {
+  flex: 1;
+  border: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 200px;
+}
+
+.scene-placeholder {
+  color: var(--text-dim);
+  font-size: var(--font-size-lg);
+  text-align: center;
+}
+
+/* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
+.narrative-feed {
+  height: 180px;
+  border: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+
+.narrative-entry {
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid rgba(51, 255, 0, 0.2);
+}
+
+.narrative-entry:last-child {
+  border-bottom: none;
+}
+
+.narrative-timestamp {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin-right: var(--spacing-sm);
+}
+
+.narrative-text {
+  color: var(--text-color);
+}
+
+/* ============================================
+   9. Sidebar (Right) 영역
+   - Agent Console, Memory Pin, Scanner Slot
+   ============================================ */
+
+.sidebar-right {
+  grid-area: sidebar-right;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  overflow-y: auto;
+}
+
+/* ============================================
+   10. Footer 영역
+   - Action Deck, Command Input
+   ============================================ */
+
+.game-footer {
+  grid-area: footer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.action-deck {
+  display: flex;
+  gap: var(--spacing-sm);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-xs);
+}
+
+.action-card {
+  min-width: 140px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  background-color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.action-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-color);
+}
+
+.action-card-title {
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-color);
+}
+
+.action-card-cost {
+  font-size: 0.75rem;
+  color: var(--warning-color);
+}
+
+.command-input-area {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  border: 1px solid var(--text-dim);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.command-prompt {
+  color: var(--text-color);
+  font-size: var(--font-size-lg);
+}
+
+.command-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-family: var(--font-main);
+  font-size: var(--font-size-lg);
+  outline: none;
+  text-shadow: 0 0 5px var(--text-dim);
+}
+
+.command-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* ============================================
+   11. 공통 패널 스타일
+   ============================================ */
+
+.panel {
+  border: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--text-dim);
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-color);
+}
+
+.panel-content {
+  flex: 1;
+  padding: var(--spacing-sm);
+  overflow-y: auto;
+}
+
+.panel-placeholder {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+/* ============================================
+   12. 버튼 스타일
+   ============================================ */
+
+button,
+.btn {
+  background: var(--text-color);
+  color: var(--bg-color);
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-family: var(--font-main);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+button:hover,
+.btn:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+button:disabled,
+.btn:disabled {
+  background: var(--text-dim);
+  cursor: not-allowed;
+}
+
+/* ============================================
+   13. 스크롤바 커스터마이징
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-dim);
+  border: 1px solid var(--text-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-color);
+}
+
+/* ============================================
+   14. 반응형 디자인
+   ============================================ */
+
+@media (max-width: 1200px) {
+  .game-container {
+    grid-template-areas:
+      'header header'
+      'center sidebar-right'
+      'footer footer';
+    grid-template-columns: 1fr var(--sidebar-width);
+  }
+
+  .sidebar-left {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+    --header-height: 50px;
+    --footer-height: 100px;
+    --sidebar-width: 100%;
+  }
+
+  .game-container {
+    grid-template-areas:
+      'header'
+      'center'
+      'footer';
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-height) 1fr var(--footer-height);
+    padding: var(--spacing-xs);
+    gap: var(--spacing-xs);
+  }
+
+  .sidebar-left,
+  .sidebar-right {
+    display: none;
+  }
+
+  .game-header {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .game-title {
+    font-size: var(--font-size-lg);
+    letter-spacing: 2px;
+  }
+
+  .economy-hud {
+    display: none;
+  }
+
+  .action-deck {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .action-card {
+    min-width: 120px;
+  }
+}
+
+/* ============================================
+   15. 유틸리티 클래스
+   ============================================ */
+
+.text-dim {
+  color: var(--text-dim);
+}
+
+.text-accent {
+  color: var(--accent-color);
+}
+
+.text-warning {
+  color: var(--warning-color);
+}
+
+.text-error {
+  color: var(--error-color);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px var(--text-color);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </file>
 

@@ -1,5 +1,48 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 02:05] U-004[Mvp]: CRT 테마/고정 레이아웃 스켈레톤 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: CSS Grid 기반 고정 8개 패널 레이아웃 및 CRT 터미널 테마 구현
+- **추가 컴포넌트**: `Panel`, `NarrativeFeed` (로그 형태), `ActionDeck`, `GameHeader`
+- **달성 요구사항**: [RULE-002] 채팅 버블 UI 금지 및 게임 HUD 구조 확보, [Frontend Style] CRT 테마 토큰 적용
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+
+- **CSS Grid**: 3열(Sidebar L/R, Center) 3행(Header, Main, Footer) 고정 레이아웃
+- **CRT Effect**: Scanline overlay, Flicker animation, Glow text, Glitch effect
+- **React 19**: 함수형 컴포넌트 기반 레이아웃 구성
+
+**설계 패턴 및 아키텍처 선택**:
+
+- **패널 슬롯 시스템**: 향후 각 기능 유닛이 독립적으로 채워질 수 있는 8개 고정 슬롯 구조
+- **로그형 내러티브**: 타임라인 기반 피드로 구성하여 "채팅" 인상을 원천 차단
+
+**코드 구조**:
+frontend/
+├── src/
+│   ├── App.tsx (레이아웃 및 패널 구성)
+│   └── style.css (CRT 테마 및 Grid 정의)
+
+### 성능 및 품질 지표
+
+- **반응형 최적화**: 1200px, 768px 브레이크포인트 기반 가변 레이아웃 검증 완료
+- **상호작용**: CRT 오버레이가 클릭을 방해하지 않도록 `pointer-events: none` 처리
+
+### 의존성 변경
+
+- 추가된 외부 의존성 없음 (Native CSS/React 활용)
+
+### 다음 단계
+
+- [RU-001[Mvp]] 리팩토링: 디렉토리/설정 정리
+- [U-005[Mvp]] TurnInput/TurnOutput 스키마(Pydantic) 설계
+
+---
+
 ## [2026-01-04 01:25] U-003[Mvp]: 백엔드 FastAPI 초기화 완료
 
 ### 구현 완료 항목
