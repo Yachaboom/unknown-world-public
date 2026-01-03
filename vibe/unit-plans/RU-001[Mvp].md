@@ -85,6 +85,7 @@
 - [ ] **Q1**: 프론트/백엔드의 공통 스키마(타입) SSOT를 어떻게 둘까?
   - Option A: MVP는 서버(Pydantic)·클라(Zod) 중복 정의(빠르게), 이후 MMP에서 통합
   - Option B: 초기부터 `shared/` JSON Schema 파일을 SSOT로 두고 생성/검증 자동화
+  **A1**: Option B
 
 ## 참고 자료
 
