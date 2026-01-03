@@ -1,26 +1,17 @@
-# Gemini CLI context ignore list
-# - Syntax: same as .gitignore
-# - Goal: exclude large/generated folders that add noise or cost
-
-**/node_modules/**
-**/dist/**
-**/build/**
-**/coverage/**
-
-**/.git/**
-**/.svn/**
-
-**/.venv/**
-**/venv/**
-**/__pycache__/**
-**/.pytest_cache/**
-**/.mypy_cache/**
-**/.ruff_cache/**
-
-**/.idea/**
-**/.vscode/**
-
-**/*.log
-**/.DS_Store
-
-
+node_modules/
+dist/
+build/
+coverage/
+.git/
+.svn/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db

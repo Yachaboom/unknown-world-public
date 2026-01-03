@@ -1,0 +1,16 @@
+# frontend/.prettierignore
+# 목적: Prettier 포맷 대상에서 "생성물/캐시/의존성"만 제외 (소스/문서 제외 금지)
+
+# Dependencies (pnpm/npm)
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Vite cache
+.vite/
+
+# vibe coding
+vibe/

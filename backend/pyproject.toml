@@ -1,0 +1,29 @@
+# backend/pyproject.toml
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "pydantic",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pyright",
+]
+
+[tool.ruff]
+extend-exclude = [
+  "__pycache__",
+  ".ruff_cache",
+  ".venv",
+  "venv",
+  "dist",
+  "build",
+  "vibe"
+]
+
+

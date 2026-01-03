@@ -10,7 +10,7 @@
 ## 1. 사용 도구(권장) 및 역할
 
 - **Frontend/Docs 포맷터**: Prettier
-  - 대상: `frontend/**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}` + (선택) `vibe/**/*.md`
+  - 대상: `frontend/**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}`
 - **Backend(Python) 포맷터**: Ruff formatter (`ruff format`)
   - 대상: `backend/**/*.py`
 
