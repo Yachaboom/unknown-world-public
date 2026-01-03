@@ -1,11 +1,26 @@
 {
   "compilerOptions": {
-    // 타입체크 전용 실행(`tsc --noEmit`)을 전제로 합니다.
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
     "noEmit": true,
-    // React 19 + Vite: TSX 지원에 필요한 최소 옵션
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
   },
-  // 소스(`src/`)는 포함하고, 생성물/캐시/의존성만 제외합니다.
   "include": ["src"],
-  "exclude": ["node_modules", "dist", "build", "coverage", ".vite"]
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

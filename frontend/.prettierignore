@@ -9,6 +9,11 @@ dist/
 build/
 coverage/
 
+# TypeScript build outputs (composite mode)
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
 # Vite cache
 .vite/
 

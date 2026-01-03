@@ -89,6 +89,7 @@
 - [ ] **Q1**: 루트에 pnpm workspace를 둘까?
   - Option A: `frontend/` 단독 패키지로 시작(권장: 초기 단순)
   - Option B: 루트 `pnpm-workspace.yaml` 구성(추후 shared 패키지 분리 시 유리)
+  **A1**: Option A
 
 ## 참고 자료
 

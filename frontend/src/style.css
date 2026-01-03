@@ -1,0 +1,91 @@
+/**
+ * Unknown World - 단일 CSS SSOT
+ *
+ * 스타일 원칙 (vibe/ref/frontend-style-guide.md):
+ * - 모든 스타일은 이 파일에서 관리 (Tailwind 도입 금지)
+ * - CSS 변수를 사용하여 테마 확장
+ * - U-004에서 CRT 테마 토큰 추가 예정
+ */
+
+/* ============================================
+   CSS Variables (테마 토큰)
+   U-004에서 CRT 테마로 확장 예정
+   ============================================ */
+:root {
+  /* 기본 색상 */
+  --color-bg: #0a0a0a;
+  --color-fg: #e0e0e0;
+  --color-accent: #00ff88;
+
+  /* 타이포그래피 */
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-base: 16px;
+  --line-height-base: 1.5;
+
+  /* 레이아웃 */
+  --spacing-unit: 8px;
+  --max-width: 1200px;
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   App Layout (U-004에서 게임 UI로 확장)
+   ============================================ */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  padding: calc(var(--spacing-unit) * 2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  color: var(--color-accent);
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--spacing-unit) * 2);
+  padding: calc(var(--spacing-unit) * 4);
+}
+
+.status {
+  color: var(--color-accent);
+  font-weight: 500;
+}

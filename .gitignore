@@ -81,6 +81,8 @@ frontend/.vite/
 
 # TypeScript
 *.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
 # Pytest
 .pytest_cache/

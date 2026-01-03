@@ -12,19 +12,22 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 D:\Dev\unknown-world\
 ├── .gitattributes         # Git 줄 끝 처리 및 속성 설정
 ├── .gitignore             # 비밀정보 및 빌드 결과물 제외
-├── frontend/              # 프론트엔드 (React + Vite + TS)
-│   ├── .gitkeep
+├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
+│   ├── index.html         # 엔트리 HTML
+│   ├── package.json       # 의존성 및 스크립트 고정
+│   ├── tsconfig.json      # TS 설정 (엄격 모드)
+│   ├── vite.config.ts     # Vite 설정
 │   └── src/
-│       └── .gitkeep
+│       ├── main.tsx       # 엔트리 포인트
+│       ├── App.tsx        # 메인 컴포넌트 (최소 컨테이너)
+│       └── style.css      # 단일 CSS SSOT
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
-│   ├── .gitkeep
-│   ├── prompts/           # LLM 시스템/턴 프롬프트 (.md)
-│   │   └── .gitkeep
+│   ├── pyproject.toml     # Python 의존성 및 설정
 │   └── src/
-│       └── unknown_world/ # 백엔드 소스 코드 (Python 패키지)
+│       └── unknown_world/
 │           └── __init__.py
-├── vibe/                  # SSOT 문서 저장소 (PRD, Roadmap, Architecture 등)
-└── code-base.xml          # 프로젝트 스냅샷 (Repomix 결과물)
+├── vibe/                  # SSOT 문서 저장소
+└── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ```
 
 ### 주요 디렉토리 책임
