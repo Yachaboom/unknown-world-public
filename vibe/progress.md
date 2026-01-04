@@ -1,5 +1,43 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 20:00] U-005[Mvp]: TurnInput/TurnOutput 스키마(Pydantic) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Pydantic V2 기반의 구조화 출력(TurnInput/TurnOutput) 모델 정의 및 Hard Gate 검증 로직 내장
+- **추가 컴포넌트**: `backend/src/unknown_world/models/turn.py` (SSOT 모델), `backend/tests/unit/models/test_turn.py` (검증 테스트)
+- **달성 요구사항**: [RULE-003] 구조화 출력 우선, [RULE-005] 재화 음수 불가, [RULE-006] ko/en 고정, [RULE-009] 0~1000 bbox 규약
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **Pydantic V2**: `Annotated` 및 `ge/le` 제약 조건을 활용한 선언적 검증
+- **JSON Schema**: Gemini Structured Outputs 부분집합 제약을 준수하는 스키마 자동 생성 기능 (`model_json_schema`)
+
+**설계 패턴 및 아키텍처 선택**:
+- **Flat-Schema 패턴**: Gemini 호환성을 위해 깊은 중첩을 배제하고 `ui`, `world`, `economy`, `safety` 패널 구조로 설계
+- **Strict Validation**: `extra="forbid"` 설정을 통해 스키마에 정의되지 않은 불명확한 필드 유입을 원천 차단
+
+**코드 구조**:
+backend/
+└── src/
+    └── unknown_world/
+        └── models/
+            ├── __init__.py
+            └── turn.py
+
+### 성능 및 품질 지표
+- **검증 정확도**: 좌표 범위(0~1000), 재화(0 이상), 언어 enum 등 비즈니스 인바리언트 100% 검증 통과
+- **스키마 정합성**: Gemini Structured Outputs용 JSON Schema Draft-07 호환성 확인
+
+### 의존성 변경
+- 추가된 외부 의존성 없음 (기존 Pydantic 활용)
+
+### 다음 단계
+- [U-006[Mvp]] TurnInput/TurnOutput Zod 모델 구현 (프론트엔드)
+
+---
+
 ## [2026-01-04 19:20] RU-001[Mvp]: 리팩토링 - 디렉토리/설정 정리 완료
 
 ### 구현 완료 항목

@@ -1,271 +1,608 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://unknown-world.dev/schemas/turn/turn_output.schema.json",
-  "title": "TurnOutput",
-  "description": "Server → Client 턴 응답 스키마 (MVP). PRD 8.7절 기반. Gemini Structured Output 호환.",
-  "type": "object",
-  "properties": {
-    "language": {
-      "type": "string",
-      "enum": ["ko-KR", "en-US"],
-      "description": "응답 언어 (TurnInput.language와 동일해야 함)"
-    },
-    "narrative": {
-      "type": "string",
-      "description": "내러티브 텍스트 (표시용)"
-    },
-    "ui": {
-      "type": "object",
-      "description": "UI 요소 (선택지, 오브젝트)",
+  "$defs": {
+    "ActionCard": {
+      "additionalProperties": false,
+      "description": "액션 카드 (Action Deck).\n\n매 턴 AI가 추천하는 행동 카드입니다.\n각 카드에 비용/위험/보상 힌트가 포함됩니다.\n\nAttributes:\n    id: 카드 고유 ID\n    label: 카드 라벨 (표시용)\n    description: 카드 설명 (선택)\n    cost: 예상 비용\n    risk: 위험도\n    hint: 예상 결과 힌트 (선택)",
       "properties": {
-        "choices": {
-          "type": "array",
-          "description": "버튼형 선택지 목록",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "선택지 고유 ID"
-              },
-              "label": {
-                "type": "string",
-                "description": "선택지 라벨"
-              },
-              "cost": {
-                "type": "object",
-                "description": "예상 비용",
-                "properties": {
-                  "signal": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "memory_shard": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                },
-                "required": ["signal", "memory_shard"]
-              },
-              "hint": {
-                "type": ["string", "null"],
-                "description": "예상 결과 힌트"
-              }
-            },
-            "required": ["id", "label", "cost"]
-          }
+        "id": {
+          "description": "카드 고유 ID",
+          "title": "Id",
+          "type": "string"
         },
-        "objects": {
-          "type": "array",
-          "description": "클릭 가능한 오브젝트 목록",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "오브젝트 고유 ID"
-              },
-              "label": {
-                "type": "string",
-                "description": "오브젝트 라벨"
-              },
-              "box_2d": {
-                "type": "array",
-                "description": "bbox [ymin, xmin, ymax, xmax] (0~1000 정규화, RULE-009)",
-                "items": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 1000
-                },
-                "minItems": 4,
-                "maxItems": 4
-              },
-              "interaction_hint": {
-                "type": ["string", "null"],
-                "description": "상호작용 힌트"
-              }
+        "label": {
+          "description": "카드 라벨 (표시용)",
+          "title": "Label",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
             },
-            "required": ["id", "label", "box_2d"]
-          }
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "카드 설명 (선택)",
+          "title": "Description"
+        },
+        "cost": {
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "예상 비용"
+        },
+        "risk": {
+          "$ref": "#/$defs/RiskLevel",
+          "default": "low",
+          "description": "위험도"
+        },
+        "hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "예상 결과 힌트 (선택)",
+          "title": "Hint"
         }
       },
-      "required": ["choices", "objects"]
+      "required": [
+        "id",
+        "label",
+        "cost"
+      ],
+      "title": "ActionCard",
+      "type": "object"
     },
-    "world": {
-      "type": "object",
-      "description": "월드 상태 변경 사항",
+    "ActionDeck": {
+      "additionalProperties": false,
+      "description": "액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).\n\n매 턴 AI가 제시하는 추천 행동 카드 덱입니다.\n\nAttributes:\n    cards: 액션 카드 목록 (3~6장 권장)",
       "properties": {
-        "delta": {
-          "type": "object",
-          "description": "이번 턴 변경 사항",
-          "properties": {
-            "rules": {
-              "type": ["array", "null"],
-              "description": "룰 변경 목록",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "action": {
-                    "type": "string",
-                    "enum": ["added", "modified", "removed"]
-                  }
-                },
-                "required": ["id", "name", "action"]
-              }
-            },
-            "inventory": {
-              "type": ["array", "null"],
-              "description": "인벤토리 변경 목록",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "action": {
-                    "type": "string",
-                    "enum": ["added", "removed", "used"]
-                  },
-                  "quantity": {
-                    "type": "integer"
-                  }
-                },
-                "required": ["id", "name", "action"]
-              }
-            }
-          }
-        },
-        "memory_pins": {
-          "type": "array",
-          "description": "중요 설정 고정 후보 목록",
+        "cards": {
+          "default": [],
+          "description": "액션 카드 목록 (3~6장 권장)",
           "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "content": {
-                "type": "string"
-              },
-              "pinned": {
-                "type": "boolean"
-              }
-            },
-            "required": ["id", "content", "pinned"]
-          }
-        }
-      },
-      "required": ["delta", "memory_pins"]
-    },
-    "render": {
-      "type": ["object", "null"],
-      "description": "렌더링 작업 (선택적)",
-      "properties": {
-        "image_job": {
-          "type": ["object", "null"],
-          "description": "이미지 생성 작업",
-          "properties": {
-            "should_generate": {
-              "type": "boolean",
-              "description": "이미지 생성 여부"
-            },
-            "model": {
-              "type": "string",
-              "enum": ["gemini-3-pro-image-preview"],
-              "description": "이미지 모델 ID (RULE-010: 고정)"
-            },
-            "aspect_ratio": {
-              "type": "string",
-              "enum": ["1:1", "16:9", "9:16", "4:3", "3:4"],
-              "description": "이미지 비율"
-            },
-            "image_size": {
-              "type": "string",
-              "enum": ["1K", "2K", "4K"],
-              "description": "이미지 해상도"
-            },
-            "prompt": {
-              "type": "string",
-              "description": "이미지 생성 프롬프트"
-            },
-            "reference_images": {
-              "type": ["array", "null"],
-              "description": "참조 이미지 URI 목록",
-              "items": {
-                "type": "string"
-              }
-            }
+            "$ref": "#/$defs/ActionCard"
           },
-          "required": ["should_generate"]
+          "maxItems": 10,
+          "minItems": 0,
+          "title": "Cards",
+          "type": "array"
         }
-      }
+      },
+      "title": "ActionDeck",
+      "type": "object"
     },
-    "economy": {
-      "type": "object",
-      "description": "재화 정보 (RULE-005: 예상 비용/잔액 필수)",
+    "AgentConsole": {
+      "additionalProperties": false,
+      "description": "에이전트 콘솔 데이터 (RULE-008).\n\n에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.\n계획/실행/검증/복구의 흔적을 표시합니다.\n\nAttributes:\n    current_phase: 현재 실행 단계\n    badges: 검증 배지 목록\n    repair_count: 자동 복구 시도 횟수",
+      "properties": {
+        "current_phase": {
+          "$ref": "#/$defs/AgentPhase",
+          "default": "commit",
+          "description": "현재 실행 단계"
+        },
+        "badges": {
+          "default": [],
+          "description": "검증 배지 목록",
+          "items": {
+            "$ref": "#/$defs/ValidationBadge"
+          },
+          "title": "Badges",
+          "type": "array"
+        },
+        "repair_count": {
+          "default": 0,
+          "description": "자동 복구 시도 횟수",
+          "minimum": 0,
+          "title": "Repair Count",
+          "type": "integer"
+        }
+      },
+      "title": "AgentConsole",
+      "type": "object"
+    },
+    "AgentPhase": {
+      "description": "에이전트 실행 단계 (RULE-008).\n\n에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.",
+      "enum": [
+        "parse",
+        "validate",
+        "plan",
+        "resolve",
+        "render",
+        "verify",
+        "commit"
+      ],
+      "title": "AgentPhase",
+      "type": "string"
+    },
+    "Box2D": {
+      "additionalProperties": false,
+      "description": "2D 바운딩 박스 (RULE-009).\n\n좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.\n이미지 이해 bbox 포맷과 호환됩니다.\n\nAttributes:\n    ymin: Y 최소값 (상단)\n    xmin: X 최소값 (좌측)\n    ymax: Y 최대값 (하단)\n    xmax: X 최대값 (우측)",
+      "properties": {
+        "ymin": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Ymin",
+          "type": "integer"
+        },
+        "xmin": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Xmin",
+          "type": "integer"
+        },
+        "ymax": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Ymax",
+          "type": "integer"
+        },
+        "xmax": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Xmax",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ymin",
+        "xmin",
+        "ymax",
+        "xmax"
+      ],
+      "title": "Box2D",
+      "type": "object"
+    },
+    "CurrencyAmount": {
+      "additionalProperties": false,
+      "description": "재화 수량.\n\nAttributes:\n    signal: 기본 재화 (텍스트 턴/이미지 생성/고급 기능에 소비)\n    memory_shard: 희귀 재화 (중요 설정 고정, 고해상도 이미지 등에 소비)",
+      "properties": {
+        "signal": {
+          "description": "시그널 (기본 재화, 0 이상)",
+          "minimum": 0,
+          "title": "Signal",
+          "type": "integer"
+        },
+        "memory_shard": {
+          "description": "기억 파편 (희귀 재화, 0 이상)",
+          "minimum": 0,
+          "title": "Memory Shard",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "signal",
+        "memory_shard"
+      ],
+      "title": "CurrencyAmount",
+      "type": "object"
+    },
+    "EconomyOutput": {
+      "additionalProperties": false,
+      "description": "경제 출력 데이터 (RULE-005).\n\n이번 턴의 비용과 잔액 정보입니다.\n잔액 음수는 절대 불가 (서버 Hard gate).\n\nAttributes:\n    cost: 이번 턴에 소비된 비용\n    balance_after: 소비 후 잔액\n\nImportant:\n    - cost와 balance_after는 항상 포함되어야 합니다.\n    - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.",
       "properties": {
         "cost": {
-          "type": "object",
-          "description": "이번 턴 소모 비용",
-          "properties": {
-            "signal": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "memory_shard": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "required": ["signal", "memory_shard"]
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "이번 턴에 소비된 비용"
         },
         "balance_after": {
-          "type": "object",
-          "description": "턴 후 잔액 (음수 금지, RULE-005)",
-          "properties": {
-            "signal": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "memory_shard": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "required": ["signal", "memory_shard"]
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "소비 후 잔액"
         }
       },
-      "required": ["cost", "balance_after"]
+      "required": [
+        "cost",
+        "balance_after"
+      ],
+      "title": "EconomyOutput",
+      "type": "object"
     },
-    "safety": {
-      "type": "object",
-      "description": "안전 정책 상태",
+    "ImageJob": {
+      "additionalProperties": false,
+      "description": "이미지 생성 작업.\n\n조건부 이미지 생성/편집 요청입니다.\n이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.\n\nAttributes:\n    should_generate: 이미지를 생성해야 하는지\n    prompt: 이미지 생성 프롬프트\n    model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)\n    aspect_ratio: 가로세로 비율 (예: \"16:9\", \"1:1\")\n    image_size: 이미지 크기 (예: \"1024x1024\")\n    reference_image_ids: 참조 이미지 ID 목록 (선택)",
+      "properties": {
+        "should_generate": {
+          "description": "이미지를 생성해야 하는지",
+          "title": "Should Generate",
+          "type": "boolean"
+        },
+        "prompt": {
+          "default": "",
+          "description": "이미지 생성 프롬프트",
+          "title": "Prompt",
+          "type": "string"
+        },
+        "model_label": {
+          "$ref": "#/$defs/ModelLabel",
+          "default": "FAST",
+          "description": "모델 선택 라벨"
+        },
+        "aspect_ratio": {
+          "default": "16:9",
+          "description": "가로세로 비율",
+          "title": "Aspect Ratio",
+          "type": "string"
+        },
+        "image_size": {
+          "default": "1024x1024",
+          "description": "이미지 크기",
+          "title": "Image Size",
+          "type": "string"
+        },
+        "reference_image_ids": {
+          "default": [],
+          "description": "참조 이미지 ID 목록 (선택)",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reference Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "should_generate"
+      ],
+      "title": "ImageJob",
+      "type": "object"
+    },
+    "Language": {
+      "description": "지원 언어 (RULE-006).\n\nko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아\n모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.",
+      "enum": [
+        "ko-KR",
+        "en-US"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "MemoryPin": {
+      "additionalProperties": false,
+      "description": "중요 설정 고정 후보.\n\n사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.\n\nAttributes:\n    id: 핀 고유 ID\n    content: 고정할 내용\n    cost: 고정에 필요한 비용",
+      "properties": {
+        "id": {
+          "description": "핀 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "content": {
+          "description": "고정할 내용",
+          "title": "Content",
+          "type": "string"
+        },
+        "cost": {
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "고정에 필요한 비용"
+        }
+      },
+      "required": [
+        "id",
+        "content",
+        "cost"
+      ],
+      "title": "MemoryPin",
+      "type": "object"
+    },
+    "ModelLabel": {
+      "description": "모델/품질 선택 라벨 (RULE-008).\n\n프롬프트 노출 없이 \"왜 이 선택이었는지\"를 사용자 친화 라벨로 표시.",
+      "enum": [
+        "FAST",
+        "QUALITY",
+        "CHEAP",
+        "REF"
+      ],
+      "title": "ModelLabel",
+      "type": "string"
+    },
+    "Quest": {
+      "additionalProperties": false,
+      "description": "퀘스트/목표 (Quest Panel).\n\n플레이어가 달성해야 하는 현재 목표입니다.\n\nAttributes:\n    id: 퀘스트 고유 ID\n    label: 퀘스트 이름\n    is_completed: 달성 여부",
+      "properties": {
+        "id": {
+          "description": "퀘스트 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "퀘스트 이름",
+          "title": "Label",
+          "type": "string"
+        },
+        "is_completed": {
+          "default": false,
+          "description": "달성 여부",
+          "title": "Is Completed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Quest",
+      "type": "object"
+    },
+    "RenderOutput": {
+      "additionalProperties": false,
+      "description": "렌더링 출력 데이터.\n\n이미지 생성/편집 관련 정보입니다.\n\nAttributes:\n    image_job: 이미지 생성 작업 (선택)",
+      "properties": {
+        "image_job": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageJob"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이미지 생성 작업 (선택)"
+        }
+      },
+      "title": "RenderOutput",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "description": "행동 위험도 수준.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "SafetyOutput": {
+      "additionalProperties": false,
+      "description": "안전 출력 데이터.\n\n안전 정책 관련 정보입니다.\n차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.\n\nAttributes:\n    blocked: 안전 정책에 의해 차단되었는지\n    message: 차단 시 사용자에게 표시할 메시지 (선택)",
       "properties": {
         "blocked": {
-          "type": "boolean",
-          "description": "차단 여부"
+          "default": false,
+          "description": "안전 정책에 의해 차단되었는지",
+          "title": "Blocked",
+          "type": "boolean"
         },
         "message": {
-          "type": ["string", "null"],
-          "description": "차단 시 메시지"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "차단 시 사용자에게 표시할 메시지 (선택)",
+          "title": "Message"
         }
       },
-      "required": ["blocked"]
+      "title": "SafetyOutput",
+      "type": "object"
+    },
+    "SceneObject": {
+      "additionalProperties": false,
+      "description": "장면 오브젝트 (클릭 가능한 핫스팟).\n\n화면에서 클릭 가능한 오브젝트입니다.\n좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).\n\nAttributes:\n    id: 오브젝트 고유 ID\n    label: 오브젝트 라벨 (표시용)\n    box_2d: 바운딩 박스 [ymin, xmin, ymax, xmax]\n    interaction_hint: 상호작용 힌트 (선택)",
+      "properties": {
+        "id": {
+          "description": "오브젝트 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "오브젝트 라벨 (표시용)",
+          "title": "Label",
+          "type": "string"
+        },
+        "box_2d": {
+          "$ref": "#/$defs/Box2D",
+          "description": "바운딩 박스"
+        },
+        "interaction_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상호작용 힌트 (선택)",
+          "title": "Interaction Hint"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "box_2d"
+      ],
+      "title": "SceneObject",
+      "type": "object"
+    },
+    "UIOutput": {
+      "additionalProperties": false,
+      "description": "UI 출력 데이터.\n\nAI가 생성한 UI 요소들입니다.\n채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).\n\nAttributes:\n    action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)\n    objects: 클릭 가능한 장면 오브젝트 목록",
+      "properties": {
+        "action_deck": {
+          "$ref": "#/$defs/ActionDeck",
+          "description": "액션 카드 덱"
+        },
+        "objects": {
+          "default": [],
+          "description": "클릭 가능한 장면 오브젝트 목록",
+          "items": {
+            "$ref": "#/$defs/SceneObject"
+          },
+          "title": "Objects",
+          "type": "array"
+        }
+      },
+      "title": "UIOutput",
+      "type": "object"
+    },
+    "ValidationBadge": {
+      "description": "검증 배지 (RULE-008).\n\n턴 결과에 대한 검증 상태를 표시합니다.",
+      "enum": [
+        "schema_ok",
+        "schema_fail",
+        "economy_ok",
+        "economy_fail",
+        "safety_ok",
+        "safety_blocked",
+        "consistency_ok",
+        "consistency_fail"
+      ],
+      "title": "ValidationBadge",
+      "type": "string"
+    },
+    "WorldDelta": {
+      "additionalProperties": false,
+      "description": "세계 상태 변화 (Q2 결정: Option A - delta 중심).\n\n이번 턴에서 변경된 세계 상태를 나타냅니다.\nsnapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.\n\nAttributes:\n    rules_changed: 변경되거나 추가된 규칙 목록\n    inventory_added: 추가된 인벤토리 아이템\n    inventory_removed: 제거된 인벤토리 아이템\n    quests_updated: 업데이트된 퀘스트(목표) 목록\n    relationships_changed: 변경된 관계\n    memory_pins: 중요 설정 고정 후보",
+      "properties": {
+        "rules_changed": {
+          "default": [],
+          "description": "변경된 규칙 목록",
+          "items": {
+            "$ref": "#/$defs/WorldRule"
+          },
+          "title": "Rules Changed",
+          "type": "array"
+        },
+        "inventory_added": {
+          "default": [],
+          "description": "추가된 인벤토리 아이템",
+          "items": {
+            "type": "string"
+          },
+          "title": "Inventory Added",
+          "type": "array"
+        },
+        "inventory_removed": {
+          "default": [],
+          "description": "제거된 인벤토리 아이템",
+          "items": {
+            "type": "string"
+          },
+          "title": "Inventory Removed",
+          "type": "array"
+        },
+        "quests_updated": {
+          "default": [],
+          "description": "업데이트된 퀘스트/목표 목록",
+          "items": {
+            "$ref": "#/$defs/Quest"
+          },
+          "title": "Quests Updated",
+          "type": "array"
+        },
+        "relationships_changed": {
+          "default": [],
+          "description": "변경된 관계",
+          "items": {
+            "type": "string"
+          },
+          "title": "Relationships Changed",
+          "type": "array"
+        },
+        "memory_pins": {
+          "default": [],
+          "description": "중요 설정 고정 후보",
+          "items": {
+            "$ref": "#/$defs/MemoryPin"
+          },
+          "title": "Memory Pins",
+          "type": "array"
+        }
+      },
+      "title": "WorldDelta",
+      "type": "object"
+    },
+    "WorldRule": {
+      "additionalProperties": false,
+      "description": "세계 규칙 (Rule Board).\n\n현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.\n\nAttributes:\n    id: 규칙 고유 ID\n    label: 규칙 이름\n    description: 규칙 상세 설명 (선택)",
+      "properties": {
+        "id": {
+          "description": "규칙 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "규칙 이름",
+          "title": "Label",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "규칙 상세 설명 (선택)",
+          "title": "Description"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "WorldRule",
+      "type": "object"
     }
   },
-  "required": ["language", "narrative", "ui", "world", "economy", "safety"],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "description": "턴 출력 (서버 → 클라이언트).\n\n서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.\nGemini Structured Outputs(JSON Schema)로 강제됩니다.\n\nHard Gate 필드 (RULE-003/004/005):\n    - economy: cost와 balance_after 필수, 잔액 음수 금지\n    - safety: blocked 시 안전한 대체 결과 제공\n    - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)\n\nAttributes:\n    language: 응답 언어 (요청과 동일)\n    narrative: 내러티브 텍스트 (표시용)\n    ui: UI 요소 (액션 덱, 오브젝트)\n    world: 세계 상태 변화 (delta 중심)\n    render: 렌더링 정보 (이미지 생성 작업)\n    economy: 경제 정보 (비용, 잔액)\n    safety: 안전 정책 정보\n    agent_console: 에이전트 실행 정보 (단계, 배지, 복구 횟수)\n\nExample:\n    >>> output = TurnOutput(\n    ...     language=Language.KO,\n    ...     narrative=\"문이 삐걱거리며 열립니다...\",\n    ...     economy=EconomyOutput(\n    ...         cost=CurrencyAmount(signal=5, memory_shard=0),\n    ...         balance_after=CurrencyAmount(signal=95, memory_shard=5),\n    ...     ),\n    ...     safety=SafetyOutput(blocked=False),\n    ... )\n    >>> schema = TurnOutput.model_json_schema()\n\nSchema Generation:\n    >>> # Gemini Structured Outputs용 JSON Schema 생성\n    >>> json_schema = TurnOutput.model_json_schema()\n    >>> # response_json_schema 파라미터에 전달\n    >>> config = {\n    ...     \"response_mime_type\": \"application/json\",\n    ...     \"response_json_schema\": json_schema,\n    ... }",
+  "properties": {
+    "language": {
+      "$ref": "#/$defs/Language",
+      "description": "응답 언어 (요청과 동일)"
+    },
+    "narrative": {
+      "description": "내러티브 텍스트 (표시용)",
+      "title": "Narrative",
+      "type": "string"
+    },
+    "economy": {
+      "$ref": "#/$defs/EconomyOutput",
+      "description": "경제 정보 (비용, 잔액)"
+    },
+    "safety": {
+      "$ref": "#/$defs/SafetyOutput",
+      "description": "안전 정책 정보"
+    },
+    "ui": {
+      "$ref": "#/$defs/UIOutput",
+      "description": "UI 요소"
+    },
+    "world": {
+      "$ref": "#/$defs/WorldDelta",
+      "description": "세계 상태 변화 (delta)"
+    },
+    "render": {
+      "$ref": "#/$defs/RenderOutput",
+      "description": "렌더링 정보"
+    },
+    "agent_console": {
+      "$ref": "#/$defs/AgentConsole",
+      "description": "에이전트 실행 정보"
+    }
+  },
+  "required": [
+    "language",
+    "narrative",
+    "economy",
+    "safety"
+  ],
+  "title": "TurnOutput",
+  "type": "object"
 }
-

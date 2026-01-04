@@ -31,10 +31,16 @@ D:\Dev\unknown-world\
 │   ├── src/
 │   │   └── unknown_world/
 │   │       ├── __init__.py
-│   │       └── main.py
+│   │       ├── main.py
+│   │       └── models/     # 데이터 모델 및 스키마 (U-005)
+│   │           ├── __init__.py
+│   │           └── turn.py
 │   └── tests/
-│       └── integration/
-│           └── test_api.py
+│       ├── integration/
+│       │   └── test_api.py
+│       └── unit/           # 단위 테스트
+│           └── models/
+│               └── test_turn.py
 ├── shared/                # 공유 리소스 (SSOT)
 │   ├── README.md
 │   └── schemas/

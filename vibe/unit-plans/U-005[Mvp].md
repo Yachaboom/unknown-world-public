@@ -87,9 +87,11 @@
 - [ ] **Q1**: Action Deck 필드 구조를 어떻게 둘까? (PRD 용어 정합성 우선)
   - Option A: `ui.action_deck.cards[]` (권장: 용어/구조 명확)
   - Option B: `ui.choices[]`로 단일화(단, “채팅 선택지” 오해 위험)
+  **A1**: Option A
 - [ ] **Q2**: TurnOutput은 `world.delta` 중심으로 갈까, `world.snapshot`을 항상 포함할까?
   - Option A: `world.delta` + SaveGame에만 snapshot 저장(권장: 페이로드 절감)
   - Option B: 매 턴 snapshot 포함(디버그는 쉽지만 비용/지연 증가)
+  **A2**: Option A
 
 ## 참고 자료
 
