@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 17:00] RU-001-Q1: 실행 방법/문서/설정의 중복과 불일치 제거 (SSOT 통일)
+
+### 작업 내용
+
+- **제안서**: [RU-001-Q1] 실행 방법/문서/설정의 중복과 불일치 제거 (roadmap vs 코드 주석 vs 루트 스크립트 vs Pyright 설정)
+- **개선 사항**:
+    - 실행 커맨드 SSOT를 루트 `package.json`으로 확정하고, `vibe/roadmap.md` 및 `main.py` docstring을 이에 맞춰 통일
+    - 포트 정책(RULE-011: 프론트 8001, 백엔드 8011)을 모든 문서와 실행 스크립트에 강제 적용
+    - `pnpm -C` 옵션을 사용하여 경로 의존성 및 쉘 환경 차이에 따른 실행 오류 방지
+    - Pyright 설정을 `backend/pyproject.toml`로 단일화하여 도구 설정 중복 제거 (Option B 적용)
+- **영향 범위**: `vibe/roadmap.md`, `backend/src/unknown_world/main.py`, `package.json`, `backend/pyproject.toml`
+
+### 기술적 세부사항
+
+- **실행 표준화**: `uv run` 및 포트 명시적 지정을 통해 환경별 실행 결과 차이 제거
+- **설정 단일화**: Pyright 검사 범위를 `src`로 고정하여 진단 일관성 확보
+
+### 검증
+
+- **수동 검증**: `pnpm dev:front` / `pnpm dev:back` 실행 시 각각 8001, 8011 포트에서 정상 동작 확인 완료
+
+---
+
 ## [2026-01-04 16:30] RU-001-Q4: shared/ 기반 JSON Schema SSOT 도입 및 소비 경로 확정
 
 ### 작업 내용

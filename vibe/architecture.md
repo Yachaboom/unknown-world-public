@@ -50,7 +50,21 @@ D:\Dev\unknown-world\
 
 ---
 
-## 3. 핵심 아키텍처 원칙
+## 3. 실행 및 도구 설정 (SSOT)
+
+Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음 SSOT 정책을 따릅니다.
+
+1. **실행 커맨드 SSOT**: 루트 `package.json`의 `scripts`. 모든 실행 안내(로드맵, 코드 주석 등)는 이를 기준으로 합니다.
+2. **포트 정책 (RULE-011)**:
+    - **Frontend**: `8001 ~ 8010` (기본: `8001`)
+    - **Backend**: `8011 ~ 8020` (기본: `8011`)
+3. **도구 설정 SSOT**:
+    - **Python (Backend)**: `backend/pyproject.toml` (Ruff, Pyright, uv 의존성)
+    - **TypeScript (Frontend)**: `frontend/package.json` (pnpm), `frontend/tsconfig.json` (TS)
+
+---
+
+## 4. 핵심 아키텍처 원칙
 
 1. **Stateful Orchestrator**: 단순 챗봇이 아닌 월드 상태(WorldState)를 유지하고 갱신하는 시스템.
 2. **Structured Turn Contract**: 서버와 클라이언트는 엄격한 JSON Schema(`TurnOutput`)를 통해서만 통신.

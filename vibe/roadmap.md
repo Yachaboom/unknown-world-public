@@ -184,18 +184,19 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-001[Mvp]](unit-plans/U-001[Mvp].md) - 프로젝트 스캐폴딩 생성 (frontend/backend)
+**현재 작업**: [RU-001[Mvp]](unit-plans/RU-001[Mvp].md) - 리팩토링: 디렉토리/설정 정리
 
 ```bash
-# Frontend
+# Frontend (RULE-011: 8001~8010)
 pnpm -C frontend install
 pnpm -C frontend dev
+# → http://localhost:8001 에서 접근 가능
 
-# Backend (예시: venv + pip)
-python -m venv .venv
-source .venv/Scripts/activate
-pip install -r backend/requirements.txt
-uvicorn unknown_world.main:app --reload --port 8000
+# Backend (uv 기반, RULE-011: 8011~8020)
+cd backend
+uv sync
+uv run uvicorn unknown_world.main:app --reload --port 8011
+# → http://localhost:8011/health 로 확인
 ```
 
 **완료 확인**:

@@ -5,7 +5,8 @@ MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니
 
 실행 방법:
     cd backend
-    uvicorn unknown_world.main:app --reload
+    uv sync
+    uv run uvicorn unknown_world.main:app --reload --port 8011
 
 참조:
     - vibe/tech-stack.md (버전 SSOT)
