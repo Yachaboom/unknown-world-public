@@ -3,21 +3,31 @@
 # ============================================================================
 # RULE-007: 비밀정보(서비스 계정 키/토큰/쿠키) 커밋 금지
 # Reference: vibe/tech-stack.md, .gemini/rules/red-line.md
+#
+# 📋 JSON 정책 (RU-001-S1):
+# - *.json 전역 차단 대신, 비밀 파일명 패턴만 차단
+# - shared/**/*.json (스키마 SSOT)는 허용
+# - 키 파일은 secrets/ 디렉토리에만 배치 (팀 규칙)
 # ============================================================================
 
 # ============================================================================
 # 🔐 SECURITY - CRITICAL (RULE-007)
 # ============================================================================
-# Vertex AI / GCP Service Account Keys
-*.json
-!package.json
-!tsconfig.json
-!pyrightconfig.json
+# JSON 전체 차단 금지: 스키마/설정 JSON이 늘어나는 프로젝트 특성상 불가
+# 대신 "비밀 JSON"을 파일명/경로 기반으로 강차단한다.
+# Reference: vibe/refactors/RU-001-S1.md (RU-001 Q1 Option B: shared/ JSON Schema SSOT)
+
+# 🔐 Credential-like JSONs - 강차단 (RULE-007)
 **/service-account*.json
+**/*service_account*.json
 **/credentials*.json
+**/*credential*.json
 **/keyfile*.json
+**/*key_file*.json
 **/gcp-*.json
 **/vertex-*.json
+**/*-sa-key*.json
+**/*_sa_key*.json
 
 # Environment variables
 .env
@@ -81,8 +91,13 @@ frontend/.vite/
 
 # TypeScript
 *.tsbuildinfo
-frontend/vite.config.js
-frontend/vite.config.d.ts
+
+# TS build artifacts (frontend) - 생성물은 커밋 금지
+frontend/*.d.ts
+frontend/*.d.ts.map
+frontend/*.js
+frontend/*.js.map
+!frontend/vite.config.ts
 
 # Pytest
 .pytest_cache/

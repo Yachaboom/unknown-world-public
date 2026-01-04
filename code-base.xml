@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: frontend/src/**/*.{ts,tsx,css}, backend/src/**/*.py, package.json, frontend/package.json, backend/pyproject.toml
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**
+- Only files matching these patterns are included: **/*.{ts,py,js,json,md}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,19 +42,96 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-backend/pyproject.toml
+backend/pyrightconfig.json
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/main.py
+backend/tests/integration/test_api.py
+CLAUDE.md
 frontend/package.json
-frontend/src/App.tsx
-frontend/src/main.tsx
-frontend/src/style.css
 frontend/src/vite-env.d.ts
+frontend/tsconfig.json
+frontend/tsconfig.node.json
+frontend/vite.config.ts
 package.json
+shared/README.md
+shared/schemas/_ignore-check.schema.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="frontend/tsconfig.node.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+
+    /* Composite for project references */
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+</file>
+
+<file path="shared/README.md">
+# shared/
+
+이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
+
+## 📁 구조
+
+```
+shared/
+├── schemas/          # JSON Schema 파일 (Pydantic/Zod 검증용)
+│   ├── turn_input.schema.json
+│   ├── turn_output.schema.json
+│   └── ...
+└── README.md
+```
+
+## ⚠️ 보안 주의사항 (RULE-007)
+
+- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
+- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
+
+## 📋 관련 문서
+
+- `vibe/refactors/RU-001-S1.md` - JSON 정책 변경 근거
+- `vibe/ref/structured-outputs-guide.md` - 스키마 작성 가이드
+- `.cursor/rules/00-core-critical.mdc` - RULE-007 (보안 규칙)
+</file>
+
+<file path="shared/schemas/_ignore-check.schema.json">
+{
+  "type": "object",
+  "description": "RU-001-S1 검증용 테스트 스키마 (커밋 후 삭제 가능)"
+}
+</file>
+
+<file path="backend/pyrightconfig.json">
+{
+  "include": ["."],
+  "exclude": ["**/__pycache__", ".ruff_cache", ".venv", "venv", "dist", "build", "vibe"]
+}
+</file>
 
 <file path="backend/src/unknown_world/main.py">
 """Unknown World - FastAPI 애플리케이션 엔트리포인트
@@ -171,17 +248,50 @@ async def root() -> dict[str, str]:
     }
 </file>
 
-<file path="frontend/src/main.tsx">
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import './style.css';
-import App from './App.tsx';
+<file path="backend/tests/integration/test_api.py">
+from fastapi.testclient import TestClient
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+from unknown_world.main import app
+
+client = TestClient(app)
+
+
+def test_health_check():
+    """/health 엔드포인트가 올바른 스키마와 상태를 반환하는지 테스트합니다."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert data["service"] == "unknown-world-backend"
+
+
+def test_root_endpoint():
+    """루트 엔드포인트가 정상 작동하는지 테스트합니다."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "message" in response.json()
+
+
+def test_cors_policy():
+    """RULE-011에 따른 CORS 정책이 올바르게 설정되었는지 테스트합니다."""
+    # 허용된 오리진 테스트 (포트 8001)
+    headers = {
+        "Origin": "http://localhost:8001",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = client.options("/health", headers=headers)
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:8001"
+
+    # 허용되지 않은 오리진 테스트 (포트 9000)
+    headers = {
+        "Origin": "http://localhost:9000",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = client.options("/health", headers=headers)
+    # FastAPI/Starlette CORS 미들웨어는 허용되지 않은 경우 origin 헤더를 반환하지 않음
+    assert "access-control-allow-origin" not in response.headers
 </file>
 
 <file path="frontend/src/vite-env.d.ts">
@@ -205,71 +315,181 @@ createRoot(document.getElementById('root')!).render(
 }
 </file>
 
-<file path="backend/pyproject.toml">
-# backend/pyproject.toml
-# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+<file path="CLAUDE.md">
+# AI 에이전트 전역 지침 (Unknown World)
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
 
-[project]
-name = "unknown-world-backend"
-version = "0.1.0"
-description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
-requires-python = ">=3.14"
-dependencies = [
-    "fastapi==0.128.0",
-    "uvicorn[standard]==0.40.0",
-    "pydantic==2.12.5",
-]
+---
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/unknown_world"]
+## 프로젝트 개요
 
-[dependency-groups]
-dev = [
-    "ruff==0.14.10",
-    "pyright==1.1.407",
-    "pytest>=9.0.2",
-    "httpx>=0.28.1",
-]
+**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
 
-[tool.ruff]
-line-length = 100
-target-version = "py314"
-extend-exclude = [
-    "__pycache__",
-    ".ruff_cache",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-]
+- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
+- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
+- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
 
-[tool.ruff.lint]
-select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # pyflakes
-    "I",      # isort
-    "UP",     # pyupgrade
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "SIM",    # flake8-simplify
-]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-]
+---
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
+## SSOT(단일 출처) 및 충돌 해결 우선순위
 
-[tool.pyright]
-pythonVersion = "3.14"
-typeCheckingMode = "strict"
-include = ["src"]
+문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
+
+1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
+2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
+3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
+4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
+5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
+
+불확실하면 **추측하지 말고 질문**합니다.
+
+---
+
+## 핵심 원칙 (Non‑Negotiable)
+
+### 1) Prompt-only wrapper / Generic chatbot 회피
+
+- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
+- 반드시 다음이 존재해야 합니다:
+  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
+  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
+  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
+
+### 2) 채팅 버블 UI 금지, 게임 UI 고정
+
+- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
+- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
+  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
+    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
+
+### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
+
+- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
+- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
+
+### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
+
+- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
+- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
+
+### 5) 비용/지연은 UX/게임 메커닉으로 제어
+
+- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
+- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
+
+### 6) ko/en i18n: 혼합 출력 금지
+
+- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
+- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
+- 프롬프트는 언어별 `.md` 파일로 관리합니다.
+
+### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
+
+- BYOK(사용자 API 키 입력) 요구 금지(MVP).
+- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
+- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
+
+### 8) 관측 가능성(Observability) = UX의 일부
+
+- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
+- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
+
+---
+
+## 작업 표준 (Workflow)
+
+### 작업 시작 전 필수
+
+- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
+- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
+
+### 유닛(단계) 기반 개발
+
+- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
+- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
+- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
+
+### 문서 동기화
+
+- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
+- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
+
+### 리팩토링
+
+- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
+
+### 테스트
+
+- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
+- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
+
+### 커밋 메시지
+
+- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
+- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
+
+---
+
+## 품질 기준 (출시/데모 관점)
+
+### Hard Gate (필수 통과)
+
+- **Schema OK**: TurnOutput JSON이 스키마를 통과
+- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
+- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
+- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
+
+### Soft Gate (관측/튜닝)
+
+- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
+- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
+
+---
+
+## 금지사항 (절대 금지)
+
+- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
+- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
+- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
+- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
+- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
+- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
+- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
+
+---
+
+## 지침 운영/사용 가이드
+
+### Cursor 규칙 적용 방식
+
+- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
+- 규칙이 부족/충돌하면:
+  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
+  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
+
+### 온보딩(신규 합류자/에이전트) 10분 루프
+
+- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
+- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
+- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
+- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
+
+### 지침 업데이트 프로세스(권장)
+
+- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
+- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
+
+---
+
+## 참조 문서
+
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+- `vibe/ref/frontend-style-guide.md`
+- `vibe/ref/structured-outputs-guide.md`
+- `vibe/commands/*.md` / `.cursor/commands/*.md`
+- `.gemini/rules/commit-rules.md`
 </file>
 
 <file path="frontend/package.json">
@@ -313,841 +533,51 @@ include = ["src"]
 }
 </file>
 
-<file path="frontend/src/App.tsx">
-/**
- * Unknown World - 메인 게임 UI 레이아웃
- *
- * RULE-002 준수: 채팅 버블 UI 금지
- * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
- * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
- *   Rule Board, Economy HUD, Agent Console, Scanner Slot
- *
- * @see vibe/ref/frontend-style-guide.md
- * @see vibe/prd.md 6.7/6.8/9장
- */
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
 
-/**
- * 패널 컴포넌트 - 공통 패널 레이아웃
- */
-interface PanelProps {
-  title: string;
-  children?: React.ReactNode;
-  className?: string;
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
-
-function Panel({ title, children, className = '' }: PanelProps) {
-  return (
-    <div className={`panel ${className}`}>
-      <div className="panel-header">
-        <span className="panel-title">{title}</span>
-      </div>
-      <div className="panel-content">
-        {children || <p className="panel-placeholder">[ 준비 중 ]</p>}
-      </div>
-    </div>
-  );
-}
-
-/**
- * 내러티브 피드 - 게임 로그 형태 (채팅 버블 아님)
- * RULE-002: 좌/우 버블 대신 턴 타임라인으로 배치
- */
-function NarrativeFeed() {
-  const sampleEntries = [
-    { turn: 1, text: '미지의 세계에 오신 것을 환영합니다...' },
-    { turn: 2, text: '당신은 어둠 속에서 깨어났습니다.' },
-    { turn: 3, text: '희미한 녹색 빛이 주변을 비추고 있습니다.' },
-  ];
-
-  return (
-    <div className="narrative-feed">
-      {sampleEntries.map((entry) => (
-        <div key={entry.turn} className="narrative-entry">
-          <span className="narrative-timestamp">[TURN {entry.turn}]</span>
-          <span className="narrative-text">{entry.text}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * 액션 덱 - 선택 가능한 행동 카드들
- * PRD: 비용/위험/보상 표시
- */
-function ActionDeck() {
-  const sampleActions = [
-    { id: 1, title: '탐색하기', cost: 1, risk: '낮음' },
-    { id: 2, title: '조사하기', cost: 2, risk: '중간' },
-    { id: 3, title: '대화하기', cost: 1, risk: '없음' },
-    { id: 4, title: '이동하기', cost: 1, risk: '낮음' },
-  ];
-
-  return (
-    <div className="action-deck">
-      {sampleActions.map((action) => (
-        <div key={action.id} className="action-card">
-          <div className="action-card-title">{action.title}</div>
-          <div className="action-card-cost">
-            ⚡ {action.cost} Signal | ⚠ {action.risk}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * 헤더 - 타이틀, 상태, 재화 HUD
- */
-function GameHeader() {
-  return (
-    <header className="game-header">
-      <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
-        UNKNOWN WORLD
-      </h1>
-      <div className="header-controls">
-        <div className="economy-hud">
-          <span className="signal-icon">⚡</span>
-          <span>Signal: 100</span>
-        </div>
-        <div className="connection-status">
-          <span className="status-indicator" />
-          <span>ONLINE</span>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-/**
- * 메인 App 컴포넌트
- * CSS Grid 기반 고정 레이아웃
- */
-function App() {
-  return (
-    <>
-      {/* CRT 스캔라인 오버레이 */}
-      <div className="crt-overlay" aria-hidden="true" />
-
-      {/* 게임 레이아웃 */}
-      <div className="game-container">
-        {/* Header: 타이틀/상태/재화 */}
-        <GameHeader />
-
-        {/* Sidebar Left: Inventory / Quest / Rule Board */}
-        <aside className="sidebar-left">
-          <Panel title="Inventory" className="flex-1">
-            <p className="panel-placeholder">[ 드래그 앤 드롭 영역 ]</p>
-          </Panel>
-          <Panel title="Quest">
-            <p className="panel-placeholder">[ 목표/퀘스트 목록 ]</p>
-          </Panel>
-          <Panel title="Rule Board">
-            <p className="panel-placeholder">[ 월드 규칙/변형 타임라인 ]</p>
-          </Panel>
-        </aside>
-
-        {/* Center: Scene Canvas + Narrative Feed */}
-        <main className="game-center">
-          <div className="scene-canvas">
-            <div className="scene-placeholder">
-              <p>[ Scene Canvas ]</p>
-              <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
-            </div>
-          </div>
-          <NarrativeFeed />
-        </main>
-
-        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
-        <aside className="sidebar-right">
-          <Panel title="Agent Console" className="flex-1">
-            <p className="panel-placeholder">
-              [ Plan / Queue / Badges ]
-              <br />
-              Parse → Validate → Plan → Resolve
-            </p>
-          </Panel>
-          <Panel title="Memory Pin">
-            <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
-          </Panel>
-          <Panel title="Scanner">
-            <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
-          </Panel>
-        </aside>
-
-        {/* Footer: Action Deck + Command Input */}
-        <footer className="game-footer">
-          <ActionDeck />
-          <div className="command-input-area">
-            <span className="command-prompt">&gt;</span>
-            <input
-              type="text"
-              className="command-input"
-              placeholder="명령을 입력하세요..."
-              aria-label="게임 명령 입력"
-            />
-            <button type="button">EXECUTE</button>
-          </div>
-        </footer>
-      </div>
-    </>
-  );
-}
-
-export default App;
 </file>
 
-<file path="frontend/src/style.css">
-/**
- * Unknown World - CRT 테마 스타일시트 (단일 CSS SSOT)
- *
- * RULE-002 준수: 채팅 버블 UI 금지 - 게임 로그/HUD 형태만 허용
- * Frontend Style Guide 준수: CRT 터미널 레트로 미학
- *
- * @see vibe/ref/frontend-style-guide.md
- */
-
-/* ============================================
-   1. CRT 테마 토큰 (CSS Variables)
-   ============================================ */
-:root {
-  /* 기본 색상 - CRT 인광 녹색 테마 */
-  --bg-color: #0d0d0d; /* 배경: 거의 순수한 검정 */
-  --text-color: #33ff00; /* 주 텍스트: 인광 녹색 (CRT 그린) */
-  --text-dim: #1a8000; /* 보조 텍스트: 어두운 녹색 */
-  --accent-color: #ff00ff; /* 강조색: 마젠타 */
-  --border-color: #33ff00; /* 테두리: 인광 녹색 */
-  --panel-bg: rgba(0, 20, 0, 0.3); /* 패널 배경: 투명 녹색 */
-  --warning-color: #ffaa00; /* 경고: 주황색 */
-  --error-color: #ff3333; /* 에러: 붉은색 */
-
-  /* CRT 효과 */
-  --crt-scanline: rgba(18, 16, 16, 0.1);
-  --crt-flicker: 0.03;
-  --glow-intensity: 5px;
-
-  /* 타이포그래피 */
-  --font-main: 'NeoDunggeunmo', 'VT323', monospace;
-  --font-size-base: 16px;
-  --font-size-lg: 1.2rem;
-  --font-size-xl: 1.5rem;
-  --font-size-2xl: 2rem;
-  --line-height-base: 1.5;
-
-  /* 레이아웃 */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --border-radius: 4px;
-  --max-width: 1400px;
-
-  /* 그리드 레이아웃 */
-  --header-height: 60px;
-  --footer-height: 120px;
-  --sidebar-width: 320px;
-}
-
-/* ============================================
-   2. 폰트 정의
-   ============================================ */
-@font-face {
-  font-family: 'NeoDunggeunmo';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.3/NeoDunggeunmo.woff')
-    format('woff');
-  font-weight: normal;
-  font-display: swap;
-}
-
-/* ============================================
-   3. Reset & Base
-   ============================================ */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-}
-
-body {
-  font-family: var(--font-main);
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  min-height: 100vh;
-  overflow: hidden;
-  text-shadow: 0 0 var(--glow-intensity) var(--text-dim);
-}
-
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ============================================
-   4. CRT 오버레이 효과
-   ============================================ */
-
-/* 스캔라인 오버레이 */
-.crt-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-  background-size: 100% 4px;
-  pointer-events: none;
-  z-index: 9999;
-  animation: flicker 0.15s infinite;
-}
-
-/* 플리커(깜빡임) 애니메이션 */
-@keyframes flicker {
-  0% {
-    opacity: 0.97;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.98;
-  }
-}
-
-/* 글리치 효과 (타이틀용) */
-.glitch {
-  position: relative;
-}
-
-.glitch::before,
-.glitch::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.glitch::before {
-  left: 2px;
-  text-shadow: -1px 0 #ff0000;
-  clip-path: inset(0 0 0 0);
-  animation: glitch-anim-1 5s infinite linear alternate-reverse;
-}
-
-.glitch::after {
-  left: -2px;
-  text-shadow: -1px 0 #0000ff;
-  clip-path: inset(0 0 0 0);
-  animation: glitch-anim-2 5s infinite linear alternate-reverse;
-}
-
-@keyframes glitch-anim-1 {
-  0%,
-  100% {
-    clip-path: inset(0 0 95% 0);
-  }
-  20% {
-    clip-path: inset(30% 0 50% 0);
-  }
-  40% {
-    clip-path: inset(10% 0 70% 0);
-  }
-  60% {
-    clip-path: inset(80% 0 5% 0);
-  }
-  80% {
-    clip-path: inset(45% 0 35% 0);
-  }
-}
-
-@keyframes glitch-anim-2 {
-  0%,
-  100% {
-    clip-path: inset(95% 0 0 0);
-  }
-  20% {
-    clip-path: inset(50% 0 30% 0);
-  }
-  40% {
-    clip-path: inset(70% 0 10% 0);
-  }
-  60% {
-    clip-path: inset(5% 0 80% 0);
-  }
-  80% {
-    clip-path: inset(35% 0 45% 0);
-  }
-}
-
-/* ============================================
-   5. 게임 레이아웃 (CSS Grid)
-   - RULE-002: 채팅 UI가 아닌 게임 UI 고정
-   ============================================ */
-
-.game-container {
-  display: grid;
-  grid-template-areas:
-    'header header header'
-    'sidebar-left center sidebar-right'
-    'footer footer footer';
-  grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
-  grid-template-rows: var(--header-height) 1fr var(--footer-height);
-  height: 100vh;
-  width: 100%;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: var(--spacing-sm);
-  gap: var(--spacing-sm);
-}
-
-/* ============================================
-   6. Header 영역
-   - Title, Language Toggle, Theme Toggle,
-     Connection Status, Economy HUD
-   ============================================ */
-
-.game-header {
-  grid-area: header;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--spacing-md);
-  border: 1px solid var(--border-color);
-  background-color: var(--panel-bg);
-  box-shadow:
-    inset 0 0 20px rgba(0, 0, 0, 0.5),
-    0 0 10px var(--text-dim);
-}
-
-.game-title {
-  font-size: var(--font-size-2xl);
-  color: var(--text-color);
-  text-transform: uppercase;
-  letter-spacing: 4px;
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.economy-hud {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--text-dim);
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.economy-hud .signal-icon {
-  color: var(--accent-color);
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: 0.875rem;
-}
-
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--text-color);
-  box-shadow: 0 0 6px var(--text-color);
-  animation: pulse 2s infinite;
-}
-
-.status-indicator.offline {
-  background-color: var(--error-color);
-  box-shadow: 0 0 6px var(--error-color);
-  animation: none;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* ============================================
-   7. Sidebar (Left) 영역
-   - Inventory, Quest/Objective, Rule Board
-   ============================================ */
-
-.sidebar-left {
-  grid-area: sidebar-left;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  overflow-y: auto;
-}
-
-/* ============================================
-   8. Center 영역
-   - Scene Canvas, Narrative Feed (로그 형태)
-   ============================================ */
-
-.game-center {
-  grid-area: center;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  overflow: hidden;
-}
-
-.scene-canvas {
-  flex: 1;
-  border: 1px solid var(--border-color);
-  background-color: var(--panel-bg);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  min-height: 200px;
-}
-
-.scene-placeholder {
-  color: var(--text-dim);
-  font-size: var(--font-size-lg);
-  text-align: center;
-}
-
-/* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
-.narrative-feed {
-  height: 180px;
-  border: 1px solid var(--border-color);
-  background-color: var(--panel-bg);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-  overflow-y: auto;
-  padding: var(--spacing-sm);
-}
-
-.narrative-entry {
-  padding: var(--spacing-xs) 0;
-  border-bottom: 1px solid rgba(51, 255, 0, 0.2);
-}
-
-.narrative-entry:last-child {
-  border-bottom: none;
-}
-
-.narrative-timestamp {
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  margin-right: var(--spacing-sm);
-}
-
-.narrative-text {
-  color: var(--text-color);
-}
-
-/* ============================================
-   9. Sidebar (Right) 영역
-   - Agent Console, Memory Pin, Scanner Slot
-   ============================================ */
-
-.sidebar-right {
-  grid-area: sidebar-right;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  overflow-y: auto;
-}
-
-/* ============================================
-   10. Footer 영역
-   - Action Deck, Command Input
-   ============================================ */
-
-.game-footer {
-  grid-area: footer;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  background-color: var(--panel-bg);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
-}
-
-.action-deck {
-  display: flex;
-  gap: var(--spacing-sm);
-  overflow-x: auto;
-  padding-bottom: var(--spacing-xs);
-}
-
-.action-card {
-  min-width: 140px;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  background-color: rgba(0, 0, 0, 0.5);
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.action-card:hover {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 10px var(--accent-color);
-}
-
-.action-card-title {
-  font-size: 0.875rem;
-  margin-bottom: var(--spacing-xs);
-  color: var(--text-color);
-}
-
-.action-card-cost {
-  font-size: 0.75rem;
-  color: var(--warning-color);
-}
-
-.command-input-area {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs);
-  border: 1px solid var(--text-dim);
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.command-prompt {
-  color: var(--text-color);
-  font-size: var(--font-size-lg);
-}
-
-.command-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text-color);
-  font-family: var(--font-main);
-  font-size: var(--font-size-lg);
-  outline: none;
-  text-shadow: 0 0 5px var(--text-dim);
-}
-
-.command-input::placeholder {
-  color: var(--text-dim);
-}
-
-/* ============================================
-   11. 공통 패널 스타일
-   ============================================ */
-
-.panel {
-  border: 1px solid var(--border-color);
-  background-color: var(--panel-bg);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-header {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-bottom: 1px solid var(--text-dim);
-  background-color: rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.panel-title {
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text-color);
-}
-
-.panel-content {
-  flex: 1;
-  padding: var(--spacing-sm);
-  overflow-y: auto;
-}
-
-.panel-placeholder {
-  color: var(--text-dim);
-  font-size: 0.875rem;
-  text-align: center;
-  padding: var(--spacing-md);
-}
-
-/* ============================================
-   12. 버튼 스타일
-   ============================================ */
-
-button,
-.btn {
-  background: var(--text-color);
-  color: var(--bg-color);
-  border: none;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-family: var(--font-main);
-  font-size: var(--font-size-lg);
-  cursor: pointer;
-  text-transform: uppercase;
-  font-weight: bold;
-  transition:
-    background 0.2s,
-    color 0.2s;
-}
-
-button:hover,
-.btn:hover {
-  background: var(--accent-color);
-  color: white;
-}
-
-button:disabled,
-.btn:disabled {
-  background: var(--text-dim);
-  cursor: not-allowed;
-}
-
-/* ============================================
-   13. 스크롤바 커스터마이징
-   ============================================ */
-
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-color);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--text-dim);
-  border: 1px solid var(--text-color);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-color);
-}
-
-/* ============================================
-   14. 반응형 디자인
-   ============================================ */
-
-@media (max-width: 1200px) {
-  .game-container {
-    grid-template-areas:
-      'header header'
-      'center sidebar-right'
-      'footer footer';
-    grid-template-columns: 1fr var(--sidebar-width);
-  }
-
-  .sidebar-left {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
-  :root {
-    font-size: 14px;
-    --header-height: 50px;
-    --footer-height: 100px;
-    --sidebar-width: 100%;
-  }
-
-  .game-container {
-    grid-template-areas:
-      'header'
-      'center'
-      'footer';
-    grid-template-columns: 1fr;
-    grid-template-rows: var(--header-height) 1fr var(--footer-height);
-    padding: var(--spacing-xs);
-    gap: var(--spacing-xs);
-  }
-
-  .sidebar-left,
-  .sidebar-right {
-    display: none;
-  }
-
-  .game-header {
-    padding: 0 var(--spacing-sm);
-  }
-
-  .game-title {
-    font-size: var(--font-size-lg);
-    letter-spacing: 2px;
-  }
-
-  .economy-hud {
-    display: none;
-  }
-
-  .action-deck {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .action-card {
-    min-width: 120px;
-  }
-}
-
-/* ============================================
-   15. 유틸리티 클래스
-   ============================================ */
-
-.text-dim {
-  color: var(--text-dim);
-}
-
-.text-accent {
-  color: var(--accent-color);
-}
-
-.text-warning {
-  color: var(--warning-color);
-}
-
-.text-error {
-  color: var(--error-color);
-}
-
-.text-glow {
-  text-shadow: 0 0 10px var(--text-color);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+<file path="frontend/vite.config.ts">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: false, // 충돌 시 8002~8010 자동 할당 허용
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+});
 </file>
 
 <file path="backend/src/unknown_world/__init__.py">
