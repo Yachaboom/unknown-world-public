@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unknown-world.dev/schemas/turn/turn_output.schema.json",
+  "title": "TurnOutput",
+  "description": "Server → Client 턴 응답 스키마 (MVP). PRD 8.7절 기반. Gemini Structured Output 호환.",
+  "type": "object",
+  "properties": {
+    "language": {
+      "type": "string",
+      "enum": ["ko-KR", "en-US"],
+      "description": "응답 언어 (TurnInput.language와 동일해야 함)"
+    },
+    "narrative": {
+      "type": "string",
+      "description": "내러티브 텍스트 (표시용)"
+    },
+    "ui": {
+      "type": "object",
+      "description": "UI 요소 (선택지, 오브젝트)",
+      "properties": {
+        "choices": {
+          "type": "array",
+          "description": "버튼형 선택지 목록",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "선택지 고유 ID"
+              },
+              "label": {
+                "type": "string",
+                "description": "선택지 라벨"
+              },
+              "cost": {
+                "type": "object",
+                "description": "예상 비용",
+                "properties": {
+                  "signal": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "memory_shard": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["signal", "memory_shard"]
+              },
+              "hint": {
+                "type": ["string", "null"],
+                "description": "예상 결과 힌트"
+              }
+            },
+            "required": ["id", "label", "cost"]
+          }
+        },
+        "objects": {
+          "type": "array",
+          "description": "클릭 가능한 오브젝트 목록",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "오브젝트 고유 ID"
+              },
+              "label": {
+                "type": "string",
+                "description": "오브젝트 라벨"
+              },
+              "box_2d": {
+                "type": "array",
+                "description": "bbox [ymin, xmin, ymax, xmax] (0~1000 정규화, RULE-009)",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "minItems": 4,
+                "maxItems": 4
+              },
+              "interaction_hint": {
+                "type": ["string", "null"],
+                "description": "상호작용 힌트"
+              }
+            },
+            "required": ["id", "label", "box_2d"]
+          }
+        }
+      },
+      "required": ["choices", "objects"]
+    },
+    "world": {
+      "type": "object",
+      "description": "월드 상태 변경 사항",
+      "properties": {
+        "delta": {
+          "type": "object",
+          "description": "이번 턴 변경 사항",
+          "properties": {
+            "rules": {
+              "type": ["array", "null"],
+              "description": "룰 변경 목록",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": ["added", "modified", "removed"]
+                  }
+                },
+                "required": ["id", "name", "action"]
+              }
+            },
+            "inventory": {
+              "type": ["array", "null"],
+              "description": "인벤토리 변경 목록",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": ["added", "removed", "used"]
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["id", "name", "action"]
+              }
+            }
+          }
+        },
+        "memory_pins": {
+          "type": "array",
+          "description": "중요 설정 고정 후보 목록",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "pinned": {
+                "type": "boolean"
+              }
+            },
+            "required": ["id", "content", "pinned"]
+          }
+        }
+      },
+      "required": ["delta", "memory_pins"]
+    },
+    "render": {
+      "type": ["object", "null"],
+      "description": "렌더링 작업 (선택적)",
+      "properties": {
+        "image_job": {
+          "type": ["object", "null"],
+          "description": "이미지 생성 작업",
+          "properties": {
+            "should_generate": {
+              "type": "boolean",
+              "description": "이미지 생성 여부"
+            },
+            "model": {
+              "type": "string",
+              "enum": ["gemini-3-pro-image-preview"],
+              "description": "이미지 모델 ID (RULE-010: 고정)"
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "enum": ["1:1", "16:9", "9:16", "4:3", "3:4"],
+              "description": "이미지 비율"
+            },
+            "image_size": {
+              "type": "string",
+              "enum": ["1K", "2K", "4K"],
+              "description": "이미지 해상도"
+            },
+            "prompt": {
+              "type": "string",
+              "description": "이미지 생성 프롬프트"
+            },
+            "reference_images": {
+              "type": ["array", "null"],
+              "description": "참조 이미지 URI 목록",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["should_generate"]
+        }
+      }
+    },
+    "economy": {
+      "type": "object",
+      "description": "재화 정보 (RULE-005: 예상 비용/잔액 필수)",
+      "properties": {
+        "cost": {
+          "type": "object",
+          "description": "이번 턴 소모 비용",
+          "properties": {
+            "signal": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "memory_shard": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": ["signal", "memory_shard"]
+        },
+        "balance_after": {
+          "type": "object",
+          "description": "턴 후 잔액 (음수 금지, RULE-005)",
+          "properties": {
+            "signal": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "memory_shard": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": ["signal", "memory_shard"]
+        }
+      },
+      "required": ["cost", "balance_after"]
+    },
+    "safety": {
+      "type": "object",
+      "description": "안전 정책 상태",
+      "properties": {
+        "blocked": {
+          "type": "boolean",
+          "description": "차단 여부"
+        },
+        "message": {
+          "type": ["string", "null"],
+          "description": "차단 시 메시지"
+        }
+      },
+      "required": ["blocked"]
+    }
+  },
+  "required": ["language", "narrative", "ui", "world", "economy", "safety"],
+  "additionalProperties": false
+}
+

@@ -1,5 +1,27 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 16:30] RU-001-Q4: shared/ 기반 JSON Schema SSOT 도입 및 소비 경로 확정
+
+### 작업 내용
+
+- **제안서**: [RU-001-Q4] `shared/` 기반 JSON Schema SSOT(Option B) 디렉토리 도입 및 소비 경로 고정
+- **개선 사항**:
+    - `shared/schemas/turn/` 디렉토리에 `turn_input.schema.json` 및 `turn_output.schema.json` 도입
+    - 백엔드(Pydantic)와 프론트엔드(Zod)의 계약 불일치(drift)를 방지하기 위한 단일 진실 공급원(SSOT) 구축
+    - `shared/README.md`를 통해 공유 스키마 운영 전략(Option B) 명시
+- **영향 범위**: `shared/` (신규), `vibe/unit-plans/RU-001[Mvp].md` (결정 사항 실현)
+
+### 기술적 세부사항
+
+- **스키마 설계**: PRD의 Turn 계약 규약을 반영하여 `turn_input`, `turn_output` 스키마 초기 버전 작성
+- **구조적 강제**: `.gitignore` 수정(RU-001-S1 연동)을 통해 `shared/` 내 JSON 스키마가 안정적으로 추적되도록 보장
+
+### 검증
+
+- **수동 검증**: `shared/` 경로의 스키마 파일 존재 및 Git 추적 여부 확인 완료 (commit: 1c93e5b)
+
+---
+
 ## [2026-01-04 02:45] RU-001-S1: .gitignore JSON 정책 리팩토링 및 shared/ 구조 도입
 
 ### 작업 내용

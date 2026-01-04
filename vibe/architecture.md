@@ -36,15 +36,16 @@ D:\Dev\unknown-world\
 │           └── test_api.py # API 통합 테스트
 ├── shared/                # 공유 리소스 (SSOT)
 │   ├── README.md          # 사용 가이드 및 보안 주의사항
-│   └── schemas/           # JSON Schema (Pydantic/Zod 공용)
+│   └── schemas/           # JSON Schema (Pydantic/Zod 공용 SSOT)
+│       └── turn/          # Turn 계약 관련 스키마 (input/output)
 └── vibe/                  # SSOT 문서 저장소
-```
 
 ### 주요 디렉토리 책임
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
 - **`backend/`**: Gemini API 연동, TurnOutput 생성 및 검증(Repair loop), SSE 스트리밍 담당.
-- **`shared/`**: 프론트엔드와 백엔드가 공유하는 스키마(JSON Schema), 타입 정의, 공용 상수 등을 관리하는 SSOT 디렉토리.
+- **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
+    - `schemas/`: 언어 중립적인 JSON Schema 포맷으로 TurnInput/TurnOutput 규약 관리.
 - **`vibe/`**: 프로젝트의 모든 명세와 진행 상황을 기록하는 단일 진실 공급원(SSOT).
 
 ---

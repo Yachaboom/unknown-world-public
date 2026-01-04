@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unknown-world.dev/schemas/turn/turn_input.schema.json",
+  "title": "TurnInput",
+  "description": "Client → Server 턴 요청 스키마 (MVP). PRD 8.7절 기반.",
+  "type": "object",
+  "properties": {
+    "language": {
+      "type": "string",
+      "enum": ["ko-KR", "en-US"],
+      "description": "게임 언어 설정 (ko-KR 또는 en-US)"
+    },
+    "text": {
+      "type": "string",
+      "description": "사용자 입력 (자연어)"
+    },
+    "click": {
+      "type": ["object", "null"],
+      "description": "클릭된 오브젝트 정보 (선택)",
+      "properties": {
+        "object_id": {
+          "type": "string",
+          "description": "클릭된 오브젝트 ID"
+        },
+        "box_2d": {
+          "type": ["array", "null"],
+          "description": "bbox [ymin, xmin, ymax, xmax] (0~1000 정규화)",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": ["object_id"]
+    },
+    "client": {
+      "type": "object",
+      "description": "클라이언트 환경 정보",
+      "properties": {
+        "viewport_w": {
+          "type": "integer",
+          "description": "뷰포트 너비 (px)"
+        },
+        "viewport_h": {
+          "type": "integer",
+          "description": "뷰포트 높이 (px)"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["dark", "light"],
+          "description": "테마 설정"
+        }
+      },
+      "required": ["viewport_w", "viewport_h", "theme"]
+    },
+    "economy_snapshot": {
+      "type": "object",
+      "description": "현재 재화 상태 스냅샷",
+      "properties": {
+        "signal": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Signal 재화 잔액"
+        },
+        "memory_shard": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Memory Shard 재화 잔액"
+        }
+      },
+      "required": ["signal", "memory_shard"]
+    }
+  },
+  "required": ["language", "text", "client", "economy_snapshot"],
+  "additionalProperties": false
+}
+
