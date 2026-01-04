@@ -34,9 +34,14 @@ D:\Dev\unknown-world\
 │   │   └── unknown_world/
 │   │       ├── __init__.py
 │   │       ├── main.py
-│   │       └── models/     # 데이터 모델 및 스키마 (U-005)
-│   │           ├── __init__.py
-│   │           └── turn.py
+│   │       ├── api/        # API 엔드포인트 및 라우팅 (U-007)
+│   │       │   ├── __init__.py
+│   │       │   └── turn.py
+│   │       ├── models/     # 데이터 모델 및 스키마 (U-005)
+│   │       │   ├── __init__.py
+│   │       │   └── turn.py
+│   │       └── orchestrator/ # 오케스트레이션 엔진
+│   │           └── mock.py  # 모의 Orchestrator (U-007)
 │   └── tests/
 │       ├── integration/
 │       │   └── test_api.py
@@ -56,6 +61,9 @@ D:\Dev\unknown-world\
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
 - **`backend/`**: Gemini API 연동, TurnOutput 생성 및 검증(Repair loop), HTTP Streaming(POST) 담당.
+    - `api/`: `/api/turn` 등 클라이언트 통신을 위한 엔드포인트 및 스트리밍 로직 관리.
+    - `orchestrator/`: 실모델(Gemini) 또는 모의(Mock)를 통한 게임 엔진 오케스트레이션 핵심 로직 담당.
+    - `models/`: Pydantic을 활용한 시스템 내부 데이터 구조 및 유효성 검증 정의.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
     - `schemas/`: 언어 중립적인 JSON Schema 포맷으로 TurnInput/TurnOutput 규약 관리.
 - **`vibe/`**: 프로젝트의 모든 명세와 진행 상황을 기록하는 단일 진실 공급원(SSOT).

@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from unknown_world import __version__
+from unknown_world.api import turn_router
 
 # =============================================================================
 # FastAPI 앱 인스턴스
@@ -54,6 +55,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# =============================================================================
+# 라우터 등록
+# =============================================================================
+
+# U-007: /api/turn HTTP Streaming 엔드포인트
+app.include_router(turn_router)
 
 
 # =============================================================================
