@@ -1,6 +1,44 @@
 # 프로젝트 진행 상황
 
-## [2026-01-04 18:30] RU-001-Q5: 버전 고정(SSOT) 강화: 루트 packageManager/engines 명시 및 backend dev 의존성 pin
+## [2026-01-04 19:20] RU-001[Mvp]: 리팩토링 - 디렉토리/설정 정리 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 프로젝트 전반의 디렉토리 구조 확정 및 설정 파일 SSOT 통일
+- **추가 컴포넌트**: `shared/schemas/turn/` (JSON Schema SSOT), 루트 실행 스크립트 (`dev:front`, `dev:back`)
+- **달성 요구사항**: [RULE-011] 포트 정책 강제, [RULE-010] 기술 스택 버전 고정, [Option B] 스키마 SSOT 도입
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **JSON Schema**: Draft-07 기반의 언어 독립적 계약 정의
+- **pnpm/Node.js**: 루트 `package.json`을 통한 개발 환경 버전 제어
+- **Vite/strictPort**: 포트 대역 이탈 방지를 위한 Fail-fast 설정
+
+**설계 패턴 및 아키텍처 선택**:
+- **Shared Schema SSOT**: 서버-클라이언트 간 데이터 구조 불일치를 원천 차단하기 위해 `shared/` 경로를 진실의 공급원으로 정의
+- **Root-orchestrated Dev**: 하위 디렉토리로 이동할 필요 없이 루트에서 모든 서브시스템을 제어하도록 스크립트 구성
+
+**코드 구조**:
+repo-root/
+├── frontend/ (포트: 8001)
+├── backend/ (포트: 8011)
+├── shared/ (JSON Schemas)
+└── package.json (루트 오케스트레이션)
+
+### 성능 및 품질 지표
+- **환경 재현성**: Node/pnpm/Python 의존성 버전 Pin 완료
+- **보안**: `.gitignore` 리팩토링으로 보안 민감 파일 노출 차단 강화
+
+### 의존성 변경
+- 루트 `package.json`에 `packageManager`, `engines` 필드 추가
+- 백엔드 `pyproject.toml` 개발 의존성 버전 고정
+
+### 다음 단계
+- [U-005[Mvp]] TurnInput/TurnOutput Pydantic 모델 구현
+- [U-006[Mvp]] TurnInput/TurnOutput Zod 모델 구현
+
+---
 
 ### 작업 내용
 

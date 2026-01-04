@@ -15,30 +15,34 @@ D:\Dev\unknown-world\
 ├── package.json           # 루트 개발 스크립트 및 프로세스 제어
 ├── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
-│   ├── index.html         # 엔트리 HTML
-│   ├── package.json       # 의존성 및 스크립트 고정
-│   ├── tsconfig.json      # TS 설정 (엄격 모드)
-│   ├── vite.config.ts     # Vite 설정
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   ├── vite.config.ts
 │   └── src/
-│       ├── main.tsx       # 엔트리 포인트
-│       ├── App.tsx        # 메인 컴포넌트 (고정 레이아웃 및 8개 패널)
-│       ├── style.css      # CRT 테마 및 Grid 레이아웃 (SSOT)
-│       └── vite-env.d.ts  # Vite 타입 정의
+│       ├── main.tsx
+│       ├── App.tsx
+│       ├── style.css
+│       └── vite-env.d.ts
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
-│   ├── pyproject.toml     # Python 의존성 및 설정 (uv)
-│   ├── uv.lock            # 의존성 락 파일
+│   ├── pyproject.toml
+│   ├── uv.lock
 │   ├── src/
 │   │   └── unknown_world/
-│   │       ├── __init__.py # 패키지 루트 및 버전
-│   │       └── main.py     # FastAPI 앱 엔트리포인트 (Health/CORS)
+│   │       ├── __init__.py
+│   │       └── main.py
 │   └── tests/
 │       └── integration/
-│           └── test_api.py # API 통합 테스트
+│           └── test_api.py
 ├── shared/                # 공유 리소스 (SSOT)
-│   ├── README.md          # 사용 가이드 및 보안 주의사항
-│   └── schemas/           # JSON Schema (Pydantic/Zod 공용 SSOT)
-│       └── turn/          # Turn 계약 관련 스키마 (input/output)
+│   ├── README.md
+│   └── schemas/
+│       └── turn/
+│           ├── turn_input.schema.json
+│           └── turn_output.schema.json
 └── vibe/                  # SSOT 문서 저장소
+```
 
 ### 주요 디렉토리 책임
 
