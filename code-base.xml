@@ -961,6 +961,10 @@ export default defineConfig({
   "version": "0.1.0",
   "private": true,
   "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": "24.12.0"
+  },
   "scripts": {
     "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
     "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",

@@ -1,5 +1,26 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 18:30] RU-001-Q5: 버전 고정(SSOT) 강화: 루트 packageManager/engines 명시 및 backend dev 의존성 pin
+
+### 작업 내용
+
+- **제안서**: [RU-001-Q5] 버전 고정(SSOT) 강화: 루트 `packageManager`/엔진 명시 + backend dev 의존성 pin(uv.lock 기준)
+- **개선 사항**:
+    - 루트 `package.json`에 `packageManager: "pnpm@10.27.0"` 및 `engines.node: "24.12.0"` 명시하여 개발 도구 버전 SSOT 강화
+    - `backend/pyproject.toml`의 개발 의존성(`pytest`, `httpx`)을 `uv.lock`에 해결된 버전으로 고정(pin)하여 버전 드리프트 방지
+- **영향 범위**: `package.json`, `backend/pyproject.toml`
+
+### 기술적 세부사항
+
+- **SSOT 신호 강화**: 루트 디렉토리 진입 시점부터 일관된 도구 버전 사용을 유도하여 환경 차이에 의한 문제 선제 차단
+- **백엔드 재현성**: 개발 의존성까지 명확히 pin 함으로써 `uv sync` 실행 시 항상 동일한 환경이 보장되도록 함
+
+### 검증
+
+- **수동 검증**: 루트 `package.json` 내용 확인 및 `backend/pyproject.toml`의 `==` 연산자 적용 확인 완료 (commit: f18f1ca)
+
+---
+
 ## [2026-01-04 18:00] RU-001-S2: Vite strictPort 도입 및 포트 정리 스크립트 정합화
 
 ### 작업 내용

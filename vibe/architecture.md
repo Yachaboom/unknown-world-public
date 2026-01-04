@@ -55,11 +55,14 @@ D:\Dev\unknown-world\
 Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음 SSOT 정책을 따릅니다.
 
 1. **실행 커맨드 SSOT**: 루트 `package.json`의 `scripts`. 모든 실행 안내(로드맵, 코드 주석 등)는 이를 기준으로 합니다.
-2. **포트 정책 (RULE-011)**:
+2. **도구 및 의존성 고정 (Pinning)**:
+    - **도구 버전**: 루트 `package.json`에 `packageManager`와 `engines`를 명시하여 pnpm 및 Node.js 버전을 고정합니다.
+    - **의존성 버전**: `vibe/tech-stack.md`를 기준으로 모든 런타임 및 개발 의존성을 특정 버전으로 고정(pin)하여 버전 드리프트를 방지합니다.
+3. **포트 정책 (RULE-011)**:
     - **Frontend**: `8001 ~ 8010` (기본: `8001`). `strictPort: true`를 강제하여 대역 외 자동 이동을 방지합니다.
     - **Backend**: `8011 ~ 8020` (기본: `8011`).
     - **정리**: `pnpm kill:port`는 8001~8020 전 대역을 대상으로 동작합니다.
-3. **도구 설정 SSOT**:
+4. **도구 설정 SSOT**:
     - **Python (Backend)**: `backend/pyproject.toml` (Ruff, Pyright, uv 의존성)
     - **TypeScript (Frontend)**: `frontend/package.json` (pnpm), `frontend/tsconfig.json` (TS)
 

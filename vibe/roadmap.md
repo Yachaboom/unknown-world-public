@@ -4,12 +4,12 @@
 
 ## 진행 현황
 
-**전체**: 5/49 (10%) | **MVP**: 5/36 (14%) | **MMP**: 0/13 (0%)
+**전체**: 9/49 (18%) | **MVP**: 9/36 (25%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-12 | MMP D-28  
+**예상 완료(가정)**: MVP D-11 | MMP D-27  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
-**진행 중**: [RU-001[Mvp]](unit-plans/RU-001[Mvp].md) / **최근 완료**: [U-004[Mvp]](unit-results/U-004[Mvp].md) (2026-01-04)
+**진행 중**: [RU-001[Mvp]](unit-plans/RU-001[Mvp].md) / **최근 완료**: [RU-001-Q5](refactors/RU-001-Q5.md) (2026-01-04)
 
 **블로커**: 없음
 
@@ -175,7 +175,11 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [RU-001-Q5](refactors/RU-001-Q5.md): 버전 고정(SSOT) 강화: 루트 packageManager/engines 명시 및 backend dev 의존성 pin (2026-01-04)
 - ✅ [RU-001-S2](refactors/RU-001-S2.md): Vite strictPort 및 포트 정리 정합화 (2026-01-04)
+- ✅ [RU-001-Q1](refactors/RU-001-Q1.md): 실행 방법/문서/설정의 중복과 불일치 제거 (2026-01-04)
+- ✅ [RU-001-Q4](refactors/RU-001-Q4.md): shared/ 기반 JSON Schema SSOT 도입 및 소비 경로 확정 (2026-01-04)
+- ✅ [RU-001-S1](refactors/RU-001-S1.md): .gitignore JSON 정책 리팩토링 및 shared/ 구조 도입 (2026-01-04)
 - ✅ [U-001[Mvp]](unit-results/U-001[Mvp].md): 프로젝트 스캐폴딩 생성 (2026-01-03)
 - ✅ [U-002[Mvp]](unit-results/U-002[Mvp].md): 프론트 Vite+React+TS 초기화 (2026-01-03)
 - ✅ [U-003[Mvp]](unit-results/U-003[Mvp].md): 백엔드 FastAPI 초기화 (2026-01-04)

@@ -23,8 +23,8 @@ packages = ["src/unknown_world"]
 dev = [
     "ruff==0.14.10",
     "pyright==1.1.407",
-    "pytest>=9.0.2",
-    "httpx>=0.28.1",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
 ]
 
 [tool.ruff]
