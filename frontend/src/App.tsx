@@ -6,13 +6,31 @@
  * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
  *   Rule Board, Economy HUD, Agent Console, Scanner Slot
  *
+ * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
+ *
  * @see vibe/ref/frontend-style-guide.md
  * @see vibe/prd.md 6.7/6.8/9장
  */
 
-/**
- * 패널 컴포넌트 - 공통 패널 레이아웃
- */
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { AgentConsole } from './components/AgentConsole';
+import { useAgentStore } from './stores/agentStore';
+import { startTurnStream, type StreamCallbacks } from './api/turnStream';
+import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+interface NarrativeEntry {
+  turn: number;
+  text: string;
+}
+
+// =============================================================================
+// 패널 컴포넌트
+// =============================================================================
+
 interface PanelProps {
   title: string;
   children?: React.ReactNode;
@@ -32,59 +50,119 @@ function Panel({ title, children, className = '' }: PanelProps) {
   );
 }
 
-/**
- * 내러티브 피드 - 게임 로그 형태 (채팅 버블 아님)
- * RULE-002: 좌/우 버블 대신 턴 타임라인으로 배치
- */
-function NarrativeFeed() {
-  const sampleEntries = [
-    { turn: 1, text: '미지의 세계에 오신 것을 환영합니다...' },
-    { turn: 2, text: '당신은 어둠 속에서 깨어났습니다.' },
-    { turn: 3, text: '희미한 녹색 빛이 주변을 비추고 있습니다.' },
-  ];
+// =============================================================================
+// 내러티브 피드 컴포넌트
+// =============================================================================
+
+interface NarrativeFeedProps {
+  entries: NarrativeEntry[];
+  streamingText: string;
+}
+
+function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // 새 엔트리 추가 시 스크롤
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [entries, streamingText]);
 
   return (
-    <div className="narrative-feed">
-      {sampleEntries.map((entry) => (
+    <div className="narrative-feed" ref={feedRef}>
+      {entries.map((entry) => (
         <div key={entry.turn} className="narrative-entry">
           <span className="narrative-timestamp">[TURN {entry.turn}]</span>
           <span className="narrative-text">{entry.text}</span>
         </div>
       ))}
+      {streamingText && (
+        <div className="narrative-entry streaming">
+          <span className="narrative-timestamp">[STREAMING]</span>
+          <span className="narrative-text">{streamingText}</span>
+          <span className="cursor-blink">▌</span>
+        </div>
+      )}
     </div>
   );
 }
 
-/**
- * 액션 덱 - 선택 가능한 행동 카드들
- * PRD: 비용/위험/보상 표시
- */
-function ActionDeck() {
-  const sampleActions = [
-    { id: 1, title: '탐색하기', cost: 1, risk: '낮음' },
-    { id: 2, title: '조사하기', cost: 2, risk: '중간' },
-    { id: 3, title: '대화하기', cost: 1, risk: '없음' },
-    { id: 4, title: '이동하기', cost: 1, risk: '낮음' },
-  ];
+// =============================================================================
+// 액션 덱 컴포넌트
+// =============================================================================
+
+interface ActionDeckProps {
+  cards: ActionCard[];
+  onCardClick?: (card: ActionCard) => void;
+  disabled?: boolean;
+}
+
+function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
+  // 카드가 없으면 기본 카드 표시
+  const displayCards: ActionCard[] =
+    cards.length > 0
+      ? cards
+      : [
+          {
+            id: 'default-1',
+            label: '탐색하기',
+            description: '주변을 살펴본다',
+            cost: { signal: 1, memory_shard: 0 },
+            risk: 'low',
+            hint: null,
+          },
+          {
+            id: 'default-2',
+            label: '조사하기',
+            description: '자세히 살펴본다',
+            cost: { signal: 2, memory_shard: 0 },
+            risk: 'medium',
+            hint: null,
+          },
+          {
+            id: 'default-3',
+            label: '대화하기',
+            description: '말을 걸어본다',
+            cost: { signal: 1, memory_shard: 0 },
+            risk: 'low',
+            hint: null,
+          },
+        ];
 
   return (
     <div className="action-deck">
-      {sampleActions.map((action) => (
-        <div key={action.id} className="action-card">
-          <div className="action-card-title">{action.title}</div>
+      {displayCards.map((card) => (
+        <button
+          key={card.id}
+          type="button"
+          className="action-card"
+          onClick={() => onCardClick?.(card)}
+          disabled={disabled}
+        >
+          <div className="action-card-title">{card.label}</div>
           <div className="action-card-cost">
-            ⚡ {action.cost} Signal | ⚠ {action.risk}
+            ⚡ {card.cost.signal} Signal
+            {card.cost.memory_shard > 0 && ` | 💎 ${card.cost.memory_shard}`}
+            {' | '}⚠ {card.risk}
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
 }
 
-/**
- * 헤더 - 타이틀, 상태, 재화 HUD
- */
-function GameHeader() {
+// =============================================================================
+// 헤더 컴포넌트
+// =============================================================================
+
+interface GameHeaderProps {
+  signal: number;
+  memoryShard: number;
+  isConnected: boolean;
+}
+
+function GameHeader({ signal, memoryShard, isConnected }: GameHeaderProps) {
   return (
     <header className="game-header">
       <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
@@ -93,22 +171,169 @@ function GameHeader() {
       <div className="header-controls">
         <div className="economy-hud">
           <span className="signal-icon">⚡</span>
-          <span>Signal: 100</span>
+          <span>Signal: {signal}</span>
+          <span className="shard-icon">💎</span>
+          <span>Shard: {memoryShard}</span>
         </div>
         <div className="connection-status">
-          <span className="status-indicator" />
-          <span>ONLINE</span>
+          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
+          <span>{isConnected ? 'ONLINE' : 'OFFLINE'}</span>
         </div>
       </div>
     </header>
   );
 }
 
-/**
- * 메인 App 컴포넌트
- * CSS Grid 기반 고정 레이아웃
- */
+// =============================================================================
+// 메인 App 컴포넌트
+// =============================================================================
+
 function App() {
+  // 상태
+  const [inputText, setInputText] = useState('');
+  const turnCountRef = useRef(0);
+  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>([
+    { turn: 0, text: '미지의 세계에 오신 것을 환영합니다...' },
+  ]);
+  const [actionCards, setActionCards] = useState<ActionCard[]>([]);
+  const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
+  const [isConnected, setIsConnected] = useState(true);
+
+  // Agent Store 액션
+  const {
+    startStream,
+    handleStage,
+    handleBadges,
+    handleNarrativeDelta,
+    handleFinal,
+    handleError,
+    completeStream,
+    isStreaming,
+    narrativeBuffer,
+  } = useAgentStore();
+
+  // 취소 함수 ref
+  const cancelStreamRef = useRef<(() => void) | null>(null);
+
+  /**
+   * TurnOutput을 받아 UI 상태를 업데이트합니다.
+   */
+  const applyTurnOutput = useCallback((output: TurnOutput) => {
+    // 내러티브 추가
+    turnCountRef.current += 1;
+    const newTurn = turnCountRef.current;
+    setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
+
+    // 액션 카드 업데이트
+    if (output.ui.action_deck.cards.length > 0) {
+      setActionCards(output.ui.action_deck.cards);
+    }
+
+    // 경제 상태 업데이트 (RULE-005: 잔액 반영)
+    setEconomy({
+      signal: output.economy.balance_after.signal,
+      memory_shard: output.economy.balance_after.memory_shard,
+    });
+  }, []);
+
+  /**
+   * 턴을 실행합니다.
+   */
+  const executeTurn = useCallback(
+    (text: string, cardId?: string) => {
+      if (isStreaming) return;
+
+      // 입력 데이터 생성
+      const turnInput: TurnInput = {
+        language: 'ko-KR',
+        text: text || (cardId ? `카드 선택: ${cardId}` : ''),
+        click: null,
+        client: {
+          viewport_w: window.innerWidth,
+          viewport_h: window.innerHeight,
+          theme: 'dark',
+        },
+        economy_snapshot: economy,
+      };
+
+      // Agent Store 시작
+      startStream();
+
+      // 스트림 콜백 설정
+      const callbacks: StreamCallbacks = {
+        onStage: handleStage,
+        onBadges: handleBadges,
+        onNarrativeDelta: handleNarrativeDelta,
+        onFinal: (event) => {
+          handleFinal(event);
+          applyTurnOutput(event.data);
+        },
+        onError: (event) => {
+          handleError(event);
+          setIsConnected(false);
+        },
+        onComplete: () => {
+          completeStream();
+        },
+      };
+
+      // 스트림 시작
+      cancelStreamRef.current = startTurnStream(turnInput, callbacks);
+      setInputText('');
+    },
+    [
+      isStreaming,
+      economy,
+      startStream,
+      handleStage,
+      handleBadges,
+      handleNarrativeDelta,
+      handleFinal,
+      handleError,
+      completeStream,
+      applyTurnOutput,
+    ],
+  );
+
+  /**
+   * 입력 제출 핸들러
+   */
+  const handleSubmit = useCallback(() => {
+    if (inputText.trim()) {
+      executeTurn(inputText.trim());
+    }
+  }, [inputText, executeTurn]);
+
+  /**
+   * 카드 클릭 핸들러
+   */
+  const handleCardClick = useCallback(
+    (card: ActionCard) => {
+      executeTurn(card.label, card.id);
+    },
+    [executeTurn],
+  );
+
+  /**
+   * 키보드 이벤트 핸들러
+   */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit],
+  );
+
+  // 컴포넌트 언마운트 시 스트림 취소
+  useEffect(() => {
+    return () => {
+      cancelStreamRef.current?.();
+    };
+  }, []);
+
   return (
     <>
       {/* CRT 스캔라인 오버레이 */}
@@ -117,7 +342,11 @@ function App() {
       {/* 게임 레이아웃 */}
       <div className="game-container">
         {/* Header: 타이틀/상태/재화 */}
-        <GameHeader />
+        <GameHeader
+          signal={economy.signal}
+          memoryShard={economy.memory_shard}
+          isConnected={isConnected}
+        />
 
         {/* Sidebar Left: Inventory / Quest / Rule Board */}
         <aside className="sidebar-left">
@@ -140,17 +369,13 @@ function App() {
               <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
             </div>
           </div>
-          <NarrativeFeed />
+          <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
         </main>
 
         {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
         <aside className="sidebar-right">
           <Panel title="Agent Console" className="flex-1">
-            <p className="panel-placeholder">
-              [ Plan / Queue / Badges ]
-              <br />
-              Parse → Validate → Plan → Resolve
-            </p>
+            <AgentConsole />
           </Panel>
           <Panel title="Memory Pin">
             <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
@@ -162,16 +387,22 @@ function App() {
 
         {/* Footer: Action Deck + Command Input */}
         <footer className="game-footer">
-          <ActionDeck />
+          <ActionDeck cards={actionCards} onCardClick={handleCardClick} disabled={isStreaming} />
           <div className="command-input-area">
             <span className="command-prompt">&gt;</span>
             <input
               type="text"
               className="command-input"
-              placeholder="명령을 입력하세요..."
+              placeholder={isStreaming ? '처리 중...' : '명령을 입력하세요...'}
               aria-label="게임 명령 입력"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isStreaming}
             />
-            <button type="button">EXECUTE</button>
+            <button type="button" onClick={handleSubmit} disabled={isStreaming}>
+              {isStreaming ? 'WAIT' : 'EXECUTE'}
+            </button>
           </div>
         </footer>
       </div>

@@ -4,12 +4,12 @@
 
 ## 진행 현황
 
-**전체**: 8/50 (16%) | **MVP**: 8/37 (22%) | **MMP**: 0/13 (0%)
+**전체**: 9/50 (18%) | **MVP**: 9/37 (24%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-10 | MMP D-26  
+**예상 완료(가정)**: MVP D-9 | MMP D-25  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
-**진행 중**: [U-008[Mvp]](unit-plans/U-008[Mvp].md) / **최근 완료**: [U-007[Mvp]](unit-results/U-007[Mvp].md) (2026-01-04)
+**진행 중**: [U-027[Mvp]](unit-plans/U-027[Mvp].md) / **최근 완료**: [U-008[Mvp]](unit-results/U-008[Mvp].md) (2026-01-05)
 
 **블로커**: 없음
 
@@ -117,7 +117,6 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-008[Mvp]](unit-plans/U-008[Mvp].md) | ⚡프론트 HTTP Streaming 클라이언트 + Agent Console/배지 | Depends=U-006,U-007 | ⏸️
 ID=[U-027[Mvp]](unit-plans/U-027[Mvp].md) | 개발 스크립트: pnpm kill 포트 제한(8001~8020) | Depends=RU-001 | ⏸️
 ID=[RU-002[Mvp]](unit-plans/RU-002[Mvp].md) | 리팩토링: validation/폴백/이벤트 타입 통일 | Depends=U-008 | ⏸️
 ID=[CP-MVP-01](unit-plans/CP-MVP-01.md) | **체크포인트: 스트리밍/스키마/폴백** | Depends=RU-002 | ⏸️
@@ -171,6 +170,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-008[Mvp]](unit-results/U-008[Mvp].md): ⚡프론트 HTTP Streaming 클라이언트 + Agent Console/배지 (2026-01-05)
 - ✅ [U-007[Mvp]](unit-results/U-007[Mvp].md): ⚡모의 Orchestrator + /api/turn HTTP Streaming(POST) (2026-01-04)
 - ✅ [U-006[Mvp]](unit-results/U-006[Mvp].md): ⚡TurnInput/TurnOutput 스키마(Zod) (2026-01-04)
 - ✅ [U-005[Mvp]](unit-results/U-005[Mvp].md): ⚡TurnInput/TurnOutput 스키마(Pydantic) (2026-01-04)

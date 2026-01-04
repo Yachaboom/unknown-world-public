@@ -1,5 +1,47 @@
 # 프로젝트 진행 상황
 
+## [2026-01-05 10:00] U-008[Mvp]: 프론트 HTTP Streaming 클라이언트 + Agent Console/배지 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: fetch 스트리밍 기반 NDJSON 파서 구축 및 Agent Console 실시간 상태 연동
+- **추가 컴포넌트**: `AgentConsole.tsx`, `turnStream.ts` (NDJSON 파서), `agentStore.ts` (Zustand)
+- **달성 요구사항**: [RULE-008] 과정 가시화 및 내부 추론 은닉, [RULE-003/004] 스트림 결과 Zod 검증 및 폴백, [RULE-002] 게임 HUD 통합
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **Fetch API & ReadableStream**: 비동기 스트림 소비
+- **NDJSON 파싱**: 버퍼 기반 라인 복구 로직 직접 구현 (Option A)
+- **Zustand 5.x**: `phases`, `badges`, `streaming_text` 상태 관리
+
+**설계 패턴 및 아키텍처 선택**:
+- **Typewriter Effect 패턴**: `narrative_delta` 이벤트를 통한 실시간 텍스트 출력
+- **Agent Phase 가시화**: 7단계 오케스트레이션 큐(Queue) 시각화로 시스템 신뢰성 확보
+- **Fail-safe 연동**: 스트림 중단 또는 스키마 불일치 시 안전 폴백(Fallback) 자동 전환
+
+**코드 구조**:
+frontend/
+└── src/
+    ├── api/
+    │   └── turnStream.ts
+    ├── stores/
+    │   └── agentStore.ts
+    └── components/
+        └── AgentConsole.tsx
+
+### 성능 및 품질 지표
+- **응답성**: 첫 패킷 수신 즉시 UI 단계 업데이트 (TTFB 최소화)
+- **견고성**: 중간 청크 파싱 실패 시에도 전체 스트림이 중단되지 않도록 에러 가드 적용
+
+### 의존성 변경
+- 추가된 외부 의존성 없음 (기존 Zustand 및 Native API 활용)
+
+### 다음 단계
+- [CP-MVP-01] "스트리밍 + 스키마 + 폴백" 루프 통합 체크포인트 검증
+
+---
+
 ## [2026-01-04 15:35] U-006[Mvp]: TurnInput/TurnOutput 스키마(Zod) 완료
 
 ### 구현 완료 항목

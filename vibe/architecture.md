@@ -20,13 +20,19 @@ D:\Dev\unknown-world\
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   ├── vite.config.ts
-│   └── src/
+    ├── src/
 │       ├── main.tsx
 │       ├── App.tsx
 │       ├── style.css
 │       ├── vite-env.d.ts
-│       └── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
-│           └── turn.ts
+│       ├── api/            # HTTP Streaming 클라이언트 (U-008)
+│       │   └── turnStream.ts
+│       ├── components/     # 게임 UI 컴포넌트 (U-008)
+│       │   └── AgentConsole.tsx
+│       ├── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
+│       │   └── turn.ts
+│       └── stores/         # 상태 관리 (Zustand) (U-008)
+│           └── agentStore.ts
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock
@@ -60,7 +66,10 @@ D:\Dev\unknown-world\
 ### 주요 디렉토리 책임
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
-- **`backend/`**: Gemini API 연동, TurnOutput 생성 및 검증(Repair loop), HTTP Streaming(POST) 담당.
+    - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
+    - `stores/`: Agent Console 상태(단계/배지) 및 월드 상태를 관리하는 Zustand 스토어.
+    - `components/`: Agent Console, Narrative Feed 등 게임 전용 UI 컴포넌트 모음.
+    - `schemas/`: Zod를 활용한 턴 계약(Turn Contract) 검증 및 폴백 로직 정의.
     - `api/`: `/api/turn` 등 클라이언트 통신을 위한 엔드포인트 및 스트리밍 로직 관리.
     - `orchestrator/`: 실모델(Gemini) 또는 모의(Mock)를 통한 게임 엔진 오케스트레이션 핵심 로직 담당.
     - `models/`: Pydantic을 활용한 시스템 내부 데이터 구조 및 유효성 검증 정의.
