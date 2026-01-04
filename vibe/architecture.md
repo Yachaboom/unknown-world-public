@@ -56,8 +56,9 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 1. **실행 커맨드 SSOT**: 루트 `package.json`의 `scripts`. 모든 실행 안내(로드맵, 코드 주석 등)는 이를 기준으로 합니다.
 2. **포트 정책 (RULE-011)**:
-    - **Frontend**: `8001 ~ 8010` (기본: `8001`)
-    - **Backend**: `8011 ~ 8020` (기본: `8011`)
+    - **Frontend**: `8001 ~ 8010` (기본: `8001`). `strictPort: true`를 강제하여 대역 외 자동 이동을 방지합니다.
+    - **Backend**: `8011 ~ 8020` (기본: `8011`).
+    - **정리**: `pnpm kill:port`는 8001~8020 전 대역을 대상으로 동작합니다.
 3. **도구 설정 SSOT**:
     - **Python (Backend)**: `backend/pyproject.toml` (Ruff, Pyright, uv 의존성)
     - **TypeScript (Frontend)**: `frontend/package.json` (pnpm), `frontend/tsconfig.json` (TS)

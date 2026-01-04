@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 4/49 (8%) | **MVP**: 4/36 (11%) | **MMP**: 0/13 (0%)
+**전체**: 5/49 (10%) | **MVP**: 5/36 (14%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-12 | MMP D-28  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
@@ -175,6 +175,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [RU-001-S2](refactors/RU-001-S2.md): Vite strictPort 및 포트 정리 정합화 (2026-01-04)
 - ✅ [U-001[Mvp]](unit-results/U-001[Mvp].md): 프로젝트 스캐폴딩 생성 (2026-01-03)
 - ✅ [U-002[Mvp]](unit-results/U-002[Mvp].md): 프론트 Vite+React+TS 초기화 (2026-01-03)
 - ✅ [U-003[Mvp]](unit-results/U-003[Mvp].md): 백엔드 FastAPI 초기화 (2026-01-04)
@@ -191,12 +192,18 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 pnpm -C frontend install
 pnpm -C frontend dev
 # → http://localhost:8001 에서 접근 가능
+# ⚠️ 포트 충돌 시 (strictPort: true로 fail-fast):
+#    pnpm -C frontend dev --port 8002  (8002~8010 중 선택)
 
 # Backend (uv 기반, RULE-011: 8011~8020)
 cd backend
 uv sync
 uv run uvicorn unknown_world.main:app --reload --port 8011
 # → http://localhost:8011/health 로 확인
+# ⚠️ 포트 충돌 시: --port 8012 (8012~8020 중 선택)
+
+# 전체 포트 정리 (8001~8020)
+pnpm kill:port
 ```
 
 **완료 확인**:

@@ -859,41 +859,6 @@ async def root() -> dict[str, str]:
 }
 </file>
 
-<file path="frontend/vite.config.ts">
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
-    strictPort: false, // 충돌 시 8002~8010 자동 할당 허용
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-});
-</file>
-
-<file path="package.json">
-{
-  "name": "unknown-world",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
-  "scripts": {
-    "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
-    "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015",
-    "kill:front": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
-    "kill:back": "npx kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
-    "dev:front": "pnpm -C frontend dev"
-  }
-}
-</file>
-
 <file path="shared/README.md">
 # shared/
 
@@ -969,6 +934,42 @@ Reference:
 """
 
 __version__ = "0.1.0"
+</file>
+
+<file path="frontend/vite.config.ts">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+});
+</file>
+
+<file path="package.json">
+{
+  "name": "unknown-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "scripts": {
+    "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
+    "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
+    "dev:front": "pnpm -C frontend dev"
+  }
+}
 </file>
 
 </files>

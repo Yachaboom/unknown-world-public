@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
-    strictPort: false, // 충돌 시 8002~8010 자동 할당 허용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
   },
   build: {
     outDir: 'dist',
