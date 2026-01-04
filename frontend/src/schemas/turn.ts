@@ -1,0 +1,558 @@
+/**
+ * Unknown World - TurnInput/TurnOutput Zod 스키마.
+ *
+ * 이 모듈은 백엔드 Pydantic 모델(U-005)과 1:1 대응하는 Zod 스키마를 정의합니다.
+ * 클라이언트 측 검증 및 타입 안전성을 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증 (서버 Pydantic + 클라 Zod)
+ *   - RULE-004: 검증 실패 시 안전 폴백 제공 (UI 멈춤 방지)
+ *   - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
+ *   - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
+ *   - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+ *
+ * Q1 결정 사항:
+ *   - schema_version 포함 (Option A): SaveGame/마이그레이션/검증에 유리
+ *
+ * @module schemas/turn
+ */
+
+import { z } from 'zod';
+
+// =============================================================================
+// 스키마 버전 (Q1 결정: Option A - 포함)
+// =============================================================================
+
+/**
+ * 현재 스키마 버전.
+ * SaveGame/마이그레이션/검증에 사용됩니다.
+ */
+export const SCHEMA_VERSION = '1.0.0' as const;
+
+// =============================================================================
+// 공통 Enum 타입
+// =============================================================================
+
+/**
+ * 지원 언어 (RULE-006).
+ * ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
+ * 모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
+ */
+export const LanguageSchema = z.enum(['ko-KR', 'en-US']);
+export type Language = z.infer<typeof LanguageSchema>;
+
+/**
+ * 테마 설정.
+ */
+export const ThemeSchema = z.enum(['dark', 'light']);
+export type Theme = z.infer<typeof ThemeSchema>;
+
+/**
+ * 에이전트 실행 단계 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
+ */
+export const AgentPhaseSchema = z.enum([
+  'parse',
+  'validate',
+  'plan',
+  'resolve',
+  'render',
+  'verify',
+  'commit',
+]);
+export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
+
+/**
+ * 검증 배지 (RULE-008).
+ * 턴 결과에 대한 검증 상태를 표시합니다.
+ */
+export const ValidationBadgeSchema = z.enum([
+  'schema_ok',
+  'schema_fail',
+  'economy_ok',
+  'economy_fail',
+  'safety_ok',
+  'safety_blocked',
+  'consistency_ok',
+  'consistency_fail',
+]);
+export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
+
+/**
+ * 모델/품질 선택 라벨 (RULE-008).
+ * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
+ */
+export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
+export type ModelLabel = z.infer<typeof ModelLabelSchema>;
+
+/**
+ * 행동 위험도 수준.
+ */
+export const RiskLevelSchema = z.enum(['low', 'medium', 'high']);
+export type RiskLevel = z.infer<typeof RiskLevelSchema>;
+
+// =============================================================================
+// 공통 하위 타입
+// =============================================================================
+
+/**
+ * 정규화 좌표 (RULE-009).
+ * 0~1000 범위의 정수입니다.
+ */
+export const CoordinateSchema = z.number().int().min(0).max(1000).describe('정규화 좌표 (0~1000)');
+export type Coordinate = z.infer<typeof CoordinateSchema>;
+
+/**
+ * 2D 바운딩 박스 (RULE-009).
+ * 좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
+ * 이미지 이해 bbox 포맷과 호환됩니다.
+ */
+export const Box2DSchema = z
+  .object({
+    ymin: CoordinateSchema.describe('Y 최소값 (상단)'),
+    xmin: CoordinateSchema.describe('X 최소값 (좌측)'),
+    ymax: CoordinateSchema.describe('Y 최대값 (하단)'),
+    xmax: CoordinateSchema.describe('X 최대값 (우측)'),
+  })
+  .strict();
+export type Box2D = z.infer<typeof Box2DSchema>;
+
+/**
+ * 재화 수량.
+ * signal과 memory_shard는 0 이상이어야 합니다 (RULE-005).
+ */
+export const CurrencyAmountSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('시그널 (기본 재화, 0 이상)'),
+    memory_shard: z.number().int().min(0).describe('기억 파편 (희귀 재화, 0 이상)'),
+  })
+  .strict();
+export type CurrencyAmount = z.infer<typeof CurrencyAmountSchema>;
+
+// =============================================================================
+// TurnInput 관련 타입
+// =============================================================================
+
+/**
+ * 클릭 입력 정보.
+ * 화면 오브젝트 클릭 시 전달되는 정보입니다.
+ */
+export const ClickInputSchema = z
+  .object({
+    object_id: z.string().describe('클릭한 오브젝트 ID'),
+    box_2d: Box2DSchema.nullable().default(null).describe('클릭 위치 바운딩 박스 (선택)'),
+  })
+  .strict();
+export type ClickInput = z.infer<typeof ClickInputSchema>;
+
+/**
+ * 클라이언트 정보.
+ */
+export const ClientInfoSchema = z
+  .object({
+    viewport_w: z.number().int().positive().describe('뷰포트 너비 (픽셀, 양수)'),
+    viewport_h: z.number().int().positive().describe('뷰포트 높이 (픽셀, 양수)'),
+    theme: ThemeSchema.default('dark').describe('현재 테마'),
+  })
+  .strict();
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+/**
+ * 재화 스냅샷 (클라이언트 → 서버).
+ * 클라이언트가 보유한 현재 재화 상태입니다.
+ */
+export const EconomySnapshotSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('현재 시그널 잔액 (0 이상)'),
+    memory_shard: z.number().int().min(0).describe('현재 기억 파편 잔액 (0 이상)'),
+  })
+  .strict();
+export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
+
+/**
+ * 턴 입력 (클라이언트 → 서버).
+ * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+ */
+export const TurnInputSchema = z
+  .object({
+    language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
+    text: z.string().default('').describe('사용자 자연어 입력'),
+    click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
+    client: ClientInfoSchema.describe('클라이언트 환경 정보'),
+    economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
+  })
+  .strict();
+export type TurnInput = z.infer<typeof TurnInputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - UI
+// =============================================================================
+
+/**
+ * 액션 카드 (Action Deck).
+ * 매 턴 AI가 추천하는 행동 카드입니다.
+ */
+export const ActionCardSchema = z
+  .object({
+    id: z.string().describe('카드 고유 ID'),
+    label: z.string().describe('카드 라벨 (표시용)'),
+    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
+    cost: CurrencyAmountSchema.describe('예상 비용'),
+    risk: RiskLevelSchema.default('low').describe('위험도'),
+    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
+  })
+  .strict();
+export type ActionCard = z.infer<typeof ActionCardSchema>;
+
+/**
+ * 장면 오브젝트 (클릭 가능한 핫스팟).
+ * 좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
+ */
+export const SceneObjectSchema = z
+  .object({
+    id: z.string().describe('오브젝트 고유 ID'),
+    label: z.string().describe('오브젝트 라벨 (표시용)'),
+    box_2d: Box2DSchema.describe('바운딩 박스'),
+    interaction_hint: z.string().nullable().default(null).describe('상호작용 힌트 (선택)'),
+  })
+  .strict();
+export type SceneObject = z.infer<typeof SceneObjectSchema>;
+
+/**
+ * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+ * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+ */
+export const ActionDeckSchema = z
+  .object({
+    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
+  })
+  .strict();
+export type ActionDeck = z.infer<typeof ActionDeckSchema>;
+
+/**
+ * UI 출력 데이터.
+ * AI가 생성한 UI 요소들입니다.
+ * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
+ */
+export const UIOutputSchema = z
+  .object({
+    action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
+    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
+  })
+  .strict();
+export type UIOutput = z.infer<typeof UIOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - World
+// =============================================================================
+
+/**
+ * 중요 설정 고정 후보.
+ * 사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
+ */
+export const MemoryPinSchema = z
+  .object({
+    id: z.string().describe('핀 고유 ID'),
+    content: z.string().describe('고정할 내용'),
+    cost: CurrencyAmountSchema.describe('고정에 필요한 비용'),
+  })
+  .strict();
+export type MemoryPin = z.infer<typeof MemoryPinSchema>;
+
+/**
+ * 세계 규칙 (Rule Board).
+ * 현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
+ */
+export const WorldRuleSchema = z
+  .object({
+    id: z.string().describe('규칙 고유 ID'),
+    label: z.string().describe('규칙 이름'),
+    description: z.string().nullable().default(null).describe('규칙 상세 설명 (선택)'),
+  })
+  .strict();
+export type WorldRule = z.infer<typeof WorldRuleSchema>;
+
+/**
+ * 퀘스트/목표 (Quest Panel).
+ * 플레이어가 달성해야 하는 현재 목표입니다.
+ */
+export const QuestSchema = z
+  .object({
+    id: z.string().describe('퀘스트 고유 ID'),
+    label: z.string().describe('퀘스트 이름'),
+    is_completed: z.boolean().default(false).describe('달성 여부'),
+  })
+  .strict();
+export type Quest = z.infer<typeof QuestSchema>;
+
+/**
+ * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
+ * 이번 턴에서 변경된 세계 상태를 나타냅니다.
+ */
+export const WorldDeltaSchema = z
+  .object({
+    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
+    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
+    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
+    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
+    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
+    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
+  })
+  .strict();
+export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Render
+// =============================================================================
+
+/**
+ * 이미지 생성 작업.
+ * 조건부 이미지 생성/편집 요청입니다.
+ */
+export const ImageJobSchema = z
+  .object({
+    should_generate: z.boolean().describe('이미지를 생성해야 하는지'),
+    prompt: z.string().default('').describe('이미지 생성 프롬프트'),
+    model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
+    aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
+    image_size: z.string().default('1024x1024').describe('이미지 크기'),
+    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
+  })
+  .strict();
+export type ImageJob = z.infer<typeof ImageJobSchema>;
+
+/**
+ * 렌더링 출력 데이터.
+ * 이미지 생성/편집 관련 정보입니다.
+ */
+export const RenderOutputSchema = z
+  .object({
+    image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
+  })
+  .strict();
+export type RenderOutput = z.infer<typeof RenderOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Economy
+// =============================================================================
+
+/**
+ * 경제 출력 데이터 (RULE-005).
+ * 이번 턴의 비용과 잔액 정보입니다.
+ * 잔액 음수는 절대 불가 (서버 Hard gate).
+ */
+export const EconomyOutputSchema = z
+  .object({
+    cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
+    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
+  })
+  .strict();
+export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Safety
+// =============================================================================
+
+/**
+ * 안전 출력 데이터.
+ * 안전 정책 관련 정보입니다.
+ * 차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
+ */
+export const SafetyOutputSchema = z
+  .object({
+    blocked: z.boolean().default(false).describe('안전 정책에 의해 차단되었는지'),
+    message: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('차단 시 사용자에게 표시할 메시지 (선택)'),
+  })
+  .strict();
+export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Agent Console
+// =============================================================================
+
+/**
+ * 에이전트 콘솔 데이터 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+ */
+export const AgentConsoleSchema = z
+  .object({
+    current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
+    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
+    repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
+  })
+  .strict();
+export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
+
+// =============================================================================
+// TurnOutput (메인 응답 스키마)
+// =============================================================================
+
+/**
+ * 턴 출력 (서버 → 클라이언트).
+ * 서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
+ *
+ * Hard Gate 필드 (RULE-003/004/005):
+ *   - economy: cost와 balance_after 필수, 잔액 음수 금지
+ *   - safety: blocked 시 안전한 대체 결과 제공
+ *   - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
+ */
+export const TurnOutputSchema = z
+  .object({
+    // 필수 필드 (Hard Gate)
+    language: LanguageSchema.describe('응답 언어 (요청과 동일)'),
+    narrative: z.string().describe('내러티브 텍스트 (표시용)'),
+    economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
+    safety: SafetyOutputSchema.describe('안전 정책 정보'),
+
+    // UI 관련 필드
+    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
+
+    // 세계 상태 필드
+    world: WorldDeltaSchema.default({
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    }).describe('세계 상태 변화 (delta)'),
+
+    // 렌더링 필드
+    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
+
+    // 에이전트 콘솔 필드
+    agent_console: AgentConsoleSchema.default({
+      current_phase: 'commit',
+      badges: [],
+      repair_count: 0,
+    }).describe('에이전트 실행 정보'),
+  })
+  .strict();
+export type TurnOutput = z.infer<typeof TurnOutputSchema>;
+
+// =============================================================================
+// 안전 폴백 (RULE-004)
+// =============================================================================
+
+/**
+ * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
+ * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
+ *
+ * @param language - 요청 언어
+ * @param repairCount - 복구 시도 횟수
+ * @param errorMessage - 오류 메시지 (선택)
+ */
+export function createFallbackTurnOutput(
+  language: Language,
+  repairCount: number = 0,
+  errorMessage?: string,
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답을 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요.'
+      : '[System] An error occurred while processing the response. Please try again.';
+
+  const safetyMessage =
+    language === 'ko-KR'
+      ? '스키마 검증 실패로 인한 폴백 응답입니다.'
+      : 'This is a fallback response due to schema validation failure.';
+
+  return {
+    language,
+    narrative: errorMessage ?? fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: safetyMessage,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: repairCount,
+    },
+  };
+}
+
+// =============================================================================
+// 검증 헬퍼 함수
+// =============================================================================
+
+/**
+ * TurnOutput 검증 결과 타입.
+ */
+export type TurnOutputParseResult =
+  | { success: true; data: TurnOutput }
+  | { success: false; error: z.ZodError; fallback: TurnOutput };
+
+/**
+ * TurnOutput을 안전하게 파싱합니다.
+ * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
+ *
+ * @param data - 파싱할 데이터
+ * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
+ * @param repairCount - 현재 복구 시도 횟수
+ */
+export function safeParseTurnOutput(
+  data: unknown,
+  language: Language = 'ko-KR',
+  repairCount: number = 0,
+): TurnOutputParseResult {
+  const result = TurnOutputSchema.safeParse(data);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  return {
+    success: false,
+    error: result.error,
+    fallback: createFallbackTurnOutput(language, repairCount),
+  };
+}
+
+/**
+ * TurnInput을 검증합니다.
+ * 입력 데이터의 유효성을 엄격하게 검사합니다.
+ *
+ * @param data - 검증할 데이터
+ * @throws {z.ZodError} 검증 실패 시
+ */
+export function parseTurnInput(data: unknown): TurnInput {
+  return TurnInputSchema.parse(data);
+}
+
+/**
+ * TurnInput 안전 파싱 결과 타입.
+ */
+export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safeParse>;
+
+/**
+ * TurnInput을 안전하게 파싱합니다.
+ *
+ * @param data - 파싱할 데이터
+ */
+export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
+  return TurnInputSchema.safeParse(data);
+}

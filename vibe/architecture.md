@@ -24,7 +24,9 @@ D:\Dev\unknown-world\
 │       ├── main.tsx
 │       ├── App.tsx
 │       ├── style.css
-│       └── vite-env.d.ts
+│       ├── vite-env.d.ts
+│       └── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
+│           └── turn.ts
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock

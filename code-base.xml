@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: backend/src/**/*.py, backend/tests/**/*.py, frontend/src/**/*.{ts,tsx}, shared/schemas/**/*.json
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, backend/.venv/**, frontend/node_modules/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, backend/.venv/**, frontend/node_modules/**, frontend/dist/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,15 +42,29 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/main.py
 backend/src/unknown_world/models/__init__.py
 backend/src/unknown_world/models/turn.py
 backend/tests/integration/test_api.py
 backend/tests/unit/models/test_turn.py
+frontend/coverage/block-navigation.js
+frontend/coverage/coverage-final.json
+frontend/coverage/prettify.js
+frontend/coverage/sorter.js
+frontend/package.json
 frontend/src/App.tsx
 frontend/src/main.tsx
+frontend/src/schemas/index.ts
+frontend/src/schemas/turn.test.ts
+frontend/src/schemas/turn.ts
+frontend/src/schemas/verify_runbook.ts
 frontend/src/vite-env.d.ts
+frontend/tsconfig.json
+frontend/tsconfig.node.json
+frontend/vite.config.ts
+package.json
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
@@ -1009,6 +1023,319 @@ def test_turn_output_json_schema():
     assert box_props["ymin"]["minimum"] == 0
 </file>
 
+<file path="frontend/coverage/block-navigation.js">
+/* eslint-disable */
+var jumpToCode = (function init() {
+    // Classes of code we would like to highlight in the file view
+    var missingCoverageClasses = ['.cbranch-no', '.cstat-no', '.fstat-no'];
+
+    // Elements to highlight in the file listing view
+    var fileListingElements = ['td.pct.low'];
+
+    // We don't want to select elements that are direct descendants of another match
+    var notSelector = ':not(' + missingCoverageClasses.join('):not(') + ') > '; // becomes `:not(a):not(b) > `
+
+    // Selector that finds elements on the page to which we can jump
+    var selector =
+        fileListingElements.join(', ') +
+        ', ' +
+        notSelector +
+        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
+
+    // The NodeList of matching elements
+    var missingCoverageElements = document.querySelectorAll(selector);
+
+    var currentIndex;
+
+    function toggleClass(index) {
+        missingCoverageElements
+            .item(currentIndex)
+            .classList.remove('highlighted');
+        missingCoverageElements.item(index).classList.add('highlighted');
+    }
+
+    function makeCurrent(index) {
+        toggleClass(index);
+        currentIndex = index;
+        missingCoverageElements.item(index).scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+        });
+    }
+
+    function goToPrevious() {
+        var nextIndex = 0;
+        if (typeof currentIndex !== 'number' || currentIndex === 0) {
+            nextIndex = missingCoverageElements.length - 1;
+        } else if (missingCoverageElements.length > 1) {
+            nextIndex = currentIndex - 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    function goToNext() {
+        var nextIndex = 0;
+
+        if (
+            typeof currentIndex === 'number' &&
+            currentIndex < missingCoverageElements.length - 1
+        ) {
+            nextIndex = currentIndex + 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    return function jump(event) {
+        if (
+            document.getElementById('fileSearch') === document.activeElement &&
+            document.activeElement != null
+        ) {
+            // if we're currently focused on the search input, we don't want to navigate
+            return;
+        }
+
+        switch (event.which) {
+            case 78: // n
+            case 74: // j
+                goToNext();
+                break;
+            case 66: // b
+            case 75: // k
+            case 80: // p
+                goToPrevious();
+                break;
+        }
+    };
+})();
+window.addEventListener('keydown', jumpToCode);
+</file>
+
+<file path="frontend/coverage/coverage-final.json">
+{"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts": {"path":"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts","statementMap":{"0":{"start":{"line":30,"column":30},"end":{"line":30,"column":null}},"1":{"start":{"line":41,"column":30},"end":{"line":41,"column":null}},"2":{"start":{"line":47,"column":27},"end":{"line":47,"column":null}},"3":{"start":{"line":54,"column":32},"end":{"line":62,"column":null}},"4":{"start":{"line":69,"column":37},"end":{"line":78,"column":null}},"5":{"start":{"line":85,"column":32},"end":{"line":85,"column":null}},"6":{"start":{"line":91,"column":31},"end":{"line":91,"column":null}},"7":{"start":{"line":102,"column":32},"end":{"line":107,"column":null}},"8":{"start":{"line":115,"column":27},"end":{"line":122,"column":null}},"9":{"start":{"line":129,"column":36},"end":{"line":138,"column":null}},"10":{"start":{"line":149,"column":32},"end":{"line":156,"column":null}},"11":{"start":{"line":162,"column":32},"end":{"line":176,"column":null}},"12":{"start":{"line":183,"column":37},"end":{"line":192,"column":null}},"13":{"start":{"line":199,"column":31},"end":{"line":209,"column":null}},"14":{"start":{"line":220,"column":32},"end":{"line":229,"column":null}},"15":{"start":{"line":236,"column":33},"end":{"line":247,"column":null}},"16":{"start":{"line":254,"column":32},"end":{"line":262,"column":null}},"17":{"start":{"line":270,"column":30},"end":{"line":278,"column":null}},"18":{"start":{"line":289,"column":31},"end":{"line":295,"column":null}},"19":{"start":{"line":302,"column":31},"end":{"line":312,"column":null}},"20":{"start":{"line":319,"column":27},"end":{"line":325,"column":null}},"21":{"start":{"line":332,"column":32},"end":{"line":359,"column":null}},"22":{"start":{"line":370,"column":30},"end":{"line":382,"column":null}},"23":{"start":{"line":389,"column":34},"end":{"line":395,"column":null}},"24":{"start":{"line":407,"column":35},"end":{"line":412,"column":null}},"25":{"start":{"line":424,"column":34},"end":{"line":436,"column":null}},"26":{"start":{"line":447,"column":34},"end":{"line":453,"column":null}},"27":{"start":{"line":469,"column":32},"end":{"line":502,"column":null}},"28":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"29":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"30":{"start":{"line":532,"column":2},"end":{"line":563,"column":null}},"31":{"start":{"line":590,"column":17},"end":{"line":590,"column":null}},"32":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"33":{"start":{"line":593,"column":4},"end":{"line":593,"column":null}},"34":{"start":{"line":596,"column":2},"end":{"line":600,"column":null}},"35":{"start":{"line":611,"column":2},"end":{"line":611,"column":null}},"36":{"start":{"line":625,"column":2},"end":{"line":625,"column":null}}},"fnMap":{"0":{"name":"createFallbackTurnOutput","decl":{"start":{"line":517,"column":16},"end":{"line":517,"column":null}},"loc":{"start":{"line":521,"column":14},"end":{"line":564,"column":null}},"line":521},"1":{"name":"safeParseTurnOutput","decl":{"start":{"line":585,"column":16},"end":{"line":585,"column":null}},"loc":{"start":{"line":589,"column":25},"end":{"line":601,"column":null}},"line":589},"2":{"name":"parseTurnInput","decl":{"start":{"line":610,"column":16},"end":{"line":610,"column":31}},"loc":{"start":{"line":610,"column":57},"end":{"line":612,"column":null}},"line":610},"3":{"name":"safeParseTurnInput","decl":{"start":{"line":624,"column":16},"end":{"line":624,"column":35}},"loc":{"start":{"line":624,"column":76},"end":{"line":626,"column":null}},"line":624}},"branchMap":{"0":{"loc":{"start":{"line":519,"column":2},"end":{"line":519,"column":null}},"type":"default-arg","locations":[{"start":{"line":519,"column":24},"end":{"line":519,"column":null}}],"line":519},"1":{"loc":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"type":"cond-expr","locations":[{"start":{"line":524,"column":8},"end":{"line":524,"column":null}},{"start":{"line":525,"column":8},"end":{"line":525,"column":null}}],"line":523},"2":{"loc":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"type":"cond-expr","locations":[{"start":{"line":529,"column":8},"end":{"line":529,"column":null}},{"start":{"line":530,"column":8},"end":{"line":530,"column":null}}],"line":528},"3":{"loc":{"start":{"line":534,"column":15},"end":{"line":534,"column":null}},"type":"binary-expr","locations":[{"start":{"line":534,"column":15},"end":{"line":534,"column":31}},{"start":{"line":534,"column":31},"end":{"line":534,"column":null}}],"line":534},"4":{"loc":{"start":{"line":587,"column":2},"end":{"line":587,"column":null}},"type":"default-arg","locations":[{"start":{"line":587,"column":23},"end":{"line":587,"column":null}}],"line":587},"5":{"loc":{"start":{"line":588,"column":2},"end":{"line":588,"column":null}},"type":"default-arg","locations":[{"start":{"line":588,"column":24},"end":{"line":588,"column":null}}],"line":588},"6":{"loc":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"type":"if","locations":[{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},{"start":{},"end":{}}],"line":592}},"s":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1,"9":1,"10":1,"11":1,"12":1,"13":1,"14":1,"15":1,"16":1,"17":1,"18":1,"19":1,"20":1,"21":1,"22":1,"23":1,"24":1,"25":1,"26":1,"27":1,"28":1,"29":1,"30":1,"31":2,"32":2,"33":1,"34":1,"35":2,"36":2},"f":{"0":1,"1":2,"2":2,"3":2},"b":{"0":[1],"1":[1,0],"2":[1,0],"3":[1,1],"4":[2],"5":[2],"6":[1,1]},"meta":{"lastBranch":7,"lastFunction":4,"lastStatement":37,"seen":{"s:30:30:30:Infinity":0,"s:41:30:41:Infinity":1,"s:47:27:47:Infinity":2,"s:54:32:62:Infinity":3,"s:69:37:78:Infinity":4,"s:85:32:85:Infinity":5,"s:91:31:91:Infinity":6,"s:102:32:107:Infinity":7,"s:115:27:122:Infinity":8,"s:129:36:138:Infinity":9,"s:149:32:156:Infinity":10,"s:162:32:176:Infinity":11,"s:183:37:192:Infinity":12,"s:199:31:209:Infinity":13,"s:220:32:229:Infinity":14,"s:236:33:247:Infinity":15,"s:254:32:262:Infinity":16,"s:270:30:278:Infinity":17,"s:289:31:295:Infinity":18,"s:302:31:312:Infinity":19,"s:319:27:325:Infinity":20,"s:332:32:359:Infinity":21,"s:370:30:382:Infinity":22,"s:389:34:395:Infinity":23,"s:407:35:412:Infinity":24,"s:424:34:436:Infinity":25,"s:447:34:453:Infinity":26,"s:469:32:502:Infinity":27,"f:517:16:517:Infinity":0,"b:519:24:519:Infinity":0,"s:523:4:525:Infinity":28,"b:524:8:524:Infinity:525:8:525:Infinity":1,"s:528:4:530:Infinity":29,"b:529:8:529:Infinity:530:8:530:Infinity":2,"s:532:2:563:Infinity":30,"b:534:15:534:31:534:31:534:Infinity":3,"f:585:16:585:Infinity":1,"b:587:23:587:Infinity":4,"b:588:24:588:Infinity":5,"s:590:17:590:Infinity":31,"b:592:2:594:Infinity:undefined:undefined:undefined:undefined":6,"s:592:2:594:Infinity":32,"s:593:4:593:Infinity":33,"s:596:2:600:Infinity":34,"f:610:16:610:31":2,"s:611:2:611:Infinity":35,"f:624:16:624:35":3,"s:625:2:625:Infinity":36}}}
+}
+</file>
+
+<file path="frontend/coverage/prettify.js">
+/* eslint-disable */
+window.PR_SHOULD_USE_CONTINUATION=true;(function(){var h=["break,continue,do,else,for,if,return,while"];var u=[h,"auto,case,char,const,default,double,enum,extern,float,goto,int,long,register,short,signed,sizeof,static,struct,switch,typedef,union,unsigned,void,volatile"];var p=[u,"catch,class,delete,false,import,new,operator,private,protected,public,this,throw,true,try,typeof"];var l=[p,"alignof,align_union,asm,axiom,bool,concept,concept_map,const_cast,constexpr,decltype,dynamic_cast,explicit,export,friend,inline,late_check,mutable,namespace,nullptr,reinterpret_cast,static_assert,static_cast,template,typeid,typename,using,virtual,where"];var x=[p,"abstract,boolean,byte,extends,final,finally,implements,import,instanceof,null,native,package,strictfp,super,synchronized,throws,transient"];var R=[x,"as,base,by,checked,decimal,delegate,descending,dynamic,event,fixed,foreach,from,group,implicit,in,interface,internal,into,is,lock,object,out,override,orderby,params,partial,readonly,ref,sbyte,sealed,stackalloc,string,select,uint,ulong,unchecked,unsafe,ushort,var"];var r="all,and,by,catch,class,else,extends,false,finally,for,if,in,is,isnt,loop,new,no,not,null,of,off,on,or,return,super,then,true,try,unless,until,when,while,yes";var w=[p,"debugger,eval,export,function,get,null,set,undefined,var,with,Infinity,NaN"];var s="caller,delete,die,do,dump,elsif,eval,exit,foreach,for,goto,if,import,last,local,my,next,no,our,print,package,redo,require,sub,undef,unless,until,use,wantarray,while,BEGIN,END";var I=[h,"and,as,assert,class,def,del,elif,except,exec,finally,from,global,import,in,is,lambda,nonlocal,not,or,pass,print,raise,try,with,yield,False,True,None"];var f=[h,"alias,and,begin,case,class,def,defined,elsif,end,ensure,false,in,module,next,nil,not,or,redo,rescue,retry,self,super,then,true,undef,unless,until,when,yield,BEGIN,END"];var H=[h,"case,done,elif,esac,eval,fi,function,in,local,set,then,until"];var A=[l,R,w,s+I,f,H];var e=/^(DIR|FILE|vector|(de|priority_)?queue|list|stack|(const_)?iterator|(multi)?(set|map)|bitset|u?(int|float)\d*)/;var C="str";var z="kwd";var j="com";var O="typ";var G="lit";var L="pun";var F="pln";var m="tag";var E="dec";var J="src";var P="atn";var n="atv";var N="nocode";var M="(?:^^\\.?|[+-]|\\!|\\!=|\\!==|\\#|\\%|\\%=|&|&&|&&=|&=|\\(|\\*|\\*=|\\+=|\\,|\\-=|\\->|\\/|\\/=|:|::|\\;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\@|\\[|\\^|\\^=|\\^\\^|\\^\\^=|\\{|\\||\\|=|\\|\\||\\|\\|=|\\~|break|case|continue|delete|do|else|finally|instanceof|return|throw|try|typeof)\\s*";function k(Z){var ad=0;var S=false;var ac=false;for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.ignoreCase){ac=true}else{if(/[a-z]/i.test(ae.source.replace(/\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[^ux]/gi,""))){S=true;ac=false;break}}}var Y={b:8,t:9,n:10,v:11,f:12,r:13};function ab(ah){var ag=ah.charCodeAt(0);if(ag!==92){return ag}var af=ah.charAt(1);ag=Y[af];if(ag){return ag}else{if("0"<=af&&af<="7"){return parseInt(ah.substring(1),8)}else{if(af==="u"||af==="x"){return parseInt(ah.substring(2),16)}else{return ah.charCodeAt(1)}}}}function T(af){if(af<32){return(af<16?"\\x0":"\\x")+af.toString(16)}var ag=String.fromCharCode(af);if(ag==="\\"||ag==="-"||ag==="["||ag==="]"){ag="\\"+ag}return ag}function X(am){var aq=am.substring(1,am.length-1).match(new RegExp("\\\\u[0-9A-Fa-f]{4}|\\\\x[0-9A-Fa-f]{2}|\\\\[0-3][0-7]{0,2}|\\\\[0-7]{1,2}|\\\\[\\s\\S]|-|[^-\\\\]","g"));var ak=[];var af=[];var ao=aq[0]==="^";for(var ar=ao?1:0,aj=aq.length;ar<aj;++ar){var ah=aq[ar];if(/\\[bdsw]/i.test(ah)){ak.push(ah)}else{var ag=ab(ah);var al;if(ar+2<aj&&"-"===aq[ar+1]){al=ab(aq[ar+2]);ar+=2}else{al=ag}af.push([ag,al]);if(!(al<65||ag>122)){if(!(al<65||ag>90)){af.push([Math.max(65,ag)|32,Math.min(al,90)|32])}if(!(al<97||ag>122)){af.push([Math.max(97,ag)&~32,Math.min(al,122)&~32])}}}}af.sort(function(av,au){return(av[0]-au[0])||(au[1]-av[1])});var ai=[];var ap=[NaN,NaN];for(var ar=0;ar<af.length;++ar){var at=af[ar];if(at[0]<=ap[1]+1){ap[1]=Math.max(ap[1],at[1])}else{ai.push(ap=at)}}var an=["["];if(ao){an.push("^")}an.push.apply(an,ak);for(var ar=0;ar<ai.length;++ar){var at=ai[ar];an.push(T(at[0]));if(at[1]>at[0]){if(at[1]+1>at[0]){an.push("-")}an.push(T(at[1]))}}an.push("]");return an.join("")}function W(al){var aj=al.source.match(new RegExp("(?:\\[(?:[^\\x5C\\x5D]|\\\\[\\s\\S])*\\]|\\\\u[A-Fa-f0-9]{4}|\\\\x[A-Fa-f0-9]{2}|\\\\[0-9]+|\\\\[^ux0-9]|\\(\\?[:!=]|[\\(\\)\\^]|[^\\x5B\\x5C\\(\\)\\^]+)","g"));var ah=aj.length;var an=[];for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){an[af]=-1}}}}for(var ak=1;ak<an.length;++ak){if(-1===an[ak]){an[ak]=++ad}}for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am;if(an[am]===undefined){aj[ak]="(?:"}}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){aj[ak]="\\"+an[am]}}}}for(var ak=0,am=0;ak<ah;++ak){if("^"===aj[ak]&&"^"!==aj[ak+1]){aj[ak]=""}}if(al.ignoreCase&&S){for(var ak=0;ak<ah;++ak){var ag=aj[ak];var ai=ag.charAt(0);if(ag.length>=2&&ai==="["){aj[ak]=X(ag)}else{if(ai!=="\\"){aj[ak]=ag.replace(/[a-zA-Z]/g,function(ao){var ap=ao.charCodeAt(0);return"["+String.fromCharCode(ap&~32,ap|32)+"]"})}}}}return aj.join("")}var aa=[];for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.global||ae.multiline){throw new Error(""+ae)}aa.push("(?:"+W(ae)+")")}return new RegExp(aa.join("|"),ac?"gi":"g")}function a(V){var U=/(?:^|\s)nocode(?:\s|$)/;var X=[];var T=0;var Z=[];var W=0;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=document.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Y=S&&"pre"===S.substring(0,3);function aa(ab){switch(ab.nodeType){case 1:if(U.test(ab.className)){return}for(var ae=ab.firstChild;ae;ae=ae.nextSibling){aa(ae)}var ad=ab.nodeName;if("BR"===ad||"LI"===ad){X[W]="\n";Z[W<<1]=T++;Z[(W++<<1)|1]=ab}break;case 3:case 4:var ac=ab.nodeValue;if(ac.length){if(!Y){ac=ac.replace(/[ \t\r\n]+/g," ")}else{ac=ac.replace(/\r\n?/g,"\n")}X[W]=ac;Z[W<<1]=T;T+=ac.length;Z[(W++<<1)|1]=ab}break}}aa(V);return{sourceCode:X.join("").replace(/\n$/,""),spans:Z}}function B(S,U,W,T){if(!U){return}var V={sourceCode:U,basePos:S};W(V);T.push.apply(T,V.decorations)}var v=/\S/;function o(S){var V=undefined;for(var U=S.firstChild;U;U=U.nextSibling){var T=U.nodeType;V=(T===1)?(V?S:U):(T===3)?(v.test(U.nodeValue)?S:V):V}return V===S?undefined:V}function g(U,T){var S={};var V;(function(){var ad=U.concat(T);var ah=[];var ag={};for(var ab=0,Z=ad.length;ab<Z;++ab){var Y=ad[ab];var ac=Y[3];if(ac){for(var ae=ac.length;--ae>=0;){S[ac.charAt(ae)]=Y}}var af=Y[1];var aa=""+af;if(!ag.hasOwnProperty(aa)){ah.push(af);ag[aa]=null}}ah.push(/[\0-\uffff]/);V=k(ah)})();var X=T.length;var W=function(ah){var Z=ah.sourceCode,Y=ah.basePos;var ad=[Y,F];var af=0;var an=Z.match(V)||[];var aj={};for(var ae=0,aq=an.length;ae<aq;++ae){var ag=an[ae];var ap=aj[ag];var ai=void 0;var am;if(typeof ap==="string"){am=false}else{var aa=S[ag.charAt(0)];if(aa){ai=ag.match(aa[1]);ap=aa[0]}else{for(var ao=0;ao<X;++ao){aa=T[ao];ai=ag.match(aa[1]);if(ai){ap=aa[0];break}}if(!ai){ap=F}}am=ap.length>=5&&"lang-"===ap.substring(0,5);if(am&&!(ai&&typeof ai[1]==="string")){am=false;ap=J}if(!am){aj[ag]=ap}}var ab=af;af+=ag.length;if(!am){ad.push(Y+ab,ap)}else{var al=ai[1];var ak=ag.indexOf(al);var ac=ak+al.length;if(ai[2]){ac=ag.length-ai[2].length;ak=ac-al.length}var ar=ap.substring(5);B(Y+ab,ag.substring(0,ak),W,ad);B(Y+ab+ak,al,q(ar,al),ad);B(Y+ab+ac,ag.substring(ac),W,ad)}}ah.decorations=ad};return W}function i(T){var W=[],S=[];if(T.tripleQuotedStrings){W.push([C,/^(?:\'\'\'(?:[^\'\\]|\\[\s\S]|\'{1,2}(?=[^\']))*(?:\'\'\'|$)|\"\"\"(?:[^\"\\]|\\[\s\S]|\"{1,2}(?=[^\"]))*(?:\"\"\"|$)|\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$))/,null,"'\""])}else{if(T.multiLineStrings){W.push([C,/^(?:\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$)|\`(?:[^\\\`]|\\[\s\S])*(?:\`|$))/,null,"'\"`"])}else{W.push([C,/^(?:\'(?:[^\\\'\r\n]|\\.)*(?:\'|$)|\"(?:[^\\\"\r\n]|\\.)*(?:\"|$))/,null,"\"'"])}}if(T.verbatimStrings){S.push([C,/^@\"(?:[^\"]|\"\")*(?:\"|$)/,null])}var Y=T.hashComments;if(Y){if(T.cStyleComments){if(Y>1){W.push([j,/^#(?:##(?:[^#]|#(?!##))*(?:###|$)|.*)/,null,"#"])}else{W.push([j,/^#(?:(?:define|elif|else|endif|error|ifdef|include|ifndef|line|pragma|undef|warning)\b|[^\r\n]*)/,null,"#"])}S.push([C,/^<(?:(?:(?:\.\.\/)*|\/?)(?:[\w-]+(?:\/[\w-]+)+)?[\w-]+\.h|[a-z]\w*)>/,null])}else{W.push([j,/^#[^\r\n]*/,null,"#"])}}if(T.cStyleComments){S.push([j,/^\/\/[^\r\n]*/,null]);S.push([j,/^\/\*[\s\S]*?(?:\*\/|$)/,null])}if(T.regexLiterals){var X=("/(?=[^/*])(?:[^/\\x5B\\x5C]|\\x5C[\\s\\S]|\\x5B(?:[^\\x5C\\x5D]|\\x5C[\\s\\S])*(?:\\x5D|$))+/");S.push(["lang-regex",new RegExp("^"+M+"("+X+")")])}var V=T.types;if(V){S.push([O,V])}var U=(""+T.keywords).replace(/^ | $/g,"");if(U.length){S.push([z,new RegExp("^(?:"+U.replace(/[\s,]+/g,"|")+")\\b"),null])}W.push([F,/^\s+/,null," \r\n\t\xA0"]);S.push([G,/^@[a-z_$][a-z_$@0-9]*/i,null],[O,/^(?:[@_]?[A-Z]+[a-z][A-Za-z_$@0-9]*|\w+_t\b)/,null],[F,/^[a-z_$][a-z_$@0-9]*/i,null],[G,new RegExp("^(?:0x[a-f0-9]+|(?:\\d(?:_\\d+)*\\d*(?:\\.\\d*)?|\\.\\d\\+)(?:e[+\\-]?\\d+)?)[a-z]*","i"),null,"0123456789"],[F,/^\\[\s\S]?/,null],[L,/^.[^\s\w\.$@\'\"\`\/\#\\]*/,null]);return g(W,S)}var K=i({keywords:A,hashComments:true,cStyleComments:true,multiLineStrings:true,regexLiterals:true});function Q(V,ag){var U=/(?:^|\s)nocode(?:\s|$)/;var ab=/\r\n?|\n/;var ac=V.ownerDocument;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=ac.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Z=S&&"pre"===S.substring(0,3);var af=ac.createElement("LI");while(V.firstChild){af.appendChild(V.firstChild)}var W=[af];function ae(al){switch(al.nodeType){case 1:if(U.test(al.className)){break}if("BR"===al.nodeName){ad(al);if(al.parentNode){al.parentNode.removeChild(al)}}else{for(var an=al.firstChild;an;an=an.nextSibling){ae(an)}}break;case 3:case 4:if(Z){var am=al.nodeValue;var aj=am.match(ab);if(aj){var ai=am.substring(0,aj.index);al.nodeValue=ai;var ah=am.substring(aj.index+aj[0].length);if(ah){var ak=al.parentNode;ak.insertBefore(ac.createTextNode(ah),al.nextSibling)}ad(al);if(!ai){al.parentNode.removeChild(al)}}}break}}function ad(ak){while(!ak.nextSibling){ak=ak.parentNode;if(!ak){return}}function ai(al,ar){var aq=ar?al.cloneNode(false):al;var ao=al.parentNode;if(ao){var ap=ai(ao,1);var an=al.nextSibling;ap.appendChild(aq);for(var am=an;am;am=an){an=am.nextSibling;ap.appendChild(am)}}return aq}var ah=ai(ak.nextSibling,0);for(var aj;(aj=ah.parentNode)&&aj.nodeType===1;){ah=aj}W.push(ah)}for(var Y=0;Y<W.length;++Y){ae(W[Y])}if(ag===(ag|0)){W[0].setAttribute("value",ag)}var aa=ac.createElement("OL");aa.className="linenums";var X=Math.max(0,((ag-1))|0)||0;for(var Y=0,T=W.length;Y<T;++Y){af=W[Y];af.className="L"+((Y+X)%10);if(!af.firstChild){af.appendChild(ac.createTextNode("\xA0"))}aa.appendChild(af)}V.appendChild(aa)}function D(ac){var aj=/\bMSIE\b/.test(navigator.userAgent);var am=/\n/g;var al=ac.sourceCode;var an=al.length;var V=0;var aa=ac.spans;var T=aa.length;var ah=0;var X=ac.decorations;var Y=X.length;var Z=0;X[Y]=an;var ar,aq;for(aq=ar=0;aq<Y;){if(X[aq]!==X[aq+2]){X[ar++]=X[aq++];X[ar++]=X[aq++]}else{aq+=2}}Y=ar;for(aq=ar=0;aq<Y;){var at=X[aq];var ab=X[aq+1];var W=aq+2;while(W+2<=Y&&X[W+1]===ab){W+=2}X[ar++]=at;X[ar++]=ab;aq=W}Y=X.length=ar;var ae=null;while(ah<T){var af=aa[ah];var S=aa[ah+2]||an;var ag=X[Z];var ap=X[Z+2]||an;var W=Math.min(S,ap);var ak=aa[ah+1];var U;if(ak.nodeType!==1&&(U=al.substring(V,W))){if(aj){U=U.replace(am,"\r")}ak.nodeValue=U;var ai=ak.ownerDocument;var ao=ai.createElement("SPAN");ao.className=X[Z+1];var ad=ak.parentNode;ad.replaceChild(ao,ak);ao.appendChild(ak);if(V<S){aa[ah+1]=ak=ai.createTextNode(al.substring(W,S));ad.insertBefore(ak,ao.nextSibling)}}V=W;if(V>=S){ah+=2}if(V>=ap){Z+=2}}}var t={};function c(U,V){for(var S=V.length;--S>=0;){var T=V[S];if(!t.hasOwnProperty(T)){t[T]=U}else{if(window.console){console.warn("cannot override language handler %s",T)}}}}function q(T,S){if(!(T&&t.hasOwnProperty(T))){T=/^\s*</.test(S)?"default-markup":"default-code"}return t[T]}c(K,["default-code"]);c(g([],[[F,/^[^<?]+/],[E,/^<!\w[^>]*(?:>|$)/],[j,/^<\!--[\s\S]*?(?:-\->|$)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],[L,/^(?:<[%?]|[%?]>)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i]]),["default-markup","htm","html","mxml","xhtml","xml","xsl"]);c(g([[F,/^[\s]+/,null," \t\r\n"],[n,/^(?:\"[^\"]*\"?|\'[^\']*\'?)/,null,"\"'"]],[[m,/^^<\/?[a-z](?:[\w.:-]*\w)?|\/?>$/i],[P,/^(?!style[\s=]|on)[a-z](?:[\w:-]*\w)?/i],["lang-uq.val",/^=\s*([^>\'\"\s]*(?:[^>\'\"\s\/]|\/(?=\s)))/],[L,/^[=<>\/]+/],["lang-js",/^on\w+\s*=\s*\"([^\"]+)\"/i],["lang-js",/^on\w+\s*=\s*\'([^\']+)\'/i],["lang-js",/^on\w+\s*=\s*([^\"\'>\s]+)/i],["lang-css",/^style\s*=\s*\"([^\"]+)\"/i],["lang-css",/^style\s*=\s*\'([^\']+)\'/i],["lang-css",/^style\s*=\s*([^\"\'>\s]+)/i]]),["in.tag"]);c(g([],[[n,/^[\s\S]+/]]),["uq.val"]);c(i({keywords:l,hashComments:true,cStyleComments:true,types:e}),["c","cc","cpp","cxx","cyc","m"]);c(i({keywords:"null,true,false"}),["json"]);c(i({keywords:R,hashComments:true,cStyleComments:true,verbatimStrings:true,types:e}),["cs"]);c(i({keywords:x,cStyleComments:true}),["java"]);c(i({keywords:H,hashComments:true,multiLineStrings:true}),["bsh","csh","sh"]);c(i({keywords:I,hashComments:true,multiLineStrings:true,tripleQuotedStrings:true}),["cv","py"]);c(i({keywords:s,hashComments:true,multiLineStrings:true,regexLiterals:true}),["perl","pl","pm"]);c(i({keywords:f,hashComments:true,multiLineStrings:true,regexLiterals:true}),["rb"]);c(i({keywords:w,cStyleComments:true,regexLiterals:true}),["js"]);c(i({keywords:r,hashComments:3,cStyleComments:true,multilineStrings:true,tripleQuotedStrings:true,regexLiterals:true}),["coffee"]);c(g([],[[C,/^[\s\S]+/]]),["regex"]);function d(V){var U=V.langExtension;try{var S=a(V.sourceNode);var T=S.sourceCode;V.sourceCode=T;V.spans=S.spans;V.basePos=0;q(U,T)(V);D(V)}catch(W){if("console" in window){console.log(W&&W.stack?W.stack:W)}}}function y(W,V,U){var S=document.createElement("PRE");S.innerHTML=W;if(U){Q(S,U)}var T={langExtension:V,numberLines:U,sourceNode:S};d(T);return S.innerHTML}function b(ad){function Y(af){return document.getElementsByTagName(af)}var ac=[Y("pre"),Y("code"),Y("xmp")];var T=[];for(var aa=0;aa<ac.length;++aa){for(var Z=0,V=ac[aa].length;Z<V;++Z){T.push(ac[aa][Z])}}ac=null;var W=Date;if(!W.now){W={now:function(){return +(new Date)}}}var X=0;var S;var ab=/\blang(?:uage)?-([\w.]+)(?!\S)/;var ae=/\bprettyprint\b/;function U(){var ag=(window.PR_SHOULD_USE_CONTINUATION?W.now()+250:Infinity);for(;X<T.length&&W.now()<ag;X++){var aj=T[X];var ai=aj.className;if(ai.indexOf("prettyprint")>=0){var ah=ai.match(ab);var am;if(!ah&&(am=o(aj))&&"CODE"===am.tagName){ah=am.className.match(ab)}if(ah){ah=ah[1]}var al=false;for(var ak=aj.parentNode;ak;ak=ak.parentNode){if((ak.tagName==="pre"||ak.tagName==="code"||ak.tagName==="xmp")&&ak.className&&ak.className.indexOf("prettyprint")>=0){al=true;break}}if(!al){var af=aj.className.match(/\blinenums\b(?::(\d+))?/);af=af?af[1]&&af[1].length?+af[1]:true:false;if(af){Q(aj,af)}S={langExtension:ah,sourceNode:aj,numberLines:af};d(S)}}}if(X<T.length){setTimeout(U,250)}else{if(ad){ad()}}}U()}window.prettyPrintOne=y;window.prettyPrint=b;window.PR={createSimpleLexer:g,registerLangHandler:c,sourceDecorator:i,PR_ATTRIB_NAME:P,PR_ATTRIB_VALUE:n,PR_COMMENT:j,PR_DECLARATION:E,PR_KEYWORD:z,PR_LITERAL:G,PR_NOCODE:N,PR_PLAIN:F,PR_PUNCTUATION:L,PR_SOURCE:J,PR_STRING:C,PR_TAG:m,PR_TYPE:O}})();PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_DECLARATION,/^<!\w[^>]*(?:>|$)/],[PR.PR_COMMENT,/^<\!--[\s\S]*?(?:-\->|$)/],[PR.PR_PUNCTUATION,/^(?:<[%?]|[%?]>)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-handlebars",/^<script\b[^>]*type\s*=\s*['"]?text\/x-handlebars-template['"]?\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i],[PR.PR_DECLARATION,/^{{[#^>/]?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{&?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{{>?\s*[\w.][^}]*}}}/],[PR.PR_COMMENT,/^{{![^}]*}}/]]),["handlebars","hbs"]);PR.registerLangHandler(PR.createSimpleLexer([[PR.PR_PLAIN,/^[ \t\r\n\f]+/,null," \t\r\n\f"]],[[PR.PR_STRING,/^\"(?:[^\n\r\f\\\"]|\\(?:\r\n?|\n|\f)|\\[\s\S])*\"/,null],[PR.PR_STRING,/^\'(?:[^\n\r\f\\\']|\\(?:\r\n?|\n|\f)|\\[\s\S])*\'/,null],["lang-css-str",/^url\(([^\)\"\']*)\)/i],[PR.PR_KEYWORD,/^(?:url|rgb|\!important|@import|@page|@media|@charset|inherit)(?=[^\-\w]|$)/i,null],["lang-css-kw",/^(-?(?:[_a-z]|(?:\\[0-9a-f]+ ?))(?:[_a-z0-9\-]|\\(?:\\[0-9a-f]+ ?))*)\s*:/i],[PR.PR_COMMENT,/^\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\//],[PR.PR_COMMENT,/^(?:<!--|-->)/],[PR.PR_LITERAL,/^(?:\d+|\d*\.\d+)(?:%|[a-z]+)?/i],[PR.PR_LITERAL,/^#(?:[0-9a-f]{3}){1,2}/i],[PR.PR_PLAIN,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i],[PR.PR_PUNCTUATION,/^[^\s\w\'\"]+/]]),["css"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_KEYWORD,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i]]),["css-kw"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_STRING,/^[^\)\"\']+/]]),["css-str"]);
+</file>
+
+<file path="frontend/coverage/sorter.js">
+/* eslint-disable */
+var addSorting = (function() {
+    'use strict';
+    var cols,
+        currentSort = {
+            index: 0,
+            desc: false
+        };
+
+    // returns the summary table element
+    function getTable() {
+        return document.querySelector('.coverage-summary');
+    }
+    // returns the thead element of the summary table
+    function getTableHeader() {
+        return getTable().querySelector('thead tr');
+    }
+    // returns the tbody element of the summary table
+    function getTableBody() {
+        return getTable().querySelector('tbody');
+    }
+    // returns the th element for nth column
+    function getNthColumn(n) {
+        return getTableHeader().querySelectorAll('th')[n];
+    }
+
+    function onFilterInput() {
+        const searchValue = document.getElementById('fileSearch').value;
+        const rows = document.getElementsByTagName('tbody')[0].children;
+
+        // Try to create a RegExp from the searchValue. If it fails (invalid regex),
+        // it will be treated as a plain text search
+        let searchRegex;
+        try {
+            searchRegex = new RegExp(searchValue, 'i'); // 'i' for case-insensitive
+        } catch (error) {
+            searchRegex = null;
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            let isMatch = false;
+
+            if (searchRegex) {
+                // If a valid regex was created, use it for matching
+                isMatch = searchRegex.test(row.textContent);
+            } else {
+                // Otherwise, fall back to the original plain text search
+                isMatch = row.textContent
+                    .toLowerCase()
+                    .includes(searchValue.toLowerCase());
+            }
+
+            row.style.display = isMatch ? '' : 'none';
+        }
+    }
+
+    // loads the search box
+    function addSearchBox() {
+        var template = document.getElementById('filterTemplate');
+        var templateClone = template.content.cloneNode(true);
+        templateClone.getElementById('fileSearch').oninput = onFilterInput;
+        template.parentElement.appendChild(templateClone);
+    }
+
+    // loads all columns
+    function loadColumns() {
+        var colNodes = getTableHeader().querySelectorAll('th'),
+            colNode,
+            cols = [],
+            col,
+            i;
+
+        for (i = 0; i < colNodes.length; i += 1) {
+            colNode = colNodes[i];
+            col = {
+                key: colNode.getAttribute('data-col'),
+                sortable: !colNode.getAttribute('data-nosort'),
+                type: colNode.getAttribute('data-type') || 'string'
+            };
+            cols.push(col);
+            if (col.sortable) {
+                col.defaultDescSort = col.type === 'number';
+                colNode.innerHTML =
+                    colNode.innerHTML + '<span class="sorter"></span>';
+            }
+        }
+        return cols;
+    }
+    // attaches a data attribute to every tr element with an object
+    // of data values keyed by column name
+    function loadRowData(tableRow) {
+        var tableCols = tableRow.querySelectorAll('td'),
+            colNode,
+            col,
+            data = {},
+            i,
+            val;
+        for (i = 0; i < tableCols.length; i += 1) {
+            colNode = tableCols[i];
+            col = cols[i];
+            val = colNode.getAttribute('data-value');
+            if (col.type === 'number') {
+                val = Number(val);
+            }
+            data[col.key] = val;
+        }
+        return data;
+    }
+    // loads all row data
+    function loadData() {
+        var rows = getTableBody().querySelectorAll('tr'),
+            i;
+
+        for (i = 0; i < rows.length; i += 1) {
+            rows[i].data = loadRowData(rows[i]);
+        }
+    }
+    // sorts the table using the data for the ith column
+    function sortByIndex(index, desc) {
+        var key = cols[index].key,
+            sorter = function(a, b) {
+                a = a.data[key];
+                b = b.data[key];
+                return a < b ? -1 : a > b ? 1 : 0;
+            },
+            finalSorter = sorter,
+            tableBody = document.querySelector('.coverage-summary tbody'),
+            rowNodes = tableBody.querySelectorAll('tr'),
+            rows = [],
+            i;
+
+        if (desc) {
+            finalSorter = function(a, b) {
+                return -1 * sorter(a, b);
+            };
+        }
+
+        for (i = 0; i < rowNodes.length; i += 1) {
+            rows.push(rowNodes[i]);
+            tableBody.removeChild(rowNodes[i]);
+        }
+
+        rows.sort(finalSorter);
+
+        for (i = 0; i < rows.length; i += 1) {
+            tableBody.appendChild(rows[i]);
+        }
+    }
+    // removes sort indicators for current column being sorted
+    function removeSortIndicators() {
+        var col = getNthColumn(currentSort.index),
+            cls = col.className;
+
+        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');
+        col.className = cls;
+    }
+    // adds sort indicators for current column being sorted
+    function addSortIndicators() {
+        getNthColumn(currentSort.index).className += currentSort.desc
+            ? ' sorted-desc'
+            : ' sorted';
+    }
+    // adds event listeners for all sorter widgets
+    function enableUI() {
+        var i,
+            el,
+            ithSorter = function ithSorter(i) {
+                var col = cols[i];
+
+                return function() {
+                    var desc = col.defaultDescSort;
+
+                    if (currentSort.index === i) {
+                        desc = !currentSort.desc;
+                    }
+                    sortByIndex(i, desc);
+                    removeSortIndicators();
+                    currentSort.index = i;
+                    currentSort.desc = desc;
+                    addSortIndicators();
+                };
+            };
+        for (i = 0; i < cols.length; i += 1) {
+            if (cols[i].sortable) {
+                // add the click event handler on the th so users
+                // dont have to click on those tiny arrows
+                el = getNthColumn(i).querySelector('.sorter').parentElement;
+                if (el.addEventListener) {
+                    el.addEventListener('click', ithSorter(i));
+                } else {
+                    el.attachEvent('onclick', ithSorter(i));
+                }
+            }
+        }
+    }
+    // adds sorting functionality to the UI
+    return function() {
+        if (!getTable()) {
+            return;
+        }
+        cols = loadColumns();
+        loadData();
+        addSearchBox();
+        addSortIndicators();
+        enableUI();
+    };
+})();
+
+window.addEventListener('load', addSorting);
+</file>
+
 <file path="frontend/src/main.tsx">
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -1022,8 +1349,1082 @@ createRoot(document.getElementById('root')!).render(
 );
 </file>
 
+<file path="frontend/src/schemas/index.ts">
+/**
+ * Unknown World - 스키마 모듈 진입점.
+ *
+ * TurnInput/TurnOutput Zod 스키마 및 관련 유틸리티를 재내보내기합니다.
+ *
+ * @module schemas
+ */
+
+// =============================================================================
+// 스키마 버전
+// =============================================================================
+
+export { SCHEMA_VERSION } from './turn';
+
+// =============================================================================
+// Enum 스키마 및 타입
+// =============================================================================
+
+export {
+  LanguageSchema,
+  ThemeSchema,
+  AgentPhaseSchema,
+  ValidationBadgeSchema,
+  ModelLabelSchema,
+  RiskLevelSchema,
+} from './turn';
+
+export type { Language, Theme, AgentPhase, ValidationBadge, ModelLabel, RiskLevel } from './turn';
+
+// =============================================================================
+// 공통 하위 타입 스키마 및 타입
+// =============================================================================
+
+export { CoordinateSchema, Box2DSchema, CurrencyAmountSchema } from './turn';
+
+export type { Coordinate, Box2D, CurrencyAmount } from './turn';
+
+// =============================================================================
+// TurnInput 관련 스키마 및 타입
+// =============================================================================
+
+export { ClickInputSchema, ClientInfoSchema, EconomySnapshotSchema, TurnInputSchema } from './turn';
+
+export type { ClickInput, ClientInfo, EconomySnapshot, TurnInput } from './turn';
+
+// =============================================================================
+// TurnOutput 관련 스키마 및 타입
+// =============================================================================
+
+export {
+  // UI
+  ActionCardSchema,
+  SceneObjectSchema,
+  ActionDeckSchema,
+  UIOutputSchema,
+  // World
+  MemoryPinSchema,
+  WorldRuleSchema,
+  QuestSchema,
+  WorldDeltaSchema,
+  // Render
+  ImageJobSchema,
+  RenderOutputSchema,
+  // Economy
+  EconomyOutputSchema,
+  // Safety
+  SafetyOutputSchema,
+  // Agent Console
+  AgentConsoleSchema,
+  // Main
+  TurnOutputSchema,
+} from './turn';
+
+export type {
+  // UI
+  ActionCard,
+  SceneObject,
+  ActionDeck,
+  UIOutput,
+  // World
+  MemoryPin,
+  WorldRule,
+  Quest,
+  WorldDelta,
+  // Render
+  ImageJob,
+  RenderOutput,
+  // Economy
+  EconomyOutput,
+  // Safety
+  SafetyOutput,
+  // Agent Console
+  AgentConsole,
+  // Main
+  TurnOutput,
+} from './turn';
+
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
+
+export {
+  createFallbackTurnOutput,
+  safeParseTurnOutput,
+  parseTurnInput,
+  safeParseTurnInput,
+} from './turn';
+
+export type { TurnOutputParseResult, TurnInputSafeParseResult } from './turn';
+</file>
+
+<file path="frontend/src/schemas/turn.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  TurnInputSchema,
+  TurnOutputSchema,
+  safeParseTurnOutput,
+  parseTurnInput,
+  safeParseTurnInput,
+  SCHEMA_VERSION,
+} from './turn';
+
+describe('Turn schemas', () => {
+  describe('SCHEMA_VERSION', () => {
+    it('should have correct version', () => {
+      expect(SCHEMA_VERSION).toBe('1.0.0');
+    });
+  });
+
+  describe('TurnInputSchema', () => {
+    const validTurnInput = {
+      language: 'ko-KR',
+      text: '테스트 입력',
+      client: {
+        viewport_w: 1920,
+        viewport_h: 1080,
+        theme: 'dark',
+      },
+      economy_snapshot: {
+        signal: 100,
+        memory_shard: 5,
+      },
+    };
+
+    it('should validate a valid TurnInput', () => {
+      const result = TurnInputSchema.safeParse(validTurnInput);
+      expect(result.success).toBe(true);
+    });
+
+    it('should fail on invalid language', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        language: 'fr-FR',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail on negative economy values', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        economy_snapshot: {
+          signal: -1,
+          memory_shard: 0,
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail on extra fields (strict)', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        extra_field: 'not allowed',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should validate click input with bbox', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        click: {
+          object_id: 'door_01',
+          box_2d: {
+            ymin: 100,
+            xmin: 100,
+            ymax: 500,
+            xmax: 500,
+          },
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should fail on invalid bbox coordinates (out of range 0-1000)', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        click: {
+          object_id: 'door_01',
+          box_2d: {
+            ymin: -1,
+            xmin: 0,
+            ymax: 1001,
+            xmax: 500,
+          },
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail on non-positive viewport dimensions', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        client: {
+          viewport_w: 0,
+          viewport_h: -100,
+          theme: 'dark',
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail on non-integer coordinates', () => {
+      const result = TurnInputSchema.safeParse({
+        ...validTurnInput,
+        click: {
+          object_id: 'obj',
+          box_2d: {
+            ymin: 10.5,
+            xmin: 20,
+            ymax: 30,
+            xmax: 40,
+          },
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('TurnOutputSchema', () => {
+    const validTurnOutput = {
+      language: 'ko-KR',
+      narrative: '테스트 내러티브',
+      economy: {
+        cost: { signal: 5, memory_shard: 0 },
+        balance_after: { signal: 95, memory_shard: 5 },
+      },
+      safety: {
+        blocked: false,
+      },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok', 'economy_ok'],
+        repair_count: 0,
+      },
+    };
+
+    it('should validate a valid TurnOutput', () => {
+      const result = TurnOutputSchema.safeParse(validTurnOutput);
+      expect(result.success).toBe(true);
+    });
+
+    it('should fail if required fields are missing', () => {
+      const { narrative: _narrative, ...invalidOutput } = validTurnOutput;
+      const result = TurnOutputSchema.safeParse(invalidOutput);
+      expect(result.success).toBe(false);
+    });
+
+    it('should handle default values for optional fields', () => {
+      const result = TurnOutputSchema.safeParse(validTurnOutput);
+      if (result.success) {
+        expect(result.data.ui).toBeDefined();
+        expect(result.data.ui.action_deck.cards).toEqual([]);
+        expect(result.data.world.rules_changed).toEqual([]);
+      } else {
+        throw new Error('Validation failed');
+      }
+    });
+
+    it('should fail if there are too many action cards (max 10)', () => {
+      const cards = Array.from({ length: 11 }, (_, i) => ({
+        id: `card_${i}`,
+        label: `Card ${i}`,
+        cost: { signal: 0, memory_shard: 0 },
+        risk: 'low',
+      }));
+      const result = TurnOutputSchema.safeParse({
+        ...validTurnOutput,
+        ui: {
+          action_deck: { cards },
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail on negative repair_count', () => {
+      const result = TurnOutputSchema.safeParse({
+        ...validTurnOutput,
+        agent_console: {
+          current_phase: 'commit',
+          badges: [],
+          repair_count: -1,
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('safeParseTurnOutput', () => {
+    it('should return success for valid data', () => {
+      const validTurnOutput = {
+        language: 'en-US',
+        narrative: 'Test narrative',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 0 },
+        },
+        safety: { blocked: false },
+      };
+      const result = safeParseTurnOutput(validTurnOutput);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.language).toBe('en-US');
+      }
+    });
+
+    it('should return fallback for invalid data', () => {
+      const invalidData = { some: 'garbage' };
+      const result = safeParseTurnOutput(invalidData, 'ko-KR', 1);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.fallback).toBeDefined();
+        expect(result.fallback.language).toBe('ko-KR');
+        expect(result.fallback.agent_console.badges).toContain('schema_fail');
+        expect(result.fallback.agent_console.repair_count).toBe(1);
+      }
+    });
+  });
+
+  describe('Input Parsing Utilities', () => {
+    const validTurnInput = {
+      language: 'ko-KR',
+      text: '테스트 입력',
+      client: {
+        viewport_w: 1920,
+        viewport_h: 1080,
+        theme: 'dark',
+      },
+      economy_snapshot: {
+        signal: 100,
+        memory_shard: 5,
+      },
+    };
+
+    describe('parseTurnInput', () => {
+      it('should parse valid input', () => {
+        const result = parseTurnInput(validTurnInput);
+        expect(result.text).toBe('테스트 입력');
+      });
+
+      it('should throw error for invalid input', () => {
+        expect(() => parseTurnInput({})).toThrow();
+      });
+    });
+
+    describe('safeParseTurnInput', () => {
+      it('should return success for valid input', () => {
+        const result = safeParseTurnInput(validTurnInput);
+        expect(result.success).toBe(true);
+      });
+
+      it('should return failure for invalid input', () => {
+        const result = safeParseTurnInput({});
+        expect(result.success).toBe(false);
+      });
+    });
+  });
+});
+</file>
+
+<file path="frontend/src/schemas/turn.ts">
+/**
+ * Unknown World - TurnInput/TurnOutput Zod 스키마.
+ *
+ * 이 모듈은 백엔드 Pydantic 모델(U-005)과 1:1 대응하는 Zod 스키마를 정의합니다.
+ * 클라이언트 측 검증 및 타입 안전성을 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증 (서버 Pydantic + 클라 Zod)
+ *   - RULE-004: 검증 실패 시 안전 폴백 제공 (UI 멈춤 방지)
+ *   - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
+ *   - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
+ *   - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+ *
+ * Q1 결정 사항:
+ *   - schema_version 포함 (Option A): SaveGame/마이그레이션/검증에 유리
+ *
+ * @module schemas/turn
+ */
+
+import { z } from 'zod';
+
+// =============================================================================
+// 스키마 버전 (Q1 결정: Option A - 포함)
+// =============================================================================
+
+/**
+ * 현재 스키마 버전.
+ * SaveGame/마이그레이션/검증에 사용됩니다.
+ */
+export const SCHEMA_VERSION = '1.0.0' as const;
+
+// =============================================================================
+// 공통 Enum 타입
+// =============================================================================
+
+/**
+ * 지원 언어 (RULE-006).
+ * ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
+ * 모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
+ */
+export const LanguageSchema = z.enum(['ko-KR', 'en-US']);
+export type Language = z.infer<typeof LanguageSchema>;
+
+/**
+ * 테마 설정.
+ */
+export const ThemeSchema = z.enum(['dark', 'light']);
+export type Theme = z.infer<typeof ThemeSchema>;
+
+/**
+ * 에이전트 실행 단계 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
+ */
+export const AgentPhaseSchema = z.enum([
+  'parse',
+  'validate',
+  'plan',
+  'resolve',
+  'render',
+  'verify',
+  'commit',
+]);
+export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
+
+/**
+ * 검증 배지 (RULE-008).
+ * 턴 결과에 대한 검증 상태를 표시합니다.
+ */
+export const ValidationBadgeSchema = z.enum([
+  'schema_ok',
+  'schema_fail',
+  'economy_ok',
+  'economy_fail',
+  'safety_ok',
+  'safety_blocked',
+  'consistency_ok',
+  'consistency_fail',
+]);
+export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
+
+/**
+ * 모델/품질 선택 라벨 (RULE-008).
+ * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
+ */
+export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
+export type ModelLabel = z.infer<typeof ModelLabelSchema>;
+
+/**
+ * 행동 위험도 수준.
+ */
+export const RiskLevelSchema = z.enum(['low', 'medium', 'high']);
+export type RiskLevel = z.infer<typeof RiskLevelSchema>;
+
+// =============================================================================
+// 공통 하위 타입
+// =============================================================================
+
+/**
+ * 정규화 좌표 (RULE-009).
+ * 0~1000 범위의 정수입니다.
+ */
+export const CoordinateSchema = z.number().int().min(0).max(1000).describe('정규화 좌표 (0~1000)');
+export type Coordinate = z.infer<typeof CoordinateSchema>;
+
+/**
+ * 2D 바운딩 박스 (RULE-009).
+ * 좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
+ * 이미지 이해 bbox 포맷과 호환됩니다.
+ */
+export const Box2DSchema = z
+  .object({
+    ymin: CoordinateSchema.describe('Y 최소값 (상단)'),
+    xmin: CoordinateSchema.describe('X 최소값 (좌측)'),
+    ymax: CoordinateSchema.describe('Y 최대값 (하단)'),
+    xmax: CoordinateSchema.describe('X 최대값 (우측)'),
+  })
+  .strict();
+export type Box2D = z.infer<typeof Box2DSchema>;
+
+/**
+ * 재화 수량.
+ * signal과 memory_shard는 0 이상이어야 합니다 (RULE-005).
+ */
+export const CurrencyAmountSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('시그널 (기본 재화, 0 이상)'),
+    memory_shard: z.number().int().min(0).describe('기억 파편 (희귀 재화, 0 이상)'),
+  })
+  .strict();
+export type CurrencyAmount = z.infer<typeof CurrencyAmountSchema>;
+
+// =============================================================================
+// TurnInput 관련 타입
+// =============================================================================
+
+/**
+ * 클릭 입력 정보.
+ * 화면 오브젝트 클릭 시 전달되는 정보입니다.
+ */
+export const ClickInputSchema = z
+  .object({
+    object_id: z.string().describe('클릭한 오브젝트 ID'),
+    box_2d: Box2DSchema.nullable().default(null).describe('클릭 위치 바운딩 박스 (선택)'),
+  })
+  .strict();
+export type ClickInput = z.infer<typeof ClickInputSchema>;
+
+/**
+ * 클라이언트 정보.
+ */
+export const ClientInfoSchema = z
+  .object({
+    viewport_w: z.number().int().positive().describe('뷰포트 너비 (픽셀, 양수)'),
+    viewport_h: z.number().int().positive().describe('뷰포트 높이 (픽셀, 양수)'),
+    theme: ThemeSchema.default('dark').describe('현재 테마'),
+  })
+  .strict();
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+/**
+ * 재화 스냅샷 (클라이언트 → 서버).
+ * 클라이언트가 보유한 현재 재화 상태입니다.
+ */
+export const EconomySnapshotSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('현재 시그널 잔액 (0 이상)'),
+    memory_shard: z.number().int().min(0).describe('현재 기억 파편 잔액 (0 이상)'),
+  })
+  .strict();
+export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
+
+/**
+ * 턴 입력 (클라이언트 → 서버).
+ * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+ */
+export const TurnInputSchema = z
+  .object({
+    language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
+    text: z.string().default('').describe('사용자 자연어 입력'),
+    click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
+    client: ClientInfoSchema.describe('클라이언트 환경 정보'),
+    economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
+  })
+  .strict();
+export type TurnInput = z.infer<typeof TurnInputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - UI
+// =============================================================================
+
+/**
+ * 액션 카드 (Action Deck).
+ * 매 턴 AI가 추천하는 행동 카드입니다.
+ */
+export const ActionCardSchema = z
+  .object({
+    id: z.string().describe('카드 고유 ID'),
+    label: z.string().describe('카드 라벨 (표시용)'),
+    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
+    cost: CurrencyAmountSchema.describe('예상 비용'),
+    risk: RiskLevelSchema.default('low').describe('위험도'),
+    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
+  })
+  .strict();
+export type ActionCard = z.infer<typeof ActionCardSchema>;
+
+/**
+ * 장면 오브젝트 (클릭 가능한 핫스팟).
+ * 좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
+ */
+export const SceneObjectSchema = z
+  .object({
+    id: z.string().describe('오브젝트 고유 ID'),
+    label: z.string().describe('오브젝트 라벨 (표시용)'),
+    box_2d: Box2DSchema.describe('바운딩 박스'),
+    interaction_hint: z.string().nullable().default(null).describe('상호작용 힌트 (선택)'),
+  })
+  .strict();
+export type SceneObject = z.infer<typeof SceneObjectSchema>;
+
+/**
+ * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+ * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+ */
+export const ActionDeckSchema = z
+  .object({
+    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
+  })
+  .strict();
+export type ActionDeck = z.infer<typeof ActionDeckSchema>;
+
+/**
+ * UI 출력 데이터.
+ * AI가 생성한 UI 요소들입니다.
+ * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
+ */
+export const UIOutputSchema = z
+  .object({
+    action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
+    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
+  })
+  .strict();
+export type UIOutput = z.infer<typeof UIOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - World
+// =============================================================================
+
+/**
+ * 중요 설정 고정 후보.
+ * 사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
+ */
+export const MemoryPinSchema = z
+  .object({
+    id: z.string().describe('핀 고유 ID'),
+    content: z.string().describe('고정할 내용'),
+    cost: CurrencyAmountSchema.describe('고정에 필요한 비용'),
+  })
+  .strict();
+export type MemoryPin = z.infer<typeof MemoryPinSchema>;
+
+/**
+ * 세계 규칙 (Rule Board).
+ * 현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
+ */
+export const WorldRuleSchema = z
+  .object({
+    id: z.string().describe('규칙 고유 ID'),
+    label: z.string().describe('규칙 이름'),
+    description: z.string().nullable().default(null).describe('규칙 상세 설명 (선택)'),
+  })
+  .strict();
+export type WorldRule = z.infer<typeof WorldRuleSchema>;
+
+/**
+ * 퀘스트/목표 (Quest Panel).
+ * 플레이어가 달성해야 하는 현재 목표입니다.
+ */
+export const QuestSchema = z
+  .object({
+    id: z.string().describe('퀘스트 고유 ID'),
+    label: z.string().describe('퀘스트 이름'),
+    is_completed: z.boolean().default(false).describe('달성 여부'),
+  })
+  .strict();
+export type Quest = z.infer<typeof QuestSchema>;
+
+/**
+ * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
+ * 이번 턴에서 변경된 세계 상태를 나타냅니다.
+ */
+export const WorldDeltaSchema = z
+  .object({
+    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
+    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
+    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
+    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
+    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
+    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
+  })
+  .strict();
+export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Render
+// =============================================================================
+
+/**
+ * 이미지 생성 작업.
+ * 조건부 이미지 생성/편집 요청입니다.
+ */
+export const ImageJobSchema = z
+  .object({
+    should_generate: z.boolean().describe('이미지를 생성해야 하는지'),
+    prompt: z.string().default('').describe('이미지 생성 프롬프트'),
+    model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
+    aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
+    image_size: z.string().default('1024x1024').describe('이미지 크기'),
+    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
+  })
+  .strict();
+export type ImageJob = z.infer<typeof ImageJobSchema>;
+
+/**
+ * 렌더링 출력 데이터.
+ * 이미지 생성/편집 관련 정보입니다.
+ */
+export const RenderOutputSchema = z
+  .object({
+    image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
+  })
+  .strict();
+export type RenderOutput = z.infer<typeof RenderOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Economy
+// =============================================================================
+
+/**
+ * 경제 출력 데이터 (RULE-005).
+ * 이번 턴의 비용과 잔액 정보입니다.
+ * 잔액 음수는 절대 불가 (서버 Hard gate).
+ */
+export const EconomyOutputSchema = z
+  .object({
+    cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
+    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
+  })
+  .strict();
+export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Safety
+// =============================================================================
+
+/**
+ * 안전 출력 데이터.
+ * 안전 정책 관련 정보입니다.
+ * 차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
+ */
+export const SafetyOutputSchema = z
+  .object({
+    blocked: z.boolean().default(false).describe('안전 정책에 의해 차단되었는지'),
+    message: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('차단 시 사용자에게 표시할 메시지 (선택)'),
+  })
+  .strict();
+export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Agent Console
+// =============================================================================
+
+/**
+ * 에이전트 콘솔 데이터 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+ */
+export const AgentConsoleSchema = z
+  .object({
+    current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
+    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
+    repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
+  })
+  .strict();
+export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
+
+// =============================================================================
+// TurnOutput (메인 응답 스키마)
+// =============================================================================
+
+/**
+ * 턴 출력 (서버 → 클라이언트).
+ * 서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
+ *
+ * Hard Gate 필드 (RULE-003/004/005):
+ *   - economy: cost와 balance_after 필수, 잔액 음수 금지
+ *   - safety: blocked 시 안전한 대체 결과 제공
+ *   - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
+ */
+export const TurnOutputSchema = z
+  .object({
+    // 필수 필드 (Hard Gate)
+    language: LanguageSchema.describe('응답 언어 (요청과 동일)'),
+    narrative: z.string().describe('내러티브 텍스트 (표시용)'),
+    economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
+    safety: SafetyOutputSchema.describe('안전 정책 정보'),
+
+    // UI 관련 필드
+    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
+
+    // 세계 상태 필드
+    world: WorldDeltaSchema.default({
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    }).describe('세계 상태 변화 (delta)'),
+
+    // 렌더링 필드
+    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
+
+    // 에이전트 콘솔 필드
+    agent_console: AgentConsoleSchema.default({
+      current_phase: 'commit',
+      badges: [],
+      repair_count: 0,
+    }).describe('에이전트 실행 정보'),
+  })
+  .strict();
+export type TurnOutput = z.infer<typeof TurnOutputSchema>;
+
+// =============================================================================
+// 안전 폴백 (RULE-004)
+// =============================================================================
+
+/**
+ * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
+ * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
+ *
+ * @param language - 요청 언어
+ * @param repairCount - 복구 시도 횟수
+ * @param errorMessage - 오류 메시지 (선택)
+ */
+export function createFallbackTurnOutput(
+  language: Language,
+  repairCount: number = 0,
+  errorMessage?: string,
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답을 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요.'
+      : '[System] An error occurred while processing the response. Please try again.';
+
+  const safetyMessage =
+    language === 'ko-KR'
+      ? '스키마 검증 실패로 인한 폴백 응답입니다.'
+      : 'This is a fallback response due to schema validation failure.';
+
+  return {
+    language,
+    narrative: errorMessage ?? fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: safetyMessage,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: repairCount,
+    },
+  };
+}
+
+// =============================================================================
+// 검증 헬퍼 함수
+// =============================================================================
+
+/**
+ * TurnOutput 검증 결과 타입.
+ */
+export type TurnOutputParseResult =
+  | { success: true; data: TurnOutput }
+  | { success: false; error: z.ZodError; fallback: TurnOutput };
+
+/**
+ * TurnOutput을 안전하게 파싱합니다.
+ * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
+ *
+ * @param data - 파싱할 데이터
+ * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
+ * @param repairCount - 현재 복구 시도 횟수
+ */
+export function safeParseTurnOutput(
+  data: unknown,
+  language: Language = 'ko-KR',
+  repairCount: number = 0,
+): TurnOutputParseResult {
+  const result = TurnOutputSchema.safeParse(data);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  return {
+    success: false,
+    error: result.error,
+    fallback: createFallbackTurnOutput(language, repairCount),
+  };
+}
+
+/**
+ * TurnInput을 검증합니다.
+ * 입력 데이터의 유효성을 엄격하게 검사합니다.
+ *
+ * @param data - 검증할 데이터
+ * @throws {z.ZodError} 검증 실패 시
+ */
+export function parseTurnInput(data: unknown): TurnInput {
+  return TurnInputSchema.parse(data);
+}
+
+/**
+ * TurnInput 안전 파싱 결과 타입.
+ */
+export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safeParse>;
+
+/**
+ * TurnInput을 안전하게 파싱합니다.
+ *
+ * @param data - 파싱할 데이터
+ */
+export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
+  return TurnInputSchema.safeParse(data);
+}
+</file>
+
+<file path="frontend/src/schemas/verify_runbook.ts">
+import {
+  TurnOutputSchema,
+  safeParseTurnOutput,
+  Box2DSchema,
+  CurrencyAmountSchema,
+  LanguageSchema,
+  parseTurnInput,
+} from './turn.js';
+
+console.log('--- Scenario A: TurnOutput 스키마 검증 (정상 케이스) ---');
+const validOutput = {
+  language: 'ko-KR',
+  narrative: '문이 삐걱거리며 열립니다...',
+  economy: {
+    cost: { signal: 5, memory_shard: 0 },
+    balance_after: { signal: 95, memory_shard: 5 },
+  },
+  safety: { blocked: false, message: null },
+};
+const resultA = safeParseTurnOutput(validOutput);
+console.log('Success:', resultA.success);
+if (resultA.success) {
+  console.log('Data (sample):', resultA.data.narrative);
+}
+
+console.log('\n--- Scenario B: TurnOutput 스키마 검증 실패 → 폴백 ---');
+const invalidOutput = {
+  language: 'ko-KR',
+  narrative: '테스트',
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const resultB = safeParseTurnOutput(invalidOutput as any);
+console.log('Success:', resultB.success);
+if (!resultB.success) {
+  console.log('Error count:', resultB.error.issues.length);
+  console.log('Fallback exists:', !!resultB.fallback);
+  console.log(
+    'Fallback badges has schema_fail:',
+    resultB.fallback?.agent_console?.badges?.includes('schema_fail'),
+  );
+}
+
+console.log('\n--- Scenario C: 좌표 범위 검증 (RULE-009) ---');
+const validBox = { ymin: 100, xmin: 200, ymax: 300, xmax: 400 };
+console.log('Valid box:', Box2DSchema.safeParse(validBox).success);
+const invalidBox = { ymin: 100, xmin: 200, ymax: 1500, xmax: 400 };
+console.log('Invalid box (1500):', Box2DSchema.safeParse(invalidBox).success);
+const negativeBox = { ymin: -10, xmin: 200, ymax: 300, xmax: 400 };
+console.log('Negative box:', Box2DSchema.safeParse(negativeBox).success);
+
+console.log('\n--- Scenario D: 재화 인바리언트 검증 (RULE-005) ---');
+const validCurrency = { signal: 100, memory_shard: 5 };
+console.log('Valid currency:', CurrencyAmountSchema.safeParse(validCurrency).success);
+const negativeCurrency = { signal: -10, memory_shard: 5 };
+console.log('Negative signal:', CurrencyAmountSchema.safeParse(negativeCurrency).success);
+
+console.log('\n--- Scenario E: 언어 정책 검증 (RULE-006) ---');
+console.log('ko-KR:', LanguageSchema.safeParse('ko-KR').success);
+console.log('en-US:', LanguageSchema.safeParse('en-US').success);
+console.log('ja-JP (invalid):', LanguageSchema.safeParse('ja-JP').success);
+console.log('ko (invalid format):', LanguageSchema.safeParse('ko').success);
+
+console.log('\n--- Scenario F: TurnInput 검증 ---');
+const validInput = {
+  language: 'ko-KR',
+  text: '문을 열어본다',
+  client: {
+    viewport_w: 1920,
+    viewport_h: 1080,
+    theme: 'dark',
+  },
+  economy_snapshot: {
+    signal: 100,
+    memory_shard: 5,
+  },
+};
+try {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parsed = parseTurnInput(validInput as any);
+  console.log('Parsed successfully:', parsed.text);
+} catch (e) {
+  console.log('Parse error:', e);
+}
+
+console.log('\n--- Scenario G: Strict 모드 검증 ---');
+const outputWithExtra = {
+  language: 'ko-KR',
+  narrative: '테스트',
+  economy: {
+    cost: { signal: 0, memory_shard: 0 },
+    balance_after: { signal: 100, memory_shard: 5 },
+  },
+  safety: { blocked: false, message: null },
+  unknown_field: '이 필드는 스키마에 없음',
+};
+const resultG = TurnOutputSchema.safeParse(outputWithExtra);
+console.log('With extra field success:', resultG.success);
+if (!resultG.success) {
+  console.log('Error code:', resultG.error.issues[0].code);
+}
+</file>
+
 <file path="frontend/src/vite-env.d.ts">
 /// <reference types="vite/client" />
+</file>
+
+<file path="frontend/tsconfig.node.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+
+    /* Composite for project references */
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
 </file>
 
 <file path="shared/schemas/turn/turn_input.schema.json">
@@ -1104,279 +2505,6 @@ createRoot(document.getElementById('root')!).render(
     }
   },
   "required": ["language", "text", "client", "economy_snapshot"],
-  "additionalProperties": false
-}
-</file>
-
-<file path="shared/schemas/turn/turn_output.schema.json">
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://unknown-world.dev/schemas/turn/turn_output.schema.json",
-  "title": "TurnOutput",
-  "description": "Server → Client 턴 응답 스키마 (MVP). PRD 8.7절 기반. Gemini Structured Output 호환.",
-  "type": "object",
-  "properties": {
-    "language": {
-      "type": "string",
-      "enum": ["ko-KR", "en-US"],
-      "description": "응답 언어 (TurnInput.language와 동일해야 함)"
-    },
-    "narrative": {
-      "type": "string",
-      "description": "내러티브 텍스트 (표시용)"
-    },
-    "ui": {
-      "type": "object",
-      "description": "UI 요소 (선택지, 오브젝트)",
-      "properties": {
-        "choices": {
-          "type": "array",
-          "description": "버튼형 선택지 목록",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "선택지 고유 ID"
-              },
-              "label": {
-                "type": "string",
-                "description": "선택지 라벨"
-              },
-              "cost": {
-                "type": "object",
-                "description": "예상 비용",
-                "properties": {
-                  "signal": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "memory_shard": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                },
-                "required": ["signal", "memory_shard"]
-              },
-              "hint": {
-                "type": ["string", "null"],
-                "description": "예상 결과 힌트"
-              }
-            },
-            "required": ["id", "label", "cost"]
-          }
-        },
-        "objects": {
-          "type": "array",
-          "description": "클릭 가능한 오브젝트 목록",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "오브젝트 고유 ID"
-              },
-              "label": {
-                "type": "string",
-                "description": "오브젝트 라벨"
-              },
-              "box_2d": {
-                "type": "array",
-                "description": "bbox [ymin, xmin, ymax, xmax] (0~1000 정규화, RULE-009)",
-                "items": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 1000
-                },
-                "minItems": 4,
-                "maxItems": 4
-              },
-              "interaction_hint": {
-                "type": ["string", "null"],
-                "description": "상호작용 힌트"
-              }
-            },
-            "required": ["id", "label", "box_2d"]
-          }
-        }
-      },
-      "required": ["choices", "objects"]
-    },
-    "world": {
-      "type": "object",
-      "description": "월드 상태 변경 사항",
-      "properties": {
-        "delta": {
-          "type": "object",
-          "description": "이번 턴 변경 사항",
-          "properties": {
-            "rules": {
-              "type": ["array", "null"],
-              "description": "룰 변경 목록",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "action": {
-                    "type": "string",
-                    "enum": ["added", "modified", "removed"]
-                  }
-                },
-                "required": ["id", "name", "action"]
-              }
-            },
-            "inventory": {
-              "type": ["array", "null"],
-              "description": "인벤토리 변경 목록",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "action": {
-                    "type": "string",
-                    "enum": ["added", "removed", "used"]
-                  },
-                  "quantity": {
-                    "type": "integer"
-                  }
-                },
-                "required": ["id", "name", "action"]
-              }
-            }
-          }
-        },
-        "memory_pins": {
-          "type": "array",
-          "description": "중요 설정 고정 후보 목록",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "content": {
-                "type": "string"
-              },
-              "pinned": {
-                "type": "boolean"
-              }
-            },
-            "required": ["id", "content", "pinned"]
-          }
-        }
-      },
-      "required": ["delta", "memory_pins"]
-    },
-    "render": {
-      "type": ["object", "null"],
-      "description": "렌더링 작업 (선택적)",
-      "properties": {
-        "image_job": {
-          "type": ["object", "null"],
-          "description": "이미지 생성 작업",
-          "properties": {
-            "should_generate": {
-              "type": "boolean",
-              "description": "이미지 생성 여부"
-            },
-            "model": {
-              "type": "string",
-              "enum": ["gemini-3-pro-image-preview"],
-              "description": "이미지 모델 ID (RULE-010: 고정)"
-            },
-            "aspect_ratio": {
-              "type": "string",
-              "enum": ["1:1", "16:9", "9:16", "4:3", "3:4"],
-              "description": "이미지 비율"
-            },
-            "image_size": {
-              "type": "string",
-              "enum": ["1K", "2K", "4K"],
-              "description": "이미지 해상도"
-            },
-            "prompt": {
-              "type": "string",
-              "description": "이미지 생성 프롬프트"
-            },
-            "reference_images": {
-              "type": ["array", "null"],
-              "description": "참조 이미지 URI 목록",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": ["should_generate"]
-        }
-      }
-    },
-    "economy": {
-      "type": "object",
-      "description": "재화 정보 (RULE-005: 예상 비용/잔액 필수)",
-      "properties": {
-        "cost": {
-          "type": "object",
-          "description": "이번 턴 소모 비용",
-          "properties": {
-            "signal": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "memory_shard": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "required": ["signal", "memory_shard"]
-        },
-        "balance_after": {
-          "type": "object",
-          "description": "턴 후 잔액 (음수 금지, RULE-005)",
-          "properties": {
-            "signal": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "memory_shard": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "required": ["signal", "memory_shard"]
-        }
-      },
-      "required": ["cost", "balance_after"]
-    },
-    "safety": {
-      "type": "object",
-      "description": "안전 정책 상태",
-      "properties": {
-        "blocked": {
-          "type": "boolean",
-          "description": "차단 여부"
-        },
-        "message": {
-          "type": ["string", "null"],
-          "description": "차단 시 메시지"
-        }
-      },
-      "required": ["blocked"]
-    }
-  },
-  "required": ["language", "narrative", "ui", "world", "economy", "safety"],
   "additionalProperties": false
 }
 </file>
@@ -1682,6 +2810,646 @@ function App() {
 export default App;
 </file>
 
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+</file>
+
+<file path="shared/schemas/turn/turn_output.schema.json">
+{
+  "$defs": {
+    "ActionCard": {
+      "additionalProperties": false,
+      "description": "액션 카드 (Action Deck).\n\n매 턴 AI가 추천하는 행동 카드입니다.\n각 카드에 비용/위험/보상 힌트가 포함됩니다.\n\nAttributes:\n    id: 카드 고유 ID\n    label: 카드 라벨 (표시용)\n    description: 카드 설명 (선택)\n    cost: 예상 비용\n    risk: 위험도\n    hint: 예상 결과 힌트 (선택)",
+      "properties": {
+        "id": {
+          "description": "카드 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "카드 라벨 (표시용)",
+          "title": "Label",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "카드 설명 (선택)",
+          "title": "Description"
+        },
+        "cost": {
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "예상 비용"
+        },
+        "risk": {
+          "$ref": "#/$defs/RiskLevel",
+          "default": "low",
+          "description": "위험도"
+        },
+        "hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "예상 결과 힌트 (선택)",
+          "title": "Hint"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "cost"
+      ],
+      "title": "ActionCard",
+      "type": "object"
+    },
+    "ActionDeck": {
+      "additionalProperties": false,
+      "description": "액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).\n\n매 턴 AI가 제시하는 추천 행동 카드 덱입니다.\n\nAttributes:\n    cards: 액션 카드 목록 (3~6장 권장)",
+      "properties": {
+        "cards": {
+          "default": [],
+          "description": "액션 카드 목록 (3~6장 권장)",
+          "items": {
+            "$ref": "#/$defs/ActionCard"
+          },
+          "maxItems": 10,
+          "minItems": 0,
+          "title": "Cards",
+          "type": "array"
+        }
+      },
+      "title": "ActionDeck",
+      "type": "object"
+    },
+    "AgentConsole": {
+      "additionalProperties": false,
+      "description": "에이전트 콘솔 데이터 (RULE-008).\n\n에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.\n계획/실행/검증/복구의 흔적을 표시합니다.\n\nAttributes:\n    current_phase: 현재 실행 단계\n    badges: 검증 배지 목록\n    repair_count: 자동 복구 시도 횟수",
+      "properties": {
+        "current_phase": {
+          "$ref": "#/$defs/AgentPhase",
+          "default": "commit",
+          "description": "현재 실행 단계"
+        },
+        "badges": {
+          "default": [],
+          "description": "검증 배지 목록",
+          "items": {
+            "$ref": "#/$defs/ValidationBadge"
+          },
+          "title": "Badges",
+          "type": "array"
+        },
+        "repair_count": {
+          "default": 0,
+          "description": "자동 복구 시도 횟수",
+          "minimum": 0,
+          "title": "Repair Count",
+          "type": "integer"
+        }
+      },
+      "title": "AgentConsole",
+      "type": "object"
+    },
+    "AgentPhase": {
+      "description": "에이전트 실행 단계 (RULE-008).\n\n에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.",
+      "enum": [
+        "parse",
+        "validate",
+        "plan",
+        "resolve",
+        "render",
+        "verify",
+        "commit"
+      ],
+      "title": "AgentPhase",
+      "type": "string"
+    },
+    "Box2D": {
+      "additionalProperties": false,
+      "description": "2D 바운딩 박스 (RULE-009).\n\n좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.\n이미지 이해 bbox 포맷과 호환됩니다.\n\nAttributes:\n    ymin: Y 최소값 (상단)\n    xmin: X 최소값 (좌측)\n    ymax: Y 최대값 (하단)\n    xmax: X 최대값 (우측)",
+      "properties": {
+        "ymin": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Ymin",
+          "type": "integer"
+        },
+        "xmin": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Xmin",
+          "type": "integer"
+        },
+        "ymax": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Ymax",
+          "type": "integer"
+        },
+        "xmax": {
+          "description": "정규화 좌표 (0~1000)",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Xmax",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ymin",
+        "xmin",
+        "ymax",
+        "xmax"
+      ],
+      "title": "Box2D",
+      "type": "object"
+    },
+    "CurrencyAmount": {
+      "additionalProperties": false,
+      "description": "재화 수량.\n\nAttributes:\n    signal: 기본 재화 (텍스트 턴/이미지 생성/고급 기능에 소비)\n    memory_shard: 희귀 재화 (중요 설정 고정, 고해상도 이미지 등에 소비)",
+      "properties": {
+        "signal": {
+          "description": "시그널 (기본 재화, 0 이상)",
+          "minimum": 0,
+          "title": "Signal",
+          "type": "integer"
+        },
+        "memory_shard": {
+          "description": "기억 파편 (희귀 재화, 0 이상)",
+          "minimum": 0,
+          "title": "Memory Shard",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "signal",
+        "memory_shard"
+      ],
+      "title": "CurrencyAmount",
+      "type": "object"
+    },
+    "EconomyOutput": {
+      "additionalProperties": false,
+      "description": "경제 출력 데이터 (RULE-005).\n\n이번 턴의 비용과 잔액 정보입니다.\n잔액 음수는 절대 불가 (서버 Hard gate).\n\nAttributes:\n    cost: 이번 턴에 소비된 비용\n    balance_after: 소비 후 잔액\n\nImportant:\n    - cost와 balance_after는 항상 포함되어야 합니다.\n    - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.",
+      "properties": {
+        "cost": {
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "이번 턴에 소비된 비용"
+        },
+        "balance_after": {
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "소비 후 잔액"
+        }
+      },
+      "required": [
+        "cost",
+        "balance_after"
+      ],
+      "title": "EconomyOutput",
+      "type": "object"
+    },
+    "ImageJob": {
+      "additionalProperties": false,
+      "description": "이미지 생성 작업.\n\n조건부 이미지 생성/편집 요청입니다.\n이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.\n\nAttributes:\n    should_generate: 이미지를 생성해야 하는지\n    prompt: 이미지 생성 프롬프트\n    model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)\n    aspect_ratio: 가로세로 비율 (예: \"16:9\", \"1:1\")\n    image_size: 이미지 크기 (예: \"1024x1024\")\n    reference_image_ids: 참조 이미지 ID 목록 (선택)",
+      "properties": {
+        "should_generate": {
+          "description": "이미지를 생성해야 하는지",
+          "title": "Should Generate",
+          "type": "boolean"
+        },
+        "prompt": {
+          "default": "",
+          "description": "이미지 생성 프롬프트",
+          "title": "Prompt",
+          "type": "string"
+        },
+        "model_label": {
+          "$ref": "#/$defs/ModelLabel",
+          "default": "FAST",
+          "description": "모델 선택 라벨"
+        },
+        "aspect_ratio": {
+          "default": "16:9",
+          "description": "가로세로 비율",
+          "title": "Aspect Ratio",
+          "type": "string"
+        },
+        "image_size": {
+          "default": "1024x1024",
+          "description": "이미지 크기",
+          "title": "Image Size",
+          "type": "string"
+        },
+        "reference_image_ids": {
+          "default": [],
+          "description": "참조 이미지 ID 목록 (선택)",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reference Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "should_generate"
+      ],
+      "title": "ImageJob",
+      "type": "object"
+    },
+    "Language": {
+      "description": "지원 언어 (RULE-006).\n\nko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아\n모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.",
+      "enum": [
+        "ko-KR",
+        "en-US"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "MemoryPin": {
+      "additionalProperties": false,
+      "description": "중요 설정 고정 후보.\n\n사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.\n\nAttributes:\n    id: 핀 고유 ID\n    content: 고정할 내용\n    cost: 고정에 필요한 비용",
+      "properties": {
+        "id": {
+          "description": "핀 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "content": {
+          "description": "고정할 내용",
+          "title": "Content",
+          "type": "string"
+        },
+        "cost": {
+          "$ref": "#/$defs/CurrencyAmount",
+          "description": "고정에 필요한 비용"
+        }
+      },
+      "required": [
+        "id",
+        "content",
+        "cost"
+      ],
+      "title": "MemoryPin",
+      "type": "object"
+    },
+    "ModelLabel": {
+      "description": "모델/품질 선택 라벨 (RULE-008).\n\n프롬프트 노출 없이 \"왜 이 선택이었는지\"를 사용자 친화 라벨로 표시.",
+      "enum": [
+        "FAST",
+        "QUALITY",
+        "CHEAP",
+        "REF"
+      ],
+      "title": "ModelLabel",
+      "type": "string"
+    },
+    "Quest": {
+      "additionalProperties": false,
+      "description": "퀘스트/목표 (Quest Panel).\n\n플레이어가 달성해야 하는 현재 목표입니다.\n\nAttributes:\n    id: 퀘스트 고유 ID\n    label: 퀘스트 이름\n    is_completed: 달성 여부",
+      "properties": {
+        "id": {
+          "description": "퀘스트 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "퀘스트 이름",
+          "title": "Label",
+          "type": "string"
+        },
+        "is_completed": {
+          "default": false,
+          "description": "달성 여부",
+          "title": "Is Completed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Quest",
+      "type": "object"
+    },
+    "RenderOutput": {
+      "additionalProperties": false,
+      "description": "렌더링 출력 데이터.\n\n이미지 생성/편집 관련 정보입니다.\n\nAttributes:\n    image_job: 이미지 생성 작업 (선택)",
+      "properties": {
+        "image_job": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageJob"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이미지 생성 작업 (선택)"
+        }
+      },
+      "title": "RenderOutput",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "description": "행동 위험도 수준.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "SafetyOutput": {
+      "additionalProperties": false,
+      "description": "안전 출력 데이터.\n\n안전 정책 관련 정보입니다.\n차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.\n\nAttributes:\n    blocked: 안전 정책에 의해 차단되었는지\n    message: 차단 시 사용자에게 표시할 메시지 (선택)",
+      "properties": {
+        "blocked": {
+          "default": false,
+          "description": "안전 정책에 의해 차단되었는지",
+          "title": "Blocked",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "차단 시 사용자에게 표시할 메시지 (선택)",
+          "title": "Message"
+        }
+      },
+      "title": "SafetyOutput",
+      "type": "object"
+    },
+    "SceneObject": {
+      "additionalProperties": false,
+      "description": "장면 오브젝트 (클릭 가능한 핫스팟).\n\n화면에서 클릭 가능한 오브젝트입니다.\n좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).\n\nAttributes:\n    id: 오브젝트 고유 ID\n    label: 오브젝트 라벨 (표시용)\n    box_2d: 바운딩 박스 [ymin, xmin, ymax, xmax]\n    interaction_hint: 상호작용 힌트 (선택)",
+      "properties": {
+        "id": {
+          "description": "오브젝트 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "오브젝트 라벨 (표시용)",
+          "title": "Label",
+          "type": "string"
+        },
+        "box_2d": {
+          "$ref": "#/$defs/Box2D",
+          "description": "바운딩 박스"
+        },
+        "interaction_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상호작용 힌트 (선택)",
+          "title": "Interaction Hint"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "box_2d"
+      ],
+      "title": "SceneObject",
+      "type": "object"
+    },
+    "UIOutput": {
+      "additionalProperties": false,
+      "description": "UI 출력 데이터.\n\nAI가 생성한 UI 요소들입니다.\n채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).\n\nAttributes:\n    action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)\n    objects: 클릭 가능한 장면 오브젝트 목록",
+      "properties": {
+        "action_deck": {
+          "$ref": "#/$defs/ActionDeck",
+          "description": "액션 카드 덱"
+        },
+        "objects": {
+          "default": [],
+          "description": "클릭 가능한 장면 오브젝트 목록",
+          "items": {
+            "$ref": "#/$defs/SceneObject"
+          },
+          "title": "Objects",
+          "type": "array"
+        }
+      },
+      "title": "UIOutput",
+      "type": "object"
+    },
+    "ValidationBadge": {
+      "description": "검증 배지 (RULE-008).\n\n턴 결과에 대한 검증 상태를 표시합니다.",
+      "enum": [
+        "schema_ok",
+        "schema_fail",
+        "economy_ok",
+        "economy_fail",
+        "safety_ok",
+        "safety_blocked",
+        "consistency_ok",
+        "consistency_fail"
+      ],
+      "title": "ValidationBadge",
+      "type": "string"
+    },
+    "WorldDelta": {
+      "additionalProperties": false,
+      "description": "세계 상태 변화 (Q2 결정: Option A - delta 중심).\n\n이번 턴에서 변경된 세계 상태를 나타냅니다.\nsnapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.\n\nAttributes:\n    rules_changed: 변경되거나 추가된 규칙 목록\n    inventory_added: 추가된 인벤토리 아이템\n    inventory_removed: 제거된 인벤토리 아이템\n    quests_updated: 업데이트된 퀘스트(목표) 목록\n    relationships_changed: 변경된 관계\n    memory_pins: 중요 설정 고정 후보",
+      "properties": {
+        "rules_changed": {
+          "default": [],
+          "description": "변경된 규칙 목록",
+          "items": {
+            "$ref": "#/$defs/WorldRule"
+          },
+          "title": "Rules Changed",
+          "type": "array"
+        },
+        "inventory_added": {
+          "default": [],
+          "description": "추가된 인벤토리 아이템",
+          "items": {
+            "type": "string"
+          },
+          "title": "Inventory Added",
+          "type": "array"
+        },
+        "inventory_removed": {
+          "default": [],
+          "description": "제거된 인벤토리 아이템",
+          "items": {
+            "type": "string"
+          },
+          "title": "Inventory Removed",
+          "type": "array"
+        },
+        "quests_updated": {
+          "default": [],
+          "description": "업데이트된 퀘스트/목표 목록",
+          "items": {
+            "$ref": "#/$defs/Quest"
+          },
+          "title": "Quests Updated",
+          "type": "array"
+        },
+        "relationships_changed": {
+          "default": [],
+          "description": "변경된 관계",
+          "items": {
+            "type": "string"
+          },
+          "title": "Relationships Changed",
+          "type": "array"
+        },
+        "memory_pins": {
+          "default": [],
+          "description": "중요 설정 고정 후보",
+          "items": {
+            "$ref": "#/$defs/MemoryPin"
+          },
+          "title": "Memory Pins",
+          "type": "array"
+        }
+      },
+      "title": "WorldDelta",
+      "type": "object"
+    },
+    "WorldRule": {
+      "additionalProperties": false,
+      "description": "세계 규칙 (Rule Board).\n\n현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.\n\nAttributes:\n    id: 규칙 고유 ID\n    label: 규칙 이름\n    description: 규칙 상세 설명 (선택)",
+      "properties": {
+        "id": {
+          "description": "규칙 고유 ID",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "규칙 이름",
+          "title": "Label",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "규칙 상세 설명 (선택)",
+          "title": "Description"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "WorldRule",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "턴 출력 (서버 → 클라이언트).\n\n서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.\nGemini Structured Outputs(JSON Schema)로 강제됩니다.\n\nHard Gate 필드 (RULE-003/004/005):\n    - economy: cost와 balance_after 필수, 잔액 음수 금지\n    - safety: blocked 시 안전한 대체 결과 제공\n    - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)\n\nAttributes:\n    language: 응답 언어 (요청과 동일)\n    narrative: 내러티브 텍스트 (표시용)\n    ui: UI 요소 (액션 덱, 오브젝트)\n    world: 세계 상태 변화 (delta 중심)\n    render: 렌더링 정보 (이미지 생성 작업)\n    economy: 경제 정보 (비용, 잔액)\n    safety: 안전 정책 정보\n    agent_console: 에이전트 실행 정보 (단계, 배지, 복구 횟수)\n\nExample:\n    >>> output = TurnOutput(\n    ...     language=Language.KO,\n    ...     narrative=\"문이 삐걱거리며 열립니다...\",\n    ...     economy=EconomyOutput(\n    ...         cost=CurrencyAmount(signal=5, memory_shard=0),\n    ...         balance_after=CurrencyAmount(signal=95, memory_shard=5),\n    ...     ),\n    ...     safety=SafetyOutput(blocked=False),\n    ... )\n    >>> schema = TurnOutput.model_json_schema()\n\nSchema Generation:\n    >>> # Gemini Structured Outputs용 JSON Schema 생성\n    >>> json_schema = TurnOutput.model_json_schema()\n    >>> # response_json_schema 파라미터에 전달\n    >>> config = {\n    ...     \"response_mime_type\": \"application/json\",\n    ...     \"response_json_schema\": json_schema,\n    ... }",
+  "properties": {
+    "language": {
+      "$ref": "#/$defs/Language",
+      "description": "응답 언어 (요청과 동일)"
+    },
+    "narrative": {
+      "description": "내러티브 텍스트 (표시용)",
+      "title": "Narrative",
+      "type": "string"
+    },
+    "economy": {
+      "$ref": "#/$defs/EconomyOutput",
+      "description": "경제 정보 (비용, 잔액)"
+    },
+    "safety": {
+      "$ref": "#/$defs/SafetyOutput",
+      "description": "안전 정책 정보"
+    },
+    "ui": {
+      "$ref": "#/$defs/UIOutput",
+      "description": "UI 요소"
+    },
+    "world": {
+      "$ref": "#/$defs/WorldDelta",
+      "description": "세계 상태 변화 (delta)"
+    },
+    "render": {
+      "$ref": "#/$defs/RenderOutput",
+      "description": "렌더링 정보"
+    },
+    "agent_console": {
+      "$ref": "#/$defs/AgentConsole",
+      "description": "에이전트 실행 정보"
+    }
+  },
+  "required": [
+    "language",
+    "narrative",
+    "economy",
+    "safety"
+  ],
+  "title": "TurnOutput",
+  "type": "object"
+}
+</file>
+
 <file path="backend/src/unknown_world/__init__.py">
 """Unknown World - Backend Package
 
@@ -1694,6 +3462,168 @@ Reference:
 """
 
 __version__ = "0.1.0"
+</file>
+
+<file path="frontend/vite.config.ts">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+});
+</file>
+
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+    "google-genai==1.56.0",
+    "google-cloud-aiplatform==1.132.0",
+    "google-cloud-storage==3.7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.407",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
+</file>
+
+<file path="frontend/package.json">
+{
+  "name": "unknown-world-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "i18next": "25.7.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-i18next": "16.5.1",
+    "zod": "4.3.4",
+    "zustand": "5.0.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "globals": "16.5.0",
+    "prettier": "3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.51.0",
+    "vite": "7.3.0",
+    "vitest": "^4.0.16"
+  }
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "unknown-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": "24.12.0"
+  },
+  "scripts": {
+    "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
+    "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
+    "dev:front": "pnpm -C frontend dev"
+  }
+}
 </file>
 
 </files>

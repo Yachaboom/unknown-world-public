@@ -1,5 +1,79 @@
 # 프로젝트 진행 상황
 
+## [2026-01-04 15:35] U-006[Mvp]: TurnInput/TurnOutput 스키마(Zod) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Zod 기반의 TurnInput/TurnOutput 스키마 정의 및 클라이언트 측 엄격 검증(strict parse) 체계 구축
+- **추가 컴포넌트**: `frontend/src/schemas/turn.ts` (Zod 모델 및 검증 헬퍼)
+- **달성 요구사항**: [RULE-003] 클라이언트 Zod 검증, [RULE-004] 안전 폴백(Fallback) 제공, [RULE-005] 재화 인바리언트 강제, [RULE-009] 0~1000 bbox 규약 준수
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **Zod 3.x**: `.strict()`, `.int()`, `.min()`, `.max()` 등을 활용한 강력한 스키마 검증
+- **TypeScript 5.9.3**: 스키마로부터 추론된 타입을 통한 타입 안전성 확보
+
+**설계 패턴 및 아키텍처 선택**:
+- **Safe-Parse 패턴**: `safeParseTurnOutput` 유틸리티를 통해 검증 실패 시에도 UI가 중단되지 않고 `schema_fail` 배지와 함께 폴백 데이터를 반환하도록 설계 (RULE-004 준수)
+- **SSOT 정합성**: 백엔드 Pydantic 모델(U-005) 및 공유 JSON Schema와 1:1 필드 매칭 및 제약 조건 동기화
+
+**코드 구조**:
+frontend/
+└── src/
+    └── schemas/
+        └── turn.ts
+
+### 성능 및 품질 지표
+- **검증 정확도**: 0~1000 좌표 범위, 재화 최소값, 필수 필드(Strict) 검증 로직 구현 완료
+- **코드 품질**: TSDoc을 통한 명세화 및 클라이언트 측 Hard Gate 역할 수행
+
+### 의존성 변경
+- 기존 `zod` 라이브러리 활용 (추가 의존성 없음)
+
+### 다음 단계
+- [U-008[Mvp]] SSE 수신 데이터에 Zod 검증 및 폴백 로직 적용
+
+---
+
+## [2026-01-04 22:10] U-006[Mvp]: TurnInput/TurnOutput 스키마(Zod) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Zod 기반의 TurnInput/TurnOutput 스키마 정의 및 클라이언트 측 엄격 검증(strict parse) 체계 구축
+- **추가 컴포넌트**: `frontend/src/schemas/turn.ts` (Zod 모델), `frontend/src/schemas/turn.test.ts` (검증 테스트)
+- **달성 요구사항**: [RULE-003] 클라이언트 Zod 검증, [RULE-004] 안전 폴백(Fallback) 제공, [RULE-005] 재화 인바리언트 강제, [RULE-009] 0~1000 bbox 규약 준수
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **Zod 4.3.4**: `.strict()`, `.int()`, `.min()`, `.max()` 등을 활용한 강력한 스키마 검증
+- **Vitest**: 100% 라인 커버리지를 달성하는 유닛 테스트 환경 구축
+
+**설계 패턴 및 아키텍처 선택**:
+- **Safe-Parse 패턴**: `safeParseTurnOutput` 유틸리티를 통해 검증 실패 시에도 UI가 중단되지 않고 `schema_fail` 배지와 함께 폴백 데이터를 반환하도록 설계 (RULE-004 준수)
+- **SSOT 정합성**: 백엔드 Pydantic 모델(U-005) 및 공유 JSON Schema와 1:1 필드 매칭 및 제약 조건 동기화
+
+**코드 구조**:
+frontend/
+└── src/
+    └── schemas/
+        ├── turn.ts
+        ├── turn.test.ts
+        └── index.ts (export bridge)
+
+### 성능 및 품질 지표
+- **검증 정확도**: 20개의 테스트 케이스를 통해 경계값, 타입, 엄격성 검증 100% 통과
+- **코드 품질**: ESLint 및 TypeScript(tsc) 무오류 통과, 라인 커버리지 100% 달성
+
+### 의존성 변경
+- 개발 의존성 추가: `vitest`, `@vitest/coverage-v8`
+
+### 다음 단계
+- [U-008[Mvp]] SSE 수신 데이터에 Zod 검증 및 폴백 로직 적용
+
+---
+
 ## [2026-01-04 20:00] U-005[Mvp]: TurnInput/TurnOutput 스키마(Pydantic) 완료
 
 ### 구현 완료 항목
