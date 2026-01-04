@@ -218,7 +218,7 @@
 
 ### 8.1 기술 스택(포함)
 
-- **Backend**: FastAPI (async), SSE 기반 스트리밍(필요 시 WebSocket 확장)
+- **Backend**: FastAPI (async), **HTTP Streaming (Fetch + POST)** 기반 스트리밍(필요 시 WebSocket 확장)
 - **Frontend**: React 19 + Vite 7
 - **상태 관리**: 세션 WorldState + 요약 메모리 + 재화 원장(Economy Ledger)
 
@@ -229,7 +229,7 @@
 
 ### 8.3 Gemini 텍스트 생성(Text Generation)
 
-- **스트리밍**: `generateContentStream`(SDK) 또는 SSE REST를 사용해 타자 효과 구현.
+- **스트리밍**: 서버는 `generateContentStream`(SDK)로 모델 청크를 수신하고, 클라이언트에는 `POST /api/turn`의 **HTTP Streaming 응답 스트림**으로 전달해 타자 효과를 구현한다.
 - **시스템 인스트럭션**: Game Master 페르소나 + 금칙/안전 + 출력 스키마 규칙을 명시.
 - **Thinking 제어**: Gemini 3 계열은 `thinking_level`(low/high)을 상황/재화에 따라 선택.
 - **Temperature**: Gemini 3는 기본값(1.0) 유지 권장(안정성/루프 방지).
@@ -238,7 +238,12 @@
 
 - 응답은 기본적으로 `response_mime_type: application/json` + `response_json_schema`를 사용한다.
 - **목적**: 내러티브 텍스트뿐 아니라, UI/상태/비용/이미지 요청을 “파싱 가능한” 결과로 받기 위함.
-- **스트리밍 구조화 출력**: 부분 JSON 청크를 누적해 최종 JSON을 완성한다(중간 청크도 유효한 partial JSON 문자열).
+- **스트리밍 구조화 출력**: 모델이 내보내는 부분 JSON(텍스트 청크)을 서버에서 누적해 최종 TurnOutput JSON을 완성하고, 클라이언트에는 **NDJSON(라인 단위 JSON) 이벤트 스트림**으로 `stage/badges/narrative_delta/final`을 전송한다.
+- **Turn Stream Protocol(초안)**: 응답은 NDJSON이며, 각 줄은 아래 이벤트 중 하나다(초기 MVP 최소 계약).
+  - `{"type":"stage","name":"Parse","status":"start"|"ok"|"fail"}`
+  - `{"type":"badges","schema":"ok"|"fail","economy":"ok"|"fail","safety":"ok"|"fail","consistency":"ok"|"fail"}`
+  - `{"type":"narrative_delta","text":"..."}`  (타자 효과용)
+  - `{"type":"final","turn_output":{...}}` (Pydantic 검증 통과한 TurnOutput만)
 - **스키마 작성 원칙(요약)**:
   - 지원 타입 중심으로 설계: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
   - 예측 가능성을 위해 `required`와 `enum`을 적극 사용하고, 필요 시 `additionalProperties: false`로 엄격화

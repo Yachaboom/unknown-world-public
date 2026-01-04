@@ -23,7 +23,7 @@
   - Pydantic `2.12.5` (스키마/검증/직렬화)
 
 - **Streaming / Realtime**
-  - SSE (Server-Sent Events): 텍스트 타자효과 + 단계(Queue/Badges) 진행 상황 스트리밍
+  - HTTP Streaming (Fetch + POST): 턴 요청(POST body) → 응답을 스트림으로 수신(타자 효과 + Queue/Badges)
   - (확장) WebSocket: 양방향 실시간 상호작용이 필요할 때만
 
 - **Access (Demo Profiles for Reviewers)**
@@ -72,7 +72,7 @@
 
 | PRD 요구사항                   | 선택 기술                       | 핵심 이유 (3~4단어) |
 | ------------------------------ | ------------------------------- | ------------------- |
-| 텍스트 “타자 효과” 스트리밍    | FastAPI + SSE                   | 저지연/단순성       |
+| 텍스트 “타자 효과” 스트리밍    | FastAPI + HTTP Streaming(POST)  | 요청-응답/POST 필수 |
 | “채팅 앱”이 아닌 게임 UI       | React + 상태 분리               | 고충실도 UI         |
 | UI/상태/비용을 기계적으로 처리 | Structured Outputs(JSON Schema) | 파싱/검증 강제      |
 | 스키마 깨짐 자동 복구          | Pydantic + Zod + Repair loop    | 실패 내성           |
@@ -88,7 +88,7 @@
 
 - **Next.js(App Router) vs Vite**: MVP는 SSR/라우팅 복잡도보다 “빠른 반복 + 고정 레이아웃”이 핵심 → Vite 선택
 - **NestJS(Node) vs FastAPI(Python)**: 오케스트레이션/검증/스키마 중심 구현을 Python+FastAPI로 빠르게 → FastAPI 선택
-- **WebSocket vs SSE**: 현재 요구는 “서버→클라이언트 스트리밍”이 대부분 → SSE 우선, WS는 확장
+- **WebSocket vs HTTP Streaming**: 현재 요구는 “턴 요청-응답 + 스트리밍”이 대부분 → HTTP Streaming 우선, WS는 확장
 - **Redux Toolkit vs Zustand**: 상태가 많지만 팀 속도가 우선 → 러닝커브 낮은 Zustand
 - **Tailwind vs CSS 변수 기반(단일 CSS)**: 스타일 가이드가 CRT 변수/글로우를 강하게 요구 → Tailwind 대신 CSS 변수
 
@@ -112,7 +112,7 @@
 - **1) 제품/UX 이해**: PRD 6~9장(게임 UI·경제·Autopilot) 훑고 “채팅 UI 금지” 원칙 공유
 - **2) 구조화 출력 이해**: TurnOutput을 “JSON Schema 우선”으로 생각(텍스트는 UI용 필드)
 - **3) 모델 운영 감각**: Flash/Pro 티어, 이미지 편집은 Pro+시그니처가 핵심임을 숙지
-- **4) 스트리밍 UX 합의**: SSE 기준으로 TTFB/단계 배지(Queue/Badges) 표준화
+- **4) 스트리밍 UX 합의**: HTTP Streaming 기준으로 TTFB/단계 배지(Queue/Badges) 표준화
 - **5) GCP 권한 세팅**: 서비스 계정/Vertex AI 권한/배포 런타임(Cloud Run) 확인
 - **6) 데모 시나리오 리플레이**: “드래그→클릭→룰 변형→엔딩 리포트” 10분 루프를 팀 공통 기준으로 고정
 - **(필수) 데모 프로필 점검**: 3종 프리셋이 “즉시 시작/즉시 리셋” 동작하는지 데모 전 확인

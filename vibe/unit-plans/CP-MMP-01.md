@@ -18,7 +18,7 @@ Cloud Run 배포 환경에서 “관측 가능성(Queue/Badges/Auto-repair) + Ha
 
 **완료 기준**:
 
-- 배포 환경에서 `/api/turn` SSE 스트리밍이 동작하고, TTFB 체감이 유지된다(<2s 목표).
+- 배포 환경에서 `/api/turn` HTTP Streaming(POST) 스트리밍이 동작하고, TTFB 체감이 유지된다(<2s 목표).
 - Agent Console에서 Queue/Badges/Auto-repair 트레이스가 보인다(프롬프트 원문/CoT는 비노출). (RULE-008)
 - 최소 1개 시나리오(U-105) 실행이 배포 환경에서 통과한다.
 

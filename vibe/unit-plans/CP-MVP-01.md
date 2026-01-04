@@ -18,7 +18,7 @@
 
 **완료 기준**:
 
-- SSE 스트리밍으로 Queue/Badges가 먼저 보이고(TTFB 체감), 최종 TurnOutput이 UI에 반영된다. (RULE-008)
+- HTTP Streaming으로 Queue/Badges가 먼저 보이고(TTFB 체감), 최종 TurnOutput이 UI에 반영된다. (RULE-008)
 - TurnOutput 스키마 실패를 유도해도(모의 출력) Auto-repair 또는 safe fallback으로 종료되며, UI가 빈 화면이 되지 않는다. (RULE-004)
 - 채팅 UI/프롬프트 노출/좌표 규약 위반이 없다. (RULE-002/008/009)
 

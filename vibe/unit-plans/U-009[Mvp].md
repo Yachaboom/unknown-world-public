@@ -20,7 +20,7 @@
 
 - Footer 영역에 Action Deck이 상시 노출되고, 카드가 3~6장으로 렌더링된다.
 - 각 카드에 **예상 비용(최소/최대)** 과 위험/보상 힌트가 표기된다. (RULE-005)
-- 카드 클릭 시 TurnInput으로 “선택된 행동”이 전송되고, SSE 스트리밍(Queue/Badges)이 갱신된다. (RULE-008)
+- 카드 클릭 시 TurnInput으로 “선택된 행동”이 전송되고, HTTP Streaming(Queue/Badges)이 갱신된다. (RULE-008)
 
 ## 영향받는 파일
 
@@ -62,7 +62,7 @@
 **이전 작업에서 가져올 것**:
 
 - **계획서**: [U-004[Mvp]](U-004[Mvp].md) - 고정 HUD 레이아웃(footer 슬롯)
-- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - turn 실행/SSE 소비/Agent Console
+- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - turn 실행/스트림 소비/Agent Console
 
 **다음 작업에 전달할 것**:
 

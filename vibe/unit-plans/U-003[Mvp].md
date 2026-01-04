@@ -12,7 +12,7 @@
 
 ## 작업 목표
 
-FastAPI 기반 오케스트레이터 백엔드의 “실행 가능한 최소 뼈대”를 만들고, 이후 유닛에서 TurnInput/TurnOutput 계약과 SSE 스트리밍을 얹을 수 있는 기반을 마련한다.
+FastAPI 기반 오케스트레이터 백엔드의 “실행 가능한 최소 뼈대”를 만들고, 이후 유닛에서 TurnInput/TurnOutput 계약과 HTTP Streaming(POST) 기반 스트리밍을 얹을 수 있는 기반을 마련한다.
 
 **배경**: Unknown World는 “string→string 채팅 API”가 아니라 Turn 계약 기반의 시스템이므로, 백엔드 골격부터 이를 전제로 잡아야 한다. (RULE-001)
 
@@ -37,7 +37,7 @@ FastAPI 기반 오케스트레이터 백엔드의 “실행 가능한 최소 뼈
 **참조**:
 
 - `vibe/tech-stack.md` - Python/FastAPI/Uvicorn/Pydantic 버전 SSOT
-- `.cursor/rules/20-backend-orchestrator.mdc` - SSE/Vertex/검증/복구 가이드
+- `.cursor/rules/20-backend-orchestrator.mdc` - HTTP Streaming/Vertex/검증/복구 가이드
 - `.cursor/rules/00-core-critical.mdc` - RULE-001/003/004/007/010
 
 ## 구현 흐름
@@ -65,7 +65,7 @@ FastAPI 기반 오케스트레이터 백엔드의 “실행 가능한 최소 뼈
 **다음 작업에 전달할 것**:
 
 - U-005에서 TurnInput/TurnOutput(Pydantic) 모델을 추가할 수 있는 패키지 구조
-- U-007에서 `/api/turn` SSE 라우트를 추가할 수 있는 FastAPI 앱 엔트리
+- U-007에서 `/api/turn` HTTP Streaming(POST) 라우트를 추가할 수 있는 FastAPI 앱 엔트리
 
 ## 주의사항
 
@@ -87,4 +87,4 @@ FastAPI 기반 오케스트레이터 백엔드의 “실행 가능한 최소 뼈
 ## 참고 자료
 
 - `vibe/tech-stack.md` - 백엔드 버전 SSOT
-- `.cursor/rules/20-backend-orchestrator.mdc` - SSE/검증/복구 기준
+- `.cursor/rules/20-backend-orchestrator.mdc` - HTTP Streaming/검증/복구 기준

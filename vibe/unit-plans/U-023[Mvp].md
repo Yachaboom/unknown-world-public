@@ -65,7 +65,7 @@
 
 **이전 작업에서 가져올 것**:
 
-- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - SSE 소비/Agent Console/배지
+- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - 스트림 소비/Agent Console/배지
 - **계획서**: [U-013[Mvp]](U-013[Mvp].md) - Quest/Rule 데이터 모델(Plan/서브퀘스트 표시와 연결)
 
 **다음 작업에 전달할 것**:

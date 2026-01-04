@@ -37,7 +37,7 @@
 **참조**:
 
 - `vibe/prd.md` 6.8 - Action Queue/단계 가시화 요구
-- `.cursor/rules/20-backend-orchestrator.mdc` - SSE로 단계 스트리밍
+- `.cursor/rules/20-backend-orchestrator.mdc` - HTTP Streaming으로 단계 스트리밍
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/008
 
 ## 구현 흐름
@@ -88,5 +88,5 @@
 ## 참고 자료
 
 - `vibe/prd.md` - 단계/배지/관측 UX
-- `.cursor/rules/20-backend-orchestrator.mdc` - SSE 단계 스트리밍
+- `.cursor/rules/20-backend-orchestrator.mdc` - HTTP Streaming 단계 스트리밍
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/008

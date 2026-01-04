@@ -38,7 +38,7 @@
 - `vibe/tech-stack.md` - 버전/모델 ID 고정
 - `.cursor/rules/00-core-critical.mdc` - RULE-001~010
 - `.cursor/rules/10-frontend-game-ui.mdc` - 단일 CSS/고정 UI
-- `.cursor/rules/20-backend-orchestrator.mdc` - SSE/검증/복구
+- `.cursor/rules/20-backend-orchestrator.mdc` - HTTP Streaming/검증/복구
 
 ## 구현 흐름
 

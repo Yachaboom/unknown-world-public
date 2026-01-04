@@ -1,4 +1,4 @@
-# U-024[Mvp]: Backend Autopilot(제한 스텝) + Action Queue SSE
+# U-024[Mvp]: Backend Autopilot(제한 스텝) + Action Queue Streaming
 
 ## 메타데이터
 
@@ -12,14 +12,14 @@
 
 ## 작업 목표
 
-백엔드에서 Autopilot 실행을 “제한된 스텝”으로 지원하고, 각 스텝의 단계/배지/복구 트레이스를 **SSE Action Queue**로 스트리밍한다.
+백엔드에서 Autopilot 실행을 “제한된 스텝”으로 지원하고, 각 스텝의 단계/배지/복구 트레이스를 **Action Queue Streaming(NDJSON)** 으로 스트리밍한다.
 
 **배경**: PRD는 Autopilot에서 Goal 기반 다단계 실행과, 그 과정(Queue/Badges/Auto-repair)을 UI로 증명하라고 요구한다. (PRD 6.8, RULE-008)
 
 **완료 기준**:
 
 - Autopilot 모드에서 “Goal 입력 → 제한된 단계 실행”이 백엔드에서 동작한다.
-- 실행 과정이 SSE로 단계 이벤트로 스트리밍되며, 프론트 Agent Console에 그대로 반영된다.
+- 실행 과정이 HTTP Streaming(POST 응답 스트림) + NDJSON 이벤트로 단계/메타가 스트리밍되며, 프론트 Agent Console에 그대로 반영된다.
 - 무한 실행/무한 repair가 발생하지 않도록 스텝/복구 횟수 제한이 강제된다. (RULE-004)
 
 ## 영향받는 파일
@@ -27,7 +27,7 @@
 **생성**:
 
 - `backend/src/unknown_world/orchestrator/autopilot.py` - 제한 스텝 실행기(goal→step loop)
-- `backend/src/unknown_world/api/autopilot.py` - (선택) autopilot 전용 SSE 엔드포인트
+- `backend/src/unknown_world/api/autopilot.py` - (선택) autopilot 전용 HTTP Streaming 엔드포인트
 
 **수정**:
 
@@ -37,7 +37,7 @@
 **참조**:
 
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/008
-- `.cursor/rules/20-backend-orchestrator.mdc` - SSE로 단계 스트리밍
+- `.cursor/rules/20-backend-orchestrator.mdc` - HTTP Streaming으로 단계 스트리밍
 - `vibe/prd.md` 6.8 - Autopilot/Action Queue 요구
 
 ## 구현 흐름
@@ -47,7 +47,7 @@
 - `max_steps`(예: 3~5)로 제한하고, 각 스텝은 TurnInput/TurnOutput 계약을 재사용한다.
 - 각 스텝마다 economy/안전/일관성 검증을 수행하고, 실패 시 즉시 복구/폴백으로 종료한다.
 
-### 2단계: SSE 이벤트 확장(스텝/단계 트레이스)
+### 2단계: 스트림 이벤트 확장(스텝/단계 트레이스)
 
 - 기존 stage 이벤트에 `step_index`(선택) 같은 메타를 추가해, UI에서 “몇 번째 자동 실행인지” 표시할 수 있게 한다.
 - Auto-repair는 스텝 내 재시도이며, 횟수 제한을 반드시 둔다. (RULE-004)

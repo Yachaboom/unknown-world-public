@@ -12,7 +12,7 @@
 
 ## 작업 목표
 
-스키마 검증 이후에도 남는 “의미적 실패(경제/언어/좌표/안전)”를 서버에서 Hard gate로 검증하고, 실패 시 **Repair loop(재시도 제한)** 와 **안전 폴백**으로 항상 턴을 заверш할 수 있게 만든다.
+스키마 검증 이후에도 남는 “의미적 실패(경제/언어/좌표/안전)”를 서버에서 Hard gate로 검증하고, 실패 시 **Repair loop(재시도 제한)** 와 **안전 폴백**으로 항상 턴을 종료할 수 있게 만든다.
 
 **배경**: PRD의 Hard Gate는 “스키마 OK”만이 아니라 Economy/Safety/Consistency까지 포함하며, 실패는 자동 복구 루프로 처리해야 한다. (RULE-004/005)
 
@@ -32,7 +32,7 @@
 
 **수정**:
 
-- `backend/src/unknown_world/api/turn.py` - Auto-repair SSE 이벤트 송출/연결(필요 시)
+- `backend/src/unknown_world/api/turn.py` - Auto-repair 스트림 이벤트(NDJSON) 송출/연결(필요 시)
 - `backend/src/unknown_world/orchestrator/generate_turn_output.py` - 실패 정보 전달/repair 입력 구성(필요 시)
 
 **참조**:
@@ -53,7 +53,7 @@
 ### 2단계: Repair loop(제한된 재시도) 구현
 
 - 검증 실패 시: 실패 요약(짧게) + “스키마/룰에 맞게 수정하라” 지시로 재요청한다(프롬프트 원문/CoT 노출 금지).
-- 재시도 횟수 제한(`max_repair_attempts`)을 두고, 시도마다 SSE로 `Auto-repair #n` 이벤트를 송출한다. (RULE-008)
+- 재시도 횟수 제한(`max_repair_attempts`)을 두고, 시도마다 스트림(NDJSON)로 `Auto-repair #n` 이벤트를 송출한다. (RULE-008)
 
 ### 3단계: Safe fallback TurnOutput 설계
 

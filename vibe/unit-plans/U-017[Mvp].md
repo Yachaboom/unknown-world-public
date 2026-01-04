@@ -52,7 +52,7 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 ### 2단계: Structured Outputs 호출 구성
 
 - 모델 라벨(FAST/QUALITY) 선택 정책을 정하고(기본값 포함), 호출 config에 스키마를 연결한다.
-- 스트리밍 여부는 U-007/U-008의 SSE 구조와 정합되게 설계한다(초기엔 비스트리밍+SSE 이벤트로도 가능).
+- 스트리밍 여부(모델)는 U-007/U-008의 **HTTP Streaming(NDJSON 이벤트) 계약**과 정합되게 설계한다(초기엔 모델 비스트리밍이어도, 서버는 stage/badges/final을 스트림으로 보낼 수 있다).
 
 ### 3단계: 서버 검증(Pydantic)과 실패 분기
 
@@ -75,7 +75,7 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 
 **기술적 고려사항**:
 
-- (RULE-007) 프롬프트 원문/내부 추론을 UI/SSE로 노출하지 않는다(메타만).
+- (RULE-007) 프롬프트 원문/내부 추론을 UI/스트림 응답에 노출하지 않는다(메타만).
 - (RULE-010) 모델 ID는 tech-stack SSOT로 고정하고, 이미지 모델은 혼용 금지.
 
 **잠재적 리스크**:

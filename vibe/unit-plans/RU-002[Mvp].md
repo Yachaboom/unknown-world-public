@@ -12,13 +12,13 @@
 
 ## 작업 목표
 
-SSE 이벤트/검증/폴백이 분산되어 생기는 불일치를 정리하고, “스키마/경제/안전” 실패가 발생해도 일관된 방식으로 **표시/복구/폴백** 되도록 타입과 흐름을 통일한다.
+스트림 이벤트(NDJSON)/검증/폴백이 분산되어 생기는 불일치를 정리하고, “스키마/경제/안전” 실패가 발생해도 일관된 방식으로 **표시/복구/폴백** 되도록 타입과 흐름을 통일한다.
 
 **배경**: 스트리밍/검증/복구는 MVP 하드 게이트이며, 작은 불일치가 데모에서 “멈춤/깨짐”으로 보인다. (RULE-004/008)
 
 **완료 기준**:
 
-- 서버가 내보내는 SSE 이벤트 타입/페이로드 형태가 단일 계약으로 정리된다.
+- 서버가 내보내는 스트림 이벤트 타입/페이로드 형태가 단일 계약으로 정리된다.
 - 클라이언트 파서/상태/표시 로직이 그 계약을 1:1로 따르고, 실패 시 폴백 TurnOutput으로 종료된다. (RULE-004)
 - stage 이름/순서(Parse→…→Commit)와 Badges(Schema/Economy/Safety/Consistency)가 UI/백엔드에서 동일 용어로 유지된다. (RULE-008)
 
@@ -26,8 +26,8 @@ SSE 이벤트/검증/폴백이 분산되어 생기는 불일치를 정리하고,
 
 **생성**:
 
-- (권장) `backend/src/unknown_world/api/sse_events.py` - SSE 이벤트 스키마/생성 유틸(서버)
-- (권장) `frontend/src/types/sse.ts` - SSE 이벤트 타입/디코더(클라)
+- (권장) `backend/src/unknown_world/api/turn_stream_events.py` - Turn 스트림 이벤트 스키마/생성 유틸(서버)
+- (권장) `frontend/src/types/turn_stream.ts` - Turn 스트림 이벤트 타입/디코더(클라)
 
 **수정**:
 
@@ -59,8 +59,8 @@ SSE 이벤트/검증/폴백이 분산되어 생기는 불일치를 정리하고,
 
 **이전 작업에서 가져올 것**:
 
-- **계획서**: [U-007[Mvp]](U-007[Mvp].md) - 서버 SSE 스트리밍/모의 Orchestrator
-- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - 클라 SSE 파서/Agent Console 렌더
+- **계획서**: [U-007[Mvp]](U-007[Mvp].md) - 서버 HTTP Streaming/모의 Orchestrator
+- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - 클라 스트림 파서/Agent Console 렌더
 
 **다음 작업에 전달할 것**:
 

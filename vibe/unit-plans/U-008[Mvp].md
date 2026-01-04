@@ -1,4 +1,4 @@
-# U-008[Mvp]: 프론트 SSE 클라이언트 + Agent Console/배지
+# U-008[Mvp]: 프론트 HTTP Streaming 클라이언트 + Agent Console/배지
 
 ## 메타데이터
 
@@ -12,7 +12,7 @@
 
 ## 작업 목표
 
-프론트에서 `/api/turn` SSE 스트림을 소비해 **단계(Queue)/배지(Badges)/Auto-repair 트레이스**를 실시간으로 보여주고, 최종 TurnOutput을 Zod 검증 후 UI에 반영한다.
+프론트에서 `/api/turn` **HTTP Streaming 응답 스트림**을 소비해 **단계(Queue)/배지(Badges)/Auto-repair 트레이스**를 실시간으로 보여주고, 최종 TurnOutput을 Zod 검증 후 UI에 반영한다.
 
 **배경**: “에이전트형 시스템”을 증명하려면 결과만이 아니라 과정(단계/검증/복구)이 UI로 보여야 한다. 단, 프롬프트 원문/내부 추론은 노출 금지다. (RULE-008)
 
@@ -26,7 +26,7 @@
 
 **생성**:
 
-- `frontend/src/api/turnStream.ts` - fetch 기반 SSE(POST) 클라이언트 + 이벤트 파서
+- `frontend/src/api/turnStream.ts` - fetch 기반 HTTP Streaming(POST) 클라이언트 + NDJSON 이벤트 파서
 - `frontend/src/stores/agentStore.ts` - queue/badges/repair 상태 저장(Zustand 권장)
 - `frontend/src/components/AgentConsole.tsx` - Plan/Queue/Badges/Auto-repair 렌더
 
@@ -44,8 +44,8 @@
 
 ### 1단계: 스트림 소비 방식 확정(fetch+ReadableStream)
 
-- `/api/turn`이 POST 기반이므로 `EventSource(GET)` 대신 fetch 스트리밍으로 SSE를 파싱한다.
-- 최소 이벤트(`stage`, `final`, `error`)를 처리하는 파서를 만든다.
+- `/api/turn`이 POST 기반이므로 `EventSource(GET)` 대신 fetch 스트리밍으로 NDJSON 이벤트를 파싱한다.
+- 최소 이벤트(`stage`, `badges`, `narrative_delta`, `final`, `error`)를 처리하는 파서를 만든다.
 
 ### 2단계: Agent Console 상태/렌더 연결
 
@@ -63,7 +63,7 @@
 **이전 작업에서 가져올 것**:
 
 - **계획서**: [U-006[Mvp]](U-006[Mvp].md) - Zod 스키마/폴백 전략
-- **계획서**: [U-007[Mvp]](U-007[Mvp].md) - SSE 이벤트 계약/모의 Orchestrator
+- **계획서**: [U-007[Mvp]](U-007[Mvp].md) - 스트림 이벤트 계약/모의 Orchestrator
 - **계획서**: [U-004[Mvp]](U-004[Mvp].md) - 고정 HUD 레이아웃(Agent Console 자리)
 
 **다음 작업에 전달할 것**:
@@ -80,11 +80,11 @@
 
 **잠재적 리스크**:
 
-- fetch 스트리밍 SSE 파싱이 브라우저별로 까다로울 수 있음 → 최소 파서로 시작하고, RU-002에서 타입/에러 처리를 정리한다.
+- fetch 스트리밍 NDJSON 파싱이 브라우저별로 까다로울 수 있음 → 최소 파서로 시작하고, RU-002에서 타입/에러 처리를 정리한다.
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: SSE 파서는 직접 구현할까, 경량 라이브러리를 쓸까?
+- [ ] **Q1**: 스트림(NDJSON) 파서는 직접 구현할까, 경량 라이브러리를 쓸까?
   - Option A: 직접 구현(권장: 의존성 최소, 동작 투명)
   - Option B: 라이브러리 사용(초기 빠르지만 유지보수/버전 리스크)
 

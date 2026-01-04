@@ -32,7 +32,7 @@ Agent Console을 “과정 가시화”를 넘어, TTFB/단계 소요시간/재�
 **수정**:
 
 - `frontend/src/components/AgentConsole.tsx` - 지표 표시 통합/정리
-- `backend/src/unknown_world/api/turn.py` - (선택) SSE 이벤트에 timing 메타 추가
+- `backend/src/unknown_world/api/turn.py` - (선택) 스트림 이벤트에 timing 메타 추가
 - `frontend/src/api/turnStream.ts` - timing/메타 파싱(필요 시)
 
 **참조**:
