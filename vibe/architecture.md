@@ -60,6 +60,14 @@ D:\Dev\unknown-world\
 │       └── turn/
 │           ├── turn_input.schema.json
 │           └── turn_output.schema.json
+├── vibe/                  # SSOT 문서 저장소
+│   ├── architecture.md
+│   ├── progress.md
+│   ├── roadmap.md
+│   ├── tech-stack.md
+│   ├── unit-plans/
+│   ├── unit-results/       # 유닛 개발 보고서 (U-027[Mvp] 포함)
+│   └── unit-runbooks/      # 유닛 실행 가이드 (U-027[Mvp] 포함)
 └── vibe/                  # SSOT 문서 저장소
 ```
 
@@ -90,7 +98,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **포트 정책 (RULE-011)**:
     - **Frontend**: `8001 ~ 8010` (기본: `8001`). `strictPort: true`를 강제하여 대역 외 자동 이동을 방지합니다.
     - **Backend**: `8011 ~ 8020` (기본: `8011`).
-    - **정리**: `pnpm kill:port`는 8001~8020 전 대역을 대상으로 동작합니다.
+    - **정리**: `pnpm kill`은 RULE-011 포트 대역(8001~8020)만을 대상으로 하는 **안전한 포트 기반 종료**를 수행합니다. 이를 통해 `node.exe` 전체를 종료하는 광역 종료 위험을 방지하고 다른 프로젝트에 영향을 주지 않도록 설계되었습니다. (`kill:port`는 이의 별칭입니다.)
 4. **도구 설정 SSOT**:
     - **Python (Backend)**: `backend/pyproject.toml` (Ruff, Pyright, uv 의존성)
     - **TypeScript (Frontend)**: `frontend/package.json` (pnpm), `frontend/tsconfig.json` (TS)

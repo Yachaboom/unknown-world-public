@@ -8,10 +8,10 @@
     "node": "24.12.0"
   },
   "scripts": {
-    "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
-    "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "kill:front": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
-    "kill:back": "npx kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill": "pnpm kill:port",
+    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
     "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
     "dev:front": "pnpm -C frontend dev"
   }

@@ -497,3 +497,4 @@ except ValidationError as e:
 - **U-007**: 모의 Orchestrator가 TurnOutput을 생성할 때 이 스키마를 계약으로 사용
 - **U-017**: 실제 Gemini Structured Outputs 호출 시 `TurnOutput.model_json_schema()`를 `response_json_schema`에 전달
 
+

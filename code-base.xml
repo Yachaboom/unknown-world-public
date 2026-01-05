@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, coverage/**, backend/.venv/**
+- Only files matching these patterns are included: **/*.{ts,tsx,py,toml,json,md}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**, backend/.venv/**, frontend/node_modules/**, frontend/dist/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -54,10 +54,8 @@ backend/src/unknown_world/orchestrator/mock.py
 backend/tests/integration/test_api.py
 backend/tests/integration/test_turn_streaming.py
 backend/tests/unit/models/test_turn.py
-frontend/coverage/block-navigation.js
+CLAUDE.md
 frontend/coverage/coverage-final.json
-frontend/coverage/prettify.js
-frontend/coverage/sorter.js
 frontend/package.json
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
@@ -75,6 +73,7 @@ frontend/tsconfig.json
 frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
+shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
@@ -1972,317 +1971,9 @@ def test_turn_output_json_schema():
     assert box_props["ymin"]["minimum"] == 0
 </file>
 
-<file path="frontend/coverage/block-navigation.js">
-/* eslint-disable */
-var jumpToCode = (function init() {
-    // Classes of code we would like to highlight in the file view
-    var missingCoverageClasses = ['.cbranch-no', '.cstat-no', '.fstat-no'];
-
-    // Elements to highlight in the file listing view
-    var fileListingElements = ['td.pct.low'];
-
-    // We don't want to select elements that are direct descendants of another match
-    var notSelector = ':not(' + missingCoverageClasses.join('):not(') + ') > '; // becomes `:not(a):not(b) > `
-
-    // Selector that finds elements on the page to which we can jump
-    var selector =
-        fileListingElements.join(', ') +
-        ', ' +
-        notSelector +
-        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
-
-    // The NodeList of matching elements
-    var missingCoverageElements = document.querySelectorAll(selector);
-
-    var currentIndex;
-
-    function toggleClass(index) {
-        missingCoverageElements
-            .item(currentIndex)
-            .classList.remove('highlighted');
-        missingCoverageElements.item(index).classList.add('highlighted');
-    }
-
-    function makeCurrent(index) {
-        toggleClass(index);
-        currentIndex = index;
-        missingCoverageElements.item(index).scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'center'
-        });
-    }
-
-    function goToPrevious() {
-        var nextIndex = 0;
-        if (typeof currentIndex !== 'number' || currentIndex === 0) {
-            nextIndex = missingCoverageElements.length - 1;
-        } else if (missingCoverageElements.length > 1) {
-            nextIndex = currentIndex - 1;
-        }
-
-        makeCurrent(nextIndex);
-    }
-
-    function goToNext() {
-        var nextIndex = 0;
-
-        if (
-            typeof currentIndex === 'number' &&
-            currentIndex < missingCoverageElements.length - 1
-        ) {
-            nextIndex = currentIndex + 1;
-        }
-
-        makeCurrent(nextIndex);
-    }
-
-    return function jump(event) {
-        if (
-            document.getElementById('fileSearch') === document.activeElement &&
-            document.activeElement != null
-        ) {
-            // if we're currently focused on the search input, we don't want to navigate
-            return;
-        }
-
-        switch (event.which) {
-            case 78: // n
-            case 74: // j
-                goToNext();
-                break;
-            case 66: // b
-            case 75: // k
-            case 80: // p
-                goToPrevious();
-                break;
-        }
-    };
-})();
-window.addEventListener('keydown', jumpToCode);
-</file>
-
 <file path="frontend/coverage/coverage-final.json">
 {"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts": {"path":"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts","statementMap":{"0":{"start":{"line":30,"column":30},"end":{"line":30,"column":null}},"1":{"start":{"line":41,"column":30},"end":{"line":41,"column":null}},"2":{"start":{"line":47,"column":27},"end":{"line":47,"column":null}},"3":{"start":{"line":54,"column":32},"end":{"line":62,"column":null}},"4":{"start":{"line":69,"column":37},"end":{"line":78,"column":null}},"5":{"start":{"line":85,"column":32},"end":{"line":85,"column":null}},"6":{"start":{"line":91,"column":31},"end":{"line":91,"column":null}},"7":{"start":{"line":102,"column":32},"end":{"line":107,"column":null}},"8":{"start":{"line":115,"column":27},"end":{"line":122,"column":null}},"9":{"start":{"line":129,"column":36},"end":{"line":138,"column":null}},"10":{"start":{"line":149,"column":32},"end":{"line":156,"column":null}},"11":{"start":{"line":162,"column":32},"end":{"line":176,"column":null}},"12":{"start":{"line":183,"column":37},"end":{"line":192,"column":null}},"13":{"start":{"line":199,"column":31},"end":{"line":209,"column":null}},"14":{"start":{"line":220,"column":32},"end":{"line":229,"column":null}},"15":{"start":{"line":236,"column":33},"end":{"line":247,"column":null}},"16":{"start":{"line":254,"column":32},"end":{"line":262,"column":null}},"17":{"start":{"line":270,"column":30},"end":{"line":278,"column":null}},"18":{"start":{"line":289,"column":31},"end":{"line":295,"column":null}},"19":{"start":{"line":302,"column":31},"end":{"line":312,"column":null}},"20":{"start":{"line":319,"column":27},"end":{"line":325,"column":null}},"21":{"start":{"line":332,"column":32},"end":{"line":359,"column":null}},"22":{"start":{"line":370,"column":30},"end":{"line":382,"column":null}},"23":{"start":{"line":389,"column":34},"end":{"line":395,"column":null}},"24":{"start":{"line":407,"column":35},"end":{"line":412,"column":null}},"25":{"start":{"line":424,"column":34},"end":{"line":436,"column":null}},"26":{"start":{"line":447,"column":34},"end":{"line":453,"column":null}},"27":{"start":{"line":469,"column":32},"end":{"line":502,"column":null}},"28":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"29":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"30":{"start":{"line":532,"column":2},"end":{"line":563,"column":null}},"31":{"start":{"line":590,"column":17},"end":{"line":590,"column":null}},"32":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"33":{"start":{"line":593,"column":4},"end":{"line":593,"column":null}},"34":{"start":{"line":596,"column":2},"end":{"line":600,"column":null}},"35":{"start":{"line":611,"column":2},"end":{"line":611,"column":null}},"36":{"start":{"line":625,"column":2},"end":{"line":625,"column":null}}},"fnMap":{"0":{"name":"createFallbackTurnOutput","decl":{"start":{"line":517,"column":16},"end":{"line":517,"column":null}},"loc":{"start":{"line":521,"column":14},"end":{"line":564,"column":null}},"line":521},"1":{"name":"safeParseTurnOutput","decl":{"start":{"line":585,"column":16},"end":{"line":585,"column":null}},"loc":{"start":{"line":589,"column":25},"end":{"line":601,"column":null}},"line":589},"2":{"name":"parseTurnInput","decl":{"start":{"line":610,"column":16},"end":{"line":610,"column":31}},"loc":{"start":{"line":610,"column":57},"end":{"line":612,"column":null}},"line":610},"3":{"name":"safeParseTurnInput","decl":{"start":{"line":624,"column":16},"end":{"line":624,"column":35}},"loc":{"start":{"line":624,"column":76},"end":{"line":626,"column":null}},"line":624}},"branchMap":{"0":{"loc":{"start":{"line":519,"column":2},"end":{"line":519,"column":null}},"type":"default-arg","locations":[{"start":{"line":519,"column":24},"end":{"line":519,"column":null}}],"line":519},"1":{"loc":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"type":"cond-expr","locations":[{"start":{"line":524,"column":8},"end":{"line":524,"column":null}},{"start":{"line":525,"column":8},"end":{"line":525,"column":null}}],"line":523},"2":{"loc":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"type":"cond-expr","locations":[{"start":{"line":529,"column":8},"end":{"line":529,"column":null}},{"start":{"line":530,"column":8},"end":{"line":530,"column":null}}],"line":528},"3":{"loc":{"start":{"line":534,"column":15},"end":{"line":534,"column":null}},"type":"binary-expr","locations":[{"start":{"line":534,"column":15},"end":{"line":534,"column":31}},{"start":{"line":534,"column":31},"end":{"line":534,"column":null}}],"line":534},"4":{"loc":{"start":{"line":587,"column":2},"end":{"line":587,"column":null}},"type":"default-arg","locations":[{"start":{"line":587,"column":23},"end":{"line":587,"column":null}}],"line":587},"5":{"loc":{"start":{"line":588,"column":2},"end":{"line":588,"column":null}},"type":"default-arg","locations":[{"start":{"line":588,"column":24},"end":{"line":588,"column":null}}],"line":588},"6":{"loc":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"type":"if","locations":[{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},{"start":{},"end":{}}],"line":592}},"s":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1,"9":1,"10":1,"11":1,"12":1,"13":1,"14":1,"15":1,"16":1,"17":1,"18":1,"19":1,"20":1,"21":1,"22":1,"23":1,"24":1,"25":1,"26":1,"27":1,"28":1,"29":1,"30":1,"31":2,"32":2,"33":1,"34":1,"35":2,"36":2},"f":{"0":1,"1":2,"2":2,"3":2},"b":{"0":[1],"1":[1,0],"2":[1,0],"3":[1,1],"4":[2],"5":[2],"6":[1,1]},"meta":{"lastBranch":7,"lastFunction":4,"lastStatement":37,"seen":{"s:30:30:30:Infinity":0,"s:41:30:41:Infinity":1,"s:47:27:47:Infinity":2,"s:54:32:62:Infinity":3,"s:69:37:78:Infinity":4,"s:85:32:85:Infinity":5,"s:91:31:91:Infinity":6,"s:102:32:107:Infinity":7,"s:115:27:122:Infinity":8,"s:129:36:138:Infinity":9,"s:149:32:156:Infinity":10,"s:162:32:176:Infinity":11,"s:183:37:192:Infinity":12,"s:199:31:209:Infinity":13,"s:220:32:229:Infinity":14,"s:236:33:247:Infinity":15,"s:254:32:262:Infinity":16,"s:270:30:278:Infinity":17,"s:289:31:295:Infinity":18,"s:302:31:312:Infinity":19,"s:319:27:325:Infinity":20,"s:332:32:359:Infinity":21,"s:370:30:382:Infinity":22,"s:389:34:395:Infinity":23,"s:407:35:412:Infinity":24,"s:424:34:436:Infinity":25,"s:447:34:453:Infinity":26,"s:469:32:502:Infinity":27,"f:517:16:517:Infinity":0,"b:519:24:519:Infinity":0,"s:523:4:525:Infinity":28,"b:524:8:524:Infinity:525:8:525:Infinity":1,"s:528:4:530:Infinity":29,"b:529:8:529:Infinity:530:8:530:Infinity":2,"s:532:2:563:Infinity":30,"b:534:15:534:31:534:31:534:Infinity":3,"f:585:16:585:Infinity":1,"b:587:23:587:Infinity":4,"b:588:24:588:Infinity":5,"s:590:17:590:Infinity":31,"b:592:2:594:Infinity:undefined:undefined:undefined:undefined":6,"s:592:2:594:Infinity":32,"s:593:4:593:Infinity":33,"s:596:2:600:Infinity":34,"f:610:16:610:31":2,"s:611:2:611:Infinity":35,"f:624:16:624:35":3,"s:625:2:625:Infinity":36}}}
 }
-</file>
-
-<file path="frontend/coverage/prettify.js">
-/* eslint-disable */
-window.PR_SHOULD_USE_CONTINUATION=true;(function(){var h=["break,continue,do,else,for,if,return,while"];var u=[h,"auto,case,char,const,default,double,enum,extern,float,goto,int,long,register,short,signed,sizeof,static,struct,switch,typedef,union,unsigned,void,volatile"];var p=[u,"catch,class,delete,false,import,new,operator,private,protected,public,this,throw,true,try,typeof"];var l=[p,"alignof,align_union,asm,axiom,bool,concept,concept_map,const_cast,constexpr,decltype,dynamic_cast,explicit,export,friend,inline,late_check,mutable,namespace,nullptr,reinterpret_cast,static_assert,static_cast,template,typeid,typename,using,virtual,where"];var x=[p,"abstract,boolean,byte,extends,final,finally,implements,import,instanceof,null,native,package,strictfp,super,synchronized,throws,transient"];var R=[x,"as,base,by,checked,decimal,delegate,descending,dynamic,event,fixed,foreach,from,group,implicit,in,interface,internal,into,is,lock,object,out,override,orderby,params,partial,readonly,ref,sbyte,sealed,stackalloc,string,select,uint,ulong,unchecked,unsafe,ushort,var"];var r="all,and,by,catch,class,else,extends,false,finally,for,if,in,is,isnt,loop,new,no,not,null,of,off,on,or,return,super,then,true,try,unless,until,when,while,yes";var w=[p,"debugger,eval,export,function,get,null,set,undefined,var,with,Infinity,NaN"];var s="caller,delete,die,do,dump,elsif,eval,exit,foreach,for,goto,if,import,last,local,my,next,no,our,print,package,redo,require,sub,undef,unless,until,use,wantarray,while,BEGIN,END";var I=[h,"and,as,assert,class,def,del,elif,except,exec,finally,from,global,import,in,is,lambda,nonlocal,not,or,pass,print,raise,try,with,yield,False,True,None"];var f=[h,"alias,and,begin,case,class,def,defined,elsif,end,ensure,false,in,module,next,nil,not,or,redo,rescue,retry,self,super,then,true,undef,unless,until,when,yield,BEGIN,END"];var H=[h,"case,done,elif,esac,eval,fi,function,in,local,set,then,until"];var A=[l,R,w,s+I,f,H];var e=/^(DIR|FILE|vector|(de|priority_)?queue|list|stack|(const_)?iterator|(multi)?(set|map)|bitset|u?(int|float)\d*)/;var C="str";var z="kwd";var j="com";var O="typ";var G="lit";var L="pun";var F="pln";var m="tag";var E="dec";var J="src";var P="atn";var n="atv";var N="nocode";var M="(?:^^\\.?|[+-]|\\!|\\!=|\\!==|\\#|\\%|\\%=|&|&&|&&=|&=|\\(|\\*|\\*=|\\+=|\\,|\\-=|\\->|\\/|\\/=|:|::|\\;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\@|\\[|\\^|\\^=|\\^\\^|\\^\\^=|\\{|\\||\\|=|\\|\\||\\|\\|=|\\~|break|case|continue|delete|do|else|finally|instanceof|return|throw|try|typeof)\\s*";function k(Z){var ad=0;var S=false;var ac=false;for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.ignoreCase){ac=true}else{if(/[a-z]/i.test(ae.source.replace(/\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[^ux]/gi,""))){S=true;ac=false;break}}}var Y={b:8,t:9,n:10,v:11,f:12,r:13};function ab(ah){var ag=ah.charCodeAt(0);if(ag!==92){return ag}var af=ah.charAt(1);ag=Y[af];if(ag){return ag}else{if("0"<=af&&af<="7"){return parseInt(ah.substring(1),8)}else{if(af==="u"||af==="x"){return parseInt(ah.substring(2),16)}else{return ah.charCodeAt(1)}}}}function T(af){if(af<32){return(af<16?"\\x0":"\\x")+af.toString(16)}var ag=String.fromCharCode(af);if(ag==="\\"||ag==="-"||ag==="["||ag==="]"){ag="\\"+ag}return ag}function X(am){var aq=am.substring(1,am.length-1).match(new RegExp("\\\\u[0-9A-Fa-f]{4}|\\\\x[0-9A-Fa-f]{2}|\\\\[0-3][0-7]{0,2}|\\\\[0-7]{1,2}|\\\\[\\s\\S]|-|[^-\\\\]","g"));var ak=[];var af=[];var ao=aq[0]==="^";for(var ar=ao?1:0,aj=aq.length;ar<aj;++ar){var ah=aq[ar];if(/\\[bdsw]/i.test(ah)){ak.push(ah)}else{var ag=ab(ah);var al;if(ar+2<aj&&"-"===aq[ar+1]){al=ab(aq[ar+2]);ar+=2}else{al=ag}af.push([ag,al]);if(!(al<65||ag>122)){if(!(al<65||ag>90)){af.push([Math.max(65,ag)|32,Math.min(al,90)|32])}if(!(al<97||ag>122)){af.push([Math.max(97,ag)&~32,Math.min(al,122)&~32])}}}}af.sort(function(av,au){return(av[0]-au[0])||(au[1]-av[1])});var ai=[];var ap=[NaN,NaN];for(var ar=0;ar<af.length;++ar){var at=af[ar];if(at[0]<=ap[1]+1){ap[1]=Math.max(ap[1],at[1])}else{ai.push(ap=at)}}var an=["["];if(ao){an.push("^")}an.push.apply(an,ak);for(var ar=0;ar<ai.length;++ar){var at=ai[ar];an.push(T(at[0]));if(at[1]>at[0]){if(at[1]+1>at[0]){an.push("-")}an.push(T(at[1]))}}an.push("]");return an.join("")}function W(al){var aj=al.source.match(new RegExp("(?:\\[(?:[^\\x5C\\x5D]|\\\\[\\s\\S])*\\]|\\\\u[A-Fa-f0-9]{4}|\\\\x[A-Fa-f0-9]{2}|\\\\[0-9]+|\\\\[^ux0-9]|\\(\\?[:!=]|[\\(\\)\\^]|[^\\x5B\\x5C\\(\\)\\^]+)","g"));var ah=aj.length;var an=[];for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){an[af]=-1}}}}for(var ak=1;ak<an.length;++ak){if(-1===an[ak]){an[ak]=++ad}}for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am;if(an[am]===undefined){aj[ak]="(?:"}}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){aj[ak]="\\"+an[am]}}}}for(var ak=0,am=0;ak<ah;++ak){if("^"===aj[ak]&&"^"!==aj[ak+1]){aj[ak]=""}}if(al.ignoreCase&&S){for(var ak=0;ak<ah;++ak){var ag=aj[ak];var ai=ag.charAt(0);if(ag.length>=2&&ai==="["){aj[ak]=X(ag)}else{if(ai!=="\\"){aj[ak]=ag.replace(/[a-zA-Z]/g,function(ao){var ap=ao.charCodeAt(0);return"["+String.fromCharCode(ap&~32,ap|32)+"]"})}}}}return aj.join("")}var aa=[];for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.global||ae.multiline){throw new Error(""+ae)}aa.push("(?:"+W(ae)+")")}return new RegExp(aa.join("|"),ac?"gi":"g")}function a(V){var U=/(?:^|\s)nocode(?:\s|$)/;var X=[];var T=0;var Z=[];var W=0;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=document.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Y=S&&"pre"===S.substring(0,3);function aa(ab){switch(ab.nodeType){case 1:if(U.test(ab.className)){return}for(var ae=ab.firstChild;ae;ae=ae.nextSibling){aa(ae)}var ad=ab.nodeName;if("BR"===ad||"LI"===ad){X[W]="\n";Z[W<<1]=T++;Z[(W++<<1)|1]=ab}break;case 3:case 4:var ac=ab.nodeValue;if(ac.length){if(!Y){ac=ac.replace(/[ \t\r\n]+/g," ")}else{ac=ac.replace(/\r\n?/g,"\n")}X[W]=ac;Z[W<<1]=T;T+=ac.length;Z[(W++<<1)|1]=ab}break}}aa(V);return{sourceCode:X.join("").replace(/\n$/,""),spans:Z}}function B(S,U,W,T){if(!U){return}var V={sourceCode:U,basePos:S};W(V);T.push.apply(T,V.decorations)}var v=/\S/;function o(S){var V=undefined;for(var U=S.firstChild;U;U=U.nextSibling){var T=U.nodeType;V=(T===1)?(V?S:U):(T===3)?(v.test(U.nodeValue)?S:V):V}return V===S?undefined:V}function g(U,T){var S={};var V;(function(){var ad=U.concat(T);var ah=[];var ag={};for(var ab=0,Z=ad.length;ab<Z;++ab){var Y=ad[ab];var ac=Y[3];if(ac){for(var ae=ac.length;--ae>=0;){S[ac.charAt(ae)]=Y}}var af=Y[1];var aa=""+af;if(!ag.hasOwnProperty(aa)){ah.push(af);ag[aa]=null}}ah.push(/[\0-\uffff]/);V=k(ah)})();var X=T.length;var W=function(ah){var Z=ah.sourceCode,Y=ah.basePos;var ad=[Y,F];var af=0;var an=Z.match(V)||[];var aj={};for(var ae=0,aq=an.length;ae<aq;++ae){var ag=an[ae];var ap=aj[ag];var ai=void 0;var am;if(typeof ap==="string"){am=false}else{var aa=S[ag.charAt(0)];if(aa){ai=ag.match(aa[1]);ap=aa[0]}else{for(var ao=0;ao<X;++ao){aa=T[ao];ai=ag.match(aa[1]);if(ai){ap=aa[0];break}}if(!ai){ap=F}}am=ap.length>=5&&"lang-"===ap.substring(0,5);if(am&&!(ai&&typeof ai[1]==="string")){am=false;ap=J}if(!am){aj[ag]=ap}}var ab=af;af+=ag.length;if(!am){ad.push(Y+ab,ap)}else{var al=ai[1];var ak=ag.indexOf(al);var ac=ak+al.length;if(ai[2]){ac=ag.length-ai[2].length;ak=ac-al.length}var ar=ap.substring(5);B(Y+ab,ag.substring(0,ak),W,ad);B(Y+ab+ak,al,q(ar,al),ad);B(Y+ab+ac,ag.substring(ac),W,ad)}}ah.decorations=ad};return W}function i(T){var W=[],S=[];if(T.tripleQuotedStrings){W.push([C,/^(?:\'\'\'(?:[^\'\\]|\\[\s\S]|\'{1,2}(?=[^\']))*(?:\'\'\'|$)|\"\"\"(?:[^\"\\]|\\[\s\S]|\"{1,2}(?=[^\"]))*(?:\"\"\"|$)|\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$))/,null,"'\""])}else{if(T.multiLineStrings){W.push([C,/^(?:\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$)|\`(?:[^\\\`]|\\[\s\S])*(?:\`|$))/,null,"'\"`"])}else{W.push([C,/^(?:\'(?:[^\\\'\r\n]|\\.)*(?:\'|$)|\"(?:[^\\\"\r\n]|\\.)*(?:\"|$))/,null,"\"'"])}}if(T.verbatimStrings){S.push([C,/^@\"(?:[^\"]|\"\")*(?:\"|$)/,null])}var Y=T.hashComments;if(Y){if(T.cStyleComments){if(Y>1){W.push([j,/^#(?:##(?:[^#]|#(?!##))*(?:###|$)|.*)/,null,"#"])}else{W.push([j,/^#(?:(?:define|elif|else|endif|error|ifdef|include|ifndef|line|pragma|undef|warning)\b|[^\r\n]*)/,null,"#"])}S.push([C,/^<(?:(?:(?:\.\.\/)*|\/?)(?:[\w-]+(?:\/[\w-]+)+)?[\w-]+\.h|[a-z]\w*)>/,null])}else{W.push([j,/^#[^\r\n]*/,null,"#"])}}if(T.cStyleComments){S.push([j,/^\/\/[^\r\n]*/,null]);S.push([j,/^\/\*[\s\S]*?(?:\*\/|$)/,null])}if(T.regexLiterals){var X=("/(?=[^/*])(?:[^/\\x5B\\x5C]|\\x5C[\\s\\S]|\\x5B(?:[^\\x5C\\x5D]|\\x5C[\\s\\S])*(?:\\x5D|$))+/");S.push(["lang-regex",new RegExp("^"+M+"("+X+")")])}var V=T.types;if(V){S.push([O,V])}var U=(""+T.keywords).replace(/^ | $/g,"");if(U.length){S.push([z,new RegExp("^(?:"+U.replace(/[\s,]+/g,"|")+")\\b"),null])}W.push([F,/^\s+/,null," \r\n\t\xA0"]);S.push([G,/^@[a-z_$][a-z_$@0-9]*/i,null],[O,/^(?:[@_]?[A-Z]+[a-z][A-Za-z_$@0-9]*|\w+_t\b)/,null],[F,/^[a-z_$][a-z_$@0-9]*/i,null],[G,new RegExp("^(?:0x[a-f0-9]+|(?:\\d(?:_\\d+)*\\d*(?:\\.\\d*)?|\\.\\d\\+)(?:e[+\\-]?\\d+)?)[a-z]*","i"),null,"0123456789"],[F,/^\\[\s\S]?/,null],[L,/^.[^\s\w\.$@\'\"\`\/\#\\]*/,null]);return g(W,S)}var K=i({keywords:A,hashComments:true,cStyleComments:true,multiLineStrings:true,regexLiterals:true});function Q(V,ag){var U=/(?:^|\s)nocode(?:\s|$)/;var ab=/\r\n?|\n/;var ac=V.ownerDocument;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=ac.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Z=S&&"pre"===S.substring(0,3);var af=ac.createElement("LI");while(V.firstChild){af.appendChild(V.firstChild)}var W=[af];function ae(al){switch(al.nodeType){case 1:if(U.test(al.className)){break}if("BR"===al.nodeName){ad(al);if(al.parentNode){al.parentNode.removeChild(al)}}else{for(var an=al.firstChild;an;an=an.nextSibling){ae(an)}}break;case 3:case 4:if(Z){var am=al.nodeValue;var aj=am.match(ab);if(aj){var ai=am.substring(0,aj.index);al.nodeValue=ai;var ah=am.substring(aj.index+aj[0].length);if(ah){var ak=al.parentNode;ak.insertBefore(ac.createTextNode(ah),al.nextSibling)}ad(al);if(!ai){al.parentNode.removeChild(al)}}}break}}function ad(ak){while(!ak.nextSibling){ak=ak.parentNode;if(!ak){return}}function ai(al,ar){var aq=ar?al.cloneNode(false):al;var ao=al.parentNode;if(ao){var ap=ai(ao,1);var an=al.nextSibling;ap.appendChild(aq);for(var am=an;am;am=an){an=am.nextSibling;ap.appendChild(am)}}return aq}var ah=ai(ak.nextSibling,0);for(var aj;(aj=ah.parentNode)&&aj.nodeType===1;){ah=aj}W.push(ah)}for(var Y=0;Y<W.length;++Y){ae(W[Y])}if(ag===(ag|0)){W[0].setAttribute("value",ag)}var aa=ac.createElement("OL");aa.className="linenums";var X=Math.max(0,((ag-1))|0)||0;for(var Y=0,T=W.length;Y<T;++Y){af=W[Y];af.className="L"+((Y+X)%10);if(!af.firstChild){af.appendChild(ac.createTextNode("\xA0"))}aa.appendChild(af)}V.appendChild(aa)}function D(ac){var aj=/\bMSIE\b/.test(navigator.userAgent);var am=/\n/g;var al=ac.sourceCode;var an=al.length;var V=0;var aa=ac.spans;var T=aa.length;var ah=0;var X=ac.decorations;var Y=X.length;var Z=0;X[Y]=an;var ar,aq;for(aq=ar=0;aq<Y;){if(X[aq]!==X[aq+2]){X[ar++]=X[aq++];X[ar++]=X[aq++]}else{aq+=2}}Y=ar;for(aq=ar=0;aq<Y;){var at=X[aq];var ab=X[aq+1];var W=aq+2;while(W+2<=Y&&X[W+1]===ab){W+=2}X[ar++]=at;X[ar++]=ab;aq=W}Y=X.length=ar;var ae=null;while(ah<T){var af=aa[ah];var S=aa[ah+2]||an;var ag=X[Z];var ap=X[Z+2]||an;var W=Math.min(S,ap);var ak=aa[ah+1];var U;if(ak.nodeType!==1&&(U=al.substring(V,W))){if(aj){U=U.replace(am,"\r")}ak.nodeValue=U;var ai=ak.ownerDocument;var ao=ai.createElement("SPAN");ao.className=X[Z+1];var ad=ak.parentNode;ad.replaceChild(ao,ak);ao.appendChild(ak);if(V<S){aa[ah+1]=ak=ai.createTextNode(al.substring(W,S));ad.insertBefore(ak,ao.nextSibling)}}V=W;if(V>=S){ah+=2}if(V>=ap){Z+=2}}}var t={};function c(U,V){for(var S=V.length;--S>=0;){var T=V[S];if(!t.hasOwnProperty(T)){t[T]=U}else{if(window.console){console.warn("cannot override language handler %s",T)}}}}function q(T,S){if(!(T&&t.hasOwnProperty(T))){T=/^\s*</.test(S)?"default-markup":"default-code"}return t[T]}c(K,["default-code"]);c(g([],[[F,/^[^<?]+/],[E,/^<!\w[^>]*(?:>|$)/],[j,/^<\!--[\s\S]*?(?:-\->|$)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],[L,/^(?:<[%?]|[%?]>)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i]]),["default-markup","htm","html","mxml","xhtml","xml","xsl"]);c(g([[F,/^[\s]+/,null," \t\r\n"],[n,/^(?:\"[^\"]*\"?|\'[^\']*\'?)/,null,"\"'"]],[[m,/^^<\/?[a-z](?:[\w.:-]*\w)?|\/?>$/i],[P,/^(?!style[\s=]|on)[a-z](?:[\w:-]*\w)?/i],["lang-uq.val",/^=\s*([^>\'\"\s]*(?:[^>\'\"\s\/]|\/(?=\s)))/],[L,/^[=<>\/]+/],["lang-js",/^on\w+\s*=\s*\"([^\"]+)\"/i],["lang-js",/^on\w+\s*=\s*\'([^\']+)\'/i],["lang-js",/^on\w+\s*=\s*([^\"\'>\s]+)/i],["lang-css",/^style\s*=\s*\"([^\"]+)\"/i],["lang-css",/^style\s*=\s*\'([^\']+)\'/i],["lang-css",/^style\s*=\s*([^\"\'>\s]+)/i]]),["in.tag"]);c(g([],[[n,/^[\s\S]+/]]),["uq.val"]);c(i({keywords:l,hashComments:true,cStyleComments:true,types:e}),["c","cc","cpp","cxx","cyc","m"]);c(i({keywords:"null,true,false"}),["json"]);c(i({keywords:R,hashComments:true,cStyleComments:true,verbatimStrings:true,types:e}),["cs"]);c(i({keywords:x,cStyleComments:true}),["java"]);c(i({keywords:H,hashComments:true,multiLineStrings:true}),["bsh","csh","sh"]);c(i({keywords:I,hashComments:true,multiLineStrings:true,tripleQuotedStrings:true}),["cv","py"]);c(i({keywords:s,hashComments:true,multiLineStrings:true,regexLiterals:true}),["perl","pl","pm"]);c(i({keywords:f,hashComments:true,multiLineStrings:true,regexLiterals:true}),["rb"]);c(i({keywords:w,cStyleComments:true,regexLiterals:true}),["js"]);c(i({keywords:r,hashComments:3,cStyleComments:true,multilineStrings:true,tripleQuotedStrings:true,regexLiterals:true}),["coffee"]);c(g([],[[C,/^[\s\S]+/]]),["regex"]);function d(V){var U=V.langExtension;try{var S=a(V.sourceNode);var T=S.sourceCode;V.sourceCode=T;V.spans=S.spans;V.basePos=0;q(U,T)(V);D(V)}catch(W){if("console" in window){console.log(W&&W.stack?W.stack:W)}}}function y(W,V,U){var S=document.createElement("PRE");S.innerHTML=W;if(U){Q(S,U)}var T={langExtension:V,numberLines:U,sourceNode:S};d(T);return S.innerHTML}function b(ad){function Y(af){return document.getElementsByTagName(af)}var ac=[Y("pre"),Y("code"),Y("xmp")];var T=[];for(var aa=0;aa<ac.length;++aa){for(var Z=0,V=ac[aa].length;Z<V;++Z){T.push(ac[aa][Z])}}ac=null;var W=Date;if(!W.now){W={now:function(){return +(new Date)}}}var X=0;var S;var ab=/\blang(?:uage)?-([\w.]+)(?!\S)/;var ae=/\bprettyprint\b/;function U(){var ag=(window.PR_SHOULD_USE_CONTINUATION?W.now()+250:Infinity);for(;X<T.length&&W.now()<ag;X++){var aj=T[X];var ai=aj.className;if(ai.indexOf("prettyprint")>=0){var ah=ai.match(ab);var am;if(!ah&&(am=o(aj))&&"CODE"===am.tagName){ah=am.className.match(ab)}if(ah){ah=ah[1]}var al=false;for(var ak=aj.parentNode;ak;ak=ak.parentNode){if((ak.tagName==="pre"||ak.tagName==="code"||ak.tagName==="xmp")&&ak.className&&ak.className.indexOf("prettyprint")>=0){al=true;break}}if(!al){var af=aj.className.match(/\blinenums\b(?::(\d+))?/);af=af?af[1]&&af[1].length?+af[1]:true:false;if(af){Q(aj,af)}S={langExtension:ah,sourceNode:aj,numberLines:af};d(S)}}}if(X<T.length){setTimeout(U,250)}else{if(ad){ad()}}}U()}window.prettyPrintOne=y;window.prettyPrint=b;window.PR={createSimpleLexer:g,registerLangHandler:c,sourceDecorator:i,PR_ATTRIB_NAME:P,PR_ATTRIB_VALUE:n,PR_COMMENT:j,PR_DECLARATION:E,PR_KEYWORD:z,PR_LITERAL:G,PR_NOCODE:N,PR_PLAIN:F,PR_PUNCTUATION:L,PR_SOURCE:J,PR_STRING:C,PR_TAG:m,PR_TYPE:O}})();PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_DECLARATION,/^<!\w[^>]*(?:>|$)/],[PR.PR_COMMENT,/^<\!--[\s\S]*?(?:-\->|$)/],[PR.PR_PUNCTUATION,/^(?:<[%?]|[%?]>)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-handlebars",/^<script\b[^>]*type\s*=\s*['"]?text\/x-handlebars-template['"]?\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i],[PR.PR_DECLARATION,/^{{[#^>/]?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{&?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{{>?\s*[\w.][^}]*}}}/],[PR.PR_COMMENT,/^{{![^}]*}}/]]),["handlebars","hbs"]);PR.registerLangHandler(PR.createSimpleLexer([[PR.PR_PLAIN,/^[ \t\r\n\f]+/,null," \t\r\n\f"]],[[PR.PR_STRING,/^\"(?:[^\n\r\f\\\"]|\\(?:\r\n?|\n|\f)|\\[\s\S])*\"/,null],[PR.PR_STRING,/^\'(?:[^\n\r\f\\\']|\\(?:\r\n?|\n|\f)|\\[\s\S])*\'/,null],["lang-css-str",/^url\(([^\)\"\']*)\)/i],[PR.PR_KEYWORD,/^(?:url|rgb|\!important|@import|@page|@media|@charset|inherit)(?=[^\-\w]|$)/i,null],["lang-css-kw",/^(-?(?:[_a-z]|(?:\\[0-9a-f]+ ?))(?:[_a-z0-9\-]|\\(?:\\[0-9a-f]+ ?))*)\s*:/i],[PR.PR_COMMENT,/^\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\//],[PR.PR_COMMENT,/^(?:<!--|-->)/],[PR.PR_LITERAL,/^(?:\d+|\d*\.\d+)(?:%|[a-z]+)?/i],[PR.PR_LITERAL,/^#(?:[0-9a-f]{3}){1,2}/i],[PR.PR_PLAIN,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i],[PR.PR_PUNCTUATION,/^[^\s\w\'\"]+/]]),["css"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_KEYWORD,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i]]),["css-kw"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_STRING,/^[^\)\"\']+/]]),["css-str"]);
-</file>
-
-<file path="frontend/coverage/sorter.js">
-/* eslint-disable */
-var addSorting = (function() {
-    'use strict';
-    var cols,
-        currentSort = {
-            index: 0,
-            desc: false
-        };
-
-    // returns the summary table element
-    function getTable() {
-        return document.querySelector('.coverage-summary');
-    }
-    // returns the thead element of the summary table
-    function getTableHeader() {
-        return getTable().querySelector('thead tr');
-    }
-    // returns the tbody element of the summary table
-    function getTableBody() {
-        return getTable().querySelector('tbody');
-    }
-    // returns the th element for nth column
-    function getNthColumn(n) {
-        return getTableHeader().querySelectorAll('th')[n];
-    }
-
-    function onFilterInput() {
-        const searchValue = document.getElementById('fileSearch').value;
-        const rows = document.getElementsByTagName('tbody')[0].children;
-
-        // Try to create a RegExp from the searchValue. If it fails (invalid regex),
-        // it will be treated as a plain text search
-        let searchRegex;
-        try {
-            searchRegex = new RegExp(searchValue, 'i'); // 'i' for case-insensitive
-        } catch (error) {
-            searchRegex = null;
-        }
-
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            let isMatch = false;
-
-            if (searchRegex) {
-                // If a valid regex was created, use it for matching
-                isMatch = searchRegex.test(row.textContent);
-            } else {
-                // Otherwise, fall back to the original plain text search
-                isMatch = row.textContent
-                    .toLowerCase()
-                    .includes(searchValue.toLowerCase());
-            }
-
-            row.style.display = isMatch ? '' : 'none';
-        }
-    }
-
-    // loads the search box
-    function addSearchBox() {
-        var template = document.getElementById('filterTemplate');
-        var templateClone = template.content.cloneNode(true);
-        templateClone.getElementById('fileSearch').oninput = onFilterInput;
-        template.parentElement.appendChild(templateClone);
-    }
-
-    // loads all columns
-    function loadColumns() {
-        var colNodes = getTableHeader().querySelectorAll('th'),
-            colNode,
-            cols = [],
-            col,
-            i;
-
-        for (i = 0; i < colNodes.length; i += 1) {
-            colNode = colNodes[i];
-            col = {
-                key: colNode.getAttribute('data-col'),
-                sortable: !colNode.getAttribute('data-nosort'),
-                type: colNode.getAttribute('data-type') || 'string'
-            };
-            cols.push(col);
-            if (col.sortable) {
-                col.defaultDescSort = col.type === 'number';
-                colNode.innerHTML =
-                    colNode.innerHTML + '<span class="sorter"></span>';
-            }
-        }
-        return cols;
-    }
-    // attaches a data attribute to every tr element with an object
-    // of data values keyed by column name
-    function loadRowData(tableRow) {
-        var tableCols = tableRow.querySelectorAll('td'),
-            colNode,
-            col,
-            data = {},
-            i,
-            val;
-        for (i = 0; i < tableCols.length; i += 1) {
-            colNode = tableCols[i];
-            col = cols[i];
-            val = colNode.getAttribute('data-value');
-            if (col.type === 'number') {
-                val = Number(val);
-            }
-            data[col.key] = val;
-        }
-        return data;
-    }
-    // loads all row data
-    function loadData() {
-        var rows = getTableBody().querySelectorAll('tr'),
-            i;
-
-        for (i = 0; i < rows.length; i += 1) {
-            rows[i].data = loadRowData(rows[i]);
-        }
-    }
-    // sorts the table using the data for the ith column
-    function sortByIndex(index, desc) {
-        var key = cols[index].key,
-            sorter = function(a, b) {
-                a = a.data[key];
-                b = b.data[key];
-                return a < b ? -1 : a > b ? 1 : 0;
-            },
-            finalSorter = sorter,
-            tableBody = document.querySelector('.coverage-summary tbody'),
-            rowNodes = tableBody.querySelectorAll('tr'),
-            rows = [],
-            i;
-
-        if (desc) {
-            finalSorter = function(a, b) {
-                return -1 * sorter(a, b);
-            };
-        }
-
-        for (i = 0; i < rowNodes.length; i += 1) {
-            rows.push(rowNodes[i]);
-            tableBody.removeChild(rowNodes[i]);
-        }
-
-        rows.sort(finalSorter);
-
-        for (i = 0; i < rows.length; i += 1) {
-            tableBody.appendChild(rows[i]);
-        }
-    }
-    // removes sort indicators for current column being sorted
-    function removeSortIndicators() {
-        var col = getNthColumn(currentSort.index),
-            cls = col.className;
-
-        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');
-        col.className = cls;
-    }
-    // adds sort indicators for current column being sorted
-    function addSortIndicators() {
-        getNthColumn(currentSort.index).className += currentSort.desc
-            ? ' sorted-desc'
-            : ' sorted';
-    }
-    // adds event listeners for all sorter widgets
-    function enableUI() {
-        var i,
-            el,
-            ithSorter = function ithSorter(i) {
-                var col = cols[i];
-
-                return function() {
-                    var desc = col.defaultDescSort;
-
-                    if (currentSort.index === i) {
-                        desc = !currentSort.desc;
-                    }
-                    sortByIndex(i, desc);
-                    removeSortIndicators();
-                    currentSort.index = i;
-                    currentSort.desc = desc;
-                    addSortIndicators();
-                };
-            };
-        for (i = 0; i < cols.length; i += 1) {
-            if (cols[i].sortable) {
-                // add the click event handler on the th so users
-                // dont have to click on those tiny arrows
-                el = getNthColumn(i).querySelector('.sorter').parentElement;
-                if (el.addEventListener) {
-                    el.addEventListener('click', ithSorter(i));
-                } else {
-                    el.attachEvent('onclick', ithSorter(i));
-                }
-            }
-        }
-    }
-    // adds sorting functionality to the UI
-    return function() {
-        if (!getTable()) {
-            return;
-        }
-        cols = loadColumns();
-        loadData();
-        addSearchBox();
-        addSortIndicators();
-        enableUI();
-    };
-})();
-
-window.addEventListener('load', addSorting);
 </file>
 
 <file path="frontend/src/api/turnStream.test.ts">
@@ -4480,6 +4171,275 @@ export const selectError = (state: AgentStore) => state.error;
 }
 </file>
 
+<file path="CLAUDE.md">
+# AI 에이전트 전역 지침 (Unknown World)
+
+이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
+
+---
+
+## 프로젝트 개요
+
+**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
+
+- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
+- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
+- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
+
+---
+
+## SSOT(단일 출처) 및 충돌 해결 우선순위
+
+문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
+
+1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
+2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
+3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
+4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
+5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
+
+불확실하면 **추측하지 말고 질문**합니다.
+
+---
+
+## 핵심 원칙 (Non‑Negotiable)
+
+### 1) Prompt-only wrapper / Generic chatbot 회피
+
+- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
+- 반드시 다음이 존재해야 합니다:
+  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
+  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
+  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
+
+### 2) 채팅 버블 UI 금지, 게임 UI 고정
+
+- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
+- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
+  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
+    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
+
+### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
+
+- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
+- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
+
+### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
+
+- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
+- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
+
+### 5) 비용/지연은 UX/게임 메커닉으로 제어
+
+- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
+- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
+
+### 6) ko/en i18n: 혼합 출력 금지
+
+- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
+- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
+- 프롬프트는 언어별 `.md` 파일로 관리합니다.
+
+### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
+
+- BYOK(사용자 API 키 입력) 요구 금지(MVP).
+- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
+- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
+
+### 8) 관측 가능성(Observability) = UX의 일부
+
+- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
+- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
+
+---
+
+## 작업 표준 (Workflow)
+
+### 작업 시작 전 필수
+
+- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
+- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
+
+### 유닛(단계) 기반 개발
+
+- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
+- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
+- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
+
+### 문서 동기화
+
+- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
+- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
+
+### 리팩토링
+
+- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
+
+### 테스트
+
+- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
+- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
+
+### 커밋 메시지
+
+- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
+- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
+
+---
+
+## 품질 기준 (출시/데모 관점)
+
+### Hard Gate (필수 통과)
+
+- **Schema OK**: TurnOutput JSON이 스키마를 통과
+- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
+- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
+- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
+
+### Soft Gate (관측/튜닝)
+
+- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
+- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
+
+---
+
+## 금지사항 (절대 금지)
+
+- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
+- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
+- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
+- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
+- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
+- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
+- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
+
+---
+
+## 지침 운영/사용 가이드
+
+### Cursor 규칙 적용 방식
+
+- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
+- 규칙이 부족/충돌하면:
+  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
+  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
+
+### 온보딩(신규 합류자/에이전트) 10분 루프
+
+- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
+- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
+- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
+- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
+
+### 지침 업데이트 프로세스(권장)
+
+- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
+- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
+
+---
+
+## 참조 문서
+
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+- `vibe/ref/frontend-style-guide.md`
+- `vibe/ref/structured-outputs-guide.md`
+- `vibe/commands/*.md` / `.cursor/commands/*.md`
+- `.gemini/rules/commit-rules.md`
+</file>
+
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+</file>
+
+<file path="shared/README.md">
+# shared/
+
+이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
+
+## 📁 구조
+
+```
+shared/
+├── schemas/
+│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
+│       ├── turn_input.schema.json    # Client → Server 요청 스키마
+│       └── turn_output.schema.json   # Server → Client 응답 스키마
+└── README.md
+```
+
+## 🔄 SSOT 원칙 (RU-001-Q4)
+
+- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
+- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
+- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
+
+### 소비 전략 (Option B: 생성물 기반 동기화)
+
+| 소비자 | 도구/방식 | 생성물 경로 (권장) |
+|--------|-----------|-------------------|
+| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
+| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
+
+> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
+
+## 📋 스키마 파일 목록
+
+### Turn 계약 (MVP)
+
+| 파일 | 용도 | PRD 참조 |
+|------|------|----------|
+| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
+| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
+
+## ✅ 스키마 작성 가이드라인
+
+- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
+- **권장 속성**: `required`, `enum`, `description`을 적극 사용
+- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
+- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
+- **참조**: `vibe/ref/structured-outputs-guide.md`
+
+## ⚠️ 보안 주의사항 (RULE-007)
+
+- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
+- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
+- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
+
+## 📚 관련 문서
+
+- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
+- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
+- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
+- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
+- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
+</file>
+
 <file path="shared/schemas/turn/turn_input.schema.json">
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -4562,33 +4522,577 @@ export const selectError = (state: AgentStore) => state.error;
 }
 </file>
 
-<file path="frontend/tsconfig.json">
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
+<file path="backend/src/unknown_world/__init__.py">
+"""Unknown World - Backend Package
 
-    /* Bundler mode */
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
+This is the main package for the Unknown World backend.
+Architecture: FastAPI + Pydantic + SSE streaming
 
-    /* Linting (엄격 모드) */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+Reference:
+- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
+- vibe/prd.md (Agent-based Game Master Engine)
+"""
+
+__version__ = "0.1.0"
+</file>
+
+<file path="backend/src/unknown_world/main.py">
+"""Unknown World - FastAPI 애플리케이션 엔트리포인트
+
+이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
+MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
+
+실행 방법:
+    cd backend
+    uv sync
+    uv run uvicorn unknown_world.main:app --reload --port 8011
+
+참조:
+    - vibe/tech-stack.md (버전 SSOT)
+    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
+    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
+"""
+
+from typing import Literal
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from unknown_world import __version__
+from unknown_world.api import turn_router
+
+# =============================================================================
+# FastAPI 앱 인스턴스
+# =============================================================================
+
+app = FastAPI(
+    title="Unknown World API",
+    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
+    version=__version__,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# =============================================================================
+# CORS 설정 (개발 환경용)
+# =============================================================================
+# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
+# RULE-011: 프론트엔드는 8001~8010 포트 사용
+# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
+
+ALLOWED_ORIGINS = [
+    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
+    *[f"http://localhost:{port}" for port in range(8001, 8011)],
+    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =============================================================================
+# 라우터 등록
+# =============================================================================
+
+# U-007: /api/turn HTTP Streaming 엔드포인트
+app.include_router(turn_router)
+
+
+# =============================================================================
+# 응답 스키마 (Pydantic)
+# =============================================================================
+
+
+class HealthResponse(BaseModel):
+    """헬스체크 응답 스키마.
+
+    Attributes:
+        status: 서버 상태 ("ok" 또는 "degraded")
+        version: 백엔드 버전
+        service: 서비스 이름
+    """
+
+    status: Literal["ok", "degraded"]
+    version: str
+    service: str
+
+
+# =============================================================================
+# 라우트 정의
+# =============================================================================
+
+
+@app.get("/health", response_model=HealthResponse, tags=["System"])
+async def health_check() -> HealthResponse:
+    """서버 헬스체크 엔드포인트.
+
+    서버가 정상적으로 작동 중인지 확인합니다.
+    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
+
+    Returns:
+        HealthResponse: 서버 상태 정보
+    """
+    return HealthResponse(
+        status="ok",
+        version=__version__,
+        service="unknown-world-backend",
+    )
+
+
+@app.get("/", tags=["System"])
+async def root() -> dict[str, str]:
+    """루트 엔드포인트.
+
+    API 정보를 간략히 안내합니다.
+
+    Returns:
+        dict: 기본 안내 메시지
+    """
+    return {
+        "message": "Unknown World API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+</file>
+
+<file path="frontend/src/App.tsx">
+/**
+ * Unknown World - 메인 게임 UI 레이아웃
+ *
+ * RULE-002 준수: 채팅 버블 UI 금지
+ * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
+ * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
+ *   Rule Board, Economy HUD, Agent Console, Scanner Slot
+ *
+ * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ * @see vibe/prd.md 6.7/6.8/9장
+ */
+
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { AgentConsole } from './components/AgentConsole';
+import { useAgentStore } from './stores/agentStore';
+import { startTurnStream, type StreamCallbacks } from './api/turnStream';
+import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+interface NarrativeEntry {
+  turn: number;
+  text: string;
 }
+
+// =============================================================================
+// 패널 컴포넌트
+// =============================================================================
+
+interface PanelProps {
+  title: string;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+function Panel({ title, children, className = '' }: PanelProps) {
+  return (
+    <div className={`panel ${className}`}>
+      <div className="panel-header">
+        <span className="panel-title">{title}</span>
+      </div>
+      <div className="panel-content">
+        {children || <p className="panel-placeholder">[ 준비 중 ]</p>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 내러티브 피드 컴포넌트
+// =============================================================================
+
+interface NarrativeFeedProps {
+  entries: NarrativeEntry[];
+  streamingText: string;
+}
+
+function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // 새 엔트리 추가 시 스크롤
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [entries, streamingText]);
+
+  return (
+    <div className="narrative-feed" ref={feedRef}>
+      {entries.map((entry) => (
+        <div key={entry.turn} className="narrative-entry">
+          <span className="narrative-timestamp">[TURN {entry.turn}]</span>
+          <span className="narrative-text">{entry.text}</span>
+        </div>
+      ))}
+      {streamingText && (
+        <div className="narrative-entry streaming">
+          <span className="narrative-timestamp">[STREAMING]</span>
+          <span className="narrative-text">{streamingText}</span>
+          <span className="cursor-blink">▌</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 액션 덱 컴포넌트
+// =============================================================================
+
+interface ActionDeckProps {
+  cards: ActionCard[];
+  onCardClick?: (card: ActionCard) => void;
+  disabled?: boolean;
+}
+
+function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
+  // 카드가 없으면 기본 카드 표시
+  const displayCards: ActionCard[] =
+    cards.length > 0
+      ? cards
+      : [
+          {
+            id: 'default-1',
+            label: '탐색하기',
+            description: '주변을 살펴본다',
+            cost: { signal: 1, memory_shard: 0 },
+            risk: 'low',
+            hint: null,
+          },
+          {
+            id: 'default-2',
+            label: '조사하기',
+            description: '자세히 살펴본다',
+            cost: { signal: 2, memory_shard: 0 },
+            risk: 'medium',
+            hint: null,
+          },
+          {
+            id: 'default-3',
+            label: '대화하기',
+            description: '말을 걸어본다',
+            cost: { signal: 1, memory_shard: 0 },
+            risk: 'low',
+            hint: null,
+          },
+        ];
+
+  return (
+    <div className="action-deck">
+      {displayCards.map((card) => (
+        <button
+          key={card.id}
+          type="button"
+          className="action-card"
+          onClick={() => onCardClick?.(card)}
+          disabled={disabled}
+        >
+          <div className="action-card-title">{card.label}</div>
+          <div className="action-card-cost">
+            ⚡ {card.cost.signal} Signal
+            {card.cost.memory_shard > 0 && ` | 💎 ${card.cost.memory_shard}`}
+            {' | '}⚠ {card.risk}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// =============================================================================
+// 헤더 컴포넌트
+// =============================================================================
+
+interface GameHeaderProps {
+  signal: number;
+  memoryShard: number;
+  isConnected: boolean;
+}
+
+function GameHeader({ signal, memoryShard, isConnected }: GameHeaderProps) {
+  return (
+    <header className="game-header">
+      <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
+        UNKNOWN WORLD
+      </h1>
+      <div className="header-controls">
+        <div className="economy-hud">
+          <span className="signal-icon">⚡</span>
+          <span>Signal: {signal}</span>
+          <span className="shard-icon">💎</span>
+          <span>Shard: {memoryShard}</span>
+        </div>
+        <div className="connection-status">
+          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
+          <span>{isConnected ? 'ONLINE' : 'OFFLINE'}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// =============================================================================
+// 메인 App 컴포넌트
+// =============================================================================
+
+function App() {
+  // 상태
+  const [inputText, setInputText] = useState('');
+  const turnCountRef = useRef(0);
+  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>([
+    { turn: 0, text: '미지의 세계에 오신 것을 환영합니다...' },
+  ]);
+  const [actionCards, setActionCards] = useState<ActionCard[]>([]);
+  const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
+  const [isConnected, setIsConnected] = useState(true);
+
+  // Agent Store 액션
+  const {
+    startStream,
+    handleStage,
+    handleBadges,
+    handleNarrativeDelta,
+    handleFinal,
+    handleError,
+    completeStream,
+    isStreaming,
+    narrativeBuffer,
+  } = useAgentStore();
+
+  // 취소 함수 ref
+  const cancelStreamRef = useRef<(() => void) | null>(null);
+
+  /**
+   * TurnOutput을 받아 UI 상태를 업데이트합니다.
+   */
+  const applyTurnOutput = useCallback((output: TurnOutput) => {
+    // 내러티브 추가
+    turnCountRef.current += 1;
+    const newTurn = turnCountRef.current;
+    setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
+
+    // 액션 카드 업데이트
+    if (output.ui.action_deck.cards.length > 0) {
+      setActionCards(output.ui.action_deck.cards);
+    }
+
+    // 경제 상태 업데이트 (RULE-005: 잔액 반영)
+    setEconomy({
+      signal: output.economy.balance_after.signal,
+      memory_shard: output.economy.balance_after.memory_shard,
+    });
+  }, []);
+
+  /**
+   * 턴을 실행합니다.
+   */
+  const executeTurn = useCallback(
+    (text: string, cardId?: string) => {
+      if (isStreaming) return;
+
+      // 입력 데이터 생성
+      const turnInput: TurnInput = {
+        language: 'ko-KR',
+        text: text || (cardId ? `카드 선택: ${cardId}` : ''),
+        click: null,
+        client: {
+          viewport_w: window.innerWidth,
+          viewport_h: window.innerHeight,
+          theme: 'dark',
+        },
+        economy_snapshot: economy,
+      };
+
+      // Agent Store 시작
+      startStream();
+
+      // 스트림 콜백 설정
+      const callbacks: StreamCallbacks = {
+        onStage: handleStage,
+        onBadges: handleBadges,
+        onNarrativeDelta: handleNarrativeDelta,
+        onFinal: (event) => {
+          handleFinal(event);
+          applyTurnOutput(event.data);
+        },
+        onError: (event) => {
+          handleError(event);
+          setIsConnected(false);
+        },
+        onComplete: () => {
+          completeStream();
+        },
+      };
+
+      // 스트림 시작
+      cancelStreamRef.current = startTurnStream(turnInput, callbacks);
+      setInputText('');
+    },
+    [
+      isStreaming,
+      economy,
+      startStream,
+      handleStage,
+      handleBadges,
+      handleNarrativeDelta,
+      handleFinal,
+      handleError,
+      completeStream,
+      applyTurnOutput,
+    ],
+  );
+
+  /**
+   * 입력 제출 핸들러
+   */
+  const handleSubmit = useCallback(() => {
+    if (inputText.trim()) {
+      executeTurn(inputText.trim());
+    }
+  }, [inputText, executeTurn]);
+
+  /**
+   * 카드 클릭 핸들러
+   */
+  const handleCardClick = useCallback(
+    (card: ActionCard) => {
+      executeTurn(card.label, card.id);
+    },
+    [executeTurn],
+  );
+
+  /**
+   * 키보드 이벤트 핸들러
+   */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit],
+  );
+
+  // 컴포넌트 언마운트 시 스트림 취소
+  useEffect(() => {
+    return () => {
+      cancelStreamRef.current?.();
+    };
+  }, []);
+
+  return (
+    <>
+      {/* CRT 스캔라인 오버레이 */}
+      <div className="crt-overlay" aria-hidden="true" />
+
+      {/* 게임 레이아웃 */}
+      <div className="game-container">
+        {/* Header: 타이틀/상태/재화 */}
+        <GameHeader
+          signal={economy.signal}
+          memoryShard={economy.memory_shard}
+          isConnected={isConnected}
+        />
+
+        {/* Sidebar Left: Inventory / Quest / Rule Board */}
+        <aside className="sidebar-left">
+          <Panel title="Inventory" className="flex-1">
+            <p className="panel-placeholder">[ 드래그 앤 드롭 영역 ]</p>
+          </Panel>
+          <Panel title="Quest">
+            <p className="panel-placeholder">[ 목표/퀘스트 목록 ]</p>
+          </Panel>
+          <Panel title="Rule Board">
+            <p className="panel-placeholder">[ 월드 규칙/변형 타임라인 ]</p>
+          </Panel>
+        </aside>
+
+        {/* Center: Scene Canvas + Narrative Feed */}
+        <main className="game-center">
+          <div className="scene-canvas">
+            <div className="scene-placeholder">
+              <p>[ Scene Canvas ]</p>
+              <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
+            </div>
+          </div>
+          <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
+        </main>
+
+        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
+        <aside className="sidebar-right">
+          <Panel title="Agent Console" className="flex-1">
+            <AgentConsole />
+          </Panel>
+          <Panel title="Memory Pin">
+            <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
+          </Panel>
+          <Panel title="Scanner">
+            <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
+          </Panel>
+        </aside>
+
+        {/* Footer: Action Deck + Command Input */}
+        <footer className="game-footer">
+          <ActionDeck cards={actionCards} onCardClick={handleCardClick} disabled={isStreaming} />
+          <div className="command-input-area">
+            <span className="command-prompt">&gt;</span>
+            <input
+              type="text"
+              className="command-input"
+              placeholder={isStreaming ? '처리 중...' : '명령을 입력하세요...'}
+              aria-label="게임 명령 입력"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isStreaming}
+            />
+            <button type="button" onClick={handleSubmit} disabled={isStreaming}>
+              {isStreaming ? 'WAIT' : 'EXECUTE'}
+            </button>
+          </div>
+        </footer>
+      </div>
+    </>
+  );
+}
+
+export default App;
+</file>
+
+<file path="frontend/vite.config.ts">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+});
 </file>
 
 <file path="shared/schemas/turn/turn_output.schema.json">
@@ -5202,579 +5706,6 @@ export const selectError = (state: AgentStore) => state.error;
 }
 </file>
 
-<file path="backend/src/unknown_world/__init__.py">
-"""Unknown World - Backend Package
-
-This is the main package for the Unknown World backend.
-Architecture: FastAPI + Pydantic + SSE streaming
-
-Reference:
-- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
-- vibe/prd.md (Agent-based Game Master Engine)
-"""
-
-__version__ = "0.1.0"
-</file>
-
-<file path="backend/src/unknown_world/main.py">
-"""Unknown World - FastAPI 애플리케이션 엔트리포인트
-
-이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
-MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
-
-실행 방법:
-    cd backend
-    uv sync
-    uv run uvicorn unknown_world.main:app --reload --port 8011
-
-참조:
-    - vibe/tech-stack.md (버전 SSOT)
-    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
-    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
-"""
-
-from typing import Literal
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-from unknown_world import __version__
-from unknown_world.api import turn_router
-
-# =============================================================================
-# FastAPI 앱 인스턴스
-# =============================================================================
-
-app = FastAPI(
-    title="Unknown World API",
-    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
-    version=__version__,
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
-
-# =============================================================================
-# CORS 설정 (개발 환경용)
-# =============================================================================
-# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
-# RULE-011: 프론트엔드는 8001~8010 포트 사용
-# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
-
-ALLOWED_ORIGINS = [
-    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
-    *[f"http://localhost:{port}" for port in range(8001, 8011)],
-    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# =============================================================================
-# 라우터 등록
-# =============================================================================
-
-# U-007: /api/turn HTTP Streaming 엔드포인트
-app.include_router(turn_router)
-
-
-# =============================================================================
-# 응답 스키마 (Pydantic)
-# =============================================================================
-
-
-class HealthResponse(BaseModel):
-    """헬스체크 응답 스키마.
-
-    Attributes:
-        status: 서버 상태 ("ok" 또는 "degraded")
-        version: 백엔드 버전
-        service: 서비스 이름
-    """
-
-    status: Literal["ok", "degraded"]
-    version: str
-    service: str
-
-
-# =============================================================================
-# 라우트 정의
-# =============================================================================
-
-
-@app.get("/health", response_model=HealthResponse, tags=["System"])
-async def health_check() -> HealthResponse:
-    """서버 헬스체크 엔드포인트.
-
-    서버가 정상적으로 작동 중인지 확인합니다.
-    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
-
-    Returns:
-        HealthResponse: 서버 상태 정보
-    """
-    return HealthResponse(
-        status="ok",
-        version=__version__,
-        service="unknown-world-backend",
-    )
-
-
-@app.get("/", tags=["System"])
-async def root() -> dict[str, str]:
-    """루트 엔드포인트.
-
-    API 정보를 간략히 안내합니다.
-
-    Returns:
-        dict: 기본 안내 메시지
-    """
-    return {
-        "message": "Unknown World API",
-        "docs": "/docs",
-        "health": "/health",
-    }
-</file>
-
-<file path="frontend/src/App.tsx">
-/**
- * Unknown World - 메인 게임 UI 레이아웃
- *
- * RULE-002 준수: 채팅 버블 UI 금지
- * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
- * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
- *   Rule Board, Economy HUD, Agent Console, Scanner Slot
- *
- * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
- *
- * @see vibe/ref/frontend-style-guide.md
- * @see vibe/prd.md 6.7/6.8/9장
- */
-
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { AgentConsole } from './components/AgentConsole';
-import { useAgentStore } from './stores/agentStore';
-import { startTurnStream, type StreamCallbacks } from './api/turnStream';
-import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-interface NarrativeEntry {
-  turn: number;
-  text: string;
-}
-
-// =============================================================================
-// 패널 컴포넌트
-// =============================================================================
-
-interface PanelProps {
-  title: string;
-  children?: React.ReactNode;
-  className?: string;
-}
-
-function Panel({ title, children, className = '' }: PanelProps) {
-  return (
-    <div className={`panel ${className}`}>
-      <div className="panel-header">
-        <span className="panel-title">{title}</span>
-      </div>
-      <div className="panel-content">
-        {children || <p className="panel-placeholder">[ 준비 중 ]</p>}
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// 내러티브 피드 컴포넌트
-// =============================================================================
-
-interface NarrativeFeedProps {
-  entries: NarrativeEntry[];
-  streamingText: string;
-}
-
-function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
-  const feedRef = useRef<HTMLDivElement>(null);
-
-  // 새 엔트리 추가 시 스크롤
-  useEffect(() => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
-    }
-  }, [entries, streamingText]);
-
-  return (
-    <div className="narrative-feed" ref={feedRef}>
-      {entries.map((entry) => (
-        <div key={entry.turn} className="narrative-entry">
-          <span className="narrative-timestamp">[TURN {entry.turn}]</span>
-          <span className="narrative-text">{entry.text}</span>
-        </div>
-      ))}
-      {streamingText && (
-        <div className="narrative-entry streaming">
-          <span className="narrative-timestamp">[STREAMING]</span>
-          <span className="narrative-text">{streamingText}</span>
-          <span className="cursor-blink">▌</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// 액션 덱 컴포넌트
-// =============================================================================
-
-interface ActionDeckProps {
-  cards: ActionCard[];
-  onCardClick?: (card: ActionCard) => void;
-  disabled?: boolean;
-}
-
-function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
-  // 카드가 없으면 기본 카드 표시
-  const displayCards: ActionCard[] =
-    cards.length > 0
-      ? cards
-      : [
-          {
-            id: 'default-1',
-            label: '탐색하기',
-            description: '주변을 살펴본다',
-            cost: { signal: 1, memory_shard: 0 },
-            risk: 'low',
-            hint: null,
-          },
-          {
-            id: 'default-2',
-            label: '조사하기',
-            description: '자세히 살펴본다',
-            cost: { signal: 2, memory_shard: 0 },
-            risk: 'medium',
-            hint: null,
-          },
-          {
-            id: 'default-3',
-            label: '대화하기',
-            description: '말을 걸어본다',
-            cost: { signal: 1, memory_shard: 0 },
-            risk: 'low',
-            hint: null,
-          },
-        ];
-
-  return (
-    <div className="action-deck">
-      {displayCards.map((card) => (
-        <button
-          key={card.id}
-          type="button"
-          className="action-card"
-          onClick={() => onCardClick?.(card)}
-          disabled={disabled}
-        >
-          <div className="action-card-title">{card.label}</div>
-          <div className="action-card-cost">
-            ⚡ {card.cost.signal} Signal
-            {card.cost.memory_shard > 0 && ` | 💎 ${card.cost.memory_shard}`}
-            {' | '}⚠ {card.risk}
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// =============================================================================
-// 헤더 컴포넌트
-// =============================================================================
-
-interface GameHeaderProps {
-  signal: number;
-  memoryShard: number;
-  isConnected: boolean;
-}
-
-function GameHeader({ signal, memoryShard, isConnected }: GameHeaderProps) {
-  return (
-    <header className="game-header">
-      <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
-        UNKNOWN WORLD
-      </h1>
-      <div className="header-controls">
-        <div className="economy-hud">
-          <span className="signal-icon">⚡</span>
-          <span>Signal: {signal}</span>
-          <span className="shard-icon">💎</span>
-          <span>Shard: {memoryShard}</span>
-        </div>
-        <div className="connection-status">
-          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
-          <span>{isConnected ? 'ONLINE' : 'OFFLINE'}</span>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// =============================================================================
-// 메인 App 컴포넌트
-// =============================================================================
-
-function App() {
-  // 상태
-  const [inputText, setInputText] = useState('');
-  const turnCountRef = useRef(0);
-  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>([
-    { turn: 0, text: '미지의 세계에 오신 것을 환영합니다...' },
-  ]);
-  const [actionCards, setActionCards] = useState<ActionCard[]>([]);
-  const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
-  const [isConnected, setIsConnected] = useState(true);
-
-  // Agent Store 액션
-  const {
-    startStream,
-    handleStage,
-    handleBadges,
-    handleNarrativeDelta,
-    handleFinal,
-    handleError,
-    completeStream,
-    isStreaming,
-    narrativeBuffer,
-  } = useAgentStore();
-
-  // 취소 함수 ref
-  const cancelStreamRef = useRef<(() => void) | null>(null);
-
-  /**
-   * TurnOutput을 받아 UI 상태를 업데이트합니다.
-   */
-  const applyTurnOutput = useCallback((output: TurnOutput) => {
-    // 내러티브 추가
-    turnCountRef.current += 1;
-    const newTurn = turnCountRef.current;
-    setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
-
-    // 액션 카드 업데이트
-    if (output.ui.action_deck.cards.length > 0) {
-      setActionCards(output.ui.action_deck.cards);
-    }
-
-    // 경제 상태 업데이트 (RULE-005: 잔액 반영)
-    setEconomy({
-      signal: output.economy.balance_after.signal,
-      memory_shard: output.economy.balance_after.memory_shard,
-    });
-  }, []);
-
-  /**
-   * 턴을 실행합니다.
-   */
-  const executeTurn = useCallback(
-    (text: string, cardId?: string) => {
-      if (isStreaming) return;
-
-      // 입력 데이터 생성
-      const turnInput: TurnInput = {
-        language: 'ko-KR',
-        text: text || (cardId ? `카드 선택: ${cardId}` : ''),
-        click: null,
-        client: {
-          viewport_w: window.innerWidth,
-          viewport_h: window.innerHeight,
-          theme: 'dark',
-        },
-        economy_snapshot: economy,
-      };
-
-      // Agent Store 시작
-      startStream();
-
-      // 스트림 콜백 설정
-      const callbacks: StreamCallbacks = {
-        onStage: handleStage,
-        onBadges: handleBadges,
-        onNarrativeDelta: handleNarrativeDelta,
-        onFinal: (event) => {
-          handleFinal(event);
-          applyTurnOutput(event.data);
-        },
-        onError: (event) => {
-          handleError(event);
-          setIsConnected(false);
-        },
-        onComplete: () => {
-          completeStream();
-        },
-      };
-
-      // 스트림 시작
-      cancelStreamRef.current = startTurnStream(turnInput, callbacks);
-      setInputText('');
-    },
-    [
-      isStreaming,
-      economy,
-      startStream,
-      handleStage,
-      handleBadges,
-      handleNarrativeDelta,
-      handleFinal,
-      handleError,
-      completeStream,
-      applyTurnOutput,
-    ],
-  );
-
-  /**
-   * 입력 제출 핸들러
-   */
-  const handleSubmit = useCallback(() => {
-    if (inputText.trim()) {
-      executeTurn(inputText.trim());
-    }
-  }, [inputText, executeTurn]);
-
-  /**
-   * 카드 클릭 핸들러
-   */
-  const handleCardClick = useCallback(
-    (card: ActionCard) => {
-      executeTurn(card.label, card.id);
-    },
-    [executeTurn],
-  );
-
-  /**
-   * 키보드 이벤트 핸들러
-   */
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit],
-  );
-
-  // 컴포넌트 언마운트 시 스트림 취소
-  useEffect(() => {
-    return () => {
-      cancelStreamRef.current?.();
-    };
-  }, []);
-
-  return (
-    <>
-      {/* CRT 스캔라인 오버레이 */}
-      <div className="crt-overlay" aria-hidden="true" />
-
-      {/* 게임 레이아웃 */}
-      <div className="game-container">
-        {/* Header: 타이틀/상태/재화 */}
-        <GameHeader
-          signal={economy.signal}
-          memoryShard={economy.memory_shard}
-          isConnected={isConnected}
-        />
-
-        {/* Sidebar Left: Inventory / Quest / Rule Board */}
-        <aside className="sidebar-left">
-          <Panel title="Inventory" className="flex-1">
-            <p className="panel-placeholder">[ 드래그 앤 드롭 영역 ]</p>
-          </Panel>
-          <Panel title="Quest">
-            <p className="panel-placeholder">[ 목표/퀘스트 목록 ]</p>
-          </Panel>
-          <Panel title="Rule Board">
-            <p className="panel-placeholder">[ 월드 규칙/변형 타임라인 ]</p>
-          </Panel>
-        </aside>
-
-        {/* Center: Scene Canvas + Narrative Feed */}
-        <main className="game-center">
-          <div className="scene-canvas">
-            <div className="scene-placeholder">
-              <p>[ Scene Canvas ]</p>
-              <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
-            </div>
-          </div>
-          <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
-        </main>
-
-        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
-        <aside className="sidebar-right">
-          <Panel title="Agent Console" className="flex-1">
-            <AgentConsole />
-          </Panel>
-          <Panel title="Memory Pin">
-            <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
-          </Panel>
-          <Panel title="Scanner">
-            <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
-          </Panel>
-        </aside>
-
-        {/* Footer: Action Deck + Command Input */}
-        <footer className="game-footer">
-          <ActionDeck cards={actionCards} onCardClick={handleCardClick} disabled={isStreaming} />
-          <div className="command-input-area">
-            <span className="command-prompt">&gt;</span>
-            <input
-              type="text"
-              className="command-input"
-              placeholder={isStreaming ? '처리 중...' : '명령을 입력하세요...'}
-              aria-label="게임 명령 입력"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isStreaming}
-            />
-            <button type="button" onClick={handleSubmit} disabled={isStreaming}>
-              {isStreaming ? 'WAIT' : 'EXECUTE'}
-            </button>
-          </div>
-        </footer>
-      </div>
-    </>
-  );
-}
-
-export default App;
-</file>
-
-<file path="frontend/vite.config.ts">
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
-    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
-    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-});
-</file>
-
 <file path="backend/pyproject.toml">
 # backend/pyproject.toml
 # SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
@@ -5908,10 +5839,10 @@ include = ["src"]
     "node": "24.12.0"
   },
   "scripts": {
-    "kill": "taskkill /F /IM uvicorn.exe /T 2>nul & taskkill /F /IM node.exe /T 2>nul & echo Killed dev servers",
-    "kill:port": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "kill:front": "npx kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
-    "kill:back": "npx kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill": "pnpm kill:port",
+    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
     "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
     "dev:front": "pnpm -C frontend dev"
   }

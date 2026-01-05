@@ -83,6 +83,7 @@
 - [ ] **Q1**: 기존 `pnpm kill`(광역 종료) 동작을 어떻게 처리할까?
   - Option A: `pnpm kill`을 안전한 포트 기반 정리로 변경하고, 광역 종료는 제거(권장: 안전)
   - Option B: `pnpm kill`은 안전하게 바꾸되, 기존 동작은 `pnpm kill:unsafe`로 분리(팀 합의 시)
+  **A1**: Option A
 
 ## 참고 자료
 

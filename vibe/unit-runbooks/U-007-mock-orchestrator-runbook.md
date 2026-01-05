@@ -325,3 +325,4 @@ curl -X POST "http://localhost:8011/api/turn?seed=123" \
 1. **U-008[Mvp]**: 프론트엔드에서 스트림 이벤트를 소비해 Agent Console/내러티브/패널 업데이트
 2. **CP-MVP-01**: "스트리밍/스키마/폴백" 체크포인트 수행
 
+

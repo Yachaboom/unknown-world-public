@@ -1,5 +1,44 @@
 # 프로젝트 진행 상황
 
+## [2026-01-05 23:50] U-027[Mvp]: 개발 스크립트 - pnpm kill 포트 제한(8001~8020) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 포트 정책(RULE-011)에 따른 pnpm kill 포트 제한(8001~8020) 구현 및 광역 프로세스 종료 방식 제거
+- **추가 컴포넌트**: `vibe/unit-runbooks/U-027-kill-port-limit-runbook.md` (실행 및 검증 런북)
+- **달성 요구사항**: [RULE-011] 포트 정책 강제 준수, [A1] pnpm kill의 포트 기반 안전 종료 전환 결정 반영
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **npx --yes kill-port**: 대화형 프롬프트(`Need to install the following packages...`)를 제거하여 자동화 환경 및 CI 안정성 확보
+- **Port-based Termination**: 프로세스 이름이 아닌 포트 번호를 기준으로 종료하여 다른 프로젝트 프로세스 간섭 차단
+
+**설계 패턴 및 아키텍처 선택**:
+- **RULE-011 정합화**: 프론트(8001-8010)와 백엔드(8011-8020)의 전체 대역을 대상으로 하는 `kill:port` 스크립트 강화
+- **Option A 적용**: 위험한 광역 종료 명령(`taskkill /IM node.exe`)을 완전히 제거하고 `pnpm kill`을 안전한 포트 기반 명령으로 대체
+
+**코드 구조**:
+repo-root/
+├── package.json (scripts: kill, kill:port, kill:front, kill:back 업데이트)
+└── vibe/
+    ├── architecture.md (RULE-011 정책 및 안전 종료 설계 반영)
+    ├── roadmap.md (포트 정리 명령어 가이드 업데이트)
+    └── unit-runbooks/
+        └── U-027-kill-port-limit-runbook.md (신규 런북 생성)
+
+### 성능 및 품질 지표
+- **안전성**: 8001~8020 대역 외의 Node/Uvicorn 프로세스 생존성 확보 (사이드 이펙트 제거)
+- **사용성**: `pnpm kill` 단축 명령어를 통해 전체 개발 서버를 한 번에 정리 가능
+
+### 의존성 변경
+- 별도의 패키지 설치 없이 `npx`를 통한 온디맨드 실행 방식 채택
+
+### 다음 단계
+- [U-028[Mvp]] 개발 환경 통합 시작 스크립트(`pnpm dev`) 구성 검토
+
+---
+
 ## [2026-01-05 10:00] U-008[Mvp]: 프론트 HTTP Streaming 클라이언트 + Agent Console/배지 완료
 
 ### 구현 완료 항목
