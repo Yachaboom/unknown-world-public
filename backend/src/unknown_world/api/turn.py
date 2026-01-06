@@ -22,7 +22,6 @@ POST 요청을 받아 NDJSON(라인 단위 JSON) 스트리밍으로 턴 결과�
 """
 
 import asyncio
-import json
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -31,22 +30,23 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
+from unknown_world.api.turn_stream_events import (
+    BadgesEvent,
+    ErrorEvent,
+    FinalEvent,
+    NarrativeDeltaEvent,
+    StageEvent,
+    StageStatus,
+    StreamEventType,
+    serialize_event,
+)
 from unknown_world.models.turn import (
     AgentPhase,
     Language,
     TurnInput,
     ValidationBadge,
 )
-from unknown_world.orchestrator.mock import (
-    BadgesEvent,
-    ErrorEvent,
-    FinalEvent,
-    MockOrchestrator,
-    NarrativeDeltaEvent,
-    StageEvent,
-    StageStatus,
-    StreamEventType,
-)
+from unknown_world.orchestrator.mock import MockOrchestrator
 
 # =============================================================================
 # 라우터 정의
@@ -77,11 +77,6 @@ PHASE_DELAYS_MS = {
 }
 
 
-def _serialize_event(event: dict[str, Any]) -> str:
-    """이벤트를 NDJSON 라인으로 직렬화합니다."""
-    return json.dumps(event, ensure_ascii=False) + "\n"
-
-
 async def _stream_turn_events(
     turn_input: TurnInput, seed: int | None = None
 ) -> AsyncGenerator[str]:
@@ -98,7 +93,7 @@ async def _stream_turn_events(
     collected_badges: list[str] = []
 
     # Phase 1: Parse (TTFB를 위해 즉시 시작 이벤트 전송)
-    yield _serialize_event(
+    yield serialize_event(
         StageEvent(
             type=StreamEventType.STAGE, name=AgentPhase.PARSE.value, status=StageStatus.START
         ).model_dump()
@@ -108,7 +103,7 @@ async def _stream_turn_events(
     for phase in ORCHESTRATOR_PHASES:
         # 단계 시작
         if phase != AgentPhase.PARSE:  # Parse는 이미 전송함
-            yield _serialize_event(
+            yield serialize_event(
                 StageEvent(
                     type=StreamEventType.STAGE, name=phase.value, status=StageStatus.START
                 ).model_dump()
@@ -119,7 +114,7 @@ async def _stream_turn_events(
         await asyncio.sleep(delay_ms / 1000.0)
 
         # 단계 완료
-        yield _serialize_event(
+        yield serialize_event(
             StageEvent(
                 type=StreamEventType.STAGE, name=phase.value, status=StageStatus.COMPLETE
             ).model_dump()
@@ -129,7 +124,7 @@ async def _stream_turn_events(
         if phase == AgentPhase.VALIDATE:
             collected_badges.append(ValidationBadge.SCHEMA_OK.value)
             collected_badges.append(ValidationBadge.ECONOMY_OK.value)
-            yield _serialize_event(
+            yield serialize_event(
                 BadgesEvent(
                     type=StreamEventType.BADGES, badges=collected_badges.copy()
                 ).model_dump()
@@ -137,7 +132,7 @@ async def _stream_turn_events(
         elif phase == AgentPhase.VERIFY:
             collected_badges.append(ValidationBadge.SAFETY_OK.value)
             collected_badges.append(ValidationBadge.CONSISTENCY_OK.value)
-            yield _serialize_event(
+            yield serialize_event(
                 BadgesEvent(
                     type=StreamEventType.BADGES, badges=collected_badges.copy()
                 ).model_dump()
@@ -152,13 +147,13 @@ async def _stream_turn_events(
         chunk_size = 20  # 한 번에 전송할 글자 수
         for i in range(0, len(narrative), chunk_size):
             chunk = narrative[i : i + chunk_size]
-            yield _serialize_event(
+            yield serialize_event(
                 NarrativeDeltaEvent(type=StreamEventType.NARRATIVE_DELTA, text=chunk).model_dump()
             )
             await asyncio.sleep(0.02)  # 타자 효과 딜레이
 
         # 최종 TurnOutput 전송
-        yield _serialize_event(
+        yield serialize_event(
             FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
         )
 
@@ -168,13 +163,13 @@ async def _stream_turn_events(
             language=turn_input.language,
             error_message=str(e),  # 내부 로깅용, UI에 노출 안 함
         )
-        yield _serialize_event(
+        yield serialize_event(
             FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
         )
 
     except Exception:
         # 예외 발생 시 안전한 에러 응답 (프롬프트/내부 추론 노출 금지 - RULE-007)
-        yield _serialize_event(
+        yield serialize_event(
             ErrorEvent(
                 type=StreamEventType.ERROR,
                 message="처리 중 오류가 발생했습니다"
@@ -263,7 +258,7 @@ async def turn_stream(request: Request) -> StreamingResponse:
         # 입력 검증 실패 시 에러 스트림 반환
 
         async def error_stream() -> AsyncGenerator[str]:
-            yield _serialize_event(
+            yield serialize_event(
                 ErrorEvent(
                     type=StreamEventType.ERROR,
                     message=parse_result.get("message", "Invalid input"),

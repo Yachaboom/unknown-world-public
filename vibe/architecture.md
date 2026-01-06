@@ -31,8 +31,10 @@ D:\Dev\unknown-world\
 │       │   └── AgentConsole.tsx
 │       ├── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
 │       │   └── turn.ts
-│       └── stores/         # 상태 관리 (Zustand) (U-008)
-│           └── agentStore.ts
+│       ├── stores/         # 상태 관리 (Zustand) (U-008)
+│       │   └── agentStore.ts
+│       └── types/          # 스트림 이벤트 계약 타입 (RU-002-Q4)
+│           └── turn_stream.ts
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock
@@ -42,7 +44,8 @@ D:\Dev\unknown-world\
 │   │       ├── main.py
 │   │       ├── api/        # API 엔드포인트 및 라우팅 (U-007)
 │   │       │   ├── __init__.py
-│   │       │   └── turn.py
+│   │       │   ├── turn.py
+│   │       │   └── turn_stream_events.py # 스트림 이벤트 계약 모델 (RU-002-Q4)
 │   │       ├── models/     # 데이터 모델 및 스키마 (U-005)
 │   │       │   ├── __init__.py
 │   │       │   └── turn.py
@@ -68,7 +71,7 @@ D:\Dev\unknown-world\
 │   ├── unit-plans/
 │   ├── unit-results/       # 유닛 개발 보고서 (U-027[Mvp] 포함)
 │   └── unit-runbooks/      # 유닛 실행 가이드 (U-027[Mvp] 포함)
-└── vibe/                  # SSOT 문서 저장소
+└── shared/                # 공유 리소스 (SSOT)
 ```
 
 ### 주요 디렉토리 책임
@@ -78,7 +81,9 @@ D:\Dev\unknown-world\
     - `stores/`: Agent Console 상태(단계/배지) 및 월드 상태를 관리하는 Zustand 스토어.
     - `components/`: Agent Console, Narrative Feed 등 게임 전용 UI 컴포넌트 모음.
     - `schemas/`: Zod를 활용한 턴 계약(Turn Contract) 검증 및 폴백 로직 정의.
-    - `api/`: `/api/turn` 등 클라이언트 통신을 위한 엔드포인트 및 스트리밍 로직 관리.
+    - `types/`: 서버-클라이언트 간 스트림 이벤트(NDJSON) 계약 타입을 정의 (SSOT).
+- **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
+    - `api/`: `/api/turn` 등 클라이언트 통신을 위한 엔드포인트 관리 및 스트림 이벤트 모델(`turn_stream_events.py`) 정의.
     - `orchestrator/`: 실모델(Gemini) 또는 모의(Mock)를 통한 게임 엔진 오케스트레이션 핵심 로직 담당.
     - `models/`: Pydantic을 활용한 시스템 내부 데이터 구조 및 유효성 검증 정의.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.

@@ -19,8 +19,8 @@ import type {
   NarrativeDeltaEvent,
   FinalEvent,
   ErrorEvent,
-} from '../api/turnStream';
-import { StageStatus } from '../api/turnStream';
+} from '../types/turn_stream';
+import { StageStatus } from '../types/turn_stream';
 
 // =============================================================================
 // 상태 타입 정의

@@ -15,9 +15,6 @@
 """
 
 import random
-from typing import Annotated
-
-from pydantic import BaseModel, Field
 
 from unknown_world.models.turn import (
     ActionCard,
@@ -43,96 +40,6 @@ from unknown_world.models.turn import (
     WorldDelta,
     WorldRule,
 )
-
-# =============================================================================
-# 스트림 이벤트 타입 (NDJSON 계약)
-# =============================================================================
-
-
-class StreamEventType:
-    """스트림 이벤트 타입 상수.
-
-    NDJSON 스트리밍에서 사용되는 이벤트 타입입니다.
-    PRD 예시 단계: Parse→Validate→Plan→Resolve→Render→Verify→Commit
-    """
-
-    STAGE = "stage"
-    BADGES = "badges"
-    NARRATIVE_DELTA = "narrative_delta"
-    FINAL = "final"
-    ERROR = "error"
-
-
-class StageStatus:
-    """단계 상태 상수."""
-
-    START = "start"
-    COMPLETE = "complete"
-
-
-class StageEvent(BaseModel):
-    """단계 진행 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("stage")
-        name: 단계 이름 (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
-        status: 상태 (start, complete)
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.STAGE)]
-    name: str
-    status: str
-
-
-class BadgesEvent(BaseModel):
-    """배지 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("badges")
-        badges: 검증 배지 목록
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.BADGES)]
-    badges: list[str]
-
-
-class NarrativeDeltaEvent(BaseModel):
-    """내러티브 델타 이벤트 (타자 효과용).
-
-    Attributes:
-        type: 이벤트 타입 ("narrative_delta")
-        text: 추가된 텍스트 조각
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.NARRATIVE_DELTA)]
-    text: str
-
-
-class FinalEvent(BaseModel):
-    """최종 TurnOutput 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("final")
-        data: 완전한 TurnOutput
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.FINAL)]
-    data: TurnOutput
-
-
-class ErrorEvent(BaseModel):
-    """에러 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("error")
-        message: 에러 메시지 (프롬프트/내부 추론 노출 금지)
-        code: 에러 코드 (선택)
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.ERROR)]
-    message: str
-    code: str | None = None
-
 
 # =============================================================================
 # 모의 데이터 생성 헬퍼

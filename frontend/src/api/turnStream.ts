@@ -13,90 +13,30 @@
  * @module api/turnStream
  */
 
-import type { TurnInput, TurnOutput, Language, AgentPhase, ValidationBadge } from '../schemas/turn';
+import type { TurnInput, Language } from '../schemas/turn';
 import { safeParseTurnOutput } from '../schemas/turn';
+import type {
+  StageEvent,
+  BadgesEvent,
+  NarrativeDeltaEvent,
+  ErrorEvent,
+  StreamCallbacks,
+} from '../types/turn_stream';
+import { StreamEventType } from '../types/turn_stream';
 
-// =============================================================================
-// 스트림 이벤트 타입 (U-007 계약과 일치)
-// =============================================================================
-
-/** 스트림 이벤트 타입 상수 */
-export const StreamEventType = {
-  STAGE: 'stage',
-  BADGES: 'badges',
-  NARRATIVE_DELTA: 'narrative_delta',
-  FINAL: 'final',
-  ERROR: 'error',
-} as const;
-
-export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
-
-/** 단계 상태 상수 */
-export const StageStatus = {
-  START: 'start',
-  COMPLETE: 'complete',
-} as const;
-
-export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
-
-// =============================================================================
-// 스트림 이벤트 인터페이스
-// =============================================================================
-
-/** 단계 진행 이벤트 */
-export interface StageEvent {
-  type: typeof StreamEventType.STAGE;
-  name: AgentPhase;
-  status: StageStatusName;
-}
-
-/** 배지 이벤트 */
-export interface BadgesEvent {
-  type: typeof StreamEventType.BADGES;
-  badges: ValidationBadge[];
-}
-
-/** 내러티브 델타 이벤트 (타자 효과용) */
-export interface NarrativeDeltaEvent {
-  type: typeof StreamEventType.NARRATIVE_DELTA;
-  text: string;
-}
-
-/** 최종 TurnOutput 이벤트 */
-export interface FinalEvent {
-  type: typeof StreamEventType.FINAL;
-  data: TurnOutput;
-}
-
-/** 에러 이벤트 */
-export interface ErrorEvent {
-  type: typeof StreamEventType.ERROR;
-  message: string;
-  code?: string;
-}
-
-/** 스트림 이벤트 유니온 타입 */
-export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
-
-// =============================================================================
-// 스트림 콜백 인터페이스
-// =============================================================================
-
-/** 스트림 이벤트 콜백 */
-export interface StreamCallbacks {
-  /** 단계 진행 이벤트 */
-  onStage?: (event: StageEvent) => void;
-  /** 배지 이벤트 */
-  onBadges?: (event: BadgesEvent) => void;
-  /** 내러티브 델타 이벤트 */
-  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
-  /** 최종 TurnOutput 이벤트 */
-  onFinal?: (event: FinalEvent) => void;
-  /** 에러 이벤트 */
-  onError?: (event: ErrorEvent) => void;
-  /** 스트림 완료 */
-  onComplete?: () => void;
-}
+// Re-export 스트림 이벤트 타입들 (하위 호환성 유지)
+export type {
+  StreamEventTypeName,
+  StageStatusName,
+  StageEvent,
+  BadgesEvent,
+  NarrativeDeltaEvent,
+  FinalEvent,
+  ErrorEvent,
+  StreamEvent,
+  StreamCallbacks,
+} from '../types/turn_stream';
+export { StreamEventType, StageStatus } from '../types/turn_stream';
 
 // =============================================================================
 // NDJSON 파서 (Q1 결정: Option A - 직접 구현)

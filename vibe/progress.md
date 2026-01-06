@@ -193,7 +193,28 @@ backend/
 
 ---
 
-## [2026-01-04 19:20] RU-001[Mvp]: 리팩토링 - 디렉토리/설정 정리 완료
+## [2026-01-07 00:05] RU-002-Q4: Turn Stream 이벤트 계약 모듈 분리 완료
+
+### 작업 내용
+
+- **제안서**: [RU-002-Q4] Turn Stream 이벤트 계약(타입/모델/유틸)의 모듈 경계 정리
+- **개선 사항**:
+    - **Backend**: 스트림 이벤트 모델을 `orchestrator/mock.py`에서 `api/turn_stream_events.py`로 분리하여 transport 계층의 책임을 명확화
+    - **Frontend**: 스트림 이벤트 타입을 `api/turnStream.ts`에서 `types/turn_stream.ts`로 분리하여 데이터 계약 SSOT 구축
+    - **결합도 해제**: Orchestrator는 도메인 모델(TurnOutput)에만 집중하고, API 계층이 스트림 프로토콜 직렬화를 담당하도록 구조 개선
+- **영향 범위**: `backend/src/unknown_world/api/turn_stream_events.py` (신규), `frontend/src/types/turn_stream.ts` (신규), `backend/src/unknown_world/api/turn.py`, `frontend/src/api/turnStream.ts`, `frontend/src/stores/agentStore.ts`
+
+### 기술적 세부사항
+
+- **SSOT 강화**: 서버와 클라이언트 각각 독립된 "계약 모듈"을 가짐으로써 향후 프로토콜 확장 시 수정 범위 원자화
+- **유지보수성**: `serialize_event` 유틸리티화를 통해 직렬화 로직 중앙 집중화
+- **하위 호환성**: 프론트엔드 `api/turnStream.ts`에서 기존 타입을 re-export 하여 기존 컴포넌트 코드 수정 최소화
+
+### 검증
+
+- **수동 검증**: `git show`를 통한 모듈 분리 및 import 경로 정상화 확인 완료 (commit: b8d02f1c)
+
+---
 
 ### 구현 완료 항목
 
