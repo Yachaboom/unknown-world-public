@@ -239,11 +239,18 @@
 - 응답은 기본적으로 `response_mime_type: application/json` + `response_json_schema`를 사용한다.
 - **목적**: 내러티브 텍스트뿐 아니라, UI/상태/비용/이미지 요청을 “파싱 가능한” 결과로 받기 위함.
 - **스트리밍 구조화 출력**: 모델이 내보내는 부분 JSON(텍스트 청크)을 서버에서 누적해 최종 TurnOutput JSON을 완성하고, 클라이언트에는 **NDJSON(라인 단위 JSON) 이벤트 스트림**으로 `stage/badges/narrative_delta/final`을 전송한다.
-- **Turn Stream Protocol(초안)**: 응답은 NDJSON이며, 각 줄은 아래 이벤트 중 하나다(초기 MVP 최소 계약).
-  - `{"type":"stage","name":"Parse","status":"start"|"ok"|"fail"}`
-  - `{"type":"badges","schema":"ok"|"fail","economy":"ok"|"fail","safety":"ok"|"fail","consistency":"ok"|"fail"}`
-  - `{"type":"narrative_delta","text":"..."}`  (타자 효과용)
-  - `{"type":"final","turn_output":{...}}` (Pydantic 검증 통과한 TurnOutput만)
+- **Turn Stream Protocol**: 응답은 NDJSON이며, 각 줄은 아래 이벤트 중 하나다.
+  - **Protocol Version 1 (v1, 현행 계약)** — MVP 안정화 기준. 현재 백엔드/프론트엔드 구현과 일치하는 실질적 SSOT.
+    - `{"type":"stage","name":"parse"|"validate"|"plan"|"resolve"|"render"|"verify"|"commit","status":"start"|"complete"}`
+    - `{"type":"badges","badges":["schema_ok"|"schema_fail","economy_ok"|"economy_fail","safety_ok"|"safety_fail","consistency_ok"|"consistency_fail"]}`
+    - `{"type":"narrative_delta","text":"..."}` (타자 효과용)
+    - `{"type":"final","data":{...}}` (Pydantic 검증 통과한 TurnOutput)
+    - `{"type":"error","message":"...","code":"..."}` (에러 발생 시, final 폴백과 함께 전송)
+  - **Protocol Version 2 (v2, 목표)** — 품질 개선 단계에서 점진적 마이그레이션 예정.
+    - `stage.status`: `"start"|"ok"|"fail"` (완료/실패 구분 명시화)
+    - `badges`: `{"schema":"ok"|"fail","economy":"ok"|"fail","safety":"ok"|"fail","consistency":"ok"|"fail"}` (Map 형태로 변경하여 의미론적 접근 용이성 확보)
+    - `final`: `{"type":"final","turn_output":{...}}` (키명을 데이터 목적에 맞게 `turn_output`으로 명시적 변경)
+  - **하위호환 정책**: 클라이언트는 `final.data` 또는 `final.turn_output` 모두를 수용하도록 별칭(Alias) 지원 로직을 구현하여 프로토콜 전환기에도 중단 없는 서비스를 제공한다.
 - **스키마 작성 원칙(요약)**:
   - 지원 타입 중심으로 설계: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
   - 예측 가능성을 위해 `required`와 `enum`을 적극 사용하고, 필요 시 `additionalProperties: false`로 엄격화

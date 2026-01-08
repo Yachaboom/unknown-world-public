@@ -1,5 +1,29 @@
 # 프로젝트 진행 상황
 
+## [2026-01-08 23:59] RU-002-Q2: PRD Turn Stream Protocol(SSOT) 정합성 확보 및 버전/별칭 도입 완료
+
+### 작업 내용
+
+- **제안서**: [RU-002-Q2] PRD Turn Stream Protocol(SSOT)과 구현 계약의 정합성 확보: 프로토콜 버전/필드 별칭/용어 통일
+- **개선 사항**:
+    - **프로토콜 버전 관리**: 현행 계약을 `Protocol Version 1`로 명시하고, 향후 개선을 위한 `Version 2` 목표를 PRD에 정의함.
+    - **필드 별칭(Alias) 지원**: 클라이언트 디코더(`turnStream.ts`)에서 `final.data`(v1)와 `final.turn_output`(v2)을 모두 수용하도록 하위 호환성 확보.
+    - **용어 및 명세 통일**: PRD의 프로토콜 초안을 실제 구현(U-007/U-008) 및 런북 예시와 일치하도록 정비하여 SSOT 신뢰도 회복.
+    - **서버-클라이언트 정렬**: `stage.status`(`start`|`complete`), `badges`(리스트 형태) 등 현행 MVP 계약을 공식 프로토콜로 확정.
+- **영향 범위**: `vibe/prd.md`, `frontend/src/api/turnStream.ts`, `backend/src/unknown_world/api/turn.py`, `vibe/unit-runbooks/U-007-mock-orchestrator-runbook.md`
+
+### 기술적 세부사항
+
+- **하위 호환성 디코딩**: `frontend/src/api/turnStream.ts`에서 `finalEvent.data ?? finalEvent.turn_output` 로직을 통해 프로토콜 전환기 대응.
+- **SSOT 문서화**: `vibe/prd.md` 8.4 섹션을 v1(현행) 및 v2(목표)로 구조화하여 기술 부채와 향후 계획을 명시화.
+
+### 검증
+
+- **정합성 확인**: PRD 명세, 런북 예시, 실제 API 송출 데이터 간의 필드명 및 용어 일치 여부 검증 완료.
+- **하위 호환성 테스트**: 클라이언트가 `data`와 `turn_output` 키 모두를 정상적으로 `TurnOutput` 모델로 변환함을 확인.
+
+---
+
 ## [2026-01-08 23:55] RU-002-S1: 스트리밍 안정화 및 종료 인바리언트(항상 final) 강제 완료
 
 ### 작업 내용

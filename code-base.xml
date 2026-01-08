@@ -3018,110 +3018,6 @@ describe('agentStore', () => {
 });
 </file>
 
-<file path="frontend/src/types/turn_stream.ts">
-/**
- * Unknown World - Turn Stream 이벤트 계약(Contract).
- *
- * NDJSON 스트리밍에서 사용되는 이벤트 타입, 인터페이스를 정의합니다.
- * 이 모듈은 백엔드와 프론트엔드 간의 스트림 이벤트 계약 SSOT입니다.
- *
- * 설계 원칙:
- *   - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
- *   - RULE-008: 단계/배지 가시화
- *
- * 참조:
- *   - vibe/unit-plans/U-007[Mvp].md
- *   - vibe/refactors/RU-002-Q4.md
- *
- * @module types/turn_stream
- */
-
-import type { TurnOutput, AgentPhase, ValidationBadge } from '../schemas/turn';
-
-// =============================================================================
-// 스트림 이벤트 타입 상수 (서버 계약과 일치)
-// =============================================================================
-
-/** 스트림 이벤트 타입 상수 */
-export const StreamEventType = {
-  STAGE: 'stage',
-  BADGES: 'badges',
-  NARRATIVE_DELTA: 'narrative_delta',
-  FINAL: 'final',
-  ERROR: 'error',
-} as const;
-
-export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
-
-/** 단계 상태 상수 */
-export const StageStatus = {
-  START: 'start',
-  COMPLETE: 'complete',
-} as const;
-
-export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
-
-// =============================================================================
-// 스트림 이벤트 인터페이스
-// =============================================================================
-
-/** 단계 진행 이벤트 */
-export interface StageEvent {
-  type: typeof StreamEventType.STAGE;
-  name: AgentPhase;
-  status: StageStatusName;
-}
-
-/** 배지 이벤트 */
-export interface BadgesEvent {
-  type: typeof StreamEventType.BADGES;
-  badges: ValidationBadge[];
-}
-
-/** 내러티브 델타 이벤트 (타자 효과용) */
-export interface NarrativeDeltaEvent {
-  type: typeof StreamEventType.NARRATIVE_DELTA;
-  text: string;
-}
-
-/** 최종 TurnOutput 이벤트 */
-export interface FinalEvent {
-  type: typeof StreamEventType.FINAL;
-  data: TurnOutput;
-}
-
-/** 에러 이벤트 */
-export interface ErrorEvent {
-  type: typeof StreamEventType.ERROR;
-  message: string;
-  code?: string;
-}
-
-/** 스트림 이벤트 유니온 타입 */
-export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
-
-// =============================================================================
-// 스트림 콜백 인터페이스
-// =============================================================================
-
-/** 스트림 이벤트 콜백 */
-export interface StreamCallbacks {
-  /** 단계 진행 이벤트 */
-  onStage?: (event: StageEvent) => void;
-  /** 배지 이벤트 */
-  onBadges?: (event: BadgesEvent) => void;
-  /** 내러티브 델타 이벤트 */
-  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
-  /** 최종 TurnOutput 이벤트 */
-  onFinal?: (event: FinalEvent) => void;
-  /** 에러 이벤트 */
-  onError?: (event: ErrorEvent) => void;
-  /** 스트림 완료 */
-  onComplete?: () => void;
-}
-</file>
-
 <file path="frontend/src/vite-env.d.ts">
 /// <reference types="vite/client" />
 </file>
@@ -3568,6 +3464,124 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 
 /** 에러 셀렉터 */
 export const selectError = (state: AgentStore) => state.error;
+</file>
+
+<file path="frontend/src/types/turn_stream.ts">
+/**
+ * Unknown World - Turn Stream 이벤트 계약(Contract).
+ *
+ * NDJSON 스트리밍에서 사용되는 이벤트 타입, 인터페이스를 정의합니다.
+ * 이 모듈은 백엔드와 프론트엔드 간의 스트림 이벤트 계약 SSOT입니다.
+ *
+ * 설계 원칙:
+ *   - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+ *   - RULE-008: 단계/배지 가시화
+ *
+ * 참조:
+ *   - vibe/unit-plans/U-007[Mvp].md
+ *   - vibe/refactors/RU-002-Q4.md
+ *
+ * @module types/turn_stream
+ */
+
+import type { TurnOutput, AgentPhase, ValidationBadge } from '../schemas/turn';
+
+// =============================================================================
+// 스트림 이벤트 타입 상수 (서버 계약과 일치)
+// =============================================================================
+
+/** 스트림 이벤트 타입 상수 */
+export const StreamEventType = {
+  STAGE: 'stage',
+  BADGES: 'badges',
+  NARRATIVE_DELTA: 'narrative_delta',
+  FINAL: 'final',
+  ERROR: 'error',
+} as const;
+
+export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
+
+/** 단계 상태 상수 */
+export const StageStatus = {
+  START: 'start',
+  COMPLETE: 'complete',
+} as const;
+
+export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
+
+// =============================================================================
+// 스트림 이벤트 인터페이스
+// =============================================================================
+
+/** 단계 진행 이벤트 */
+export interface StageEvent {
+  type: typeof StreamEventType.STAGE;
+  name: AgentPhase;
+  status: StageStatusName;
+}
+
+/** 배지 이벤트 */
+export interface BadgesEvent {
+  type: typeof StreamEventType.BADGES;
+  badges: ValidationBadge[];
+}
+
+/** 내러티브 델타 이벤트 (타자 효과용) */
+export interface NarrativeDeltaEvent {
+  type: typeof StreamEventType.NARRATIVE_DELTA;
+  text: string;
+}
+
+/** 최종 TurnOutput 이벤트
+ *
+ * RU-002-Q2: v1은 `data`, v2는 `turn_output` 사용.
+ * 하위호환을 위해 두 필드 모두 선언하되, 정규화된 인터페이스는 `data`를 사용.
+ */
+export interface FinalEvent {
+  type: typeof StreamEventType.FINAL;
+  /** v1 현행 계약: TurnOutput 페이로드 */
+  data: TurnOutput;
+}
+
+/** FinalEvent 원시 수신 형태 (v1/v2 별칭 지원) */
+export interface FinalEventRaw {
+  type: typeof StreamEventType.FINAL;
+  /** v1 계약 */
+  data?: TurnOutput;
+  /** v2 계약 (별칭) */
+  turn_output?: TurnOutput;
+}
+
+/** 에러 이벤트 */
+export interface ErrorEvent {
+  type: typeof StreamEventType.ERROR;
+  message: string;
+  code?: string;
+}
+
+/** 스트림 이벤트 유니온 타입 */
+export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
+
+// =============================================================================
+// 스트림 콜백 인터페이스
+// =============================================================================
+
+/** 스트림 이벤트 콜백 */
+export interface StreamCallbacks {
+  /** 단계 진행 이벤트 */
+  onStage?: (event: StageEvent) => void;
+  /** 배지 이벤트 */
+  onBadges?: (event: BadgesEvent) => void;
+  /** 내러티브 델타 이벤트 */
+  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
+  /** 최종 TurnOutput 이벤트 */
+  onFinal?: (event: FinalEvent) => void;
+  /** 에러 이벤트 */
+  onError?: (event: ErrorEvent) => void;
+  /** 스트림 완료 */
+  onComplete?: () => void;
+}
 </file>
 
 <file path="frontend/tsconfig.json">
@@ -4546,6 +4560,159 @@ class MockOrchestrator:
         )
 </file>
 
+<file path="frontend/vite.config.ts">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+});
+</file>
+
+<file path="shared/schemas/turn/turn_input.schema.json">
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unknown-world.dev/schemas/turn/turn_input.schema.json",
+  "title": "TurnInput",
+  "description": "Client → Server 턴 요청 스키마 (MVP). PRD 8.7절 기반.",
+  "type": "object",
+  "properties": {
+    "language": {
+      "type": "string",
+      "enum": ["ko-KR", "en-US"],
+      "description": "게임 언어 설정 (ko-KR 또는 en-US)"
+    },
+    "text": {
+      "type": "string",
+      "description": "사용자 입력 (자연어)"
+    },
+    "click": {
+      "type": ["object", "null"],
+      "description": "클릭된 오브젝트 정보 (선택)",
+      "properties": {
+        "object_id": {
+          "type": "string",
+          "description": "클릭된 오브젝트 ID"
+        },
+        "box_2d": {
+          "type": ["array", "null"],
+          "description": "bbox [ymin, xmin, ymax, xmax] (0~1000 정규화)",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": ["object_id"]
+    },
+    "client": {
+      "type": "object",
+      "description": "클라이언트 환경 정보",
+      "properties": {
+        "viewport_w": {
+          "type": "integer",
+          "description": "뷰포트 너비 (px)"
+        },
+        "viewport_h": {
+          "type": "integer",
+          "description": "뷰포트 높이 (px)"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["dark", "light"],
+          "description": "테마 설정"
+        }
+      },
+      "required": ["viewport_w", "viewport_h", "theme"]
+    },
+    "economy_snapshot": {
+      "type": "object",
+      "description": "현재 재화 상태 스냅샷",
+      "properties": {
+        "signal": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Signal 재화 잔액"
+        },
+        "memory_shard": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Memory Shard 재화 잔액"
+        }
+      },
+      "required": ["signal", "memory_shard"]
+    }
+  },
+  "required": ["language", "text", "client", "economy_snapshot"],
+  "additionalProperties": false
+}
+</file>
+
+<file path="frontend/package.json">
+{
+  "name": "unknown-world-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "i18next": "25.7.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-i18next": "16.5.1",
+    "zod": "4.3.4",
+    "zustand": "5.0.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "globals": "16.5.0",
+    "prettier": "3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.51.0",
+    "vite": "7.3.0",
+    "vitest": "^4.0.16"
+  }
+}
+</file>
+
 <file path="frontend/src/api/turnStream.ts">
 /**
  * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
@@ -4687,8 +4854,10 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
 
     case StreamEventType.FINAL: {
       // RULE-003/004: Zod strict parse + 폴백
-      const finalEvent = event as { type: string; data: unknown };
-      const parseResult = safeParseTurnOutput(finalEvent.data, language);
+      // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
+      const finalEvent = event as { type: string; data?: unknown; turn_output?: unknown };
+      const turnOutputPayload = finalEvent.data ?? finalEvent.turn_output;
+      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
 
       if (parseResult.success) {
         callbacks.onFinal?.({
@@ -4893,159 +5062,6 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
   executeTurnStream(input, callbacks, { signal: controller.signal });
 
   return () => controller.abort();
-}
-</file>
-
-<file path="frontend/vite.config.ts">
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
-    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
-    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-});
-</file>
-
-<file path="shared/schemas/turn/turn_input.schema.json">
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://unknown-world.dev/schemas/turn/turn_input.schema.json",
-  "title": "TurnInput",
-  "description": "Client → Server 턴 요청 스키마 (MVP). PRD 8.7절 기반.",
-  "type": "object",
-  "properties": {
-    "language": {
-      "type": "string",
-      "enum": ["ko-KR", "en-US"],
-      "description": "게임 언어 설정 (ko-KR 또는 en-US)"
-    },
-    "text": {
-      "type": "string",
-      "description": "사용자 입력 (자연어)"
-    },
-    "click": {
-      "type": ["object", "null"],
-      "description": "클릭된 오브젝트 정보 (선택)",
-      "properties": {
-        "object_id": {
-          "type": "string",
-          "description": "클릭된 오브젝트 ID"
-        },
-        "box_2d": {
-          "type": ["array", "null"],
-          "description": "bbox [ymin, xmin, ymax, xmax] (0~1000 정규화)",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 1000
-          },
-          "minItems": 4,
-          "maxItems": 4
-        }
-      },
-      "required": ["object_id"]
-    },
-    "client": {
-      "type": "object",
-      "description": "클라이언트 환경 정보",
-      "properties": {
-        "viewport_w": {
-          "type": "integer",
-          "description": "뷰포트 너비 (px)"
-        },
-        "viewport_h": {
-          "type": "integer",
-          "description": "뷰포트 높이 (px)"
-        },
-        "theme": {
-          "type": "string",
-          "enum": ["dark", "light"],
-          "description": "테마 설정"
-        }
-      },
-      "required": ["viewport_w", "viewport_h", "theme"]
-    },
-    "economy_snapshot": {
-      "type": "object",
-      "description": "현재 재화 상태 스냅샷",
-      "properties": {
-        "signal": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Signal 재화 잔액"
-        },
-        "memory_shard": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Memory Shard 재화 잔액"
-        }
-      },
-      "required": ["signal", "memory_shard"]
-    }
-  },
-  "required": ["language", "text", "client", "economy_snapshot"],
-  "additionalProperties": false
-}
-</file>
-
-<file path="frontend/package.json">
-{
-  "name": "unknown-world-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "packageManager": "pnpm@10.27.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "6.3.1",
-    "@dnd-kit/sortable": "10.0.0",
-    "i18next": "25.7.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-i18next": "16.5.1",
-    "zod": "4.3.4",
-    "zustand": "5.0.9"
-  },
-  "devDependencies": {
-    "@eslint/js": "9.39.2",
-    "@types/node": "25.0.3",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "9.39.2",
-    "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-unused-imports": "4.3.0",
-    "globals": "16.5.0",
-    "prettier": "3.7.4",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.51.0",
-    "vite": "7.3.0",
-    "vitest": "^4.0.16"
-  }
 }
 </file>
 

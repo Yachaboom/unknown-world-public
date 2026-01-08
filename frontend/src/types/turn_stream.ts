@@ -64,10 +64,24 @@ export interface NarrativeDeltaEvent {
   text: string;
 }
 
-/** 최종 TurnOutput 이벤트 */
+/** 최종 TurnOutput 이벤트
+ *
+ * RU-002-Q2: v1은 `data`, v2는 `turn_output` 사용.
+ * 하위호환을 위해 두 필드 모두 선언하되, 정규화된 인터페이스는 `data`를 사용.
+ */
 export interface FinalEvent {
   type: typeof StreamEventType.FINAL;
+  /** v1 현행 계약: TurnOutput 페이로드 */
   data: TurnOutput;
+}
+
+/** FinalEvent 원시 수신 형태 (v1/v2 별칭 지원) */
+export interface FinalEventRaw {
+  type: typeof StreamEventType.FINAL;
+  /** v1 계약 */
+  data?: TurnOutput;
+  /** v2 계약 (별칭) */
+  turn_output?: TurnOutput;
 }
 
 /** 에러 이벤트 */

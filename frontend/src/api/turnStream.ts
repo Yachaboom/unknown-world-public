@@ -138,8 +138,10 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
 
     case StreamEventType.FINAL: {
       // RULE-003/004: Zod strict parse + 폴백
-      const finalEvent = event as { type: string; data: unknown };
-      const parseResult = safeParseTurnOutput(finalEvent.data, language);
+      // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
+      const finalEvent = event as { type: string; data?: unknown; turn_output?: unknown };
+      const turnOutputPayload = finalEvent.data ?? finalEvent.turn_output;
+      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
 
       if (parseResult.success) {
         callbacks.onFinal?.({
