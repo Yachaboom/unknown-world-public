@@ -117,5 +117,13 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **Decoupled UI**: 게임의 시각적 요소는 월드 상태로부터 독립적으로 렌더링(Data-driven UI).
 4. **Resilient Pipeline**: LLM의 불안정한 출력을 Pydantic/Zod 이중 검증과 Repair loop로 방어.
 
+## 5. 스트리밍 및 에러 핸들링 정책 (RU-002-S1)
+
+1. **종료 인바리언트 (Terminal Invariant)**: 모든 `/api/turn` 스트림은 성공, 내부 실패, 네트워크 장애 여부와 상관없이 **정확히 1개의 `final` 이벤트**로 종료되어야 한다.
+    - 서버는 예외 발생 시 `error` 이벤트를 송출한 뒤 반드시 폴백 `TurnOutput`을 포함한 `final` 이벤트를 송출한다.
+    - 클라이언트는 서버 연결 실패 시 직접 폴백 `TurnOutput`을 생성하여 스트림 종료 상태를 UI에 전달한다.
+2. **상태 보존형 폴백 (State-preserving Fallback)**: 폴백 시 발생하는 `TurnOutput`은 입력 시점의 재화 스냅샷(`economy_snapshot`)을 그대로 유지하며, 비용(`cost`)은 0으로 설정하여 재화 HUD의 일관성을 보장한다. (RULE-005 준수)
+3. **가시성 보장 (Observability)**: 에러 발생 시 `error` 이벤트를 통해 사용자에게 상황을 알리되, 시스템의 최종 상태는 항상 구조화된 `final` 데이터를 통해 확정한다.
+
 ---
 _본 문서는 프로젝트의 진화에 따라 수시로 업데이트됩니다._

@@ -498,3 +498,4 @@ except ValidationError as e:
 - **U-017**: 실제 Gemini Structured Outputs 호출 시 `TurnOutput.model_json_schema()`를 `response_json_schema`에 전달
 
 
+

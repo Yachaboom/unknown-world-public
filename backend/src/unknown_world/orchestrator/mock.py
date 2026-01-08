@@ -342,15 +342,20 @@ class MockOrchestrator:
         )
 
     def create_safe_fallback(
-        self, language: Language, error_message: str | None = None
+        self,
+        language: Language,
+        error_message: str | None = None,
+        economy_snapshot: CurrencyAmount | None = None,
     ) -> TurnOutput:
-        """안전한 폴백 TurnOutput 생성 (RULE-004).
+        """안전한 폴백 TurnOutput 생성 (RULE-004, RU-002-S1).
 
         스키마 검증 실패 시 반환할 안전한 기본 응답입니다.
+        폴백 시 economy.balance_after는 입력 스냅샷을 그대로 유지합니다 (비용 0, 잔액 변화 없음).
 
         Args:
             language: 응답 언어
             error_message: 에러 메시지 (내부용, UI에 노출하지 않음)
+            economy_snapshot: 요청 직전 재화 스냅샷 (폴백 시 잔액 유지용)
 
         Returns:
             TurnOutput: 안전한 폴백 응답
@@ -363,6 +368,13 @@ class MockOrchestrator:
             else "There was a momentary confusion. Please try again."
         )
 
+        # RU-002-S1: 폴백 시 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
+        balance_after = (
+            economy_snapshot
+            if economy_snapshot is not None
+            else CurrencyAmount(signal=100, memory_shard=5)  # 기본값 (스냅샷 없을 때만)
+        )
+
         return TurnOutput(
             language=language,
             narrative=narrative,
@@ -371,7 +383,7 @@ class MockOrchestrator:
             render=RenderOutput(image_job=None),
             economy=EconomyOutput(
                 cost=CurrencyAmount(signal=0, memory_shard=0),
-                balance_after=CurrencyAmount(signal=100, memory_shard=5),  # 기본 잔액
+                balance_after=balance_after,
             ),
             safety=SafetyOutput(blocked=False, message=None),
             agent_console=AgentConsole(

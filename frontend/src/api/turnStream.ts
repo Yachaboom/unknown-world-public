@@ -13,7 +13,7 @@
  * @module api/turnStream
  */
 
-import type { TurnInput, Language } from '../schemas/turn';
+import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
 import { safeParseTurnOutput } from '../schemas/turn';
 import type {
   StageEvent,
@@ -204,6 +204,9 @@ export async function executeTurnStream(
   const controller = new AbortController();
   const signal = options?.signal ?? controller.signal;
 
+  // RU-002-S1: AbortError 발생 시 onComplete 호출 여부 추적
+  let aborted = false;
+
   try {
     const response = await fetch(TURN_ENDPOINT, {
       method: 'POST',
@@ -245,22 +248,87 @@ export async function executeTurnStream(
     if (remaining) {
       dispatchEvent(remaining, callbacks, input.language);
     }
-
-    callbacks.onComplete?.();
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      // 사용자가 취소한 경우
+      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
+      aborted = true;
       return;
     }
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
+    // RU-002-S1: 네트워크 에러 시에도 onError 호출
     callbacks.onError?.({
       type: StreamEventType.ERROR,
       message: errorMessage,
       code: 'STREAM_ERROR',
     });
+
+    // RU-002-S1: 네트워크 에러 시 클라이언트 측 폴백 final 생성
+    // 서버에서 final이 오지 못한 경우 UI가 멈추지 않도록 함
+    const fallback = createClientFallbackTurnOutput(input.language, input.economy_snapshot);
+    callbacks.onFinal?.({
+      type: StreamEventType.FINAL,
+      data: fallback,
+    });
+  } finally {
+    // RU-002-S1: 스트림 종료 인바리언트 - 성공/실패 모두에서 onComplete 호출 보장
+    if (!aborted) {
+      callbacks.onComplete?.();
+    }
   }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
+ * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
+ * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
+ */
+function createClientFallbackTurnOutput(
+  language: Language,
+  economySnapshot: { signal: number; memory_shard: number },
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
+      : '[System] Failed to connect to server. Please try again.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
+      balance_after: {
+        signal: economySnapshot.signal,
+        memory_shard: economySnapshot.memory_shard,
+      },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
 }
 
 /**

@@ -1,5 +1,27 @@
 # 프로젝트 진행 상황
 
+## [2026-01-08 23:55] RU-002-S1: 스트리밍 안정화 및 종료 인바리언트(항상 final) 강제 완료
+
+### 작업 내용
+
+- **제안서**: [RU-002-S1] 스트리밍 실패(네트워크/서버/검증)에서도 “항상 final(폴백 TurnOutput)로 종료” + UI 멈춤 방지 + Economy 안전화
+- **개선 사항**:
+    - **스트림 종료 인바리언트 강제**: 서버(FastAPI) 및 클라이언트(fetch) 양측에서 네트워크 오류, 입력 검증 실패, 내부 예외 등 모든 경로에서 반드시 `final` 이벤트(폴백 TurnOutput)로 종료되도록 보장하여 UI 멈춤 현상 원천 차단.
+    - **Economy 일관성 유지**: 폴백 TurnOutput 생성 시 입력 스냅샷(`economy_snapshot`)을 활용하여 비용 0 및 현재 잔액 유지를 보장함으써 재화 HUD 왜곡 방지 (RULE-005 준수).
+    - **클라이언트 자가 복구**: 서버로부터 `final`을 받지 못한 네트워크 장애 상황에서도 클라이언트 측에서 안전 폴백을 직접 생성하여 `onFinal` 및 `onComplete` 호출 보장.
+- **영향 범위**: `backend/src/unknown_world/api/turn.py`, `backend/src/unknown_world/orchestrator/mock.py`, `frontend/src/api/turnStream.ts`
+
+### 기술적 세부사항
+
+- **Fail-safe 파이프라인**: 서버의 `_stream_turn_events`와 클라이언트의 `executeTurnStream`에 `try-catch-finally` 구조 및 폴백 송출 로직을 엄격히 적용.
+- **상태 보존형 폴백**: `MockOrchestrator.create_safe_fallback` 메서드가 `economy_snapshot`을 인자로 받아 잔액을 보존하도록 인터페이스 확장.
+
+### 검증
+
+- **수동 검증 완료**: 백엔드 다운(네트워크 에러), 입력 검증 실패(Validation Error), 서버 강제 예외 발생 시나리오에서 모두 UI가 IDLE 상태로 복귀하고 재화 잔액이 유지됨을 확인.
+
+---
+
 ## [2026-01-05 23:50] U-027[Mvp]: 개발 스크립트 - pnpm kill 포트 제한(8001~8020) 완료
 
 ### 구현 완료 항목

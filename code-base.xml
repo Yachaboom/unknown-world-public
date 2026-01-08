@@ -3157,6 +3157,525 @@ export interface StreamCallbacks {
 }
 </file>
 
+<file path="CLAUDE.md">
+# AI 에이전트 전역 지침 (Unknown World)
+
+이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
+
+---
+
+## 프로젝트 개요
+
+**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
+
+- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
+- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
+- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
+
+---
+
+## SSOT(단일 출처) 및 충돌 해결 우선순위
+
+문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
+
+1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
+2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
+3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
+4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
+5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
+
+불확실하면 **추측하지 말고 질문**합니다.
+
+---
+
+## 핵심 원칙 (Non‑Negotiable)
+
+### 1) Prompt-only wrapper / Generic chatbot 회피
+
+- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
+- 반드시 다음이 존재해야 합니다:
+  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
+  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
+  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
+
+### 2) 채팅 버블 UI 금지, 게임 UI 고정
+
+- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
+- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
+  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
+    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
+
+### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
+
+- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
+- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
+
+### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
+
+- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
+- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
+
+### 5) 비용/지연은 UX/게임 메커닉으로 제어
+
+- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
+- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
+
+### 6) ko/en i18n: 혼합 출력 금지
+
+- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
+- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
+- 프롬프트는 언어별 `.md` 파일로 관리합니다.
+
+### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
+
+- BYOK(사용자 API 키 입력) 요구 금지(MVP).
+- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
+- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
+
+### 8) 관측 가능성(Observability) = UX의 일부
+
+- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
+- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
+
+---
+
+## 작업 표준 (Workflow)
+
+### 작업 시작 전 필수
+
+- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
+- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
+
+### 유닛(단계) 기반 개발
+
+- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
+- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
+- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
+
+### 문서 동기화
+
+- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
+- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
+
+### 리팩토링
+
+- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
+
+### 테스트
+
+- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
+- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
+
+### 커밋 메시지
+
+- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
+- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
+
+---
+
+## 품질 기준 (출시/데모 관점)
+
+### Hard Gate (필수 통과)
+
+- **Schema OK**: TurnOutput JSON이 스키마를 통과
+- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
+- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
+- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
+
+### Soft Gate (관측/튜닝)
+
+- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
+- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
+
+---
+
+## 금지사항 (절대 금지)
+
+- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
+- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
+- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
+- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
+- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
+- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
+- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
+
+---
+
+## 지침 운영/사용 가이드
+
+### Cursor 규칙 적용 방식
+
+- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
+- 규칙이 부족/충돌하면:
+  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
+  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
+
+### 온보딩(신규 합류자/에이전트) 10분 루프
+
+- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
+- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
+- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
+- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
+
+### 지침 업데이트 프로세스(권장)
+
+- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
+- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
+
+---
+
+## 참조 문서
+
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+- `vibe/ref/frontend-style-guide.md`
+- `vibe/ref/structured-outputs-guide.md`
+- `vibe/commands/*.md` / `.cursor/commands/*.md`
+- `.gemini/rules/commit-rules.md`
+</file>
+
+<file path="frontend/src/stores/agentStore.ts">
+/**
+ * Unknown World - Agent Console 상태 관리 (Zustand).
+ *
+ * 스트리밍 중 수신되는 단계/배지/내러티브/복구 정보를 저장하고,
+ * AgentConsole 컴포넌트에서 구독할 수 있도록 합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-003/004: 검증 후 상태 반영, 실패 시 폴백
+ *
+ * @module stores/agentStore
+ */
+
+import { create } from 'zustand';
+import type { AgentPhase, ValidationBadge, TurnOutput } from '../schemas/turn';
+import type {
+  StageEvent,
+  BadgesEvent,
+  NarrativeDeltaEvent,
+  FinalEvent,
+  ErrorEvent,
+} from '../types/turn_stream';
+import { StageStatus } from '../types/turn_stream';
+
+// =============================================================================
+// 상태 타입 정의
+// =============================================================================
+
+/** 단계 상태 */
+export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
+/** 단계 정보 */
+export interface PhaseInfo {
+  name: AgentPhase;
+  status: PhaseStatus;
+}
+
+/** 에러 정보 */
+export interface AgentError {
+  message: string;
+  code?: string;
+}
+
+/** Agent Console 상태 */
+export interface AgentState {
+  /** 현재 스트리밍 중인지 */
+  isStreaming: boolean;
+  /** 현재 단계 */
+  currentPhase: AgentPhase | null;
+  /** 단계별 상태 */
+  phases: PhaseInfo[];
+  /** 검증 배지 목록 */
+  badges: ValidationBadge[];
+  /** 누적 내러티브 텍스트 (타자 효과용) */
+  narrativeBuffer: string;
+  /** 자동 복구 횟수 */
+  repairCount: number;
+  /** 최종 TurnOutput */
+  finalOutput: TurnOutput | null;
+  /** 에러 정보 */
+  error: AgentError | null;
+}
+
+/** Agent Console 액션 */
+export interface AgentActions {
+  /** 스트림 시작 */
+  startStream: () => void;
+  /** 단계 이벤트 처리 */
+  handleStage: (event: StageEvent) => void;
+  /** 배지 이벤트 처리 */
+  handleBadges: (event: BadgesEvent) => void;
+  /** 내러티브 델타 이벤트 처리 */
+  handleNarrativeDelta: (event: NarrativeDeltaEvent) => void;
+  /** 최종 출력 이벤트 처리 */
+  handleFinal: (event: FinalEvent) => void;
+  /** 에러 이벤트 처리 */
+  handleError: (event: ErrorEvent) => void;
+  /** 스트림 완료 */
+  completeStream: () => void;
+  /** 상태 초기화 */
+  reset: () => void;
+}
+
+export type AgentStore = AgentState & AgentActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+/** 기본 단계 목록 (PRD 예시) */
+const DEFAULT_PHASES: AgentPhase[] = [
+  'parse',
+  'validate',
+  'plan',
+  'resolve',
+  'render',
+  'verify',
+  'commit',
+];
+
+/** 초기 상태 생성 */
+function createInitialState(): AgentState {
+  return {
+    isStreaming: false,
+    currentPhase: null,
+    phases: DEFAULT_PHASES.map((name) => ({
+      name,
+      status: 'pending' as const,
+    })),
+    badges: [],
+    narrativeBuffer: '',
+    repairCount: 0,
+    finalOutput: null,
+    error: null,
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Agent Console 상태 스토어.
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 사용
+ * const { isStreaming, phases, badges } = useAgentStore();
+ * const startStream = useAgentStore((state) => state.startStream);
+ * ```
+ */
+export const useAgentStore = create<AgentStore>((set) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+  startStream: () => {
+    set({
+      ...createInitialState(),
+      isStreaming: true,
+    });
+  },
+
+  handleStage: (event) => {
+    set((state) => {
+      const phaseName = event.name;
+      const isStart = event.status === StageStatus.START;
+
+      // 단계 상태 업데이트
+      const phases = state.phases.map((phase) => {
+        if (phase.name === phaseName) {
+          return {
+            ...phase,
+            status: isStart ? ('in_progress' as const) : ('completed' as const),
+          };
+        }
+        return phase;
+      });
+
+      return {
+        phases,
+        currentPhase: isStart ? phaseName : state.currentPhase,
+      };
+    });
+  },
+
+  handleBadges: (event) => {
+    set({
+      badges: event.badges,
+    });
+  },
+
+  handleNarrativeDelta: (event) => {
+    set((state) => ({
+      narrativeBuffer: state.narrativeBuffer + event.text,
+    }));
+  },
+
+  handleFinal: (event) => {
+    set({
+      finalOutput: event.data,
+      repairCount: event.data.agent_console?.repair_count ?? 0,
+    });
+  },
+
+  handleError: (event) => {
+    set({
+      error: {
+        message: event.message,
+        code: event.code,
+      },
+    });
+  },
+
+  completeStream: () => {
+    set({
+      isStreaming: false,
+      narrativeBuffer: '', // 스트림 완료 시 버퍼 초기화
+    });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 스트리밍 상태 셀렉터 */
+export const selectIsStreaming = (state: AgentStore) => state.isStreaming;
+
+/** 현재 단계 셀렉터 */
+export const selectCurrentPhase = (state: AgentStore) => state.currentPhase;
+
+/** 단계 목록 셀렉터 */
+export const selectPhases = (state: AgentStore) => state.phases;
+
+/** 배지 목록 셀렉터 */
+export const selectBadges = (state: AgentStore) => state.badges;
+
+/** 내러티브 버퍼 셀렉터 */
+export const selectNarrativeBuffer = (state: AgentStore) => state.narrativeBuffer;
+
+/** 복구 횟수 셀렉터 */
+export const selectRepairCount = (state: AgentStore) => state.repairCount;
+
+/** 최종 출력 셀렉터 */
+export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
+
+/** 에러 셀렉터 */
+export const selectError = (state: AgentStore) => state.error;
+</file>
+
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+</file>
+
+<file path="shared/README.md">
+# shared/
+
+이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
+
+## 📁 구조
+
+```
+shared/
+├── schemas/
+│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
+│       ├── turn_input.schema.json    # Client → Server 요청 스키마
+│       └── turn_output.schema.json   # Server → Client 응답 스키마
+└── README.md
+```
+
+## 🔄 SSOT 원칙 (RU-001-Q4)
+
+- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
+- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
+- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
+
+### 소비 전략 (Option B: 생성물 기반 동기화)
+
+| 소비자 | 도구/방식 | 생성물 경로 (권장) |
+|--------|-----------|-------------------|
+| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
+| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
+
+> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
+
+## 📋 스키마 파일 목록
+
+### Turn 계약 (MVP)
+
+| 파일 | 용도 | PRD 참조 |
+|------|------|----------|
+| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
+| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
+
+## ✅ 스키마 작성 가이드라인
+
+- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
+- **권장 속성**: `required`, `enum`, `description`을 적극 사용
+- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
+- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
+- **참조**: `vibe/ref/structured-outputs-guide.md`
+
+## ⚠️ 보안 주의사항 (RULE-007)
+
+- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
+- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
+- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
+
+## 📚 관련 문서
+
+- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
+- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
+- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
+- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
+- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
+</file>
+
+<file path="backend/src/unknown_world/__init__.py">
+"""Unknown World - Backend Package
+
+This is the main package for the Unknown World backend.
+Architecture: FastAPI + Pydantic + SSE streaming
+
+Reference:
+- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
+- vibe/prd.md (Agent-based Game Master Engine)
+"""
+
+__version__ = "0.1.0"
+</file>
+
 <file path="backend/src/unknown_world/api/turn.py">
 """Unknown World - /api/turn HTTP Streaming 엔드포인트.
 
@@ -3184,7 +3703,7 @@ POST 요청을 받아 NDJSON(라인 단위 JSON) 스트리밍으로 턴 결과�
 import asyncio
 import time
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -3202,6 +3721,7 @@ from unknown_world.api.turn_stream_events import (
 )
 from unknown_world.models.turn import (
     AgentPhase,
+    CurrencyAmount,
     Language,
     TurnInput,
     ValidationBadge,
@@ -3319,16 +3839,22 @@ async def _stream_turn_events(
 
     except ValidationError as e:
         # 스키마 검증 실패 시 폴백 (RULE-004)
+        # RU-002-S1: economy_snapshot을 전달하여 잔액 유지
         fallback = orchestrator.create_safe_fallback(
             language=turn_input.language,
             error_message=str(e),  # 내부 로깅용, UI에 노출 안 함
+            economy_snapshot=CurrencyAmount(
+                signal=turn_input.economy_snapshot.signal,
+                memory_shard=turn_input.economy_snapshot.memory_shard,
+            ),
         )
         yield serialize_event(
             FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
         )
 
     except Exception:
-        # 예외 발생 시 안전한 에러 응답 (프롬프트/내부 추론 노출 금지 - RULE-007)
+        # RU-002-S1: 예외 발생 시 error + final(폴백) 순서로 송출
+        # (프롬프트/내부 추론 노출 금지 - RULE-007)
         yield serialize_event(
             ErrorEvent(
                 type=StreamEventType.ERROR,
@@ -3338,28 +3864,48 @@ async def _stream_turn_events(
                 code="INTERNAL_ERROR",
             ).model_dump()
         )
+        # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
+        fallback = orchestrator.create_safe_fallback(
+            language=turn_input.language,
+            error_message="Internal error",
+            economy_snapshot=CurrencyAmount(
+                signal=turn_input.economy_snapshot.signal,
+                memory_shard=turn_input.economy_snapshot.memory_shard,
+            ),
+        )
+        yield serialize_event(
+            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
+        )
 
 
 async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, Any]:
     """요청 본문을 TurnInput으로 검증 및 파싱합니다.
 
     Returns:
-        TurnInput 또는 에러 정보 dict
+        TurnInput 또는 에러 정보 dict (language, economy_snapshot 포함)
     """
+    body: dict[str, Any] | None = None
     try:
         body = await request.json()
         return TurnInput.model_validate(body)
     except ValidationError as e:
+        # RU-002-S1: 입력 검증 실패 시에도 language/economy 추출 시도
+        raw_language = body.get("language") if isinstance(body, dict) else None
+        raw_economy = body.get("economy_snapshot") if isinstance(body, dict) else None
         return {
             "error": True,
             "message": "Invalid input",
             "details": e.errors(),
+            "language": raw_language if raw_language in ("ko-KR", "en-US") else "ko-KR",
+            "economy_snapshot": raw_economy,
         }
     except Exception:
         return {
             "error": True,
             "message": "Failed to parse request body",
             "details": None,
+            "language": "ko-KR",
+            "economy_snapshot": None,
         }
 
 
@@ -3415,15 +3961,41 @@ async def turn_stream(request: Request) -> StreamingResponse:
     parse_result = await _validate_and_parse_input(request)
 
     if isinstance(parse_result, dict) and parse_result.get("error"):
-        # 입력 검증 실패 시 에러 스트림 반환
+        # RU-002-S1: 입력 검증 실패 시에도 error + final(폴백) 순서로 송출
+        error_language = parse_result.get("language", "ko-KR")
+        error_economy = parse_result.get("economy_snapshot")
+
+        # economy_snapshot이 유효한지 확인
+        economy_snapshot: CurrencyAmount | None = None
+        if isinstance(error_economy, dict):
+            try:
+                # 명시적 타입 캐스팅으로 Pyright 경고 해소
+                eco_dict = cast(dict[str, Any], error_economy)
+                economy_snapshot = CurrencyAmount(
+                    signal=int(eco_dict.get("signal", 100)),
+                    memory_shard=int(eco_dict.get("memory_shard", 5)),
+                )
+            except (ValueError, TypeError):
+                economy_snapshot = None
 
         async def error_stream() -> AsyncGenerator[str]:
+            # 에러 이벤트 송출
             yield serialize_event(
                 ErrorEvent(
                     type=StreamEventType.ERROR,
                     message=parse_result.get("message", "Invalid input"),
                     code="VALIDATION_ERROR",
                 ).model_dump()
+            )
+            # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
+            fallback_orchestrator = MockOrchestrator()
+            fallback = fallback_orchestrator.create_safe_fallback(
+                language=Language.KO if error_language == "ko-KR" else Language.EN,
+                error_message="Validation error",
+                economy_snapshot=economy_snapshot,
+            )
+            yield serialize_event(
+                FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
             )
 
         return StreamingResponse(
@@ -3451,6 +4023,130 @@ async def turn_stream(request: Request) -> StreamingResponse:
             "X-Request-Time": str(int(time.time() * 1000)),
         },
     )
+</file>
+
+<file path="backend/src/unknown_world/main.py">
+"""Unknown World - FastAPI 애플리케이션 엔트리포인트
+
+이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
+MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
+
+실행 방법:
+    cd backend
+    uv sync
+    uv run uvicorn unknown_world.main:app --reload --port 8011
+
+참조:
+    - vibe/tech-stack.md (버전 SSOT)
+    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
+    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
+"""
+
+from typing import Literal
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from unknown_world import __version__
+from unknown_world.api import turn_router
+
+# =============================================================================
+# FastAPI 앱 인스턴스
+# =============================================================================
+
+app = FastAPI(
+    title="Unknown World API",
+    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
+    version=__version__,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# =============================================================================
+# CORS 설정 (개발 환경용)
+# =============================================================================
+# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
+# RULE-011: 프론트엔드는 8001~8010 포트 사용
+# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
+
+ALLOWED_ORIGINS = [
+    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
+    *[f"http://localhost:{port}" for port in range(8001, 8011)],
+    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =============================================================================
+# 라우터 등록
+# =============================================================================
+
+# U-007: /api/turn HTTP Streaming 엔드포인트
+app.include_router(turn_router)
+
+
+# =============================================================================
+# 응답 스키마 (Pydantic)
+# =============================================================================
+
+
+class HealthResponse(BaseModel):
+    """헬스체크 응답 스키마.
+
+    Attributes:
+        status: 서버 상태 ("ok" 또는 "degraded")
+        version: 백엔드 버전
+        service: 서비스 이름
+    """
+
+    status: Literal["ok", "degraded"]
+    version: str
+    service: str
+
+
+# =============================================================================
+# 라우트 정의
+# =============================================================================
+
+
+@app.get("/health", response_model=HealthResponse, tags=["System"])
+async def health_check() -> HealthResponse:
+    """서버 헬스체크 엔드포인트.
+
+    서버가 정상적으로 작동 중인지 확인합니다.
+    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
+
+    Returns:
+        HealthResponse: 서버 상태 정보
+    """
+    return HealthResponse(
+        status="ok",
+        version=__version__,
+        service="unknown-world-backend",
+    )
+
+
+@app.get("/", tags=["System"])
+async def root() -> dict[str, str]:
+    """루트 엔드포인트.
+
+    API 정보를 간략히 안내합니다.
+
+    Returns:
+        dict: 기본 안내 메시지
+    """
+    return {
+        "message": "Unknown World API",
+        "docs": "/docs",
+        "health": "/health",
+    }
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/mock.py">
@@ -3798,15 +4494,20 @@ class MockOrchestrator:
         )
 
     def create_safe_fallback(
-        self, language: Language, error_message: str | None = None
+        self,
+        language: Language,
+        error_message: str | None = None,
+        economy_snapshot: CurrencyAmount | None = None,
     ) -> TurnOutput:
-        """안전한 폴백 TurnOutput 생성 (RULE-004).
+        """안전한 폴백 TurnOutput 생성 (RULE-004, RU-002-S1).
 
         스키마 검증 실패 시 반환할 안전한 기본 응답입니다.
+        폴백 시 economy.balance_after는 입력 스냅샷을 그대로 유지합니다 (비용 0, 잔액 변화 없음).
 
         Args:
             language: 응답 언어
             error_message: 에러 메시지 (내부용, UI에 노출하지 않음)
+            economy_snapshot: 요청 직전 재화 스냅샷 (폴백 시 잔액 유지용)
 
         Returns:
             TurnOutput: 안전한 폴백 응답
@@ -3819,6 +4520,13 @@ class MockOrchestrator:
             else "There was a momentary confusion. Please try again."
         )
 
+        # RU-002-S1: 폴백 시 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
+        balance_after = (
+            economy_snapshot
+            if economy_snapshot is not None
+            else CurrencyAmount(signal=100, memory_shard=5)  # 기본값 (스냅샷 없을 때만)
+        )
+
         return TurnOutput(
             language=language,
             narrative=narrative,
@@ -3827,7 +4535,7 @@ class MockOrchestrator:
             render=RenderOutput(image_job=None),
             economy=EconomyOutput(
                 cost=CurrencyAmount(signal=0, memory_shard=0),
-                balance_after=CurrencyAmount(signal=100, memory_shard=5),  # 기본 잔액
+                balance_after=balance_after,
             ),
             safety=SafetyOutput(blocked=False, message=None),
             agent_console=AgentConsole(
@@ -3836,183 +4544,6 @@ class MockOrchestrator:
                 repair_count=1,  # 복구 시도 횟수
             ),
         )
-</file>
-
-<file path="CLAUDE.md">
-# AI 에이전트 전역 지침 (Unknown World)
-
-이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
-
----
-
-## 프로젝트 개요
-
-**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
-
-- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
-- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
-- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
-
----
-
-## SSOT(단일 출처) 및 충돌 해결 우선순위
-
-문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
-
-1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
-2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
-3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
-4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
-5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
-
-불확실하면 **추측하지 말고 질문**합니다.
-
----
-
-## 핵심 원칙 (Non‑Negotiable)
-
-### 1) Prompt-only wrapper / Generic chatbot 회피
-
-- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
-- 반드시 다음이 존재해야 합니다:
-  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
-  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
-  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
-
-### 2) 채팅 버블 UI 금지, 게임 UI 고정
-
-- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
-- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
-  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
-    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
-
-### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
-
-- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
-- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
-
-### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
-
-- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
-- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
-
-### 5) 비용/지연은 UX/게임 메커닉으로 제어
-
-- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
-- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
-
-### 6) ko/en i18n: 혼합 출력 금지
-
-- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
-- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
-- 프롬프트는 언어별 `.md` 파일로 관리합니다.
-
-### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
-
-- BYOK(사용자 API 키 입력) 요구 금지(MVP).
-- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
-- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
-
-### 8) 관측 가능성(Observability) = UX의 일부
-
-- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
-- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
-
----
-
-## 작업 표준 (Workflow)
-
-### 작업 시작 전 필수
-
-- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
-- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
-
-### 유닛(단계) 기반 개발
-
-- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
-- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
-- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
-
-### 문서 동기화
-
-- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
-- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
-
-### 리팩토링
-
-- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
-
-### 테스트
-
-- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
-- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
-
-### 커밋 메시지
-
-- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
-- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
-
----
-
-## 품질 기준 (출시/데모 관점)
-
-### Hard Gate (필수 통과)
-
-- **Schema OK**: TurnOutput JSON이 스키마를 통과
-- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
-- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
-- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
-
-### Soft Gate (관측/튜닝)
-
-- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
-- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
-
----
-
-## 금지사항 (절대 금지)
-
-- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
-- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
-- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
-- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
-- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
-- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
-- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
-
----
-
-## 지침 운영/사용 가이드
-
-### Cursor 규칙 적용 방식
-
-- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
-- 규칙이 부족/충돌하면:
-  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
-  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
-
-### 온보딩(신규 합류자/에이전트) 10분 루프
-
-- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
-- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
-- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
-- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
-
-### 지침 업데이트 프로세스(권장)
-
-- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
-- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
-
----
-
-## 참조 문서
-
-- `vibe/prd.md`
-- `vibe/tech-stack.md`
-- `vibe/ref/frontend-style-guide.md`
-- `vibe/ref/structured-outputs-guide.md`
-- `vibe/commands/*.md` / `.cursor/commands/*.md`
-- `.gemini/rules/commit-rules.md`
 </file>
 
 <file path="frontend/src/api/turnStream.ts">
@@ -4031,7 +4562,7 @@ class MockOrchestrator:
  * @module api/turnStream
  */
 
-import type { TurnInput, Language } from '../schemas/turn';
+import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
 import { safeParseTurnOutput } from '../schemas/turn';
 import type {
   StageEvent,
@@ -4222,6 +4753,9 @@ export async function executeTurnStream(
   const controller = new AbortController();
   const signal = options?.signal ?? controller.signal;
 
+  // RU-002-S1: AbortError 발생 시 onComplete 호출 여부 추적
+  let aborted = false;
+
   try {
     const response = await fetch(TURN_ENDPOINT, {
       method: 'POST',
@@ -4263,22 +4797,87 @@ export async function executeTurnStream(
     if (remaining) {
       dispatchEvent(remaining, callbacks, input.language);
     }
-
-    callbacks.onComplete?.();
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      // 사용자가 취소한 경우
+      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
+      aborted = true;
       return;
     }
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
+    // RU-002-S1: 네트워크 에러 시에도 onError 호출
     callbacks.onError?.({
       type: StreamEventType.ERROR,
       message: errorMessage,
       code: 'STREAM_ERROR',
     });
+
+    // RU-002-S1: 네트워크 에러 시 클라이언트 측 폴백 final 생성
+    // 서버에서 final이 오지 못한 경우 UI가 멈추지 않도록 함
+    const fallback = createClientFallbackTurnOutput(input.language, input.economy_snapshot);
+    callbacks.onFinal?.({
+      type: StreamEventType.FINAL,
+      data: fallback,
+    });
+  } finally {
+    // RU-002-S1: 스트림 종료 인바리언트 - 성공/실패 모두에서 onComplete 호출 보장
+    if (!aborted) {
+      callbacks.onComplete?.();
+    }
   }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
+ * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
+ * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
+ */
+function createClientFallbackTurnOutput(
+  language: Language,
+  economySnapshot: { signal: number; memory_shard: number },
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
+      : '[System] Failed to connect to server. Please try again.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
+      balance_after: {
+        signal: economySnapshot.signal,
+        memory_shard: economySnapshot.memory_shard,
+      },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
 }
 
 /**
@@ -4297,332 +4896,23 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
 }
 </file>
 
-<file path="frontend/src/stores/agentStore.ts">
-/**
- * Unknown World - Agent Console 상태 관리 (Zustand).
- *
- * 스트리밍 중 수신되는 단계/배지/내러티브/복구 정보를 저장하고,
- * AgentConsole 컴포넌트에서 구독할 수 있도록 합니다.
- *
- * 설계 원칙:
- *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
- *   - RULE-003/004: 검증 후 상태 반영, 실패 시 폴백
- *
- * @module stores/agentStore
- */
+<file path="frontend/vite.config.ts">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-import { create } from 'zustand';
-import type { AgentPhase, ValidationBadge, TurnOutput } from '../schemas/turn';
-import type {
-  StageEvent,
-  BadgesEvent,
-  NarrativeDeltaEvent,
-  FinalEvent,
-  ErrorEvent,
-} from '../types/turn_stream';
-import { StageStatus } from '../types/turn_stream';
-
-// =============================================================================
-// 상태 타입 정의
-// =============================================================================
-
-/** 단계 상태 */
-export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
-
-/** 단계 정보 */
-export interface PhaseInfo {
-  name: AgentPhase;
-  status: PhaseStatus;
-}
-
-/** 에러 정보 */
-export interface AgentError {
-  message: string;
-  code?: string;
-}
-
-/** Agent Console 상태 */
-export interface AgentState {
-  /** 현재 스트리밍 중인지 */
-  isStreaming: boolean;
-  /** 현재 단계 */
-  currentPhase: AgentPhase | null;
-  /** 단계별 상태 */
-  phases: PhaseInfo[];
-  /** 검증 배지 목록 */
-  badges: ValidationBadge[];
-  /** 누적 내러티브 텍스트 (타자 효과용) */
-  narrativeBuffer: string;
-  /** 자동 복구 횟수 */
-  repairCount: number;
-  /** 최종 TurnOutput */
-  finalOutput: TurnOutput | null;
-  /** 에러 정보 */
-  error: AgentError | null;
-}
-
-/** Agent Console 액션 */
-export interface AgentActions {
-  /** 스트림 시작 */
-  startStream: () => void;
-  /** 단계 이벤트 처리 */
-  handleStage: (event: StageEvent) => void;
-  /** 배지 이벤트 처리 */
-  handleBadges: (event: BadgesEvent) => void;
-  /** 내러티브 델타 이벤트 처리 */
-  handleNarrativeDelta: (event: NarrativeDeltaEvent) => void;
-  /** 최종 출력 이벤트 처리 */
-  handleFinal: (event: FinalEvent) => void;
-  /** 에러 이벤트 처리 */
-  handleError: (event: ErrorEvent) => void;
-  /** 스트림 완료 */
-  completeStream: () => void;
-  /** 상태 초기화 */
-  reset: () => void;
-}
-
-export type AgentStore = AgentState & AgentActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-/** 기본 단계 목록 (PRD 예시) */
-const DEFAULT_PHASES: AgentPhase[] = [
-  'parse',
-  'validate',
-  'plan',
-  'resolve',
-  'render',
-  'verify',
-  'commit',
-];
-
-/** 초기 상태 생성 */
-function createInitialState(): AgentState {
-  return {
-    isStreaming: false,
-    currentPhase: null,
-    phases: DEFAULT_PHASES.map((name) => ({
-      name,
-      status: 'pending' as const,
-    })),
-    badges: [],
-    narrativeBuffer: '',
-    repairCount: 0,
-    finalOutput: null,
-    error: null,
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * Agent Console 상태 스토어.
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 사용
- * const { isStreaming, phases, badges } = useAgentStore();
- * const startStream = useAgentStore((state) => state.startStream);
- * ```
- */
-export const useAgentStore = create<AgentStore>((set) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-  startStream: () => {
-    set({
-      ...createInitialState(),
-      isStreaming: true,
-    });
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
   },
-
-  handleStage: (event) => {
-    set((state) => {
-      const phaseName = event.name;
-      const isStart = event.status === StageStatus.START;
-
-      // 단계 상태 업데이트
-      const phases = state.phases.map((phase) => {
-        if (phase.name === phaseName) {
-          return {
-            ...phase,
-            status: isStart ? ('in_progress' as const) : ('completed' as const),
-          };
-        }
-        return phase;
-      });
-
-      return {
-        phases,
-        currentPhase: isStart ? phaseName : state.currentPhase,
-      };
-    });
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
   },
-
-  handleBadges: (event) => {
-    set({
-      badges: event.badges,
-    });
-  },
-
-  handleNarrativeDelta: (event) => {
-    set((state) => ({
-      narrativeBuffer: state.narrativeBuffer + event.text,
-    }));
-  },
-
-  handleFinal: (event) => {
-    set({
-      finalOutput: event.data,
-      repairCount: event.data.agent_console?.repair_count ?? 0,
-    });
-  },
-
-  handleError: (event) => {
-    set({
-      error: {
-        message: event.message,
-        code: event.code,
-      },
-    });
-  },
-
-  completeStream: () => {
-    set({
-      isStreaming: false,
-      narrativeBuffer: '', // 스트림 완료 시 버퍼 초기화
-    });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 스트리밍 상태 셀렉터 */
-export const selectIsStreaming = (state: AgentStore) => state.isStreaming;
-
-/** 현재 단계 셀렉터 */
-export const selectCurrentPhase = (state: AgentStore) => state.currentPhase;
-
-/** 단계 목록 셀렉터 */
-export const selectPhases = (state: AgentStore) => state.phases;
-
-/** 배지 목록 셀렉터 */
-export const selectBadges = (state: AgentStore) => state.badges;
-
-/** 내러티브 버퍼 셀렉터 */
-export const selectNarrativeBuffer = (state: AgentStore) => state.narrativeBuffer;
-
-/** 복구 횟수 셀렉터 */
-export const selectRepairCount = (state: AgentStore) => state.repairCount;
-
-/** 최종 출력 셀렉터 */
-export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
-
-/** 에러 셀렉터 */
-export const selectError = (state: AgentStore) => state.error;
-</file>
-
-<file path="frontend/tsconfig.json">
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Linting (엄격 모드) */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
-}
-</file>
-
-<file path="shared/README.md">
-# shared/
-
-이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
-
-## 📁 구조
-
-```
-shared/
-├── schemas/
-│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
-│       ├── turn_input.schema.json    # Client → Server 요청 스키마
-│       └── turn_output.schema.json   # Server → Client 응답 스키마
-└── README.md
-```
-
-## 🔄 SSOT 원칙 (RU-001-Q4)
-
-- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
-- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
-- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
-
-### 소비 전략 (Option B: 생성물 기반 동기화)
-
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
-| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
-
-> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
-
-## 📋 스키마 파일 목록
-
-### Turn 계약 (MVP)
-
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
-| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
-
-## ✅ 스키마 작성 가이드라인
-
-- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
-- **권장 속성**: `required`, `enum`, `description`을 적극 사용
-- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
-- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
-- **참조**: `vibe/ref/structured-outputs-guide.md`
-
-## ⚠️ 보안 주의사항 (RULE-007)
-
-- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
-- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
-- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
-
-## 📚 관련 문서
-
-- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
-- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
-- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
-- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
-- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
+});
 </file>
 
 <file path="shared/schemas/turn/turn_input.schema.json">
@@ -4707,161 +4997,56 @@ shared/
 }
 </file>
 
-<file path="backend/src/unknown_world/__init__.py">
-"""Unknown World - Backend Package
-
-This is the main package for the Unknown World backend.
-Architecture: FastAPI + Pydantic + SSE streaming
-
-Reference:
-- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
-- vibe/prd.md (Agent-based Game Master Engine)
-"""
-
-__version__ = "0.1.0"
-</file>
-
-<file path="backend/src/unknown_world/main.py">
-"""Unknown World - FastAPI 애플리케이션 엔트리포인트
-
-이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
-MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
-
-실행 방법:
-    cd backend
-    uv sync
-    uv run uvicorn unknown_world.main:app --reload --port 8011
-
-참조:
-    - vibe/tech-stack.md (버전 SSOT)
-    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
-    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
-"""
-
-from typing import Literal
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-from unknown_world import __version__
-from unknown_world.api import turn_router
-
-# =============================================================================
-# FastAPI 앱 인스턴스
-# =============================================================================
-
-app = FastAPI(
-    title="Unknown World API",
-    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
-    version=__version__,
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
-
-# =============================================================================
-# CORS 설정 (개발 환경용)
-# =============================================================================
-# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
-# RULE-011: 프론트엔드는 8001~8010 포트 사용
-# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
-
-ALLOWED_ORIGINS = [
-    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
-    *[f"http://localhost:{port}" for port in range(8001, 8011)],
-    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# =============================================================================
-# 라우터 등록
-# =============================================================================
-
-# U-007: /api/turn HTTP Streaming 엔드포인트
-app.include_router(turn_router)
-
-
-# =============================================================================
-# 응답 스키마 (Pydantic)
-# =============================================================================
-
-
-class HealthResponse(BaseModel):
-    """헬스체크 응답 스키마.
-
-    Attributes:
-        status: 서버 상태 ("ok" 또는 "degraded")
-        version: 백엔드 버전
-        service: 서비스 이름
-    """
-
-    status: Literal["ok", "degraded"]
-    version: str
-    service: str
-
-
-# =============================================================================
-# 라우트 정의
-# =============================================================================
-
-
-@app.get("/health", response_model=HealthResponse, tags=["System"])
-async def health_check() -> HealthResponse:
-    """서버 헬스체크 엔드포인트.
-
-    서버가 정상적으로 작동 중인지 확인합니다.
-    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
-
-    Returns:
-        HealthResponse: 서버 상태 정보
-    """
-    return HealthResponse(
-        status="ok",
-        version=__version__,
-        service="unknown-world-backend",
-    )
-
-
-@app.get("/", tags=["System"])
-async def root() -> dict[str, str]:
-    """루트 엔드포인트.
-
-    API 정보를 간략히 안내합니다.
-
-    Returns:
-        dict: 기본 안내 메시지
-    """
-    return {
-        "message": "Unknown World API",
-        "docs": "/docs",
-        "health": "/health",
-    }
-</file>
-
-<file path="frontend/vite.config.ts">
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
-    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
-    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
+<file path="frontend/package.json">
+{
+  "name": "unknown-world-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "i18next": "25.7.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-i18next": "16.5.1",
+    "zod": "4.3.4",
+    "zustand": "5.0.9"
   },
-});
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "globals": "16.5.0",
+    "prettier": "3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.51.0",
+    "vite": "7.3.0",
+    "vitest": "^4.0.16"
+  }
+}
 </file>
 
 <file path="shared/schemas/turn/turn_output.schema.json">
@@ -5472,58 +5657,6 @@ export default defineConfig({
   ],
   "title": "TurnOutput",
   "type": "object"
-}
-</file>
-
-<file path="frontend/package.json">
-{
-  "name": "unknown-world-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "packageManager": "pnpm@10.27.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "6.3.1",
-    "@dnd-kit/sortable": "10.0.0",
-    "i18next": "25.7.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-i18next": "16.5.1",
-    "zod": "4.3.4",
-    "zustand": "5.0.9"
-  },
-  "devDependencies": {
-    "@eslint/js": "9.39.2",
-    "@types/node": "25.0.3",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "9.39.2",
-    "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-unused-imports": "4.3.0",
-    "globals": "16.5.0",
-    "prettier": "3.7.4",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.51.0",
-    "vite": "7.3.0",
-    "vitest": "^4.0.16"
-  }
 }
 </file>
 

@@ -24,7 +24,7 @@ POST 요청을 받아 NDJSON(라인 단위 JSON) 스트리밍으로 턴 결과�
 import asyncio
 import time
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -42,6 +42,7 @@ from unknown_world.api.turn_stream_events import (
 )
 from unknown_world.models.turn import (
     AgentPhase,
+    CurrencyAmount,
     Language,
     TurnInput,
     ValidationBadge,
@@ -159,16 +160,22 @@ async def _stream_turn_events(
 
     except ValidationError as e:
         # 스키마 검증 실패 시 폴백 (RULE-004)
+        # RU-002-S1: economy_snapshot을 전달하여 잔액 유지
         fallback = orchestrator.create_safe_fallback(
             language=turn_input.language,
             error_message=str(e),  # 내부 로깅용, UI에 노출 안 함
+            economy_snapshot=CurrencyAmount(
+                signal=turn_input.economy_snapshot.signal,
+                memory_shard=turn_input.economy_snapshot.memory_shard,
+            ),
         )
         yield serialize_event(
             FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
         )
 
     except Exception:
-        # 예외 발생 시 안전한 에러 응답 (프롬프트/내부 추론 노출 금지 - RULE-007)
+        # RU-002-S1: 예외 발생 시 error + final(폴백) 순서로 송출
+        # (프롬프트/내부 추론 노출 금지 - RULE-007)
         yield serialize_event(
             ErrorEvent(
                 type=StreamEventType.ERROR,
@@ -178,28 +185,48 @@ async def _stream_turn_events(
                 code="INTERNAL_ERROR",
             ).model_dump()
         )
+        # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
+        fallback = orchestrator.create_safe_fallback(
+            language=turn_input.language,
+            error_message="Internal error",
+            economy_snapshot=CurrencyAmount(
+                signal=turn_input.economy_snapshot.signal,
+                memory_shard=turn_input.economy_snapshot.memory_shard,
+            ),
+        )
+        yield serialize_event(
+            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
+        )
 
 
 async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, Any]:
     """요청 본문을 TurnInput으로 검증 및 파싱합니다.
 
     Returns:
-        TurnInput 또는 에러 정보 dict
+        TurnInput 또는 에러 정보 dict (language, economy_snapshot 포함)
     """
+    body: dict[str, Any] | None = None
     try:
         body = await request.json()
         return TurnInput.model_validate(body)
     except ValidationError as e:
+        # RU-002-S1: 입력 검증 실패 시에도 language/economy 추출 시도
+        raw_language = body.get("language") if isinstance(body, dict) else None
+        raw_economy = body.get("economy_snapshot") if isinstance(body, dict) else None
         return {
             "error": True,
             "message": "Invalid input",
             "details": e.errors(),
+            "language": raw_language if raw_language in ("ko-KR", "en-US") else "ko-KR",
+            "economy_snapshot": raw_economy,
         }
     except Exception:
         return {
             "error": True,
             "message": "Failed to parse request body",
             "details": None,
+            "language": "ko-KR",
+            "economy_snapshot": None,
         }
 
 
@@ -255,15 +282,41 @@ async def turn_stream(request: Request) -> StreamingResponse:
     parse_result = await _validate_and_parse_input(request)
 
     if isinstance(parse_result, dict) and parse_result.get("error"):
-        # 입력 검증 실패 시 에러 스트림 반환
+        # RU-002-S1: 입력 검증 실패 시에도 error + final(폴백) 순서로 송출
+        error_language = parse_result.get("language", "ko-KR")
+        error_economy = parse_result.get("economy_snapshot")
+
+        # economy_snapshot이 유효한지 확인
+        economy_snapshot: CurrencyAmount | None = None
+        if isinstance(error_economy, dict):
+            try:
+                # 명시적 타입 캐스팅으로 Pyright 경고 해소
+                eco_dict = cast(dict[str, Any], error_economy)
+                economy_snapshot = CurrencyAmount(
+                    signal=int(eco_dict.get("signal", 100)),
+                    memory_shard=int(eco_dict.get("memory_shard", 5)),
+                )
+            except (ValueError, TypeError):
+                economy_snapshot = None
 
         async def error_stream() -> AsyncGenerator[str]:
+            # 에러 이벤트 송출
             yield serialize_event(
                 ErrorEvent(
                     type=StreamEventType.ERROR,
                     message=parse_result.get("message", "Invalid input"),
                     code="VALIDATION_ERROR",
                 ).model_dump()
+            )
+            # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
+            fallback_orchestrator = MockOrchestrator()
+            fallback = fallback_orchestrator.create_safe_fallback(
+                language=Language.KO if error_language == "ko-KR" else Language.EN,
+                error_message="Validation error",
+                economy_snapshot=economy_snapshot,
+            )
+            yield serialize_event(
+                FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
             )
 
         return StreamingResponse(
