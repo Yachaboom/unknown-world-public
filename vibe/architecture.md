@@ -117,7 +117,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **Decoupled UI**: 게임의 시각적 요소는 월드 상태로부터 독립적으로 렌더링(Data-driven UI).
 4. **Resilient Pipeline**: LLM의 불안정한 출력을 Pydantic/Zod 이중 검증과 Repair loop로 방어.
 
-## 5. 스트리밍 및 에러 핸들링 정책 (RU-002-S1, RU-002-Q2, RU-002-S2)
+## 5. 스트리밍 및 에러 핸들링 정책 (RU-002[Mvp])
 
 1. **프로토콜 버전 및 하위 호환성 (Protocol Versioning)**:
     - **Version 1 (현행)**: MVP 안정화 계약. `final.data`, `stage.status: "complete"`, `badges: string[]` 형식을 사용한다.

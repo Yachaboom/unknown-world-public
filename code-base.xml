@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,py,js,json,md}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,6 +42,7 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/__init__.py
 backend/src/unknown_world/api/turn_stream_events.py
@@ -54,7 +55,6 @@ backend/src/unknown_world/orchestrator/mock.py
 backend/tests/integration/test_api.py
 backend/tests/integration/test_turn_streaming.py
 backend/tests/unit/models/test_turn.py
-CLAUDE.md
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -62,6 +62,9 @@ frontend/coverage/sorter.js
 frontend/package.json
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
+frontend/src/App.tsx
+frontend/src/components/AgentConsole.tsx
+frontend/src/main.tsx
 frontend/src/schemas/index.ts
 frontend/src/schemas/turn.test.ts
 frontend/src/schemas/turn.ts
@@ -74,7 +77,6 @@ frontend/tsconfig.json
 frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
-shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
@@ -91,161 +93,6 @@ This section contains the contents of the repository's files.
 from unknown_world.api.turn import router as turn_router
 
 __all__ = ["turn_router"]
-</file>
-
-<file path="backend/src/unknown_world/api/turn_stream_events.py">
-"""Unknown World - Turn Stream 이벤트 계약(Contract).
-
-NDJSON 스트리밍에서 사용되는 이벤트 타입, 모델, 유틸리티를 정의합니다.
-이 모듈은 Orchestrator ↔ API ↔ Frontend 간의 스트림 이벤트 계약 SSOT입니다.
-
-설계 원칙:
-    - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
-    - RULE-003: 구조화 출력(JSON Schema) 우선 + Pydantic 검증
-    - RULE-008: 단계/배지 가시화
-
-참조:
-    - vibe/unit-plans/U-007[Mvp].md
-    - vibe/refactors/RU-002-Q4.md
-"""
-
-from __future__ import annotations
-
-import json
-from typing import Annotated, Any
-
-from pydantic import BaseModel, Field
-
-# =============================================================================
-# 스트림 이벤트 타입 상수
-# =============================================================================
-
-
-class StreamEventType:
-    """스트림 이벤트 타입 상수.
-
-    NDJSON 스트리밍에서 사용되는 이벤트 타입입니다.
-    PRD 예시 단계: Parse→Validate→Plan→Resolve→Render→Verify→Commit
-    """
-
-    STAGE = "stage"
-    BADGES = "badges"
-    NARRATIVE_DELTA = "narrative_delta"
-    FINAL = "final"
-    ERROR = "error"
-
-
-class StageStatus:
-    """단계 상태 상수."""
-
-    START = "start"
-    COMPLETE = "complete"
-
-
-# =============================================================================
-# 스트림 이벤트 모델 (Pydantic)
-# =============================================================================
-
-
-class StageEvent(BaseModel):
-    """단계 진행 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("stage")
-        name: 단계 이름 (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
-        status: 상태 (start, complete)
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.STAGE)]
-    name: str
-    status: str
-
-
-class BadgesEvent(BaseModel):
-    """배지 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("badges")
-        badges: 검증 배지 목록
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.BADGES)]
-    badges: list[str]
-
-
-class NarrativeDeltaEvent(BaseModel):
-    """내러티브 델타 이벤트 (타자 효과용).
-
-    Attributes:
-        type: 이벤트 타입 ("narrative_delta")
-        text: 추가된 텍스트 조각
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.NARRATIVE_DELTA)]
-    text: str
-
-
-class FinalEvent(BaseModel):
-    """최종 TurnOutput 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("final")
-        data: 완전한 TurnOutput
-
-    Note:
-        TurnOutput은 TYPE_CHECKING 블록에서 import되며,
-        런타임에는 Any로 처리됩니다.
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.FINAL)]
-    data: Any  # TurnOutput (순환 import 방지)
-
-
-class ErrorEvent(BaseModel):
-    """에러 이벤트.
-
-    Attributes:
-        type: 이벤트 타입 ("error")
-        message: 에러 메시지 (프롬프트/내부 추론 노출 금지)
-        code: 에러 코드 (선택)
-    """
-
-    type: Annotated[str, Field(default=StreamEventType.ERROR)]
-    message: str
-    code: str | None = None
-
-
-# =============================================================================
-# 유틸리티 함수
-# =============================================================================
-
-
-def serialize_event(event: dict[str, Any]) -> str:
-    """이벤트를 NDJSON 라인으로 직렬화합니다.
-
-    Args:
-        event: 직렬화할 이벤트 딕셔너리
-
-    Returns:
-        str: NDJSON 형식 문자열 (줄바꿈 포함)
-    """
-    return json.dumps(event, ensure_ascii=False) + "\n"
-
-
-# =============================================================================
-# 모듈 공개 API
-# =============================================================================
-
-__all__ = [
-    "StreamEventType",
-    "StageStatus",
-    "StageEvent",
-    "BadgesEvent",
-    "NarrativeDeltaEvent",
-    "FinalEvent",
-    "ErrorEvent",
-    "serialize_event",
-]
 </file>
 
 <file path="backend/src/unknown_world/models/__init__.py">
@@ -980,144 +827,6 @@ def test_cors_policy():
     assert "access-control-allow-origin" not in response.headers
 </file>
 
-<file path="backend/tests/integration/test_turn_streaming.py">
-"""Unknown World - /api/turn HTTP Streaming 통합 테스트.
-
-NDJSON 스트리밍 이벤트의 순서, 구조, 데이터 정밀도를 검증합니다.
-"""
-
-import json
-
-from fastapi.testclient import TestClient
-
-from unknown_world.main import app
-from unknown_world.models.turn import Language, TurnOutput
-
-client = TestClient(app)
-
-
-def test_turn_streaming_success():
-    """정상적인 턴 요청 시 NDJSON 스트림이 올바른 순서로 반환되는지 테스트합니다."""
-    payload = {
-        "language": "ko-KR",
-        "text": "테스트 입력",
-        "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
-        "economy_snapshot": {"signal": 100, "memory_shard": 5},
-    }
-
-    # StreamingResponse 테스트
-    response = client.post("/api/turn", json=payload)
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "application/x-ndjson"
-
-    events = []
-    for line in response.iter_lines():
-        if line:
-            events.append(json.loads(line))
-
-    # 1. 이벤트 존재 여부 확인
-    assert len(events) > 0
-
-    # 2. 첫 번째 이벤트는 항상 stage: parse: start 여야 함 (TTFB)
-    assert events[0]["type"] == "stage"
-    assert events[0]["name"] == "parse"
-    assert events[0]["status"] == "start"
-
-    # 3. 단계별 이벤트 순서 확인
-    stages = [e["name"] for e in events if e["type"] == "stage" and e["status"] == "start"]
-    expected_stages = ["parse", "validate", "plan", "resolve", "render", "verify", "commit"]
-    assert stages == expected_stages
-
-    # 4. 배지 이벤트 포함 여부 확인
-    badges_events = [e for e in events if e["type"] == "badges"]
-    assert len(badges_events) >= 2
-    assert "schema_ok" in badges_events[0]["badges"]
-
-    # 5. 최종 결과물 확인
-    final_events = [e for e in events if e["type"] == "final"]
-    assert len(final_events) == 1
-
-    turn_output_data = final_events[0]["data"]
-    # Pydantic 모델로 다시 검증 (RULE-003)
-    turn_output = TurnOutput.model_validate(turn_output_data)
-    assert turn_output.language == Language.KO
-    assert len(turn_output.narrative) > 0
-
-
-def test_turn_streaming_invalid_input():
-    """잘못된 입력 요청 시 에러 이벤트가 스트리밍되는지 테스트합니다."""
-    payload = {
-        "language": "invalid-lang",  # 잘못된 언어 코드
-        "text": "",
-    }
-
-    response = client.post("/api/turn", json=payload)
-    # 입력 검증 실패 시에도 200 OK 스트림으로 에러를 보낼 수도 있고,
-    # 400 Bad Request를 보낼 수도 있음. 현재 구현은 200 OK + type: error 임.
-    assert response.status_code == 200
-
-    events = [json.loads(line) for line in response.iter_lines() if line]
-    assert any(e["type"] == "error" for e in events)
-    assert any(e["code"] == "VALIDATION_ERROR" for e in events)
-
-
-def test_turn_streaming_deterministic_seed():
-    """seed 파라미터 사용 시 결과가 결정적인지 테스트합니다."""
-    payload = {
-        "language": "en-US",
-        "text": "Hello",
-        "client": {"viewport_w": 1920, "viewport_h": 1080},
-        "economy_snapshot": {"signal": 100, "memory_shard": 5},
-    }
-
-    # 동일한 시드로 두 번 요청
-    seed = 12345
-
-    def get_final_output(s):
-        resp = client.post(f"/api/turn?seed={s}", json=payload)
-        events = [json.loads(line) for line in resp.iter_lines() if line]
-        return next(e["data"] for e in events if e["type"] == "final")
-
-    output1 = get_final_output(seed)
-    output2 = get_final_output(seed)
-
-    assert output1 == output2
-    assert output1["language"] == "en-US"
-
-
-def test_turn_streaming_generation_fallback(monkeypatch):
-    """생성 중 ValidationError 발생 시 안전한 폴백이 반환되는지 테스트합니다."""
-    from pydantic import ValidationError
-
-    from unknown_world.orchestrator.mock import MockOrchestrator
-
-    def mock_generate_failure(self, turn_input):
-        # Pydantic ValidationError를 수동으로 생성하는 것은 복잡하므로
-        # 간단한 필드 검증 오류를 시뮬레이션하거나 직접 raise 함
-        # 여기서는 테스트를 위해 임의의 필드 누락 등으로 발생한다고 가정
-        raise ValidationError.from_exception_data(title="MockError", line_errors=[])
-
-    monkeypatch.setattr(MockOrchestrator, "generate_turn_output", mock_generate_failure)
-
-    payload = {
-        "language": "ko-KR",
-        "text": "테스트",
-        "client": {"viewport_w": 1920, "viewport_h": 1080},
-        "economy_snapshot": {"signal": 100, "memory_shard": 5},
-    }
-
-    response = client.post("/api/turn", json=payload)
-    events = [json.loads(line) for line in response.iter_lines() if line]
-
-    final_event = next(e for e in events if e["type"] == "final")
-    turn_output = final_event["data"]
-
-    # 폴백 응답의 특징 확인
-    assert turn_output["agent_console"]["badges"] == ["schema_fail"]
-    assert turn_output["agent_console"]["repair_count"] == 1
-    assert "혼란" in turn_output["narrative"] or "confusion" in turn_output["narrative"]
-</file>
-
 <file path="backend/tests/unit/models/test_turn.py">
 """TurnInput/TurnOutput 모델 단위 테스트."""
 
@@ -1661,175 +1370,229 @@ var addSorting = (function() {
 window.addEventListener('load', addSorting);
 </file>
 
-<file path="frontend/src/api/turnStream.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NDJSONParser } from './turnStream';
+<file path="frontend/src/components/AgentConsole.tsx">
+/**
+ * Unknown World - Agent Console 컴포넌트.
+ *
+ * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
+ * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
+ *
+ * @module components/AgentConsole
+ */
 
-describe('NDJSONParser', () => {
-  let parser: NDJSONParser;
+import {
+  useAgentStore,
+  selectIsStreaming,
+  selectPhases,
+  selectBadges,
+  selectRepairCount,
+  selectError,
+  type PhaseInfo,
+} from '../stores/agentStore';
+import type { ValidationBadge } from '../schemas/turn';
 
-  beforeEach(() => {
-    parser = new NDJSONParser();
-  });
+// =============================================================================
+// 상수 정의
+// =============================================================================
 
-  it('should parse a single complete line', () => {
-    const chunk = JSON.stringify({ type: 'test', value: 1 }) + '\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ type: 'test', value: 1 });
-  });
+/** 단계 표시 이름 (한국어) */
+const PHASE_LABELS: Record<string, string> = {
+  parse: 'Parse',
+  validate: 'Validate',
+  plan: 'Plan',
+  resolve: 'Resolve',
+  render: 'Render',
+  verify: 'Verify',
+  commit: 'Commit',
+};
 
-  it('should parse multiple complete lines in one chunk', () => {
-    const chunk = JSON.stringify({ id: 1 }) + '\n' + JSON.stringify({ id: 2 }) + '\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(2);
-    expect(results[0]).toEqual({ id: 1 });
-    expect(results[1]).toEqual({ id: 2 });
-  });
+/** 배지 표시 정보 */
+const BADGE_INFO: Record<ValidationBadge, { label: string; isOk: boolean }> = {
+  schema_ok: { label: 'Schema', isOk: true },
+  schema_fail: { label: 'Schema', isOk: false },
+  economy_ok: { label: 'Economy', isOk: true },
+  economy_fail: { label: 'Economy', isOk: false },
+  safety_ok: { label: 'Safety', isOk: true },
+  safety_blocked: { label: 'Safety', isOk: false },
+  consistency_ok: { label: 'Consistency', isOk: true },
+  consistency_fail: { label: 'Consistency', isOk: false },
+};
 
-  it('should buffer partial lines and parse them when completed', () => {
-    const chunk1 = '{"id": 1';
-    const chunk2 = ', "val": "ok"}\n';
+// =============================================================================
+// 하위 컴포넌트
+// =============================================================================
 
-    const results1 = parser.parse(chunk1);
-    expect(results1).toHaveLength(0);
+/** 단계 상태 아이콘 */
+function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
+  switch (status) {
+    case 'pending':
+      return <span className="phase-icon pending">○</span>;
+    case 'in_progress':
+      return <span className="phase-icon in-progress">◎</span>;
+    case 'completed':
+      return <span className="phase-icon completed">●</span>;
+    case 'failed':
+      return <span className="phase-icon failed">✕</span>;
+    default:
+      return <span className="phase-icon">○</span>;
+  }
+}
 
-    const results2 = parser.parse(chunk2);
-    expect(results2).toHaveLength(1);
-    expect(results2[0]).toEqual({ id: 1, val: 'ok' });
-  });
+/** 단계 큐 항목 */
+function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
+  const label = PHASE_LABELS[phase.name] ?? phase.name;
+  const statusClass = `phase-item ${phase.status}`;
 
-  it('should ignore empty lines', () => {
-    const chunk = '\n\n{"a":1}\n\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(1);
-  });
+  return (
+    <div className={statusClass}>
+      <PhaseIcon status={phase.status} />
+      <span className="phase-label">{label}</span>
+    </div>
+  );
+}
 
-  it('should not crash on invalid JSON and continue', () => {
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const chunk = 'invalid json\n{"valid": true}\n';
-    const results = parser.parse(chunk);
+/** 단계 큐 */
+function PhaseQueue() {
+  const phases = useAgentStore(selectPhases);
 
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ valid: true });
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
-  });
+  return (
+    <div className="phase-queue">
+      <div className="queue-label">Queue</div>
+      <div className="queue-items">
+        {phases.map((phase) => (
+          <PhaseQueueItem key={phase.name} phase={phase} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  it('should flush remaining buffer', () => {
-    parser.parse('{"id": 1}'); // No newline
-    const result = parser.flush();
-    expect(result).toEqual({ id: 1 });
-  });
+/** 배지 아이템 */
+function BadgeItem({ badge }: { badge: ValidationBadge }) {
+  const info = BADGE_INFO[badge];
+  if (!info) return null;
 
-  it('should return null on flush with empty buffer', () => {
-    const result = parser.flush();
-    expect(result).toBeNull();
-  });
-});
+  const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
+  const statusText = info.isOk ? 'OK' : 'FAIL';
 
-describe('executeTurnStream', () => {
-  const mockInput = {
-    language: 'ko-KR' as const,
-    text: 'Hello',
-    click: null,
-    client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-    economy_snapshot: { signal: 100, memory_shard: 0 },
-  };
+  return (
+    <div className={`badge-item ${statusClass}`}>
+      <span className="badge-label">{info.label}</span>
+      <span className="badge-status">{statusText}</span>
+    </div>
+  );
+}
 
-  const mockCallbacks = {
-    onStage: vi.fn(),
-    onBadges: vi.fn(),
-    onNarrativeDelta: vi.fn(),
-    onFinal: vi.fn(),
-    onError: vi.fn(),
-    onComplete: vi.fn(),
-  };
+/** 배지 패널 */
+function BadgesPanel() {
+  const badges = useAgentStore(selectBadges);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.fetch = vi.fn();
-  });
-
-  it('should process stream events correctly', async () => {
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
-        );
-        controller.enqueue(
-          encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
-        );
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              type: 'final',
-              data: {
-                language: 'ko-KR',
-                narrative: 'Hello',
-                economy: {
-                  cost: { signal: 0, memory_shard: 0 },
-                  balance_after: { signal: 100, memory_shard: 0 },
-                },
-                safety: { blocked: false },
-              },
-            }) + '\n',
-          ),
-        );
-        controller.close();
-      },
-    });
-
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      body: stream,
-    });
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
-    expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'Hello' }),
+  if (badges.length === 0) {
+    return (
+      <div className="badges-panel">
+        <div className="badges-label">Badges</div>
+        <div className="badges-empty">[ 검증 대기 중 ]</div>
+      </div>
     );
-    expect(mockCallbacks.onFinal).toHaveBeenCalled();
-    expect(mockCallbacks.onComplete).toHaveBeenCalled();
-  });
+  }
 
-  it('should handle HTTP errors', async () => {
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-    });
+  return (
+    <div className="badges-panel">
+      <div className="badges-label">Badges</div>
+      <div className="badges-grid">
+        {badges.map((badge, index) => (
+          <BadgeItem key={`${badge}-${index}`} badge={badge} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
+/** Auto-repair 트레이스 */
+function RepairTrace() {
+  const repairCount = useAgentStore(selectRepairCount);
+  const isStreaming = useAgentStore(selectIsStreaming);
 
-    expect(mockCallbacks.onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        code: 'STREAM_ERROR',
-        message: expect.stringContaining('500'),
-      }),
-    );
-  });
+  if (repairCount === 0 && !isStreaming) {
+    return null;
+  }
 
-  it('should handle fetch rejection', async () => {
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('Network failure'),
-    );
+  return (
+    <div className="repair-trace">
+      <span className="repair-label">Auto-repair</span>
+      <span className="repair-count">#{repairCount}</span>
+      {repairCount > 0 && <span className="repair-status text-warning"> (복구됨)</span>}
+    </div>
+  );
+}
 
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
+/** 에러 표시 */
+function ErrorDisplay() {
+  const error = useAgentStore(selectError);
 
-    expect(mockCallbacks.onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'Network failure',
-      }),
-    );
-  });
-});
+  if (!error) return null;
+
+  return (
+    <div className="agent-error">
+      <span className="error-icon">⚠</span>
+      <span className="error-message">{error.message}</span>
+      {error.code && <span className="error-code">[{error.code}]</span>}
+    </div>
+  );
+}
+
+/** 스트리밍 상태 표시 */
+function StreamingStatus() {
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  return (
+    <div className="streaming-status">
+      <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
+      <span className="status-text">{isStreaming ? 'PROCESSING' : 'IDLE'}</span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Agent Console 컴포넌트.
+ *
+ * Plan/Queue/Badges/Auto-repair를 실시간으로 표시합니다.
+ * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
+ */
+export function AgentConsole() {
+  return (
+    <div className="agent-console-content">
+      <StreamingStatus />
+      <PhaseQueue />
+      <BadgesPanel />
+      <RepairTrace />
+      <ErrorDisplay />
+    </div>
+  );
+}
+
+export default AgentConsole;
+</file>
+
+<file path="frontend/src/main.tsx">
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './style.css';
+import App from './App.tsx';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
 </file>
 
 <file path="frontend/src/schemas/index.ts">
@@ -3053,181 +2816,533 @@ describe('agentStore', () => {
 }
 </file>
 
-<file path="CLAUDE.md">
-# AI 에이전트 전역 지침 (Unknown World)
+<file path="backend/src/unknown_world/api/turn_stream_events.py">
+"""Unknown World - Turn Stream 이벤트 계약(Contract).
 
-이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
+NDJSON 스트리밍에서 사용되는 이벤트 타입, 모델, 유틸리티를 정의합니다.
+이 모듈은 Orchestrator ↔ API ↔ Frontend 간의 스트림 이벤트 계약 SSOT입니다.
 
----
+설계 원칙:
+    - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
+    - RULE-003: 구조화 출력(JSON Schema) 우선 + Pydantic 검증
+    - RULE-008: 단계/배지 가시화
 
-## 프로젝트 개요
+참조:
+    - vibe/unit-plans/U-007[Mvp].md
+    - vibe/refactors/RU-002-Q4.md
+"""
 
-**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
+from __future__ import annotations
 
-- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
-- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
-- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
+import json
+from typing import Annotated, Any
 
----
+from pydantic import BaseModel, Field
 
-## SSOT(단일 출처) 및 충돌 해결 우선순위
+# =============================================================================
+# 스트림 이벤트 타입 상수
+# =============================================================================
 
-문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
 
-1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
-2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
-3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
-4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
-5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
+class StreamEventType:
+    """스트림 이벤트 타입 상수.
 
-불확실하면 **추측하지 말고 질문**합니다.
+    NDJSON 스트리밍에서 사용되는 이벤트 타입입니다.
+    PRD 예시 단계: Parse→Validate→Plan→Resolve→Render→Verify→Commit
+    """
 
----
+    STAGE = "stage"
+    BADGES = "badges"
+    NARRATIVE_DELTA = "narrative_delta"
+    FINAL = "final"
+    ERROR = "error"
+    REPAIR = "repair"
 
-## 핵심 원칙 (Non‑Negotiable)
 
-### 1) Prompt-only wrapper / Generic chatbot 회피
+class StageStatus:
+    """단계 상태 상수."""
 
-- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
-- 반드시 다음이 존재해야 합니다:
-  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
-  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
-  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
+    START = "start"
+    COMPLETE = "complete"
+    FAIL = "fail"
 
-### 2) 채팅 버블 UI 금지, 게임 UI 고정
 
-- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
-- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
-  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
-    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
+# =============================================================================
+# 스트림 이벤트 모델 (Pydantic)
+# =============================================================================
 
-### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
 
-- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
-- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
+class StageEvent(BaseModel):
+    """단계 진행 이벤트.
 
-### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
+    Attributes:
+        type: 이벤트 타입 ("stage")
+        name: 단계 이름 (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
+        status: 상태 (start, complete)
+    """
 
-- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
-- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
+    type: Annotated[str, Field(default=StreamEventType.STAGE)]
+    name: str
+    status: str
 
-### 5) 비용/지연은 UX/게임 메커닉으로 제어
 
-- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
-- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
+class RepairEvent(BaseModel):
+    """자동 복구(Repair) 이벤트.
 
-### 6) ko/en i18n: 혼합 출력 금지
+    Attributes:
+        type: 이벤트 타입 ("repair")
+        attempt: 현재 시도 횟수
+        message: 복구 메시지 (선택)
+    """
 
-- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
-- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
-- 프롬프트는 언어별 `.md` 파일로 관리합니다.
+    type: Annotated[str, Field(default=StreamEventType.REPAIR)]
+    attempt: int
+    message: str | None = None
 
-### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
 
-- BYOK(사용자 API 키 입력) 요구 금지(MVP).
-- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
-- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
+class BadgesEvent(BaseModel):
+    """배지 이벤트.
 
-### 8) 관측 가능성(Observability) = UX의 일부
+    Attributes:
+        type: 이벤트 타입 ("badges")
+        badges: 검증 배지 목록
+    """
 
-- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
-- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
+    type: Annotated[str, Field(default=StreamEventType.BADGES)]
+    badges: list[str]
 
----
 
-## 작업 표준 (Workflow)
+class NarrativeDeltaEvent(BaseModel):
+    """내러티브 델타 이벤트 (타자 효과용).
 
-### 작업 시작 전 필수
+    Attributes:
+        type: 이벤트 타입 ("narrative_delta")
+        text: 추가된 텍스트 조각
+    """
 
-- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
-- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
+    type: Annotated[str, Field(default=StreamEventType.NARRATIVE_DELTA)]
+    text: str
 
-### 유닛(단계) 기반 개발
 
-- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
-- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
-- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
+class FinalEvent(BaseModel):
+    """최종 TurnOutput 이벤트.
 
-### 문서 동기화
+    Attributes:
+        type: 이벤트 타입 ("final")
+        data: 완전한 TurnOutput
 
-- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
-- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
+    Note:
+        TurnOutput은 TYPE_CHECKING 블록에서 import되며,
+        런타임에는 Any로 처리됩니다.
+    """
 
-### 리팩토링
+    type: Annotated[str, Field(default=StreamEventType.FINAL)]
+    data: Any  # TurnOutput (순환 import 방지)
 
-- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
 
-### 테스트
+class ErrorEvent(BaseModel):
+    """에러 이벤트.
 
-- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
-- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
+    Attributes:
+        type: 이벤트 타입 ("error")
+        message: 에러 메시지 (프롬프트/내부 추론 노출 금지)
+        code: 에러 코드 (선택)
+    """
 
-### 커밋 메시지
+    type: Annotated[str, Field(default=StreamEventType.ERROR)]
+    message: str
+    code: str | None = None
 
-- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
-- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
 
----
+# =============================================================================
+# 유틸리티 함수
+# =============================================================================
 
-## 품질 기준 (출시/데모 관점)
 
-### Hard Gate (필수 통과)
+def serialize_event(event: dict[str, Any]) -> str:
+    """이벤트를 NDJSON 라인으로 직렬화합니다.
 
-- **Schema OK**: TurnOutput JSON이 스키마를 통과
-- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
-- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
-- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
+    Args:
+        event: 직렬화할 이벤트 딕셔너리
 
-### Soft Gate (관측/튜닝)
+    Returns:
+        str: NDJSON 형식 문자열 (줄바꿈 포함)
+    """
+    return json.dumps(event, ensure_ascii=False) + "\n"
 
-- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
-- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
 
----
+# =============================================================================
+# 모듈 공개 API
+# =============================================================================
 
-## 금지사항 (절대 금지)
+__all__ = [
+    "StreamEventType",
+    "StageStatus",
+    "StageEvent",
+    "RepairEvent",
+    "BadgesEvent",
+    "NarrativeDeltaEvent",
+    "FinalEvent",
+    "ErrorEvent",
+    "serialize_event",
+]
+</file>
 
-- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
-- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
-- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
-- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
-- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
-- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
-- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
+<file path="backend/tests/integration/test_turn_streaming.py">
+"""Unknown World - /api/turn HTTP Streaming 통합 테스트.
 
----
+NDJSON 스트리밍 이벤트의 순서, 구조, 데이터 정밀도를 검증합니다.
+"""
 
-## 지침 운영/사용 가이드
+import json
 
-### Cursor 규칙 적용 방식
+from fastapi.testclient import TestClient
 
-- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
-- 규칙이 부족/충돌하면:
-  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
-  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
+from unknown_world.main import app
+from unknown_world.models.turn import Language, TurnOutput
 
-### 온보딩(신규 합류자/에이전트) 10분 루프
+client = TestClient(app)
 
-- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
-- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
-- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
-- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
 
-### 지침 업데이트 프로세스(권장)
+def test_turn_streaming_success():
+    """정상적인 턴 요청 시 NDJSON 스트림이 올바른 순서로 반환되는지 테스트합니다."""
+    payload = {
+        "language": "ko-KR",
+        "text": "테스트 입력",
+        "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
+        "economy_snapshot": {"signal": 100, "memory_shard": 5},
+    }
 
-- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
-- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
+    # StreamingResponse 테스트
+    response = client.post("/api/turn", json=payload)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/x-ndjson"
 
----
+    events = []
+    for line in response.iter_lines():
+        if line:
+            events.append(json.loads(line))
 
-## 참조 문서
+    # 1. 이벤트 존재 여부 확인
+    assert len(events) > 0
 
-- `vibe/prd.md`
-- `vibe/tech-stack.md`
-- `vibe/ref/frontend-style-guide.md`
-- `vibe/ref/structured-outputs-guide.md`
-- `vibe/commands/*.md` / `.cursor/commands/*.md`
-- `.gemini/rules/commit-rules.md`
+    # 2. 첫 번째 이벤트는 항상 stage: parse: start 여야 함 (TTFB)
+    assert events[0]["type"] == "stage"
+    assert events[0]["name"] == "parse"
+    assert events[0]["status"] == "start"
+
+    # 3. 단계별 이벤트 순서 확인
+    stages = [e["name"] for e in events if e["type"] == "stage" and e["status"] == "start"]
+    expected_stages = ["parse", "validate", "plan", "resolve", "render", "verify", "commit"]
+    assert stages == expected_stages
+
+    # 4. 배지 이벤트 포함 여부 확인
+    badges_events = [e for e in events if e["type"] == "badges"]
+    assert len(badges_events) >= 2
+    assert "schema_ok" in badges_events[0]["badges"]
+
+    # 5. 최종 결과물 확인
+    final_events = [e for e in events if e["type"] == "final"]
+    assert len(final_events) == 1
+
+    turn_output_data = final_events[0]["data"]
+    # Pydantic 모델로 다시 검증 (RULE-003)
+    turn_output = TurnOutput.model_validate(turn_output_data)
+    assert turn_output.language == Language.KO
+    assert len(turn_output.narrative) > 0
+
+
+def test_turn_streaming_invalid_input():
+    """잘못된 입력 요청 시 에러 이벤트가 스트리밍되는지 테스트합니다."""
+    payload = {
+        "language": "invalid-lang",  # 잘못된 언어 코드
+        "text": "",
+    }
+
+    response = client.post("/api/turn", json=payload)
+    # 입력 검증 실패 시에도 200 OK 스트림으로 에러를 보낼 수도 있고,
+    # 400 Bad Request를 보낼 수도 있음. 현재 구현은 200 OK + type: error 임.
+    assert response.status_code == 200
+
+    events = [json.loads(line) for line in response.iter_lines() if line]
+    assert any(e["type"] == "error" for e in events)
+    assert any(e["code"] == "VALIDATION_ERROR" for e in events)
+
+
+def test_turn_streaming_deterministic_seed():
+    """seed 파라미터 사용 시 결과가 결정적인지 테스트합니다."""
+    payload = {
+        "language": "en-US",
+        "text": "Hello",
+        "client": {"viewport_w": 1920, "viewport_h": 1080},
+        "economy_snapshot": {"signal": 100, "memory_shard": 5},
+    }
+
+    # 동일한 시드로 두 번 요청
+    seed = 12345
+
+    def get_final_output(s):
+        resp = client.post(f"/api/turn?seed={s}", json=payload)
+        events = [json.loads(line) for line in resp.iter_lines() if line]
+        return next(e["data"] for e in events if e["type"] == "final")
+
+    output1 = get_final_output(seed)
+    output2 = get_final_output(seed)
+
+    assert output1 == output2
+    assert output1["language"] == "en-US"
+
+
+def test_turn_streaming_generation_fallback(monkeypatch):
+    """생성 중 ValidationError 발생 시 안전한 폴백이 반환되는지 테스트합니다."""
+    from pydantic import ValidationError
+
+    from unknown_world.orchestrator.mock import MockOrchestrator
+
+    def mock_generate_failure(self, turn_input):
+        # Pydantic ValidationError를 수동으로 생성하는 것은 복잡하므로
+        # 간단한 필드 검증 오류를 시뮬레이션하거나 직접 raise 함
+        # 여기서는 테스트를 위해 임의의 필드 누락 등으로 발생한다고 가정
+        raise ValidationError.from_exception_data(title="MockError", line_errors=[])
+
+    monkeypatch.setattr(MockOrchestrator, "generate_turn_output", mock_generate_failure)
+
+    payload = {
+        "language": "ko-KR",
+        "text": "테스트",
+        "client": {"viewport_w": 1920, "viewport_h": 1080},
+        "economy_snapshot": {"signal": 100, "memory_shard": 5},
+    }
+
+    response = client.post("/api/turn", json=payload)
+    events = [json.loads(line) for line in response.iter_lines() if line]
+
+    final_event = next(e for e in events if e["type"] == "final")
+    turn_output = final_event["data"]
+
+    # 폴백 응답의 특징 확인
+    assert turn_output["agent_console"]["badges"] == ["schema_fail"]
+    assert turn_output["agent_console"]["repair_count"] == 1
+    assert "혼란" in turn_output["narrative"] or "confusion" in turn_output["narrative"]
+
+
+def test_turn_streaming_repair_loop(monkeypatch):
+    """검증 실패 시 repair 이벤트가 스트림에 포함되는지 테스트합니다 (RU-002)."""
+    from pydantic import ValidationError
+
+    from unknown_world.orchestrator.mock import MockOrchestrator
+
+    # 첫 번째 호출에서 실패하여 repair 트리거 시뮬레이션
+    # (실제 구현에서는 N회 재시도 로직이 turn.py에 있어야 함)
+    call_count = 0
+
+    def mock_generate_with_repair(self, turn_input):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise ValidationError.from_exception_data(title="MockSchemaError", line_errors=[])
+        return orchestrator_orig_generate(self, turn_input)
+
+    import unknown_world.orchestrator.mock as mock_mod
+
+    orchestrator_orig_generate = mock_mod.MockOrchestrator.generate_turn_output
+    monkeypatch.setattr(MockOrchestrator, "generate_turn_output", mock_generate_with_repair)
+
+    payload = {
+        "language": "ko-KR",
+        "text": "리페어 테스트",
+        "client": {"viewport_w": 1920, "viewport_h": 1080},
+        "economy_snapshot": {"signal": 100, "memory_shard": 5},
+    }
+
+    response = client.post("/api/turn", json=payload)
+    events = [json.loads(line) for line in response.iter_lines() if line]
+
+    # RU-002 요구사항: repair 이벤트가 명시적으로 존재해야 함
+    repair_events = [e for e in events if e["type"] == "repair"]
+    assert len(repair_events) >= 1
+    assert "attempt" in repair_events[0]
+    assert repair_events[0]["attempt"] == 1
+</file>
+
+<file path="frontend/src/api/turnStream.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NDJSONParser } from './turnStream';
+
+describe('NDJSONParser', () => {
+  let parser: NDJSONParser;
+
+  beforeEach(() => {
+    parser = new NDJSONParser();
+  });
+
+  it('should parse a single complete line', () => {
+    const chunk = JSON.stringify({ type: 'test', value: 1 }) + '\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ type: 'test', value: 1 });
+  });
+
+  it('should parse multiple complete lines in one chunk', () => {
+    const chunk = JSON.stringify({ id: 1 }) + '\n' + JSON.stringify({ id: 2 }) + '\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(2);
+    expect(results[0]).toEqual({ id: 1 });
+    expect(results[1]).toEqual({ id: 2 });
+  });
+
+  it('should buffer partial lines and parse them when completed', () => {
+    const chunk1 = '{"id": 1';
+    const chunk2 = ', "val": "ok"}\n';
+
+    const results1 = parser.parse(chunk1);
+    expect(results1).toHaveLength(0);
+
+    const results2 = parser.parse(chunk2);
+    expect(results2).toHaveLength(1);
+    expect(results2[0]).toEqual({ id: 1, val: 'ok' });
+  });
+
+  it('should ignore empty lines', () => {
+    const chunk = '\n\n{"a":1}\n\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(1);
+  });
+
+  it('should not crash on invalid JSON and continue', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chunk = 'invalid json\n{"valid": true}\n';
+    const results = parser.parse(chunk);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ valid: true });
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('should flush remaining buffer', () => {
+    parser.parse('{"id": 1}'); // No newline
+    const result = parser.flush();
+    expect(result).toEqual({ id: 1 });
+  });
+
+  it('should return null on flush with empty buffer', () => {
+    const result = parser.flush();
+    expect(result).toBeNull();
+  });
+});
+
+describe('executeTurnStream', () => {
+  const mockInput = {
+    language: 'ko-KR' as const,
+    text: 'Hello',
+    click: null,
+    client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+    economy_snapshot: { signal: 100, memory_shard: 0 },
+  };
+
+  const mockCallbacks = {
+    onStage: vi.fn(),
+    onRepair: vi.fn(),
+    onBadges: vi.fn(),
+    onNarrativeDelta: vi.fn(),
+    onFinal: vi.fn(),
+    onError: vi.fn(),
+    onComplete: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+  });
+
+  it('should process stream events correctly (including repair)', async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({ type: 'repair', attempt: 1, message: 'Schema fail, retrying' }) + '\n',
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({
+              type: 'final',
+              data: {
+                language: 'ko-KR',
+                narrative: 'Hello',
+                economy: {
+                  cost: { signal: 0, memory_shard: 0 },
+                  balance_after: { signal: 100, memory_shard: 0 },
+                },
+                safety: { blocked: false },
+              },
+            }) + '\n',
+          ),
+        );
+        controller.close();
+      },
+    });
+
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      body: stream,
+    });
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
+    expect(mockCallbacks.onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ attempt: 1, message: 'Schema fail, retrying' }),
+    );
+    expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Hello' }),
+    );
+    expect(mockCallbacks.onFinal).toHaveBeenCalled();
+    expect(mockCallbacks.onComplete).toHaveBeenCalled();
+  });
+
+  it('should handle HTTP errors', async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'STREAM_ERROR',
+        message: expect.stringContaining('500'),
+      }),
+    );
+  });
+
+  it('should handle fetch rejection', async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Network failure'),
+    );
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Network failure',
+      }),
+    );
+  });
+});
 </file>
 
 <file path="frontend/tsconfig.json">
@@ -3259,69 +3374,6 @@ describe('agentStore', () => {
 }
 </file>
 
-<file path="shared/README.md">
-# shared/
-
-이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
-
-## 📁 구조
-
-```
-shared/
-├── schemas/
-│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
-│       ├── turn_input.schema.json    # Client → Server 요청 스키마
-│       └── turn_output.schema.json   # Server → Client 응답 스키마
-└── README.md
-```
-
-## 🔄 SSOT 원칙 (RU-001-Q4)
-
-- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
-- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
-- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
-
-### 소비 전략 (Option B: 생성물 기반 동기화)
-
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
-| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
-
-> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
-
-## 📋 스키마 파일 목록
-
-### Turn 계약 (MVP)
-
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
-| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
-
-## ✅ 스키마 작성 가이드라인
-
-- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
-- **권장 속성**: `required`, `enum`, `description`을 적극 사용
-- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
-- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
-- **참조**: `vibe/ref/structured-outputs-guide.md`
-
-## ⚠️ 보안 주의사항 (RULE-007)
-
-- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
-- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
-- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
-
-## 📚 관련 문서
-
-- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
-- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
-- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
-- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
-- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
-</file>
-
 <file path="backend/src/unknown_world/__init__.py">
 """Unknown World - Backend Package
 
@@ -3334,355 +3386,6 @@ Reference:
 """
 
 __version__ = "0.1.0"
-</file>
-
-<file path="backend/src/unknown_world/api/turn.py">
-"""Unknown World - /api/turn HTTP Streaming 엔드포인트.
-
-POST 요청을 받아 NDJSON(라인 단위 JSON) 스트리밍으로 턴 결과를 반환합니다.
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) 우선 + Pydantic 검증
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
-    - RULE-007: 프롬프트/내부 추론 노출 금지
-    - RULE-008: 단계/배지 가시화, TTFB 2초 목표
-
-스트림 이벤트 타입:
-    - stage: 단계 진행 상태 (Parse→Validate→Plan→Resolve→Render→Verify→Commit)
-    - badges: 검증 배지 목록
-    - narrative_delta: 내러티브 텍스트 조각 (타자 효과용)
-    - final: 최종 TurnOutput
-    - error: 에러 발생 시
-
-참조:
-    - vibe/unit-plans/U-007[Mvp].md
-    - .cursor/rules/20-backend-orchestrator.mdc
-"""
-
-import asyncio
-import time
-from collections.abc import AsyncGenerator
-from typing import Any, cast
-
-from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
-
-from unknown_world.api.turn_stream_events import (
-    BadgesEvent,
-    ErrorEvent,
-    FinalEvent,
-    NarrativeDeltaEvent,
-    StageEvent,
-    StageStatus,
-    StreamEventType,
-    serialize_event,
-)
-from unknown_world.models.turn import (
-    AgentPhase,
-    CurrencyAmount,
-    Language,
-    TurnInput,
-    ValidationBadge,
-)
-from unknown_world.orchestrator.mock import MockOrchestrator
-
-# =============================================================================
-# 라우터 정의
-# =============================================================================
-
-router = APIRouter(prefix="/api", tags=["Turn"])
-
-# 단계 목록 (PRD 예시)
-ORCHESTRATOR_PHASES = [
-    AgentPhase.PARSE,
-    AgentPhase.VALIDATE,
-    AgentPhase.PLAN,
-    AgentPhase.RESOLVE,
-    AgentPhase.RENDER,
-    AgentPhase.VERIFY,
-    AgentPhase.COMMIT,
-]
-
-# 모의 단계 지연 시간 (ms) - 실제 처리 시뮬레이션
-PHASE_DELAYS_MS = {
-    AgentPhase.PARSE: 50,
-    AgentPhase.VALIDATE: 30,
-    AgentPhase.PLAN: 100,
-    AgentPhase.RESOLVE: 150,
-    AgentPhase.RENDER: 80,
-    AgentPhase.VERIFY: 40,
-    AgentPhase.COMMIT: 20,
-}
-
-
-async def _stream_turn_events(
-    turn_input: TurnInput, seed: int | None = None
-) -> AsyncGenerator[str]:
-    """턴 처리 이벤트를 NDJSON 스트림으로 생성합니다.
-
-    Args:
-        turn_input: 사용자 턴 입력
-        seed: 모의 Orchestrator 시드 (재현성 보장)
-
-    Yields:
-        str: NDJSON 라인
-    """
-    orchestrator = MockOrchestrator(seed=seed)
-    collected_badges: list[str] = []
-
-    # Phase 1: Parse (TTFB를 위해 즉시 시작 이벤트 전송)
-    yield serialize_event(
-        StageEvent(
-            type=StreamEventType.STAGE, name=AgentPhase.PARSE.value, status=StageStatus.START
-        ).model_dump()
-    )
-
-    # 각 단계별 처리 시뮬레이션
-    for phase in ORCHESTRATOR_PHASES:
-        # 단계 시작
-        if phase != AgentPhase.PARSE:  # Parse는 이미 전송함
-            yield serialize_event(
-                StageEvent(
-                    type=StreamEventType.STAGE, name=phase.value, status=StageStatus.START
-                ).model_dump()
-            )
-
-        # 모의 처리 지연
-        delay_ms = PHASE_DELAYS_MS.get(phase, 50)
-        await asyncio.sleep(delay_ms / 1000.0)
-
-        # 단계 완료
-        yield serialize_event(
-            StageEvent(
-                type=StreamEventType.STAGE, name=phase.value, status=StageStatus.COMPLETE
-            ).model_dump()
-        )
-
-        # 배지 추가 (Validate, Verify 단계에서)
-        if phase == AgentPhase.VALIDATE:
-            collected_badges.append(ValidationBadge.SCHEMA_OK.value)
-            collected_badges.append(ValidationBadge.ECONOMY_OK.value)
-            yield serialize_event(
-                BadgesEvent(
-                    type=StreamEventType.BADGES, badges=collected_badges.copy()
-                ).model_dump()
-            )
-        elif phase == AgentPhase.VERIFY:
-            collected_badges.append(ValidationBadge.SAFETY_OK.value)
-            collected_badges.append(ValidationBadge.CONSISTENCY_OK.value)
-            yield serialize_event(
-                BadgesEvent(
-                    type=StreamEventType.BADGES, badges=collected_badges.copy()
-                ).model_dump()
-            )
-
-    # TurnOutput 생성
-    try:
-        turn_output = orchestrator.generate_turn_output(turn_input)
-
-        # 내러티브 델타 스트리밍 (타자 효과)
-        narrative = turn_output.narrative
-        chunk_size = 20  # 한 번에 전송할 글자 수
-        for i in range(0, len(narrative), chunk_size):
-            chunk = narrative[i : i + chunk_size]
-            yield serialize_event(
-                NarrativeDeltaEvent(type=StreamEventType.NARRATIVE_DELTA, text=chunk).model_dump()
-            )
-            await asyncio.sleep(0.02)  # 타자 효과 딜레이
-
-        # 최종 TurnOutput 전송
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
-        )
-
-    except ValidationError as e:
-        # 스키마 검증 실패 시 폴백 (RULE-004)
-        # RU-002-S1: economy_snapshot을 전달하여 잔액 유지
-        fallback = orchestrator.create_safe_fallback(
-            language=turn_input.language,
-            error_message=str(e),  # 내부 로깅용, UI에 노출 안 함
-            economy_snapshot=CurrencyAmount(
-                signal=turn_input.economy_snapshot.signal,
-                memory_shard=turn_input.economy_snapshot.memory_shard,
-            ),
-        )
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-        )
-
-    except Exception:
-        # RU-002-S1: 예외 발생 시 error + final(폴백) 순서로 송출
-        # (프롬프트/내부 추론 노출 금지 - RULE-007)
-        yield serialize_event(
-            ErrorEvent(
-                type=StreamEventType.ERROR,
-                message="처리 중 오류가 발생했습니다"
-                if turn_input.language == Language.KO
-                else "An error occurred during processing",
-                code="INTERNAL_ERROR",
-            ).model_dump()
-        )
-        # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
-        fallback = orchestrator.create_safe_fallback(
-            language=turn_input.language,
-            error_message="Internal error",
-            economy_snapshot=CurrencyAmount(
-                signal=turn_input.economy_snapshot.signal,
-                memory_shard=turn_input.economy_snapshot.memory_shard,
-            ),
-        )
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-        )
-
-
-async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, Any]:
-    """요청 본문을 TurnInput으로 검증 및 파싱합니다.
-
-    Returns:
-        TurnInput 또는 에러 정보 dict (language, economy_snapshot 포함)
-    """
-    body: dict[str, Any] | None = None
-    try:
-        body = await request.json()
-        return TurnInput.model_validate(body)
-    except ValidationError as e:
-        # RU-002-S1: 입력 검증 실패 시에도 language/economy 추출 시도
-        raw_language = body.get("language") if isinstance(body, dict) else None
-        raw_economy = body.get("economy_snapshot") if isinstance(body, dict) else None
-        return {
-            "error": True,
-            "message": "Invalid input",
-            "details": e.errors(),
-            "language": raw_language if raw_language in ("ko-KR", "en-US") else "ko-KR",
-            "economy_snapshot": raw_economy,
-        }
-    except Exception:
-        return {
-            "error": True,
-            "message": "Failed to parse request body",
-            "details": None,
-            "language": "ko-KR",
-            "economy_snapshot": None,
-        }
-
-
-@router.post(
-    "/turn",
-    response_class=StreamingResponse,
-    summary="턴 처리 (HTTP Streaming)",
-    description="""
-턴 입력을 받아 NDJSON 스트리밍으로 결과를 반환합니다.
-
-**스트림 이벤트 타입**:
-- `stage`: 처리 단계 진행 상태
-- `badges`: 검증 배지 목록
-- `narrative_delta`: 내러티브 텍스트 조각 (타자 효과)
-- `final`: 최종 TurnOutput
-- `error`: 에러 발생 시
-
-**예시 요청**:
-```json
-{
-    "language": "ko-KR",
-    "text": "문을 열어본다",
-    "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
-    "economy_snapshot": {"signal": 100, "memory_shard": 5}
-}
-```
-""",
-    responses={
-        200: {
-            "description": "NDJSON 스트림",
-            "content": {
-                "application/x-ndjson": {
-                    "example": '{"type":"stage","name":"parse","status":"start"}\n'
-                }
-            },
-        },
-        400: {"description": "잘못된 요청"},
-    },
-)
-async def turn_stream(request: Request) -> StreamingResponse:
-    """턴 처리 HTTP Streaming 엔드포인트.
-
-    POST 요청으로 TurnInput을 받아 NDJSON 스트리밍으로 결과를 반환합니다.
-    TTFB를 줄이기 위해 첫 stage 이벤트를 즉시 전송합니다.
-
-    Args:
-        request: FastAPI Request 객체
-
-    Returns:
-        StreamingResponse: NDJSON 스트림
-    """
-    # 입력 검증
-    parse_result = await _validate_and_parse_input(request)
-
-    if isinstance(parse_result, dict) and parse_result.get("error"):
-        # RU-002-S1: 입력 검증 실패 시에도 error + final(폴백) 순서로 송출
-        error_language = parse_result.get("language", "ko-KR")
-        error_economy = parse_result.get("economy_snapshot")
-
-        # economy_snapshot이 유효한지 확인
-        economy_snapshot: CurrencyAmount | None = None
-        if isinstance(error_economy, dict):
-            try:
-                # 명시적 타입 캐스팅으로 Pyright 경고 해소
-                eco_dict = cast(dict[str, Any], error_economy)
-                economy_snapshot = CurrencyAmount(
-                    signal=int(eco_dict.get("signal", 100)),
-                    memory_shard=int(eco_dict.get("memory_shard", 5)),
-                )
-            except (ValueError, TypeError):
-                economy_snapshot = None
-
-        async def error_stream() -> AsyncGenerator[str]:
-            # 에러 이벤트 송출
-            yield serialize_event(
-                ErrorEvent(
-                    type=StreamEventType.ERROR,
-                    message=parse_result.get("message", "Invalid input"),
-                    code="VALIDATION_ERROR",
-                ).model_dump()
-            )
-            # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
-            fallback_orchestrator = MockOrchestrator()
-            fallback = fallback_orchestrator.create_safe_fallback(
-                language=Language.KO if error_language == "ko-KR" else Language.EN,
-                error_message="Validation error",
-                economy_snapshot=economy_snapshot,
-            )
-            yield serialize_event(
-                FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-            )
-
-        return StreamingResponse(
-            error_stream(),
-            media_type="application/x-ndjson",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",  # nginx 버퍼링 비활성화
-            },
-        )
-
-    turn_input: TurnInput = parse_result  # type: ignore[assignment]
-
-    # 시드 추출 (쿼리 파라미터에서, 테스트/재현용)
-    seed_param = request.query_params.get("seed")
-    seed = int(seed_param) if seed_param else None
-
-    # NDJSON 스트리밍 응답
-    return StreamingResponse(
-        _stream_turn_events(turn_input, seed=seed),
-        media_type="application/x-ndjson",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",  # nginx 버퍼링 비활성화
-            "X-Request-Time": str(int(time.time() * 1000)),
-        },
-    )
 </file>
 
 <file path="backend/src/unknown_world/main.py">
@@ -4206,6 +3909,422 @@ class MockOrchestrator:
         )
 </file>
 
+<file path="frontend/src/App.tsx">
+/**
+ * Unknown World - 메인 게임 UI 레이아웃
+ *
+ * RULE-002 준수: 채팅 버블 UI 금지
+ * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
+ * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
+ *   Rule Board, Economy HUD, Agent Console, Scanner Slot
+ *
+ * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ * @see vibe/prd.md 6.7/6.8/9장
+ */
+
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { AgentConsole } from './components/AgentConsole';
+import { useAgentStore } from './stores/agentStore';
+import { startTurnStream, type StreamCallbacks } from './api/turnStream';
+import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+interface NarrativeEntry {
+  turn: number;
+  text: string;
+}
+
+// =============================================================================
+// 패널 컴포넌트
+// =============================================================================
+
+interface PanelProps {
+  title: string;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+function Panel({ title, children, className = '' }: PanelProps) {
+  return (
+    <div className={`panel ${className}`}>
+      <div className="panel-header">
+        <span className="panel-title">{title}</span>
+      </div>
+      <div className="panel-content">
+        {children || <p className="panel-placeholder">[ 준비 중 ]</p>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 내러티브 피드 컴포넌트
+// =============================================================================
+
+interface NarrativeFeedProps {
+  entries: NarrativeEntry[];
+  streamingText: string;
+}
+
+function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // 새 엔트리 추가 시 스크롤
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [entries, streamingText]);
+
+  return (
+    <div className="narrative-feed" ref={feedRef}>
+      {entries.map((entry) => (
+        <div key={entry.turn} className="narrative-entry">
+          <span className="narrative-timestamp">[TURN {entry.turn}]</span>
+          <span className="narrative-text">{entry.text}</span>
+        </div>
+      ))}
+      {streamingText && (
+        <div className="narrative-entry streaming">
+          <span className="narrative-timestamp">[STREAMING]</span>
+          <span className="narrative-text">{streamingText}</span>
+          <span className="cursor-blink">▌</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 액션 덱 컴포넌트
+// =============================================================================
+
+interface ActionDeckProps {
+  cards: ActionCard[];
+  onCardClick?: (card: ActionCard) => void;
+  disabled?: boolean;
+}
+
+function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
+  // 카드가 없으면 기본 카드 표시
+  const displayCards: ActionCard[] =
+    cards.length > 0
+      ? cards
+      : [
+          {
+            id: 'default-1',
+            label: '탐색하기',
+            description: '주변을 살펴본다',
+            cost: { signal: 1, memory_shard: 0 },
+            risk: 'low',
+            hint: null,
+          },
+          {
+            id: 'default-2',
+            label: '조사하기',
+            description: '자세히 살펴본다',
+            cost: { signal: 2, memory_shard: 0 },
+            risk: 'medium',
+            hint: null,
+          },
+          {
+            id: 'default-3',
+            label: '대화하기',
+            description: '말을 걸어본다',
+            cost: { signal: 1, memory_shard: 0 },
+            risk: 'low',
+            hint: null,
+          },
+        ];
+
+  return (
+    <div className="action-deck">
+      {displayCards.map((card) => (
+        <button
+          key={card.id}
+          type="button"
+          className="action-card"
+          onClick={() => onCardClick?.(card)}
+          disabled={disabled}
+        >
+          <div className="action-card-title">{card.label}</div>
+          <div className="action-card-cost">
+            ⚡ {card.cost.signal} Signal
+            {card.cost.memory_shard > 0 && ` | 💎 ${card.cost.memory_shard}`}
+            {' | '}⚠ {card.risk}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// =============================================================================
+// 헤더 컴포넌트
+// =============================================================================
+
+interface GameHeaderProps {
+  signal: number;
+  memoryShard: number;
+  isConnected: boolean;
+}
+
+function GameHeader({ signal, memoryShard, isConnected }: GameHeaderProps) {
+  return (
+    <header className="game-header">
+      <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
+        UNKNOWN WORLD
+      </h1>
+      <div className="header-controls">
+        <div className="economy-hud">
+          <span className="signal-icon">⚡</span>
+          <span>Signal: {signal}</span>
+          <span className="shard-icon">💎</span>
+          <span>Shard: {memoryShard}</span>
+        </div>
+        <div className="connection-status">
+          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
+          <span>{isConnected ? 'ONLINE' : 'OFFLINE'}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// =============================================================================
+// 메인 App 컴포넌트
+// =============================================================================
+
+function App() {
+  // 상태
+  const [inputText, setInputText] = useState('');
+  const turnCountRef = useRef(0);
+  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>([
+    { turn: 0, text: '미지의 세계에 오신 것을 환영합니다...' },
+  ]);
+  const [actionCards, setActionCards] = useState<ActionCard[]>([]);
+  const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
+  const [isConnected, setIsConnected] = useState(true);
+
+  // Agent Store 액션
+  const {
+    startStream,
+    handleStage,
+    handleBadges,
+    handleNarrativeDelta,
+    handleFinal,
+    handleError,
+    completeStream,
+    isStreaming,
+    narrativeBuffer,
+  } = useAgentStore();
+
+  // 취소 함수 ref
+  const cancelStreamRef = useRef<(() => void) | null>(null);
+
+  /**
+   * TurnOutput을 받아 UI 상태를 업데이트합니다.
+   */
+  const applyTurnOutput = useCallback((output: TurnOutput) => {
+    // 내러티브 추가
+    turnCountRef.current += 1;
+    const newTurn = turnCountRef.current;
+    setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
+
+    // 액션 카드 업데이트
+    if (output.ui.action_deck.cards.length > 0) {
+      setActionCards(output.ui.action_deck.cards);
+    }
+
+    // 경제 상태 업데이트 (RULE-005: 잔액 반영)
+    setEconomy({
+      signal: output.economy.balance_after.signal,
+      memory_shard: output.economy.balance_after.memory_shard,
+    });
+  }, []);
+
+  /**
+   * 턴을 실행합니다.
+   */
+  const executeTurn = useCallback(
+    (text: string, cardId?: string) => {
+      if (isStreaming) return;
+
+      // 입력 데이터 생성
+      const turnInput: TurnInput = {
+        language: 'ko-KR',
+        text: text || (cardId ? `카드 선택: ${cardId}` : ''),
+        click: null,
+        client: {
+          viewport_w: window.innerWidth,
+          viewport_h: window.innerHeight,
+          theme: 'dark',
+        },
+        economy_snapshot: economy,
+      };
+
+      // Agent Store 시작
+      startStream();
+
+      // 스트림 콜백 설정
+      const callbacks: StreamCallbacks = {
+        onStage: handleStage,
+        onBadges: handleBadges,
+        onNarrativeDelta: handleNarrativeDelta,
+        onFinal: (event) => {
+          handleFinal(event);
+          applyTurnOutput(event.data);
+        },
+        onError: (event) => {
+          handleError(event);
+          setIsConnected(false);
+        },
+        onComplete: () => {
+          completeStream();
+        },
+      };
+
+      // 스트림 시작
+      cancelStreamRef.current = startTurnStream(turnInput, callbacks);
+      setInputText('');
+    },
+    [
+      isStreaming,
+      economy,
+      startStream,
+      handleStage,
+      handleBadges,
+      handleNarrativeDelta,
+      handleFinal,
+      handleError,
+      completeStream,
+      applyTurnOutput,
+    ],
+  );
+
+  /**
+   * 입력 제출 핸들러
+   */
+  const handleSubmit = useCallback(() => {
+    if (inputText.trim()) {
+      executeTurn(inputText.trim());
+    }
+  }, [inputText, executeTurn]);
+
+  /**
+   * 카드 클릭 핸들러
+   */
+  const handleCardClick = useCallback(
+    (card: ActionCard) => {
+      executeTurn(card.label, card.id);
+    },
+    [executeTurn],
+  );
+
+  /**
+   * 키보드 이벤트 핸들러
+   */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit],
+  );
+
+  // 컴포넌트 언마운트 시 스트림 취소
+  useEffect(() => {
+    return () => {
+      cancelStreamRef.current?.();
+    };
+  }, []);
+
+  return (
+    <>
+      {/* CRT 스캔라인 오버레이 */}
+      <div className="crt-overlay" aria-hidden="true" />
+
+      {/* 게임 레이아웃 */}
+      <div className="game-container">
+        {/* Header: 타이틀/상태/재화 */}
+        <GameHeader
+          signal={economy.signal}
+          memoryShard={economy.memory_shard}
+          isConnected={isConnected}
+        />
+
+        {/* Sidebar Left: Inventory / Quest / Rule Board */}
+        <aside className="sidebar-left">
+          <Panel title="Inventory" className="flex-1">
+            <p className="panel-placeholder">[ 드래그 앤 드롭 영역 ]</p>
+          </Panel>
+          <Panel title="Quest">
+            <p className="panel-placeholder">[ 목표/퀘스트 목록 ]</p>
+          </Panel>
+          <Panel title="Rule Board">
+            <p className="panel-placeholder">[ 월드 규칙/변형 타임라인 ]</p>
+          </Panel>
+        </aside>
+
+        {/* Center: Scene Canvas + Narrative Feed */}
+        <main className="game-center">
+          <div className="scene-canvas">
+            <div className="scene-placeholder">
+              <p>[ Scene Canvas ]</p>
+              <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
+            </div>
+          </div>
+          <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
+        </main>
+
+        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
+        <aside className="sidebar-right">
+          <Panel title="Agent Console" className="flex-1">
+            <AgentConsole />
+          </Panel>
+          <Panel title="Memory Pin">
+            <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
+          </Panel>
+          <Panel title="Scanner">
+            <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
+          </Panel>
+        </aside>
+
+        {/* Footer: Action Deck + Command Input */}
+        <footer className="game-footer">
+          <ActionDeck cards={actionCards} onCardClick={handleCardClick} disabled={isStreaming} />
+          <div className="command-input-area">
+            <span className="command-prompt">&gt;</span>
+            <input
+              type="text"
+              className="command-input"
+              placeholder={isStreaming ? '처리 중...' : '명령을 입력하세요...'}
+              aria-label="게임 명령 입력"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isStreaming}
+            />
+            <button type="button" onClick={handleSubmit} disabled={isStreaming}>
+              {isStreaming ? 'WAIT' : 'EXECUTE'}
+            </button>
+          </div>
+        </footer>
+      </div>
+    </>
+  );
+}
+
+export default App;
+</file>
+
 <file path="frontend/src/stores/agentStore.ts">
 /**
  * Unknown World - Agent Console 상태 관리 (Zustand).
@@ -4456,324 +4575,6 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 export const selectError = (state: AgentStore) => state.error;
 </file>
 
-<file path="frontend/src/types/turn_stream.ts">
-/**
- * Unknown World - Turn Stream 이벤트 계약(Contract).
- *
- * NDJSON 스트리밍에서 사용되는 이벤트 타입, 인터페이스를 정의합니다.
- * 이 모듈은 백엔드와 프론트엔드 간의 스트림 이벤트 계약 SSOT입니다.
- *
- * 설계 원칙:
- *   - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
- *   - RU-002-S2: 이벤트별 Zod 검증 + Unknown/확장 이벤트 폴백
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
- *   - RULE-008: 단계/배지 가시화
- *
- * 참조:
- *   - vibe/unit-plans/U-007[Mvp].md
- *   - vibe/refactors/RU-002-Q4.md
- *   - vibe/refactors/RU-002-S2.md
- *
- * @module types/turn_stream
- */
-
-import { z } from 'zod';
-import {
-  AgentPhaseSchema,
-  ValidationBadgeSchema,
-  type TurnOutput,
-  type AgentPhase,
-  type ValidationBadge,
-} from '../schemas/turn';
-
-// =============================================================================
-// 스트림 이벤트 타입 상수 (서버 계약과 일치)
-// =============================================================================
-
-/** 스트림 이벤트 타입 상수 */
-export const StreamEventType = {
-  STAGE: 'stage',
-  BADGES: 'badges',
-  NARRATIVE_DELTA: 'narrative_delta',
-  FINAL: 'final',
-  ERROR: 'error',
-} as const;
-
-export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
-
-/**
- * 단계 상태 상수.
- * RU-002-S2/RU-002-Q2: v1(complete) 및 v2(ok/fail) 별칭 모두 지원.
- */
-export const StageStatus = {
-  START: 'start',
-  COMPLETE: 'complete',
-  /** v2 별칭: complete와 동일하게 처리 */
-  OK: 'ok',
-  /** v2 별칭: 단계 실패 */
-  FAIL: 'fail',
-} as const;
-
-export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
-
-// =============================================================================
-// RU-002-S2: 이벤트별 Zod 스키마 (경량 검증 + 폴백)
-// =============================================================================
-
-/**
- * stage.status 스키마.
- * v1(complete) 및 v2(ok/fail) 별칭 모두 허용.
- */
-export const StageStatusSchema = z.enum(['start', 'complete', 'ok', 'fail']);
-
-/**
- * StageEvent Zod 스키마.
- * 단계 진행 이벤트 검증용.
- */
-export const StageEventSchema = z.object({
-  type: z.literal(StreamEventType.STAGE),
-  name: AgentPhaseSchema,
-  status: StageStatusSchema,
-});
-
-/**
- * BadgesEvent Zod 스키마 (v1: 배열).
- * v1은 badges: string[] 형식.
- */
-export const BadgesEventSchemaV1 = z.object({
-  type: z.literal(StreamEventType.BADGES),
-  badges: z.array(ValidationBadgeSchema),
-});
-
-/**
- * BadgesEvent Zod 스키마 (v2: 객체/맵).
- * 향후 v2는 badges: { [key]: status } 형식을 지원할 수 있음.
- * 현재는 v1만 사용하므로 이 스키마는 확장성을 위해 정의.
- */
-export const BadgesEventSchemaV2 = z.object({
-  type: z.literal(StreamEventType.BADGES),
-  badges: z.record(z.string(), z.boolean()),
-});
-
-/**
- * BadgesEvent 통합 스키마.
- * v1(배열) 또는 v2(객체) 모두 허용.
- */
-export const BadgesEventSchema = z.union([BadgesEventSchemaV1, BadgesEventSchemaV2]);
-
-/**
- * NarrativeDeltaEvent Zod 스키마.
- * 타자 효과용 내러티브 델타 이벤트 검증용.
- */
-export const NarrativeDeltaEventSchema = z.object({
-  type: z.literal(StreamEventType.NARRATIVE_DELTA),
-  text: z.string(),
-});
-
-/**
- * FinalEvent 원시 스키마.
- * v1(data) 및 v2(turn_output) 별칭 모두 허용.
- * TurnOutput 자체 검증은 turnStream.ts에서 safeParseTurnOutput으로 수행.
- */
-export const FinalEventRawSchema = z.object({
-  type: z.literal(StreamEventType.FINAL),
-  data: z.unknown().optional(),
-  turn_output: z.unknown().optional(),
-});
-
-/**
- * ErrorEvent Zod 스키마.
- * 에러 이벤트 검증용.
- */
-export const ErrorEventSchema = z.object({
-  type: z.literal(StreamEventType.ERROR),
-  message: z.string(),
-  code: z.string().optional(),
-});
-
-/**
- * 이벤트 타입 추출용 최소 스키마.
- * Unknown 이벤트 판별에 사용.
- */
-export const BaseEventSchema = z.object({
-  type: z.string(),
-});
-
-// =============================================================================
-// 이벤트 파싱 유틸리티 (RU-002-S2)
-// =============================================================================
-
-/** 이벤트 검증 결과 타입 */
-export type EventParseResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: z.ZodError };
-
-/**
- * StageEvent를 안전하게 파싱합니다.
- */
-export function safeParseStageEvent(
-  data: unknown,
-): EventParseResult<z.infer<typeof StageEventSchema>> {
-  const result = StageEventSchema.safeParse(data);
-  return result.success
-    ? { success: true, data: result.data }
-    : { success: false, error: result.error };
-}
-
-/**
- * BadgesEvent를 안전하게 파싱합니다.
- * v1(배열) 형태로 정규화하여 반환합니다.
- */
-export function safeParseBadgesEvent(data: unknown): EventParseResult<BadgesEvent> {
-  const result = BadgesEventSchema.safeParse(data);
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
-
-  // v2(객체) 형태인 경우 v1(배열)로 정규화
-  const parsed = result.data;
-  if (Array.isArray(parsed.badges)) {
-    // v1 형태: 그대로 반환
-    return {
-      success: true,
-      data: { type: StreamEventType.BADGES, badges: parsed.badges as ValidationBadge[] },
-    };
-  } else {
-    // v2 형태: true인 키만 추출하여 배열로 변환
-    const badgeArray = Object.entries(parsed.badges)
-      .filter(([, value]) => value)
-      .map(([key]) => key as ValidationBadge);
-    return {
-      success: true,
-      data: { type: StreamEventType.BADGES, badges: badgeArray },
-    };
-  }
-}
-
-/**
- * NarrativeDeltaEvent를 안전하게 파싱합니다.
- */
-export function safeParseNarrativeDeltaEvent(
-  data: unknown,
-): EventParseResult<z.infer<typeof NarrativeDeltaEventSchema>> {
-  const result = NarrativeDeltaEventSchema.safeParse(data);
-  return result.success
-    ? { success: true, data: result.data }
-    : { success: false, error: result.error };
-}
-
-/**
- * FinalEvent 원시 형태를 안전하게 파싱합니다.
- * TurnOutput 자체 검증은 별도로 수행해야 합니다.
- */
-export function safeParseFinalEventRaw(
-  data: unknown,
-): EventParseResult<z.infer<typeof FinalEventRawSchema>> {
-  const result = FinalEventRawSchema.safeParse(data);
-  return result.success
-    ? { success: true, data: result.data }
-    : { success: false, error: result.error };
-}
-
-/**
- * ErrorEvent를 안전하게 파싱합니다.
- */
-export function safeParseErrorEvent(
-  data: unknown,
-): EventParseResult<z.infer<typeof ErrorEventSchema>> {
-  const result = ErrorEventSchema.safeParse(data);
-  return result.success
-    ? { success: true, data: result.data }
-    : { success: false, error: result.error };
-}
-
-/**
- * stage.status 정규화 헬퍼.
- * 'ok'를 'complete'로, 'fail'은 그대로 유지.
- */
-export function normalizeStageStatus(status: StageStatusName): 'start' | 'complete' | 'fail' {
-  if (status === 'ok') return 'complete';
-  return status;
-}
-
-// =============================================================================
-// 스트림 이벤트 인터페이스
-// =============================================================================
-
-/**
- * 단계 진행 이벤트.
- * RU-002-S2: status에 'fail' 추가하여 단계 실패 표현 지원.
- */
-export interface StageEvent {
-  type: typeof StreamEventType.STAGE;
-  name: AgentPhase;
-  /** 'start' | 'complete' | 'ok' | 'fail'. ok는 complete로 정규화됨. */
-  status: StageStatusName;
-}
-
-/** 배지 이벤트 */
-export interface BadgesEvent {
-  type: typeof StreamEventType.BADGES;
-  badges: ValidationBadge[];
-}
-
-/** 내러티브 델타 이벤트 (타자 효과용) */
-export interface NarrativeDeltaEvent {
-  type: typeof StreamEventType.NARRATIVE_DELTA;
-  text: string;
-}
-
-/** 최종 TurnOutput 이벤트
- *
- * RU-002-Q2: v1은 `data`, v2는 `turn_output` 사용.
- * 하위호환을 위해 두 필드 모두 선언하되, 정규화된 인터페이스는 `data`를 사용.
- */
-export interface FinalEvent {
-  type: typeof StreamEventType.FINAL;
-  /** v1 현행 계약: TurnOutput 페이로드 */
-  data: TurnOutput;
-}
-
-/** FinalEvent 원시 수신 형태 (v1/v2 별칭 지원) */
-export interface FinalEventRaw {
-  type: typeof StreamEventType.FINAL;
-  /** v1 계약 */
-  data?: TurnOutput;
-  /** v2 계약 (별칭) */
-  turn_output?: TurnOutput;
-}
-
-/** 에러 이벤트 */
-export interface ErrorEvent {
-  type: typeof StreamEventType.ERROR;
-  message: string;
-  code?: string;
-}
-
-/** 스트림 이벤트 유니온 타입 */
-export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
-
-// =============================================================================
-// 스트림 콜백 인터페이스
-// =============================================================================
-
-/** 스트림 이벤트 콜백 */
-export interface StreamCallbacks {
-  /** 단계 진행 이벤트 */
-  onStage?: (event: StageEvent) => void;
-  /** 배지 이벤트 */
-  onBadges?: (event: BadgesEvent) => void;
-  /** 내러티브 델타 이벤트 */
-  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
-  /** 최종 TurnOutput 이벤트 */
-  onFinal?: (event: FinalEvent) => void;
-  /** 에러 이벤트 */
-  onError?: (event: ErrorEvent) => void;
-  /** 스트림 완료 */
-  onComplete?: () => void;
-}
-</file>
-
 <file path="frontend/vite.config.ts">
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -4875,6 +4676,449 @@ export default defineConfig({
 }
 </file>
 
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+    "google-genai==1.56.0",
+    "google-cloud-aiplatform==1.132.0",
+    "google-cloud-storage==3.7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.407",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
+</file>
+
+<file path="backend/src/unknown_world/api/turn.py">
+"""Unknown World - /api/turn HTTP Streaming 엔드포인트.
+
+POST 요청을 받아 NDJSON(라인 단위 JSON) 스트리밍으로 턴 결과를 반환합니다.
+
+설계 원칙:
+    - RULE-003: 구조화 출력(JSON Schema) 우선 + Pydantic 검증
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
+    - RULE-007: 프롬프트/내부 추론 노출 금지
+    - RULE-008: 단계/배지 가시화, TTFB 2초 목표
+
+스트림 이벤트 타입:
+    - stage: 단계 진행 상태 (Parse→Validate→Plan→Resolve→Render→Verify→Commit)
+    - badges: 검증 배지 목록
+    - narrative_delta: 내러티브 텍스트 조각 (타자 효과용)
+    - final: 최종 TurnOutput
+    - error: 에러 발생 시
+
+참조:
+    - vibe/unit-plans/U-007[Mvp].md
+    - .cursor/rules/20-backend-orchestrator.mdc
+"""
+
+import asyncio
+import time
+from collections.abc import AsyncGenerator
+from typing import Any, cast
+
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
+
+from unknown_world.api.turn_stream_events import (
+    BadgesEvent,
+    ErrorEvent,
+    FinalEvent,
+    NarrativeDeltaEvent,
+    RepairEvent,
+    StageEvent,
+    StageStatus,
+    StreamEventType,
+    serialize_event,
+)
+from unknown_world.models.turn import (
+    AgentPhase,
+    CurrencyAmount,
+    Language,
+    TurnInput,
+    ValidationBadge,
+)
+from unknown_world.orchestrator.mock import MockOrchestrator
+
+# =============================================================================
+# 라우터 정의
+# =============================================================================
+
+router = APIRouter(prefix="/api", tags=["Turn"])
+
+# 단계 목록 (PRD 예시)
+ORCHESTRATOR_PHASES = [
+    AgentPhase.PARSE,
+    AgentPhase.VALIDATE,
+    AgentPhase.PLAN,
+    AgentPhase.RESOLVE,
+    AgentPhase.RENDER,
+    AgentPhase.VERIFY,
+    AgentPhase.COMMIT,
+]
+
+# 모의 단계 지연 시간 (ms) - 실제 처리 시뮬레이션
+PHASE_DELAYS_MS = {
+    AgentPhase.PARSE: 50,
+    AgentPhase.VALIDATE: 30,
+    AgentPhase.PLAN: 100,
+    AgentPhase.RESOLVE: 150,
+    AgentPhase.RENDER: 80,
+    AgentPhase.VERIFY: 40,
+    AgentPhase.COMMIT: 20,
+}
+
+
+async def _stream_turn_events(
+    turn_input: TurnInput, seed: int | None = None
+) -> AsyncGenerator[str]:
+    """턴 처리 이벤트를 NDJSON 스트림으로 생성합니다.
+
+    Args:
+        turn_input: 사용자 턴 입력
+        seed: 모의 Orchestrator 시드 (재현성 보장)
+
+    Yields:
+        str: NDJSON 라인
+    """
+    orchestrator = MockOrchestrator(seed=seed)
+    collected_badges: list[str] = []
+
+    # Phase 1: Parse (TTFB를 위해 즉시 시작 이벤트 전송)
+    yield serialize_event(
+        StageEvent(
+            type=StreamEventType.STAGE, name=AgentPhase.PARSE.value, status=StageStatus.START
+        ).model_dump()
+    )
+
+    # 각 단계별 처리 시뮬레이션
+    for phase in ORCHESTRATOR_PHASES:
+        # 단계 시작
+        if phase != AgentPhase.PARSE:  # Parse는 이미 전송함
+            yield serialize_event(
+                StageEvent(
+                    type=StreamEventType.STAGE, name=phase.value, status=StageStatus.START
+                ).model_dump()
+            )
+
+        # 모의 처리 지연
+        delay_ms = PHASE_DELAYS_MS.get(phase, 50)
+        await asyncio.sleep(delay_ms / 1000.0)
+
+        # 단계 완료
+        yield serialize_event(
+            StageEvent(
+                type=StreamEventType.STAGE, name=phase.value, status=StageStatus.COMPLETE
+            ).model_dump()
+        )
+
+        # 배지 추가 (Validate, Verify 단계에서)
+        if phase == AgentPhase.VALIDATE:
+            collected_badges.append(ValidationBadge.SCHEMA_OK.value)
+            collected_badges.append(ValidationBadge.ECONOMY_OK.value)
+            yield serialize_event(
+                BadgesEvent(
+                    type=StreamEventType.BADGES, badges=collected_badges.copy()
+                ).model_dump()
+            )
+        elif phase == AgentPhase.VERIFY:
+            collected_badges.append(ValidationBadge.SAFETY_OK.value)
+            collected_badges.append(ValidationBadge.CONSISTENCY_OK.value)
+            yield serialize_event(
+                BadgesEvent(
+                    type=StreamEventType.BADGES, badges=collected_badges.copy()
+                ).model_dump()
+            )
+
+    # TurnOutput 생성 (Repair 루프 포함 - RULE-004)
+    max_repair_attempts = 3
+    repair_attempt = 0
+    turn_output = None
+
+    try:
+        while repair_attempt <= max_repair_attempts:
+            try:
+                # 0회차는 정상 시도, 1회차부터는 repair
+                if repair_attempt > 0:
+                    yield serialize_event(
+                        RepairEvent(
+                            type=StreamEventType.REPAIR,
+                            attempt=repair_attempt,
+                            message="검증 실패로 인해 다시 시도 중입니다..."
+                            if turn_input.language == Language.KO
+                            else "Retrying due to validation failure",
+                        ).model_dump()
+                    )
+
+                turn_output = orchestrator.generate_turn_output(turn_input)
+                break  # 성공 시 루프 탈출
+
+            except ValidationError as e:
+                repair_attempt += 1
+                if repair_attempt > max_repair_attempts:
+                    # 최종 실패 시 폴백 (RULE-004)
+                    turn_output = orchestrator.create_safe_fallback(
+                        language=turn_input.language,
+                        error_message=str(e),
+                        economy_snapshot=CurrencyAmount(
+                            signal=turn_input.economy_snapshot.signal,
+                            memory_shard=turn_input.economy_snapshot.memory_shard,
+                        ),
+                    )
+                    break
+                # 루프 계속 진행 (재시도)
+                continue
+
+        if turn_output:
+            # 내러티브 델타 스트리밍 (타자 효과)
+            narrative = turn_output.narrative
+            chunk_size = 20  # 한 번에 전송할 글자 수
+            for i in range(0, len(narrative), chunk_size):
+                chunk = narrative[i : i + chunk_size]
+                yield serialize_event(
+                    NarrativeDeltaEvent(
+                        type=StreamEventType.NARRATIVE_DELTA, text=chunk
+                    ).model_dump()
+                )
+                await asyncio.sleep(0.02)  # 타자 효과 딜레이
+
+            # 최종 TurnOutput 전송
+            yield serialize_event(
+                FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
+            )
+
+    except Exception:
+        # RU-002-S1: 예외 발생 시 error + final(폴백) 순서로 송출
+        # (프롬프트/내부 추론 노출 금지 - RULE-007)
+        yield serialize_event(
+            ErrorEvent(
+                type=StreamEventType.ERROR,
+                message="처리 중 오류가 발생했습니다"
+                if turn_input.language == Language.KO
+                else "An error occurred during processing",
+                code="INTERNAL_ERROR",
+            ).model_dump()
+        )
+        # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
+        fallback = orchestrator.create_safe_fallback(
+            language=turn_input.language,
+            error_message="Internal error",
+            economy_snapshot=CurrencyAmount(
+                signal=turn_input.economy_snapshot.signal,
+                memory_shard=turn_input.economy_snapshot.memory_shard,
+            ),
+        )
+        yield serialize_event(
+            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
+        )
+
+
+async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, Any]:
+    """요청 본문을 TurnInput으로 검증 및 파싱합니다.
+
+    Returns:
+        TurnInput 또는 에러 정보 dict (language, economy_snapshot 포함)
+    """
+    body: dict[str, Any] | None = None
+    try:
+        body = await request.json()
+        return TurnInput.model_validate(body)
+    except ValidationError as e:
+        # RU-002-S1: 입력 검증 실패 시에도 language/economy 추출 시도
+        raw_language = body.get("language") if isinstance(body, dict) else None
+        raw_economy = body.get("economy_snapshot") if isinstance(body, dict) else None
+        return {
+            "error": True,
+            "message": "Invalid input",
+            "details": e.errors(),
+            "language": raw_language if raw_language in ("ko-KR", "en-US") else "ko-KR",
+            "economy_snapshot": raw_economy,
+        }
+    except Exception:
+        return {
+            "error": True,
+            "message": "Failed to parse request body",
+            "details": None,
+            "language": "ko-KR",
+            "economy_snapshot": None,
+        }
+
+
+@router.post(
+    "/turn",
+    response_class=StreamingResponse,
+    summary="턴 처리 (HTTP Streaming)",
+    description="""
+턴 입력을 받아 NDJSON 스트리밍으로 결과를 반환합니다.
+
+**스트림 이벤트 타입**:
+- `stage`: 처리 단계 진행 상태
+- `badges`: 검증 배지 목록
+- `narrative_delta`: 내러티브 텍스트 조각 (타자 효과)
+- `final`: 최종 TurnOutput
+- `error`: 에러 발생 시
+
+**예시 요청**:
+```json
+{
+    "language": "ko-KR",
+    "text": "문을 열어본다",
+    "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
+    "economy_snapshot": {"signal": 100, "memory_shard": 5}
+}
+```
+""",
+    responses={
+        200: {
+            "description": "NDJSON 스트림",
+            "content": {
+                "application/x-ndjson": {
+                    "example": '{"type":"stage","name":"parse","status":"start"}\n'
+                }
+            },
+        },
+        400: {"description": "잘못된 요청"},
+    },
+)
+async def turn_stream(request: Request) -> StreamingResponse:
+    """턴 처리 HTTP Streaming 엔드포인트.
+
+    POST 요청으로 TurnInput을 받아 NDJSON 스트리밍으로 결과를 반환합니다.
+    TTFB를 줄이기 위해 첫 stage 이벤트를 즉시 전송합니다.
+
+    Args:
+        request: FastAPI Request 객체
+
+    Returns:
+        StreamingResponse: NDJSON 스트림
+    """
+    # 입력 검증
+    parse_result = await _validate_and_parse_input(request)
+
+    if isinstance(parse_result, dict) and parse_result.get("error"):
+        # RU-002-S1: 입력 검증 실패 시에도 error + final(폴백) 순서로 송출
+        error_language = parse_result.get("language", "ko-KR")
+        error_economy = parse_result.get("economy_snapshot")
+
+        # economy_snapshot이 유효한지 확인
+        economy_snapshot: CurrencyAmount | None = None
+        if isinstance(error_economy, dict):
+            try:
+                # 명시적 타입 캐스팅으로 Pyright 경고 해소
+                eco_dict = cast(dict[str, Any], error_economy)
+                economy_snapshot = CurrencyAmount(
+                    signal=int(eco_dict.get("signal", 100)),
+                    memory_shard=int(eco_dict.get("memory_shard", 5)),
+                )
+            except (ValueError, TypeError):
+                economy_snapshot = None
+
+        async def error_stream() -> AsyncGenerator[str]:
+            # 에러 이벤트 송출
+            yield serialize_event(
+                ErrorEvent(
+                    type=StreamEventType.ERROR,
+                    message=parse_result.get("message", "Invalid input"),
+                    code="VALIDATION_ERROR",
+                ).model_dump()
+            )
+            # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
+            fallback_orchestrator = MockOrchestrator()
+            fallback = fallback_orchestrator.create_safe_fallback(
+                language=Language.KO if error_language == "ko-KR" else Language.EN,
+                error_message="Validation error",
+                economy_snapshot=economy_snapshot,
+            )
+            yield serialize_event(
+                FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
+            )
+
+        return StreamingResponse(
+            error_stream(),
+            media_type="application/x-ndjson",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",  # nginx 버퍼링 비활성화
+            },
+        )
+
+    turn_input: TurnInput = parse_result  # type: ignore[assignment]
+
+    # 시드 추출 (쿼리 파라미터에서, 테스트/재현용)
+    seed_param = request.query_params.get("seed")
+    seed = int(seed_param) if seed_param else None
+
+    # NDJSON 스트리밍 응답
+    return StreamingResponse(
+        _stream_turn_events(turn_input, seed=seed),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # nginx 버퍼링 비활성화
+            "X-Request-Time": str(int(time.time() * 1000)),
+        },
+    )
+</file>
+
 <file path="frontend/package.json">
 {
   "name": "unknown-world-frontend",
@@ -4924,6 +5168,359 @@ export default defineConfig({
     "vite": "7.3.0",
     "vitest": "^4.0.16"
   }
+}
+</file>
+
+<file path="frontend/src/types/turn_stream.ts">
+/**
+ * Unknown World - Turn Stream 이벤트 계약(Contract).
+ *
+ * NDJSON 스트리밍에서 사용되는 이벤트 타입, 인터페이스를 정의합니다.
+ * 이 모듈은 백엔드와 프론트엔드 간의 스트림 이벤트 계약 SSOT입니다.
+ *
+ * 설계 원칙:
+ *   - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
+ *   - RU-002-S2: 이벤트별 Zod 검증 + Unknown/확장 이벤트 폴백
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+ *   - RULE-008: 단계/배지 가시화
+ *
+ * 참조:
+ *   - vibe/unit-plans/U-007[Mvp].md
+ *   - vibe/refactors/RU-002-Q4.md
+ *   - vibe/refactors/RU-002-S2.md
+ *
+ * @module types/turn_stream
+ */
+
+import { z } from 'zod';
+import {
+  AgentPhaseSchema,
+  ValidationBadgeSchema,
+  type TurnOutput,
+  type AgentPhase,
+  type ValidationBadge,
+} from '../schemas/turn';
+
+// =============================================================================
+// 스트림 이벤트 타입 상수 (서버 계약과 일치)
+// =============================================================================
+
+/** 스트림 이벤트 타입 상수 */
+export const StreamEventType = {
+  STAGE: 'stage',
+  BADGES: 'badges',
+  NARRATIVE_DELTA: 'narrative_delta',
+  FINAL: 'final',
+  ERROR: 'error',
+  REPAIR: 'repair',
+} as const;
+
+export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
+
+/**
+ * 단계 상태 상수.
+ * RU-002-S2/RU-002-Q2: v1(complete) 및 v2(ok/fail) 별칭 모두 지원.
+ */
+export const StageStatus = {
+  START: 'start',
+  COMPLETE: 'complete',
+  /** 단계 실패 */
+  FAIL: 'fail',
+} as const;
+
+export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
+
+// =============================================================================
+// RU-002-S2: 이벤트별 Zod 스키마 (경량 검증 + 폴백)
+// =============================================================================
+
+/**
+ * stage.status 스키마.
+ * v1(complete) 및 v2(ok/fail) 별칭 모두 허용.
+ */
+export const StageStatusSchema = z.enum(['start', 'complete', 'ok', 'fail']);
+
+/**
+ * StageEvent Zod 스키마.
+ * 단계 진행 이벤트 검증용.
+ */
+export const StageEventSchema = z.object({
+  type: z.literal(StreamEventType.STAGE),
+  name: AgentPhaseSchema,
+  status: StageStatusSchema,
+});
+
+/**
+ * RepairEvent Zod 스키마.
+ * 자동 복구 시도 이벤트 검증용.
+ */
+export const RepairEventSchema = z.object({
+  type: z.literal(StreamEventType.REPAIR),
+  attempt: z.number(),
+  message: z.string().optional(),
+});
+
+/**
+ * BadgesEvent Zod 스키마 (v1: 배열).
+ * v1은 badges: string[] 형식.
+ */
+export const BadgesEventSchemaV1 = z.object({
+  type: z.literal(StreamEventType.BADGES),
+  badges: z.array(ValidationBadgeSchema),
+});
+
+/**
+ * BadgesEvent Zod 스키마 (v2: 객체/맵).
+ * 향후 v2는 badges: { [key]: status } 형식을 지원할 수 있음.
+ * 현재는 v1만 사용하므로 이 스키마는 확장성을 위해 정의.
+ */
+export const BadgesEventSchemaV2 = z.object({
+  type: z.literal(StreamEventType.BADGES),
+  badges: z.record(z.string(), z.boolean()),
+});
+
+/**
+ * BadgesEvent 통합 스키마.
+ * v1(배열) 또는 v2(객체) 모두 허용.
+ */
+export const BadgesEventSchema = z.union([BadgesEventSchemaV1, BadgesEventSchemaV2]);
+
+/**
+ * NarrativeDeltaEvent Zod 스키마.
+ * 타자 효과용 내러티브 델타 이벤트 검증용.
+ */
+export const NarrativeDeltaEventSchema = z.object({
+  type: z.literal(StreamEventType.NARRATIVE_DELTA),
+  text: z.string(),
+});
+
+/**
+ * FinalEvent 원시 스키마.
+ * v1(data) 및 v2(turn_output) 별칭 모두 허용.
+ * TurnOutput 자체 검증은 turnStream.ts에서 safeParseTurnOutput으로 수행.
+ */
+export const FinalEventRawSchema = z.object({
+  type: z.literal(StreamEventType.FINAL),
+  data: z.unknown(),
+});
+
+/**
+ * ErrorEvent Zod 스키마.
+ * 에러 이벤트 검증용.
+ */
+export const ErrorEventSchema = z.object({
+  type: z.literal(StreamEventType.ERROR),
+  message: z.string(),
+  code: z.string().optional(),
+});
+
+/**
+ * 이벤트 타입 추출용 최소 스키마.
+ * Unknown 이벤트 판별에 사용.
+ */
+export const BaseEventSchema = z.object({
+  type: z.string(),
+});
+
+// =============================================================================
+// 이벤트 파싱 유틸리티 (RU-002-S2)
+// =============================================================================
+
+/** 이벤트 검증 결과 타입 */
+export type EventParseResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: z.ZodError };
+
+/**
+ * StageEvent를 안전하게 파싱합니다.
+ */
+export function safeParseStageEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof StageEventSchema>> {
+  const result = StageEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * RepairEvent를 안전하게 파싱합니다.
+ */
+export function safeParseRepairEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof RepairEventSchema>> {
+  const result = RepairEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * BadgesEvent를 안전하게 파싱합니다.
+ * v1(배열) 형태로 정규화하여 반환합니다.
+ */
+export function safeParseBadgesEvent(data: unknown): EventParseResult<BadgesEvent> {
+  const result = BadgesEventSchema.safeParse(data);
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  // v2(객체) 형태인 경우 v1(배열)로 정규화
+  const parsed = result.data;
+  if (Array.isArray(parsed.badges)) {
+    // v1 형태: 그대로 반환
+    return {
+      success: true,
+      data: { type: StreamEventType.BADGES, badges: parsed.badges as ValidationBadge[] },
+    };
+  } else {
+    // v2 형태: true인 키만 추출하여 배열로 변환
+    const badgeArray = Object.entries(parsed.badges)
+      .filter(([, value]) => value)
+      .map(([key]) => key as ValidationBadge);
+    return {
+      success: true,
+      data: { type: StreamEventType.BADGES, badges: badgeArray },
+    };
+  }
+}
+
+/**
+ * NarrativeDeltaEvent를 안전하게 파싱합니다.
+ */
+export function safeParseNarrativeDeltaEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof NarrativeDeltaEventSchema>> {
+  const result = NarrativeDeltaEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * FinalEvent 원시 형태를 안전하게 파싱합니다.
+ * TurnOutput 자체 검증은 별도로 수행해야 합니다.
+ */
+export function safeParseFinalEventRaw(
+  data: unknown,
+): EventParseResult<z.infer<typeof FinalEventRawSchema>> {
+  const result = FinalEventRawSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * ErrorEvent를 안전하게 파싱합니다.
+ */
+export function safeParseErrorEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof ErrorEventSchema>> {
+  const result = ErrorEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * stage.status 정규화 헬퍼.
+ * 'ok'를 'complete'로, 'fail'은 그대로 유지.
+ */
+export function normalizeStageStatus(status: string): 'start' | 'complete' | 'fail' {
+  if (status === 'ok') return 'complete';
+  if (status === 'fail') return 'fail';
+  if (status === 'start') return 'start';
+  return 'complete';
+}
+
+// =============================================================================
+// 스트림 이벤트 인터페이스
+// =============================================================================
+
+/**
+ * 단계 진행 이벤트.
+ * RU-002-S2: status에 'fail' 추가하여 단계 실패 표현 지원.
+ */
+export interface StageEvent {
+  type: typeof StreamEventType.STAGE;
+  name: AgentPhase;
+  /** 'start' | 'complete' | 'ok' | 'fail'. ok는 complete로 정규화됨. */
+  status: StageStatusName;
+}
+
+/** 자동 복구(Repair) 이벤트 */
+export interface RepairEvent {
+  type: typeof StreamEventType.REPAIR;
+  attempt: number;
+  message?: string;
+}
+
+/** 배지 이벤트 */
+export interface BadgesEvent {
+  type: typeof StreamEventType.BADGES;
+  badges: ValidationBadge[];
+}
+
+/** 내러티브 델타 이벤트 (타자 효과용) */
+export interface NarrativeDeltaEvent {
+  type: typeof StreamEventType.NARRATIVE_DELTA;
+  text: string;
+}
+
+/** 최종 TurnOutput 이벤트
+ *
+ * RU-002-Q2: v1은 `data`, v2는 `turn_output` 사용.
+ * 하위호환을 위해 두 필드 모두 선언하되, 정규화된 인터페이스는 `data`를 사용.
+ */
+export interface FinalEvent {
+  type: typeof StreamEventType.FINAL;
+  /** v1 현행 계약: TurnOutput 페이로드 */
+  data: TurnOutput;
+}
+
+/** FinalEvent 원시 수신 형태 */
+export interface FinalEventRaw {
+  type: typeof StreamEventType.FINAL;
+  /** TurnOutput 페이로드 */
+  data: TurnOutput;
+}
+
+/** 에러 이벤트 */
+export interface ErrorEvent {
+  type: typeof StreamEventType.ERROR;
+  message: string;
+  code?: string;
+}
+
+/** 스트림 이벤트 유니온 타입 */
+export type StreamEvent =
+  | StageEvent
+  | RepairEvent
+  | BadgesEvent
+  | NarrativeDeltaEvent
+  | FinalEvent
+  | ErrorEvent;
+
+// =============================================================================
+// 스트림 콜백 인터페이스
+// =============================================================================
+
+/** 스트림 이벤트 콜백 */
+export interface StreamCallbacks {
+  /** 단계 진행 이벤트 */
+  onStage?: (event: StageEvent) => void;
+  /** 자동 복구 이벤트 */
+  onRepair?: (event: RepairEvent) => void;
+  /** 배지 이벤트 */
+  onBadges?: (event: BadgesEvent) => void;
+  /** 내러티브 델타 이벤트 */
+  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
+  /** 최종 TurnOutput 이벤트 */
+  onFinal?: (event: FinalEvent) => void;
+  /** 에러 이벤트 */
+  onError?: (event: ErrorEvent) => void;
+  /** 스트림 완료 */
+  onComplete?: () => void;
 }
 </file>
 
@@ -5538,6 +6135,27 @@ export default defineConfig({
 }
 </file>
 
+<file path="package.json">
+{
+  "name": "unknown-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": "24.12.0"
+  },
+  "scripts": {
+    "kill": "pnpm kill:port",
+    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
+    "dev:front": "pnpm -C frontend dev"
+  }
+}
+</file>
+
 <file path="frontend/src/api/turnStream.ts">
 /**
  * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
@@ -5561,6 +6179,7 @@ import {
   StreamEventType,
   BaseEventSchema,
   safeParseStageEvent,
+  safeParseRepairEvent,
   safeParseBadgesEvent,
   safeParseNarrativeDeltaEvent,
   safeParseFinalEventRaw,
@@ -5573,6 +6192,7 @@ export type {
   StreamEventTypeName,
   StageStatusName,
   StageEvent,
+  RepairEvent,
   BadgesEvent,
   NarrativeDeltaEvent,
   FinalEvent,
@@ -5694,6 +6314,17 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
       break;
     }
 
+    case StreamEventType.REPAIR: {
+      // RU-002-S2: repair 이벤트 검증
+      const repairResult = safeParseRepairEvent(event);
+      if (repairResult.success) {
+        callbacks.onRepair?.(repairResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid repair event:', repairResult.error.message);
+      }
+      break;
+    }
+
     case StreamEventType.BADGES: {
       // RU-002-S2: badges 이벤트 검증 (v1/v2 정규화 포함)
       const badgesResult = safeParseBadgesEvent(event);
@@ -5730,8 +6361,7 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
       }
 
       // RULE-003/004: Zod strict parse + 폴백
-      // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
-      const turnOutputPayload = finalRawResult.data.data ?? finalRawResult.data.turn_output;
+      const turnOutputPayload = finalRawResult.data.data;
       const parseResult = safeParseTurnOutput(turnOutputPayload, language);
 
       if (parseResult.success) {
@@ -5996,27 +6626,6 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
   executeTurnStream(input, callbacks, { signal: controller.signal });
 
   return () => controller.abort();
-}
-</file>
-
-<file path="package.json">
-{
-  "name": "unknown-world",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
-  "packageManager": "pnpm@10.27.0",
-  "engines": {
-    "node": "24.12.0"
-  },
-  "scripts": {
-    "kill": "pnpm kill:port",
-    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
-    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
-    "dev:front": "pnpm -C frontend dev"
-  }
 }
 </file>
 

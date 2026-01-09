@@ -35,6 +35,7 @@ from unknown_world.api.turn_stream_events import (
     ErrorEvent,
     FinalEvent,
     NarrativeDeltaEvent,
+    RepairEvent,
     StageEvent,
     StageStatus,
     StreamEventType,
@@ -139,39 +140,62 @@ async def _stream_turn_events(
                 ).model_dump()
             )
 
-    # TurnOutput 생성
+    # TurnOutput 생성 (Repair 루프 포함 - RULE-004)
+    max_repair_attempts = 3
+    repair_attempt = 0
+    turn_output = None
+
     try:
-        turn_output = orchestrator.generate_turn_output(turn_input)
+        while repair_attempt <= max_repair_attempts:
+            try:
+                # 0회차는 정상 시도, 1회차부터는 repair
+                if repair_attempt > 0:
+                    yield serialize_event(
+                        RepairEvent(
+                            type=StreamEventType.REPAIR,
+                            attempt=repair_attempt,
+                            message="검증 실패로 인해 다시 시도 중입니다..."
+                            if turn_input.language == Language.KO
+                            else "Retrying due to validation failure",
+                        ).model_dump()
+                    )
 
-        # 내러티브 델타 스트리밍 (타자 효과)
-        narrative = turn_output.narrative
-        chunk_size = 20  # 한 번에 전송할 글자 수
-        for i in range(0, len(narrative), chunk_size):
-            chunk = narrative[i : i + chunk_size]
+                turn_output = orchestrator.generate_turn_output(turn_input)
+                break  # 성공 시 루프 탈출
+
+            except ValidationError as e:
+                repair_attempt += 1
+                if repair_attempt > max_repair_attempts:
+                    # 최종 실패 시 폴백 (RULE-004)
+                    turn_output = orchestrator.create_safe_fallback(
+                        language=turn_input.language,
+                        error_message=str(e),
+                        economy_snapshot=CurrencyAmount(
+                            signal=turn_input.economy_snapshot.signal,
+                            memory_shard=turn_input.economy_snapshot.memory_shard,
+                        ),
+                    )
+                    break
+                # 루프 계속 진행 (재시도)
+                continue
+
+        if turn_output:
+            # 내러티브 델타 스트리밍 (타자 효과)
+            narrative = turn_output.narrative
+            chunk_size = 20  # 한 번에 전송할 글자 수
+            for i in range(0, len(narrative), chunk_size):
+                chunk = narrative[i : i + chunk_size]
+                yield serialize_event(
+                    NarrativeDeltaEvent(
+                        type=StreamEventType.NARRATIVE_DELTA, text=chunk
+                    ).model_dump()
+                )
+                await asyncio.sleep(0.02)  # 타자 효과 딜레이
+
+            # 최종 TurnOutput 전송
             yield serialize_event(
-                NarrativeDeltaEvent(type=StreamEventType.NARRATIVE_DELTA, text=chunk).model_dump()
+                FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
             )
-            await asyncio.sleep(0.02)  # 타자 효과 딜레이
-
-        # 최종 TurnOutput 전송
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
-        )
-
-    except ValidationError as e:
-        # 스키마 검증 실패 시 폴백 (RULE-004)
-        # RU-002-S1: economy_snapshot을 전달하여 잔액 유지
-        fallback = orchestrator.create_safe_fallback(
-            language=turn_input.language,
-            error_message=str(e),  # 내부 로깅용, UI에 노출 안 함
-            economy_snapshot=CurrencyAmount(
-                signal=turn_input.economy_snapshot.signal,
-                memory_shard=turn_input.economy_snapshot.memory_shard,
-            ),
-        )
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-        )
 
     except Exception:
         # RU-002-S1: 예외 발생 시 error + final(폴백) 순서로 송출

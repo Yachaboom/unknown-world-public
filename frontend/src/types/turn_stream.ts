@@ -38,6 +38,7 @@ export const StreamEventType = {
   NARRATIVE_DELTA: 'narrative_delta',
   FINAL: 'final',
   ERROR: 'error',
+  REPAIR: 'repair',
 } as const;
 
 export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
@@ -49,9 +50,7 @@ export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEv
 export const StageStatus = {
   START: 'start',
   COMPLETE: 'complete',
-  /** v2 별칭: complete와 동일하게 처리 */
-  OK: 'ok',
-  /** v2 별칭: 단계 실패 */
+  /** 단계 실패 */
   FAIL: 'fail',
 } as const;
 
@@ -75,6 +74,16 @@ export const StageEventSchema = z.object({
   type: z.literal(StreamEventType.STAGE),
   name: AgentPhaseSchema,
   status: StageStatusSchema,
+});
+
+/**
+ * RepairEvent Zod 스키마.
+ * 자동 복구 시도 이벤트 검증용.
+ */
+export const RepairEventSchema = z.object({
+  type: z.literal(StreamEventType.REPAIR),
+  attempt: z.number(),
+  message: z.string().optional(),
 });
 
 /**
@@ -118,8 +127,7 @@ export const NarrativeDeltaEventSchema = z.object({
  */
 export const FinalEventRawSchema = z.object({
   type: z.literal(StreamEventType.FINAL),
-  data: z.unknown().optional(),
-  turn_output: z.unknown().optional(),
+  data: z.unknown(),
 });
 
 /**
@@ -156,6 +164,18 @@ export function safeParseStageEvent(
   data: unknown,
 ): EventParseResult<z.infer<typeof StageEventSchema>> {
   const result = StageEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * RepairEvent를 안전하게 파싱합니다.
+ */
+export function safeParseRepairEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof RepairEventSchema>> {
+  const result = RepairEventSchema.safeParse(data);
   return result.success
     ? { success: true, data: result.data }
     : { success: false, error: result.error };
@@ -232,9 +252,11 @@ export function safeParseErrorEvent(
  * stage.status 정규화 헬퍼.
  * 'ok'를 'complete'로, 'fail'은 그대로 유지.
  */
-export function normalizeStageStatus(status: StageStatusName): 'start' | 'complete' | 'fail' {
+export function normalizeStageStatus(status: string): 'start' | 'complete' | 'fail' {
   if (status === 'ok') return 'complete';
-  return status;
+  if (status === 'fail') return 'fail';
+  if (status === 'start') return 'start';
+  return 'complete';
 }
 
 // =============================================================================
@@ -250,6 +272,13 @@ export interface StageEvent {
   name: AgentPhase;
   /** 'start' | 'complete' | 'ok' | 'fail'. ok는 complete로 정규화됨. */
   status: StageStatusName;
+}
+
+/** 자동 복구(Repair) 이벤트 */
+export interface RepairEvent {
+  type: typeof StreamEventType.REPAIR;
+  attempt: number;
+  message?: string;
 }
 
 /** 배지 이벤트 */
@@ -275,13 +304,11 @@ export interface FinalEvent {
   data: TurnOutput;
 }
 
-/** FinalEvent 원시 수신 형태 (v1/v2 별칭 지원) */
+/** FinalEvent 원시 수신 형태 */
 export interface FinalEventRaw {
   type: typeof StreamEventType.FINAL;
-  /** v1 계약 */
-  data?: TurnOutput;
-  /** v2 계약 (별칭) */
-  turn_output?: TurnOutput;
+  /** TurnOutput 페이로드 */
+  data: TurnOutput;
 }
 
 /** 에러 이벤트 */
@@ -292,7 +319,13 @@ export interface ErrorEvent {
 }
 
 /** 스트림 이벤트 유니온 타입 */
-export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
+export type StreamEvent =
+  | StageEvent
+  | RepairEvent
+  | BadgesEvent
+  | NarrativeDeltaEvent
+  | FinalEvent
+  | ErrorEvent;
 
 // =============================================================================
 // 스트림 콜백 인터페이스
@@ -302,6 +335,8 @@ export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | Final
 export interface StreamCallbacks {
   /** 단계 진행 이벤트 */
   onStage?: (event: StageEvent) => void;
+  /** 자동 복구 이벤트 */
+  onRepair?: (event: RepairEvent) => void;
   /** 배지 이벤트 */
   onBadges?: (event: BadgesEvent) => void;
   /** 내러티브 델타 이벤트 */

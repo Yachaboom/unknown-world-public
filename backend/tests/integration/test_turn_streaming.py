@@ -133,3 +133,42 @@ def test_turn_streaming_generation_fallback(monkeypatch):
     assert turn_output["agent_console"]["badges"] == ["schema_fail"]
     assert turn_output["agent_console"]["repair_count"] == 1
     assert "혼란" in turn_output["narrative"] or "confusion" in turn_output["narrative"]
+
+
+def test_turn_streaming_repair_loop(monkeypatch):
+    """검증 실패 시 repair 이벤트가 스트림에 포함되는지 테스트합니다 (RU-002)."""
+    from pydantic import ValidationError
+
+    from unknown_world.orchestrator.mock import MockOrchestrator
+
+    # 첫 번째 호출에서 실패하여 repair 트리거 시뮬레이션
+    # (실제 구현에서는 N회 재시도 로직이 turn.py에 있어야 함)
+    call_count = 0
+
+    def mock_generate_with_repair(self, turn_input):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise ValidationError.from_exception_data(title="MockSchemaError", line_errors=[])
+        return orchestrator_orig_generate(self, turn_input)
+
+    import unknown_world.orchestrator.mock as mock_mod
+
+    orchestrator_orig_generate = mock_mod.MockOrchestrator.generate_turn_output
+    monkeypatch.setattr(MockOrchestrator, "generate_turn_output", mock_generate_with_repair)
+
+    payload = {
+        "language": "ko-KR",
+        "text": "리페어 테스트",
+        "client": {"viewport_w": 1920, "viewport_h": 1080},
+        "economy_snapshot": {"signal": 100, "memory_shard": 5},
+    }
+
+    response = client.post("/api/turn", json=payload)
+    events = [json.loads(line) for line in response.iter_lines() if line]
+
+    # RU-002 요구사항: repair 이벤트가 명시적으로 존재해야 함
+    repair_events = [e for e in events if e["type"] == "repair"]
+    assert len(repair_events) >= 1
+    assert "attempt" in repair_events[0]
+    assert repair_events[0]["attempt"] == 1

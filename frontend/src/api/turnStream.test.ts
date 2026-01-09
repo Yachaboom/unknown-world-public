@@ -75,6 +75,7 @@ describe('executeTurnStream', () => {
 
   const mockCallbacks = {
     onStage: vi.fn(),
+    onRepair: vi.fn(),
     onBadges: vi.fn(),
     onNarrativeDelta: vi.fn(),
     onFinal: vi.fn(),
@@ -87,12 +88,17 @@ describe('executeTurnStream', () => {
     global.fetch = vi.fn();
   });
 
-  it('should process stream events correctly', async () => {
+  it('should process stream events correctly (including repair)', async () => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(
           encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({ type: 'repair', attempt: 1, message: 'Schema fail, retrying' }) + '\n',
+          ),
         );
         controller.enqueue(
           encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
@@ -126,6 +132,9 @@ describe('executeTurnStream', () => {
     await executeTurnStream(mockInput, mockCallbacks);
 
     expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
+    expect(mockCallbacks.onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ attempt: 1, message: 'Schema fail, retrying' }),
+    );
     expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
       expect.objectContaining({ text: 'Hello' }),
     );

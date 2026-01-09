@@ -20,6 +20,7 @@ import {
   StreamEventType,
   BaseEventSchema,
   safeParseStageEvent,
+  safeParseRepairEvent,
   safeParseBadgesEvent,
   safeParseNarrativeDeltaEvent,
   safeParseFinalEventRaw,
@@ -32,6 +33,7 @@ export type {
   StreamEventTypeName,
   StageStatusName,
   StageEvent,
+  RepairEvent,
   BadgesEvent,
   NarrativeDeltaEvent,
   FinalEvent,
@@ -153,6 +155,17 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
       break;
     }
 
+    case StreamEventType.REPAIR: {
+      // RU-002-S2: repair 이벤트 검증
+      const repairResult = safeParseRepairEvent(event);
+      if (repairResult.success) {
+        callbacks.onRepair?.(repairResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid repair event:', repairResult.error.message);
+      }
+      break;
+    }
+
     case StreamEventType.BADGES: {
       // RU-002-S2: badges 이벤트 검증 (v1/v2 정규화 포함)
       const badgesResult = safeParseBadgesEvent(event);
@@ -189,8 +202,7 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
       }
 
       // RULE-003/004: Zod strict parse + 폴백
-      // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
-      const turnOutputPayload = finalRawResult.data.data ?? finalRawResult.data.turn_output;
+      const turnOutputPayload = finalRawResult.data.data;
       const parseResult = safeParseTurnOutput(turnOutputPayload, language);
 
       if (parseResult.success) {

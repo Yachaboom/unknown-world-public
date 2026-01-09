@@ -4,12 +4,12 @@
 
 ## 진행 현황
 
-**전체**: 19/50 (38%) | **MVP**: 19/37 (51%) | **MMP**: 0/13 (0%)
+**전체**: 20/50 (40%) | **MVP**: 20/37 (54%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-5 | MMP D-21  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
-**진행 중**: 없음 / **최근 완료**: [RU-002-S2](refactors/RU-002-S2.md) (2026-01-10)
+**진행 중**: 없음 / **최근 완료**: [RU-002[Mvp]](unit-results/RU-002[Mvp].md) (2026-01-10)
 
 **블로커**: 없음
 
@@ -117,7 +117,6 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[RU-002[Mvp]](unit-plans/RU-002[Mvp].md) | 리팩토링: validation/폴백/이벤트 타입 통일 | Depends=U-008 | ⏸️
 ID=[CP-MVP-01](unit-plans/CP-MVP-01.md) | **체크포인트: 스트리밍/스키마/폴백** | Depends=RU-002 | ⏸️
 
 ID=[U-009[Mvp]](unit-plans/U-009[Mvp].md) | ⚡Action Deck(카드+비용/대안) | Depends=U-004,U-008 | ⏸️
@@ -169,6 +168,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [RU-002[Mvp]](unit-results/RU-002[Mvp].md): 리팩토링: validation/폴백/이벤트 타입 통일 (2026-01-10)
 - ✅ [RU-002-S2](refactors/RU-002-S2.md): 스트림 이벤트 검증 강화(Zod) 및 Unknown 이벤트 폴백 처리 (2026-01-10)
 - ✅ [RU-002-S1](refactors/RU-002-S1.md): 스트리밍 안정화 및 종료 인바리언트(항상 final) 강제 (2026-01-08)
 - ✅ [RU-002-Q2](refactors/RU-002-Q2.md): PRD Turn Stream Protocol(SSOT) 정합성 확보 및 버전/별칭 도입 (2026-01-08)

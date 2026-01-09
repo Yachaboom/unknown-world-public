@@ -37,6 +37,7 @@ class StreamEventType:
     NARRATIVE_DELTA = "narrative_delta"
     FINAL = "final"
     ERROR = "error"
+    REPAIR = "repair"
 
 
 class StageStatus:
@@ -44,6 +45,7 @@ class StageStatus:
 
     START = "start"
     COMPLETE = "complete"
+    FAIL = "fail"
 
 
 # =============================================================================
@@ -63,6 +65,20 @@ class StageEvent(BaseModel):
     type: Annotated[str, Field(default=StreamEventType.STAGE)]
     name: str
     status: str
+
+
+class RepairEvent(BaseModel):
+    """자동 복구(Repair) 이벤트.
+
+    Attributes:
+        type: 이벤트 타입 ("repair")
+        attempt: 현재 시도 횟수
+        message: 복구 메시지 (선택)
+    """
+
+    type: Annotated[str, Field(default=StreamEventType.REPAIR)]
+    attempt: int
+    message: str | None = None
 
 
 class BadgesEvent(BaseModel):
@@ -144,6 +160,7 @@ __all__ = [
     "StreamEventType",
     "StageStatus",
     "StageEvent",
+    "RepairEvent",
     "BadgesEvent",
     "NarrativeDeltaEvent",
     "FinalEvent",
