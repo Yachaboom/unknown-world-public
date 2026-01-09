@@ -4,12 +4,12 @@
 
 ## 진행 현황
 
-**전체**: 11/50 (22%) | **MVP**: 11/37 (29%) | **MMP**: 0/13 (0%)
+**전체**: 19/50 (38%) | **MVP**: 19/37 (51%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-8 | MMP D-24  
+**예상 완료(가정)**: MVP D-5 | MMP D-21  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
-**진행 중**: 없음 / **최근 완료**: [RU-002-Q4](refactors/RU-002-Q4.md) (2026-01-07)
+**진행 중**: 없음 / **최근 완료**: [RU-002-S2](refactors/RU-002-S2.md) (2026-01-10)
 
 **블로커**: 없음
 
@@ -169,6 +169,10 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [RU-002-S2](refactors/RU-002-S2.md): 스트림 이벤트 검증 강화(Zod) 및 Unknown 이벤트 폴백 처리 (2026-01-10)
+- ✅ [RU-002-S1](refactors/RU-002-S1.md): 스트리밍 안정화 및 종료 인바리언트(항상 final) 강제 (2026-01-08)
+- ✅ [RU-002-Q2](refactors/RU-002-Q2.md): PRD Turn Stream Protocol(SSOT) 정합성 확보 및 버전/별칭 도입 (2026-01-08)
+- ✅ [RU-002-Q4](refactors/RU-002-Q4.md): Turn Stream 이벤트 계약 모듈 분리 (2026-01-07)
 - ✅ [U-027[Mvp]](unit-results/U-027[Mvp].md): 개발 스크립트: pnpm kill 포트 제한(8001~8020) (2026-01-05)
 - ✅ [U-008[Mvp]](unit-results/U-008[Mvp].md): ⚡프론트 HTTP Streaming 클라이언트 + Agent Console/배지 (2026-01-05)
 - ✅ [U-007[Mvp]](unit-results/U-007[Mvp].md): ⚡모의 Orchestrator + /api/turn HTTP Streaming(POST) (2026-01-04)

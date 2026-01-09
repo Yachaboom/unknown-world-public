@@ -1,5 +1,30 @@
 # 프로젝트 진행 상황
 
+## [2026-01-10 01:10] RU-002-S2: 스트림 이벤트 검증 강화(Zod) 및 Unknown 이벤트 폴백 처리 완료
+
+### 작업 내용
+
+- **제안서**: [RU-002-S2] 스트림 이벤트( stage/badges/error 등 ) 검증 강화(Zod) + Unknown/확장 이벤트 폴백 처리로 “깨짐” 방지
+- **개선 사항**:
+    - **이벤트별 Zod 검증 도입**: `stage`, `badges`, `narrative_delta`, `final`, `error` 등 모든 스트림 이벤트에 대해 경량 Zod 스키마를 정의하고 `safeParse`를 적용하여 데이터 무결성 확보.
+    - **Unknown/확장 이벤트 대응**: 정의되지 않은 이벤트 타입 수신 시 콘솔 경고를 남기되 UI 중단 없이 무시(drop)하는 폴백 로직을 구현하여 전방 호환성 및 관측성 확보.
+    - **프로토콜 별칭(Alias) 지원**: `stage.status`(`complete`/`ok`/`fail`), `final`(`data`/`turn_output`) 등 버전별 필드 별칭을 수용하고 표준 형태로 정규화.
+    - **단계 실패 상태 시각화**: `stage.status=fail` 수신 시 Agent Console에서 해당 단계를 `failed` 상태로 표시하도록 스토어 보강.
+- **영향 범위**: `frontend/src/types/turn_stream.ts`, `frontend/src/api/turnStream.ts`, `frontend/src/stores/agentStore.ts`
+
+### 기술적 세부사항
+
+- **검증 유틸리티**: `safeParseStageEvent`, `safeParseBadgesEvent` 등 이벤트별 전용 파싱 유틸리티를 통한 `dispatchEvent` 로직의 선언적 구현.
+- **정규화 계층**: `normalizeStageStatus`를 통해 서버의 다양한 상태 표기를 클라이언트 표준(`start`/`complete`/`fail`)으로 변환.
+- **견고성**: 배지 이벤트 수신 시 v1(배열)과 v2(맵) 형식을 모두 지원하여 프로토콜 업그레이드 대응.
+
+### 검증
+
+- **정합성 확인**: Zod 스키마가 PRD 명세 및 기존 `TurnOutput` 검증 로직과 일관되게 동작함을 확인.
+- **폴백 테스트**: 존재하지 않는 이벤트 타입 또는 스키마 위반 데이터 유입 시 UI가 멈추지 않고 적절히 예외를 처리함을 확인.
+
+---
+
 ## [2026-01-08 23:59] RU-002-Q2: PRD Turn Stream Protocol(SSOT) 정합성 확보 및 버전/별칭 도입 완료
 
 ### 작업 내용

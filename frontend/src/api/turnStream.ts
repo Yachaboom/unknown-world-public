@@ -15,14 +15,17 @@
 
 import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
 import { safeParseTurnOutput } from '../schemas/turn';
-import type {
-  StageEvent,
-  BadgesEvent,
-  NarrativeDeltaEvent,
-  ErrorEvent,
-  StreamCallbacks,
+import type { StreamCallbacks } from '../types/turn_stream';
+import {
+  StreamEventType,
+  BaseEventSchema,
+  safeParseStageEvent,
+  safeParseBadgesEvent,
+  safeParseNarrativeDeltaEvent,
+  safeParseFinalEventRaw,
+  safeParseErrorEvent,
+  normalizeStageStatus,
 } from '../types/turn_stream';
-import { StreamEventType } from '../types/turn_stream';
 
 // Re-export 스트림 이벤트 타입들 (하위 호환성 유지)
 export type {
@@ -113,6 +116,9 @@ export class NDJSONParser {
 /**
  * 파싱된 이벤트를 타입별로 분배합니다.
  *
+ * RU-002-S2: 캐스팅 대신 Zod safeParse를 적용하여 검증 강화.
+ * Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력.
+ *
  * @param event - 파싱된 이벤트 객체
  * @param callbacks - 콜백 함수들
  * @param language - 폴백 언어
@@ -120,27 +126,71 @@ export class NDJSONParser {
 function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Language): void {
   if (!event || typeof event !== 'object') return;
 
-  const e = event as Record<string, unknown>;
-  const type = e.type;
+  // 기본 이벤트 타입 추출
+  const baseResult = BaseEventSchema.safeParse(event);
+  if (!baseResult.success) {
+    console.warn('[TurnStream] Invalid event format (no type field):', event);
+    return;
+  }
+
+  const type = baseResult.data.type;
 
   switch (type) {
-    case StreamEventType.STAGE:
-      callbacks.onStage?.(event as StageEvent);
+    case StreamEventType.STAGE: {
+      // RU-002-S2: stage 이벤트 검증
+      const stageResult = safeParseStageEvent(event);
+      if (stageResult.success) {
+        // status 정규화: 'ok' → 'complete'
+        const normalizedStatus = normalizeStageStatus(stageResult.data.status);
+        callbacks.onStage?.({
+          type: StreamEventType.STAGE,
+          name: stageResult.data.name,
+          status: normalizedStatus,
+        });
+      } else {
+        console.warn('[TurnStream] Invalid stage event:', stageResult.error.message);
+      }
       break;
+    }
 
-    case StreamEventType.BADGES:
-      callbacks.onBadges?.(event as BadgesEvent);
+    case StreamEventType.BADGES: {
+      // RU-002-S2: badges 이벤트 검증 (v1/v2 정규화 포함)
+      const badgesResult = safeParseBadgesEvent(event);
+      if (badgesResult.success) {
+        callbacks.onBadges?.(badgesResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid badges event:', badgesResult.error.message);
+      }
       break;
+    }
 
-    case StreamEventType.NARRATIVE_DELTA:
-      callbacks.onNarrativeDelta?.(event as NarrativeDeltaEvent);
+    case StreamEventType.NARRATIVE_DELTA: {
+      // RU-002-S2: narrative_delta 이벤트 검증
+      const narrativeResult = safeParseNarrativeDeltaEvent(event);
+      if (narrativeResult.success) {
+        callbacks.onNarrativeDelta?.(narrativeResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid narrative_delta event:', narrativeResult.error.message);
+      }
       break;
+    }
 
     case StreamEventType.FINAL: {
+      // RU-002-S2: final 이벤트 구조 검증
+      const finalRawResult = safeParseFinalEventRaw(event);
+      if (!finalRawResult.success) {
+        console.warn('[TurnStream] Invalid final event structure:', finalRawResult.error.message);
+        // 구조가 잘못되어도 폴백 제공
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: createFallbackTurnOutput(language),
+        });
+        break;
+      }
+
       // RULE-003/004: Zod strict parse + 폴백
       // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
-      const finalEvent = event as { type: string; data?: unknown; turn_output?: unknown };
-      const turnOutputPayload = finalEvent.data ?? finalEvent.turn_output;
+      const turnOutputPayload = finalRawResult.data.data ?? finalRawResult.data.turn_output;
       const parseResult = safeParseTurnOutput(turnOutputPayload, language);
 
       if (parseResult.success) {
@@ -158,13 +208,72 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
       break;
     }
 
-    case StreamEventType.ERROR:
-      callbacks.onError?.(event as ErrorEvent);
+    case StreamEventType.ERROR: {
+      // RU-002-S2: error 이벤트 검증
+      const errorResult = safeParseErrorEvent(event);
+      if (errorResult.success) {
+        callbacks.onError?.(errorResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid error event:', errorResult.error.message);
+        // 에러 이벤트가 깨진 경우에도 기본 에러 전달
+        callbacks.onError?.({
+          type: StreamEventType.ERROR,
+          message: 'Unknown error (malformed error event)',
+          code: 'INVALID_ERROR_EVENT',
+        });
+      }
       break;
+    }
 
     default:
-      console.warn('[TurnStream] Unknown event type:', type);
+      // RU-002-S2: Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력
+      // 향후 protocol, repair, telemetry 등 확장 이벤트 도입 시 여기서 처리 가능
+      console.warn('[TurnStream] Unknown/ignored event type:', type, event);
   }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
+ * dispatchEvent 내부에서 사용하는 간단한 폴백.
+ */
+function createFallbackTurnOutput(language: Language): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.'
+      : '[System] An error occurred while processing response data.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
 }
 
 // =============================================================================

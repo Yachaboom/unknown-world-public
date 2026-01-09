@@ -144,14 +144,28 @@ export const useAgentStore = create<AgentStore>((set) => ({
   handleStage: (event) => {
     set((state) => {
       const phaseName = event.name;
-      const isStart = event.status === StageStatus.START;
+      const eventStatus = event.status;
+
+      // RU-002-S2: status 값에 따른 단계 상태 결정
+      // 'start' → in_progress
+      // 'complete' 또는 'ok' (정규화됨) → completed
+      // 'fail' → failed
+      let newStatus: PhaseStatus;
+      if (eventStatus === StageStatus.START) {
+        newStatus = 'in_progress';
+      } else if (eventStatus === 'fail') {
+        newStatus = 'failed';
+      } else {
+        // 'complete' (정규화된 'ok' 포함)
+        newStatus = 'completed';
+      }
 
       // 단계 상태 업데이트
       const phases = state.phases.map((phase) => {
         if (phase.name === phaseName) {
           return {
             ...phase,
-            status: isStart ? ('in_progress' as const) : ('completed' as const),
+            status: newStatus,
           };
         }
         return phase;
@@ -159,7 +173,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
 
       return {
         phases,
-        currentPhase: isStart ? phaseName : state.currentPhase,
+        currentPhase: eventStatus === StageStatus.START ? phaseName : state.currentPhase,
       };
     });
   },

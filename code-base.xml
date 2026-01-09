@@ -3230,360 +3230,6 @@ describe('agentStore', () => {
 - `.gemini/rules/commit-rules.md`
 </file>
 
-<file path="frontend/src/stores/agentStore.ts">
-/**
- * Unknown World - Agent Console 상태 관리 (Zustand).
- *
- * 스트리밍 중 수신되는 단계/배지/내러티브/복구 정보를 저장하고,
- * AgentConsole 컴포넌트에서 구독할 수 있도록 합니다.
- *
- * 설계 원칙:
- *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
- *   - RULE-003/004: 검증 후 상태 반영, 실패 시 폴백
- *
- * @module stores/agentStore
- */
-
-import { create } from 'zustand';
-import type { AgentPhase, ValidationBadge, TurnOutput } from '../schemas/turn';
-import type {
-  StageEvent,
-  BadgesEvent,
-  NarrativeDeltaEvent,
-  FinalEvent,
-  ErrorEvent,
-} from '../types/turn_stream';
-import { StageStatus } from '../types/turn_stream';
-
-// =============================================================================
-// 상태 타입 정의
-// =============================================================================
-
-/** 단계 상태 */
-export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
-
-/** 단계 정보 */
-export interface PhaseInfo {
-  name: AgentPhase;
-  status: PhaseStatus;
-}
-
-/** 에러 정보 */
-export interface AgentError {
-  message: string;
-  code?: string;
-}
-
-/** Agent Console 상태 */
-export interface AgentState {
-  /** 현재 스트리밍 중인지 */
-  isStreaming: boolean;
-  /** 현재 단계 */
-  currentPhase: AgentPhase | null;
-  /** 단계별 상태 */
-  phases: PhaseInfo[];
-  /** 검증 배지 목록 */
-  badges: ValidationBadge[];
-  /** 누적 내러티브 텍스트 (타자 효과용) */
-  narrativeBuffer: string;
-  /** 자동 복구 횟수 */
-  repairCount: number;
-  /** 최종 TurnOutput */
-  finalOutput: TurnOutput | null;
-  /** 에러 정보 */
-  error: AgentError | null;
-}
-
-/** Agent Console 액션 */
-export interface AgentActions {
-  /** 스트림 시작 */
-  startStream: () => void;
-  /** 단계 이벤트 처리 */
-  handleStage: (event: StageEvent) => void;
-  /** 배지 이벤트 처리 */
-  handleBadges: (event: BadgesEvent) => void;
-  /** 내러티브 델타 이벤트 처리 */
-  handleNarrativeDelta: (event: NarrativeDeltaEvent) => void;
-  /** 최종 출력 이벤트 처리 */
-  handleFinal: (event: FinalEvent) => void;
-  /** 에러 이벤트 처리 */
-  handleError: (event: ErrorEvent) => void;
-  /** 스트림 완료 */
-  completeStream: () => void;
-  /** 상태 초기화 */
-  reset: () => void;
-}
-
-export type AgentStore = AgentState & AgentActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-/** 기본 단계 목록 (PRD 예시) */
-const DEFAULT_PHASES: AgentPhase[] = [
-  'parse',
-  'validate',
-  'plan',
-  'resolve',
-  'render',
-  'verify',
-  'commit',
-];
-
-/** 초기 상태 생성 */
-function createInitialState(): AgentState {
-  return {
-    isStreaming: false,
-    currentPhase: null,
-    phases: DEFAULT_PHASES.map((name) => ({
-      name,
-      status: 'pending' as const,
-    })),
-    badges: [],
-    narrativeBuffer: '',
-    repairCount: 0,
-    finalOutput: null,
-    error: null,
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * Agent Console 상태 스토어.
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 사용
- * const { isStreaming, phases, badges } = useAgentStore();
- * const startStream = useAgentStore((state) => state.startStream);
- * ```
- */
-export const useAgentStore = create<AgentStore>((set) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-  startStream: () => {
-    set({
-      ...createInitialState(),
-      isStreaming: true,
-    });
-  },
-
-  handleStage: (event) => {
-    set((state) => {
-      const phaseName = event.name;
-      const isStart = event.status === StageStatus.START;
-
-      // 단계 상태 업데이트
-      const phases = state.phases.map((phase) => {
-        if (phase.name === phaseName) {
-          return {
-            ...phase,
-            status: isStart ? ('in_progress' as const) : ('completed' as const),
-          };
-        }
-        return phase;
-      });
-
-      return {
-        phases,
-        currentPhase: isStart ? phaseName : state.currentPhase,
-      };
-    });
-  },
-
-  handleBadges: (event) => {
-    set({
-      badges: event.badges,
-    });
-  },
-
-  handleNarrativeDelta: (event) => {
-    set((state) => ({
-      narrativeBuffer: state.narrativeBuffer + event.text,
-    }));
-  },
-
-  handleFinal: (event) => {
-    set({
-      finalOutput: event.data,
-      repairCount: event.data.agent_console?.repair_count ?? 0,
-    });
-  },
-
-  handleError: (event) => {
-    set({
-      error: {
-        message: event.message,
-        code: event.code,
-      },
-    });
-  },
-
-  completeStream: () => {
-    set({
-      isStreaming: false,
-      narrativeBuffer: '', // 스트림 완료 시 버퍼 초기화
-    });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 스트리밍 상태 셀렉터 */
-export const selectIsStreaming = (state: AgentStore) => state.isStreaming;
-
-/** 현재 단계 셀렉터 */
-export const selectCurrentPhase = (state: AgentStore) => state.currentPhase;
-
-/** 단계 목록 셀렉터 */
-export const selectPhases = (state: AgentStore) => state.phases;
-
-/** 배지 목록 셀렉터 */
-export const selectBadges = (state: AgentStore) => state.badges;
-
-/** 내러티브 버퍼 셀렉터 */
-export const selectNarrativeBuffer = (state: AgentStore) => state.narrativeBuffer;
-
-/** 복구 횟수 셀렉터 */
-export const selectRepairCount = (state: AgentStore) => state.repairCount;
-
-/** 최종 출력 셀렉터 */
-export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
-
-/** 에러 셀렉터 */
-export const selectError = (state: AgentStore) => state.error;
-</file>
-
-<file path="frontend/src/types/turn_stream.ts">
-/**
- * Unknown World - Turn Stream 이벤트 계약(Contract).
- *
- * NDJSON 스트리밍에서 사용되는 이벤트 타입, 인터페이스를 정의합니다.
- * 이 모듈은 백엔드와 프론트엔드 간의 스트림 이벤트 계약 SSOT입니다.
- *
- * 설계 원칙:
- *   - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
- *   - RULE-008: 단계/배지 가시화
- *
- * 참조:
- *   - vibe/unit-plans/U-007[Mvp].md
- *   - vibe/refactors/RU-002-Q4.md
- *
- * @module types/turn_stream
- */
-
-import type { TurnOutput, AgentPhase, ValidationBadge } from '../schemas/turn';
-
-// =============================================================================
-// 스트림 이벤트 타입 상수 (서버 계약과 일치)
-// =============================================================================
-
-/** 스트림 이벤트 타입 상수 */
-export const StreamEventType = {
-  STAGE: 'stage',
-  BADGES: 'badges',
-  NARRATIVE_DELTA: 'narrative_delta',
-  FINAL: 'final',
-  ERROR: 'error',
-} as const;
-
-export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
-
-/** 단계 상태 상수 */
-export const StageStatus = {
-  START: 'start',
-  COMPLETE: 'complete',
-} as const;
-
-export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
-
-// =============================================================================
-// 스트림 이벤트 인터페이스
-// =============================================================================
-
-/** 단계 진행 이벤트 */
-export interface StageEvent {
-  type: typeof StreamEventType.STAGE;
-  name: AgentPhase;
-  status: StageStatusName;
-}
-
-/** 배지 이벤트 */
-export interface BadgesEvent {
-  type: typeof StreamEventType.BADGES;
-  badges: ValidationBadge[];
-}
-
-/** 내러티브 델타 이벤트 (타자 효과용) */
-export interface NarrativeDeltaEvent {
-  type: typeof StreamEventType.NARRATIVE_DELTA;
-  text: string;
-}
-
-/** 최종 TurnOutput 이벤트
- *
- * RU-002-Q2: v1은 `data`, v2는 `turn_output` 사용.
- * 하위호환을 위해 두 필드 모두 선언하되, 정규화된 인터페이스는 `data`를 사용.
- */
-export interface FinalEvent {
-  type: typeof StreamEventType.FINAL;
-  /** v1 현행 계약: TurnOutput 페이로드 */
-  data: TurnOutput;
-}
-
-/** FinalEvent 원시 수신 형태 (v1/v2 별칭 지원) */
-export interface FinalEventRaw {
-  type: typeof StreamEventType.FINAL;
-  /** v1 계약 */
-  data?: TurnOutput;
-  /** v2 계약 (별칭) */
-  turn_output?: TurnOutput;
-}
-
-/** 에러 이벤트 */
-export interface ErrorEvent {
-  type: typeof StreamEventType.ERROR;
-  message: string;
-  code?: string;
-}
-
-/** 스트림 이벤트 유니온 타입 */
-export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
-
-// =============================================================================
-// 스트림 콜백 인터페이스
-// =============================================================================
-
-/** 스트림 이벤트 콜백 */
-export interface StreamCallbacks {
-  /** 단계 진행 이벤트 */
-  onStage?: (event: StageEvent) => void;
-  /** 배지 이벤트 */
-  onBadges?: (event: BadgesEvent) => void;
-  /** 내러티브 델타 이벤트 */
-  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
-  /** 최종 TurnOutput 이벤트 */
-  onFinal?: (event: FinalEvent) => void;
-  /** 에러 이벤트 */
-  onError?: (event: ErrorEvent) => void;
-  /** 스트림 완료 */
-  onComplete?: () => void;
-}
-</file>
-
 <file path="frontend/tsconfig.json">
 {
   "compilerOptions": {
@@ -4560,6 +4206,574 @@ class MockOrchestrator:
         )
 </file>
 
+<file path="frontend/src/stores/agentStore.ts">
+/**
+ * Unknown World - Agent Console 상태 관리 (Zustand).
+ *
+ * 스트리밍 중 수신되는 단계/배지/내러티브/복구 정보를 저장하고,
+ * AgentConsole 컴포넌트에서 구독할 수 있도록 합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-003/004: 검증 후 상태 반영, 실패 시 폴백
+ *
+ * @module stores/agentStore
+ */
+
+import { create } from 'zustand';
+import type { AgentPhase, ValidationBadge, TurnOutput } from '../schemas/turn';
+import type {
+  StageEvent,
+  BadgesEvent,
+  NarrativeDeltaEvent,
+  FinalEvent,
+  ErrorEvent,
+} from '../types/turn_stream';
+import { StageStatus } from '../types/turn_stream';
+
+// =============================================================================
+// 상태 타입 정의
+// =============================================================================
+
+/** 단계 상태 */
+export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
+/** 단계 정보 */
+export interface PhaseInfo {
+  name: AgentPhase;
+  status: PhaseStatus;
+}
+
+/** 에러 정보 */
+export interface AgentError {
+  message: string;
+  code?: string;
+}
+
+/** Agent Console 상태 */
+export interface AgentState {
+  /** 현재 스트리밍 중인지 */
+  isStreaming: boolean;
+  /** 현재 단계 */
+  currentPhase: AgentPhase | null;
+  /** 단계별 상태 */
+  phases: PhaseInfo[];
+  /** 검증 배지 목록 */
+  badges: ValidationBadge[];
+  /** 누적 내러티브 텍스트 (타자 효과용) */
+  narrativeBuffer: string;
+  /** 자동 복구 횟수 */
+  repairCount: number;
+  /** 최종 TurnOutput */
+  finalOutput: TurnOutput | null;
+  /** 에러 정보 */
+  error: AgentError | null;
+}
+
+/** Agent Console 액션 */
+export interface AgentActions {
+  /** 스트림 시작 */
+  startStream: () => void;
+  /** 단계 이벤트 처리 */
+  handleStage: (event: StageEvent) => void;
+  /** 배지 이벤트 처리 */
+  handleBadges: (event: BadgesEvent) => void;
+  /** 내러티브 델타 이벤트 처리 */
+  handleNarrativeDelta: (event: NarrativeDeltaEvent) => void;
+  /** 최종 출력 이벤트 처리 */
+  handleFinal: (event: FinalEvent) => void;
+  /** 에러 이벤트 처리 */
+  handleError: (event: ErrorEvent) => void;
+  /** 스트림 완료 */
+  completeStream: () => void;
+  /** 상태 초기화 */
+  reset: () => void;
+}
+
+export type AgentStore = AgentState & AgentActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+/** 기본 단계 목록 (PRD 예시) */
+const DEFAULT_PHASES: AgentPhase[] = [
+  'parse',
+  'validate',
+  'plan',
+  'resolve',
+  'render',
+  'verify',
+  'commit',
+];
+
+/** 초기 상태 생성 */
+function createInitialState(): AgentState {
+  return {
+    isStreaming: false,
+    currentPhase: null,
+    phases: DEFAULT_PHASES.map((name) => ({
+      name,
+      status: 'pending' as const,
+    })),
+    badges: [],
+    narrativeBuffer: '',
+    repairCount: 0,
+    finalOutput: null,
+    error: null,
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Agent Console 상태 스토어.
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 사용
+ * const { isStreaming, phases, badges } = useAgentStore();
+ * const startStream = useAgentStore((state) => state.startStream);
+ * ```
+ */
+export const useAgentStore = create<AgentStore>((set) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+  startStream: () => {
+    set({
+      ...createInitialState(),
+      isStreaming: true,
+    });
+  },
+
+  handleStage: (event) => {
+    set((state) => {
+      const phaseName = event.name;
+      const eventStatus = event.status;
+
+      // RU-002-S2: status 값에 따른 단계 상태 결정
+      // 'start' → in_progress
+      // 'complete' 또는 'ok' (정규화됨) → completed
+      // 'fail' → failed
+      let newStatus: PhaseStatus;
+      if (eventStatus === StageStatus.START) {
+        newStatus = 'in_progress';
+      } else if (eventStatus === 'fail') {
+        newStatus = 'failed';
+      } else {
+        // 'complete' (정규화된 'ok' 포함)
+        newStatus = 'completed';
+      }
+
+      // 단계 상태 업데이트
+      const phases = state.phases.map((phase) => {
+        if (phase.name === phaseName) {
+          return {
+            ...phase,
+            status: newStatus,
+          };
+        }
+        return phase;
+      });
+
+      return {
+        phases,
+        currentPhase: eventStatus === StageStatus.START ? phaseName : state.currentPhase,
+      };
+    });
+  },
+
+  handleBadges: (event) => {
+    set({
+      badges: event.badges,
+    });
+  },
+
+  handleNarrativeDelta: (event) => {
+    set((state) => ({
+      narrativeBuffer: state.narrativeBuffer + event.text,
+    }));
+  },
+
+  handleFinal: (event) => {
+    set({
+      finalOutput: event.data,
+      repairCount: event.data.agent_console?.repair_count ?? 0,
+    });
+  },
+
+  handleError: (event) => {
+    set({
+      error: {
+        message: event.message,
+        code: event.code,
+      },
+    });
+  },
+
+  completeStream: () => {
+    set({
+      isStreaming: false,
+      narrativeBuffer: '', // 스트림 완료 시 버퍼 초기화
+    });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 스트리밍 상태 셀렉터 */
+export const selectIsStreaming = (state: AgentStore) => state.isStreaming;
+
+/** 현재 단계 셀렉터 */
+export const selectCurrentPhase = (state: AgentStore) => state.currentPhase;
+
+/** 단계 목록 셀렉터 */
+export const selectPhases = (state: AgentStore) => state.phases;
+
+/** 배지 목록 셀렉터 */
+export const selectBadges = (state: AgentStore) => state.badges;
+
+/** 내러티브 버퍼 셀렉터 */
+export const selectNarrativeBuffer = (state: AgentStore) => state.narrativeBuffer;
+
+/** 복구 횟수 셀렉터 */
+export const selectRepairCount = (state: AgentStore) => state.repairCount;
+
+/** 최종 출력 셀렉터 */
+export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
+
+/** 에러 셀렉터 */
+export const selectError = (state: AgentStore) => state.error;
+</file>
+
+<file path="frontend/src/types/turn_stream.ts">
+/**
+ * Unknown World - Turn Stream 이벤트 계약(Contract).
+ *
+ * NDJSON 스트리밍에서 사용되는 이벤트 타입, 인터페이스를 정의합니다.
+ * 이 모듈은 백엔드와 프론트엔드 간의 스트림 이벤트 계약 SSOT입니다.
+ *
+ * 설계 원칙:
+ *   - RU-002-Q4: 이벤트 계약을 transport 계층으로 분리
+ *   - RU-002-S2: 이벤트별 Zod 검증 + Unknown/확장 이벤트 폴백
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+ *   - RULE-008: 단계/배지 가시화
+ *
+ * 참조:
+ *   - vibe/unit-plans/U-007[Mvp].md
+ *   - vibe/refactors/RU-002-Q4.md
+ *   - vibe/refactors/RU-002-S2.md
+ *
+ * @module types/turn_stream
+ */
+
+import { z } from 'zod';
+import {
+  AgentPhaseSchema,
+  ValidationBadgeSchema,
+  type TurnOutput,
+  type AgentPhase,
+  type ValidationBadge,
+} from '../schemas/turn';
+
+// =============================================================================
+// 스트림 이벤트 타입 상수 (서버 계약과 일치)
+// =============================================================================
+
+/** 스트림 이벤트 타입 상수 */
+export const StreamEventType = {
+  STAGE: 'stage',
+  BADGES: 'badges',
+  NARRATIVE_DELTA: 'narrative_delta',
+  FINAL: 'final',
+  ERROR: 'error',
+} as const;
+
+export type StreamEventTypeName = (typeof StreamEventType)[keyof typeof StreamEventType];
+
+/**
+ * 단계 상태 상수.
+ * RU-002-S2/RU-002-Q2: v1(complete) 및 v2(ok/fail) 별칭 모두 지원.
+ */
+export const StageStatus = {
+  START: 'start',
+  COMPLETE: 'complete',
+  /** v2 별칭: complete와 동일하게 처리 */
+  OK: 'ok',
+  /** v2 별칭: 단계 실패 */
+  FAIL: 'fail',
+} as const;
+
+export type StageStatusName = (typeof StageStatus)[keyof typeof StageStatus];
+
+// =============================================================================
+// RU-002-S2: 이벤트별 Zod 스키마 (경량 검증 + 폴백)
+// =============================================================================
+
+/**
+ * stage.status 스키마.
+ * v1(complete) 및 v2(ok/fail) 별칭 모두 허용.
+ */
+export const StageStatusSchema = z.enum(['start', 'complete', 'ok', 'fail']);
+
+/**
+ * StageEvent Zod 스키마.
+ * 단계 진행 이벤트 검증용.
+ */
+export const StageEventSchema = z.object({
+  type: z.literal(StreamEventType.STAGE),
+  name: AgentPhaseSchema,
+  status: StageStatusSchema,
+});
+
+/**
+ * BadgesEvent Zod 스키마 (v1: 배열).
+ * v1은 badges: string[] 형식.
+ */
+export const BadgesEventSchemaV1 = z.object({
+  type: z.literal(StreamEventType.BADGES),
+  badges: z.array(ValidationBadgeSchema),
+});
+
+/**
+ * BadgesEvent Zod 스키마 (v2: 객체/맵).
+ * 향후 v2는 badges: { [key]: status } 형식을 지원할 수 있음.
+ * 현재는 v1만 사용하므로 이 스키마는 확장성을 위해 정의.
+ */
+export const BadgesEventSchemaV2 = z.object({
+  type: z.literal(StreamEventType.BADGES),
+  badges: z.record(z.string(), z.boolean()),
+});
+
+/**
+ * BadgesEvent 통합 스키마.
+ * v1(배열) 또는 v2(객체) 모두 허용.
+ */
+export const BadgesEventSchema = z.union([BadgesEventSchemaV1, BadgesEventSchemaV2]);
+
+/**
+ * NarrativeDeltaEvent Zod 스키마.
+ * 타자 효과용 내러티브 델타 이벤트 검증용.
+ */
+export const NarrativeDeltaEventSchema = z.object({
+  type: z.literal(StreamEventType.NARRATIVE_DELTA),
+  text: z.string(),
+});
+
+/**
+ * FinalEvent 원시 스키마.
+ * v1(data) 및 v2(turn_output) 별칭 모두 허용.
+ * TurnOutput 자체 검증은 turnStream.ts에서 safeParseTurnOutput으로 수행.
+ */
+export const FinalEventRawSchema = z.object({
+  type: z.literal(StreamEventType.FINAL),
+  data: z.unknown().optional(),
+  turn_output: z.unknown().optional(),
+});
+
+/**
+ * ErrorEvent Zod 스키마.
+ * 에러 이벤트 검증용.
+ */
+export const ErrorEventSchema = z.object({
+  type: z.literal(StreamEventType.ERROR),
+  message: z.string(),
+  code: z.string().optional(),
+});
+
+/**
+ * 이벤트 타입 추출용 최소 스키마.
+ * Unknown 이벤트 판별에 사용.
+ */
+export const BaseEventSchema = z.object({
+  type: z.string(),
+});
+
+// =============================================================================
+// 이벤트 파싱 유틸리티 (RU-002-S2)
+// =============================================================================
+
+/** 이벤트 검증 결과 타입 */
+export type EventParseResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: z.ZodError };
+
+/**
+ * StageEvent를 안전하게 파싱합니다.
+ */
+export function safeParseStageEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof StageEventSchema>> {
+  const result = StageEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * BadgesEvent를 안전하게 파싱합니다.
+ * v1(배열) 형태로 정규화하여 반환합니다.
+ */
+export function safeParseBadgesEvent(data: unknown): EventParseResult<BadgesEvent> {
+  const result = BadgesEventSchema.safeParse(data);
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  // v2(객체) 형태인 경우 v1(배열)로 정규화
+  const parsed = result.data;
+  if (Array.isArray(parsed.badges)) {
+    // v1 형태: 그대로 반환
+    return {
+      success: true,
+      data: { type: StreamEventType.BADGES, badges: parsed.badges as ValidationBadge[] },
+    };
+  } else {
+    // v2 형태: true인 키만 추출하여 배열로 변환
+    const badgeArray = Object.entries(parsed.badges)
+      .filter(([, value]) => value)
+      .map(([key]) => key as ValidationBadge);
+    return {
+      success: true,
+      data: { type: StreamEventType.BADGES, badges: badgeArray },
+    };
+  }
+}
+
+/**
+ * NarrativeDeltaEvent를 안전하게 파싱합니다.
+ */
+export function safeParseNarrativeDeltaEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof NarrativeDeltaEventSchema>> {
+  const result = NarrativeDeltaEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * FinalEvent 원시 형태를 안전하게 파싱합니다.
+ * TurnOutput 자체 검증은 별도로 수행해야 합니다.
+ */
+export function safeParseFinalEventRaw(
+  data: unknown,
+): EventParseResult<z.infer<typeof FinalEventRawSchema>> {
+  const result = FinalEventRawSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * ErrorEvent를 안전하게 파싱합니다.
+ */
+export function safeParseErrorEvent(
+  data: unknown,
+): EventParseResult<z.infer<typeof ErrorEventSchema>> {
+  const result = ErrorEventSchema.safeParse(data);
+  return result.success
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error };
+}
+
+/**
+ * stage.status 정규화 헬퍼.
+ * 'ok'를 'complete'로, 'fail'은 그대로 유지.
+ */
+export function normalizeStageStatus(status: StageStatusName): 'start' | 'complete' | 'fail' {
+  if (status === 'ok') return 'complete';
+  return status;
+}
+
+// =============================================================================
+// 스트림 이벤트 인터페이스
+// =============================================================================
+
+/**
+ * 단계 진행 이벤트.
+ * RU-002-S2: status에 'fail' 추가하여 단계 실패 표현 지원.
+ */
+export interface StageEvent {
+  type: typeof StreamEventType.STAGE;
+  name: AgentPhase;
+  /** 'start' | 'complete' | 'ok' | 'fail'. ok는 complete로 정규화됨. */
+  status: StageStatusName;
+}
+
+/** 배지 이벤트 */
+export interface BadgesEvent {
+  type: typeof StreamEventType.BADGES;
+  badges: ValidationBadge[];
+}
+
+/** 내러티브 델타 이벤트 (타자 효과용) */
+export interface NarrativeDeltaEvent {
+  type: typeof StreamEventType.NARRATIVE_DELTA;
+  text: string;
+}
+
+/** 최종 TurnOutput 이벤트
+ *
+ * RU-002-Q2: v1은 `data`, v2는 `turn_output` 사용.
+ * 하위호환을 위해 두 필드 모두 선언하되, 정규화된 인터페이스는 `data`를 사용.
+ */
+export interface FinalEvent {
+  type: typeof StreamEventType.FINAL;
+  /** v1 현행 계약: TurnOutput 페이로드 */
+  data: TurnOutput;
+}
+
+/** FinalEvent 원시 수신 형태 (v1/v2 별칭 지원) */
+export interface FinalEventRaw {
+  type: typeof StreamEventType.FINAL;
+  /** v1 계약 */
+  data?: TurnOutput;
+  /** v2 계약 (별칭) */
+  turn_output?: TurnOutput;
+}
+
+/** 에러 이벤트 */
+export interface ErrorEvent {
+  type: typeof StreamEventType.ERROR;
+  message: string;
+  code?: string;
+}
+
+/** 스트림 이벤트 유니온 타입 */
+export type StreamEvent = StageEvent | BadgesEvent | NarrativeDeltaEvent | FinalEvent | ErrorEvent;
+
+// =============================================================================
+// 스트림 콜백 인터페이스
+// =============================================================================
+
+/** 스트림 이벤트 콜백 */
+export interface StreamCallbacks {
+  /** 단계 진행 이벤트 */
+  onStage?: (event: StageEvent) => void;
+  /** 배지 이벤트 */
+  onBadges?: (event: BadgesEvent) => void;
+  /** 내러티브 델타 이벤트 */
+  onNarrativeDelta?: (event: NarrativeDeltaEvent) => void;
+  /** 최종 TurnOutput 이벤트 */
+  onFinal?: (event: FinalEvent) => void;
+  /** 에러 이벤트 */
+  onError?: (event: ErrorEvent) => void;
+  /** 스트림 완료 */
+  onComplete?: () => void;
+}
+</file>
+
 <file path="frontend/vite.config.ts">
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -4710,358 +4924,6 @@ export default defineConfig({
     "vite": "7.3.0",
     "vitest": "^4.0.16"
   }
-}
-</file>
-
-<file path="frontend/src/api/turnStream.ts">
-/**
- * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
- *
- * fetch 기반으로 POST 요청을 보내고 응답 스트림을 NDJSON으로 파싱합니다.
- * 중간 청크 파싱 실패가 전체 UI를 멈추지 않도록 설계되었습니다.
- *
- * 설계 원칙:
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
- *   - RULE-004: 검증 실패 시 안전 폴백 제공
- *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
- *   - RULE-011: 백엔드 포트 8011 사용
- *
- * @module api/turnStream
- */
-
-import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
-import { safeParseTurnOutput } from '../schemas/turn';
-import type {
-  StageEvent,
-  BadgesEvent,
-  NarrativeDeltaEvent,
-  ErrorEvent,
-  StreamCallbacks,
-} from '../types/turn_stream';
-import { StreamEventType } from '../types/turn_stream';
-
-// Re-export 스트림 이벤트 타입들 (하위 호환성 유지)
-export type {
-  StreamEventTypeName,
-  StageStatusName,
-  StageEvent,
-  BadgesEvent,
-  NarrativeDeltaEvent,
-  FinalEvent,
-  ErrorEvent,
-  StreamEvent,
-  StreamCallbacks,
-} from '../types/turn_stream';
-export { StreamEventType, StageStatus } from '../types/turn_stream';
-
-// =============================================================================
-// NDJSON 파서 (Q1 결정: Option A - 직접 구현)
-// =============================================================================
-
-/**
- * NDJSON 라인 파서.
- * 부분 청크를 버퍼링하고 완전한 라인을 파싱합니다.
- */
-export class NDJSONParser {
-  private buffer = '';
-
-  /**
-   * 청크를 파싱하고 완전한 JSON 객체들을 반환합니다.
-   *
-   * @param chunk - 수신된 텍스트 청크
-   * @returns 파싱된 JSON 객체 배열
-   */
-  parse(chunk: string): unknown[] {
-    this.buffer += chunk;
-    const results: unknown[] = [];
-
-    // 줄바꿈으로 분할
-    const lines = this.buffer.split('\n');
-
-    // 마지막 라인은 불완전할 수 있으므로 버퍼에 유지
-    this.buffer = lines.pop() ?? '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed === '') continue;
-
-      try {
-        const parsed = JSON.parse(trimmed);
-        results.push(parsed);
-      } catch {
-        // 파싱 실패 시 해당 라인 무시 (RULE-004: 전체 중단 방지)
-        console.warn('[NDJSON] Failed to parse line:', trimmed);
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * 버퍼를 초기화합니다.
-   */
-  reset(): void {
-    this.buffer = '';
-  }
-
-  /**
-   * 남은 버퍼를 플러시하고 마지막 객체를 파싱합니다.
-   */
-  flush(): unknown | null {
-    const trimmed = this.buffer.trim();
-    this.buffer = '';
-
-    if (trimmed === '') return null;
-
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      console.warn('[NDJSON] Failed to parse remaining buffer:', trimmed);
-      return null;
-    }
-  }
-}
-
-// =============================================================================
-// 스트림 이벤트 핸들러
-// =============================================================================
-
-/**
- * 파싱된 이벤트를 타입별로 분배합니다.
- *
- * @param event - 파싱된 이벤트 객체
- * @param callbacks - 콜백 함수들
- * @param language - 폴백 언어
- */
-function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Language): void {
-  if (!event || typeof event !== 'object') return;
-
-  const e = event as Record<string, unknown>;
-  const type = e.type;
-
-  switch (type) {
-    case StreamEventType.STAGE:
-      callbacks.onStage?.(event as StageEvent);
-      break;
-
-    case StreamEventType.BADGES:
-      callbacks.onBadges?.(event as BadgesEvent);
-      break;
-
-    case StreamEventType.NARRATIVE_DELTA:
-      callbacks.onNarrativeDelta?.(event as NarrativeDeltaEvent);
-      break;
-
-    case StreamEventType.FINAL: {
-      // RULE-003/004: Zod strict parse + 폴백
-      // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
-      const finalEvent = event as { type: string; data?: unknown; turn_output?: unknown };
-      const turnOutputPayload = finalEvent.data ?? finalEvent.turn_output;
-      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
-
-      if (parseResult.success) {
-        callbacks.onFinal?.({
-          type: StreamEventType.FINAL,
-          data: parseResult.data,
-        });
-      } else {
-        console.warn('[TurnStream] TurnOutput validation failed:', parseResult.error);
-        callbacks.onFinal?.({
-          type: StreamEventType.FINAL,
-          data: parseResult.fallback,
-        });
-      }
-      break;
-    }
-
-    case StreamEventType.ERROR:
-      callbacks.onError?.(event as ErrorEvent);
-      break;
-
-    default:
-      console.warn('[TurnStream] Unknown event type:', type);
-  }
-}
-
-// =============================================================================
-// API 설정
-// =============================================================================
-
-/** 백엔드 API URL (RULE-011: 포트 8011) */
-const API_BASE_URL = 'http://localhost:8011';
-
-/** 턴 스트림 API 엔드포인트 */
-const TURN_ENDPOINT = `${API_BASE_URL}/api/turn`;
-
-// =============================================================================
-// 스트림 클라이언트
-// =============================================================================
-
-/** 스트림 요청 옵션 */
-export interface TurnStreamOptions {
-  /** 요청 타임아웃 (ms) */
-  timeout?: number;
-  /** AbortSignal */
-  signal?: AbortSignal;
-}
-
-/**
- * 턴 스트림 요청을 실행합니다.
- *
- * @param input - 턴 입력 데이터
- * @param callbacks - 이벤트 콜백
- * @param options - 요청 옵션
- * @returns 취소 함수
- */
-export async function executeTurnStream(
-  input: TurnInput,
-  callbacks: StreamCallbacks,
-  options?: TurnStreamOptions,
-): Promise<void> {
-  const parser = new NDJSONParser();
-  const controller = new AbortController();
-  const signal = options?.signal ?? controller.signal;
-
-  // RU-002-S1: AbortError 발생 시 onComplete 호출 여부 추적
-  let aborted = false;
-
-  try {
-    const response = await fetch(TURN_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/x-ndjson',
-      },
-      body: JSON.stringify(input),
-      signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    if (!response.body) {
-      throw new Error('Response body is null');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    // 스트림 읽기 루프
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const events = parser.parse(chunk);
-
-      for (const event of events) {
-        dispatchEvent(event, callbacks, input.language);
-      }
-    }
-
-    // 남은 버퍼 플러시
-    const remaining = parser.flush();
-    if (remaining) {
-      dispatchEvent(remaining, callbacks, input.language);
-    }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
-      aborted = true;
-      return;
-    }
-
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
-    // RU-002-S1: 네트워크 에러 시에도 onError 호출
-    callbacks.onError?.({
-      type: StreamEventType.ERROR,
-      message: errorMessage,
-      code: 'STREAM_ERROR',
-    });
-
-    // RU-002-S1: 네트워크 에러 시 클라이언트 측 폴백 final 생성
-    // 서버에서 final이 오지 못한 경우 UI가 멈추지 않도록 함
-    const fallback = createClientFallbackTurnOutput(input.language, input.economy_snapshot);
-    callbacks.onFinal?.({
-      type: StreamEventType.FINAL,
-      data: fallback,
-    });
-  } finally {
-    // RU-002-S1: 스트림 종료 인바리언트 - 성공/실패 모두에서 onComplete 호출 보장
-    if (!aborted) {
-      callbacks.onComplete?.();
-    }
-  }
-}
-
-/**
- * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
- * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
- * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
- */
-function createClientFallbackTurnOutput(
-  language: Language,
-  economySnapshot: { signal: number; memory_shard: number },
-): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
-      : '[System] Failed to connect to server. Please try again.';
-
-  return {
-    language,
-    narrative: fallbackNarrative,
-    economy: {
-      cost: { signal: 0, memory_shard: 0 },
-      // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
-      balance_after: {
-        signal: economySnapshot.signal,
-        memory_shard: economySnapshot.memory_shard,
-      },
-    },
-    safety: {
-      blocked: false,
-      message: null,
-    },
-    ui: {
-      action_deck: { cards: [] },
-      objects: [],
-    },
-    world: {
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    },
-    render: {
-      image_job: null,
-    },
-    agent_console: {
-      current_phase: 'commit',
-      badges: ['schema_fail'],
-      repair_count: 1,
-    },
-  };
-}
-
-/**
- * 턴 스트림을 시작하고 취소 함수를 반환합니다.
- *
- * @param input - 턴 입력 데이터
- * @param callbacks - 이벤트 콜백
- * @returns 취소 함수
- */
-export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): () => void {
-  const controller = new AbortController();
-
-  executeTurnStream(input, callbacks, { signal: controller.signal });
-
-  return () => controller.abort();
 }
 </file>
 
@@ -5673,6 +5535,467 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
   ],
   "title": "TurnOutput",
   "type": "object"
+}
+</file>
+
+<file path="frontend/src/api/turnStream.ts">
+/**
+ * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
+ *
+ * fetch 기반으로 POST 요청을 보내고 응답 스트림을 NDJSON으로 파싱합니다.
+ * 중간 청크 파싱 실패가 전체 UI를 멈추지 않도록 설계되었습니다.
+ *
+ * 설계 원칙:
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+ *   - RULE-004: 검증 실패 시 안전 폴백 제공
+ *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-011: 백엔드 포트 8011 사용
+ *
+ * @module api/turnStream
+ */
+
+import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
+import { safeParseTurnOutput } from '../schemas/turn';
+import type { StreamCallbacks } from '../types/turn_stream';
+import {
+  StreamEventType,
+  BaseEventSchema,
+  safeParseStageEvent,
+  safeParseBadgesEvent,
+  safeParseNarrativeDeltaEvent,
+  safeParseFinalEventRaw,
+  safeParseErrorEvent,
+  normalizeStageStatus,
+} from '../types/turn_stream';
+
+// Re-export 스트림 이벤트 타입들 (하위 호환성 유지)
+export type {
+  StreamEventTypeName,
+  StageStatusName,
+  StageEvent,
+  BadgesEvent,
+  NarrativeDeltaEvent,
+  FinalEvent,
+  ErrorEvent,
+  StreamEvent,
+  StreamCallbacks,
+} from '../types/turn_stream';
+export { StreamEventType, StageStatus } from '../types/turn_stream';
+
+// =============================================================================
+// NDJSON 파서 (Q1 결정: Option A - 직접 구현)
+// =============================================================================
+
+/**
+ * NDJSON 라인 파서.
+ * 부분 청크를 버퍼링하고 완전한 라인을 파싱합니다.
+ */
+export class NDJSONParser {
+  private buffer = '';
+
+  /**
+   * 청크를 파싱하고 완전한 JSON 객체들을 반환합니다.
+   *
+   * @param chunk - 수신된 텍스트 청크
+   * @returns 파싱된 JSON 객체 배열
+   */
+  parse(chunk: string): unknown[] {
+    this.buffer += chunk;
+    const results: unknown[] = [];
+
+    // 줄바꿈으로 분할
+    const lines = this.buffer.split('\n');
+
+    // 마지막 라인은 불완전할 수 있으므로 버퍼에 유지
+    this.buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === '') continue;
+
+      try {
+        const parsed = JSON.parse(trimmed);
+        results.push(parsed);
+      } catch {
+        // 파싱 실패 시 해당 라인 무시 (RULE-004: 전체 중단 방지)
+        console.warn('[NDJSON] Failed to parse line:', trimmed);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 버퍼를 초기화합니다.
+   */
+  reset(): void {
+    this.buffer = '';
+  }
+
+  /**
+   * 남은 버퍼를 플러시하고 마지막 객체를 파싱합니다.
+   */
+  flush(): unknown | null {
+    const trimmed = this.buffer.trim();
+    this.buffer = '';
+
+    if (trimmed === '') return null;
+
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      console.warn('[NDJSON] Failed to parse remaining buffer:', trimmed);
+      return null;
+    }
+  }
+}
+
+// =============================================================================
+// 스트림 이벤트 핸들러
+// =============================================================================
+
+/**
+ * 파싱된 이벤트를 타입별로 분배합니다.
+ *
+ * RU-002-S2: 캐스팅 대신 Zod safeParse를 적용하여 검증 강화.
+ * Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력.
+ *
+ * @param event - 파싱된 이벤트 객체
+ * @param callbacks - 콜백 함수들
+ * @param language - 폴백 언어
+ */
+function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Language): void {
+  if (!event || typeof event !== 'object') return;
+
+  // 기본 이벤트 타입 추출
+  const baseResult = BaseEventSchema.safeParse(event);
+  if (!baseResult.success) {
+    console.warn('[TurnStream] Invalid event format (no type field):', event);
+    return;
+  }
+
+  const type = baseResult.data.type;
+
+  switch (type) {
+    case StreamEventType.STAGE: {
+      // RU-002-S2: stage 이벤트 검증
+      const stageResult = safeParseStageEvent(event);
+      if (stageResult.success) {
+        // status 정규화: 'ok' → 'complete'
+        const normalizedStatus = normalizeStageStatus(stageResult.data.status);
+        callbacks.onStage?.({
+          type: StreamEventType.STAGE,
+          name: stageResult.data.name,
+          status: normalizedStatus,
+        });
+      } else {
+        console.warn('[TurnStream] Invalid stage event:', stageResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.BADGES: {
+      // RU-002-S2: badges 이벤트 검증 (v1/v2 정규화 포함)
+      const badgesResult = safeParseBadgesEvent(event);
+      if (badgesResult.success) {
+        callbacks.onBadges?.(badgesResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid badges event:', badgesResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.NARRATIVE_DELTA: {
+      // RU-002-S2: narrative_delta 이벤트 검증
+      const narrativeResult = safeParseNarrativeDeltaEvent(event);
+      if (narrativeResult.success) {
+        callbacks.onNarrativeDelta?.(narrativeResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid narrative_delta event:', narrativeResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.FINAL: {
+      // RU-002-S2: final 이벤트 구조 검증
+      const finalRawResult = safeParseFinalEventRaw(event);
+      if (!finalRawResult.success) {
+        console.warn('[TurnStream] Invalid final event structure:', finalRawResult.error.message);
+        // 구조가 잘못되어도 폴백 제공
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: createFallbackTurnOutput(language),
+        });
+        break;
+      }
+
+      // RULE-003/004: Zod strict parse + 폴백
+      // RU-002-Q2: v1(data) 및 v2(turn_output) 별칭 모두 수용 (하위호환)
+      const turnOutputPayload = finalRawResult.data.data ?? finalRawResult.data.turn_output;
+      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
+
+      if (parseResult.success) {
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: parseResult.data,
+        });
+      } else {
+        console.warn('[TurnStream] TurnOutput validation failed:', parseResult.error);
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: parseResult.fallback,
+        });
+      }
+      break;
+    }
+
+    case StreamEventType.ERROR: {
+      // RU-002-S2: error 이벤트 검증
+      const errorResult = safeParseErrorEvent(event);
+      if (errorResult.success) {
+        callbacks.onError?.(errorResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid error event:', errorResult.error.message);
+        // 에러 이벤트가 깨진 경우에도 기본 에러 전달
+        callbacks.onError?.({
+          type: StreamEventType.ERROR,
+          message: 'Unknown error (malformed error event)',
+          code: 'INVALID_ERROR_EVENT',
+        });
+      }
+      break;
+    }
+
+    default:
+      // RU-002-S2: Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력
+      // 향후 protocol, repair, telemetry 등 확장 이벤트 도입 시 여기서 처리 가능
+      console.warn('[TurnStream] Unknown/ignored event type:', type, event);
+  }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
+ * dispatchEvent 내부에서 사용하는 간단한 폴백.
+ */
+function createFallbackTurnOutput(language: Language): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.'
+      : '[System] An error occurred while processing response data.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
+}
+
+// =============================================================================
+// API 설정
+// =============================================================================
+
+/** 백엔드 API URL (RULE-011: 포트 8011) */
+const API_BASE_URL = 'http://localhost:8011';
+
+/** 턴 스트림 API 엔드포인트 */
+const TURN_ENDPOINT = `${API_BASE_URL}/api/turn`;
+
+// =============================================================================
+// 스트림 클라이언트
+// =============================================================================
+
+/** 스트림 요청 옵션 */
+export interface TurnStreamOptions {
+  /** 요청 타임아웃 (ms) */
+  timeout?: number;
+  /** AbortSignal */
+  signal?: AbortSignal;
+}
+
+/**
+ * 턴 스트림 요청을 실행합니다.
+ *
+ * @param input - 턴 입력 데이터
+ * @param callbacks - 이벤트 콜백
+ * @param options - 요청 옵션
+ * @returns 취소 함수
+ */
+export async function executeTurnStream(
+  input: TurnInput,
+  callbacks: StreamCallbacks,
+  options?: TurnStreamOptions,
+): Promise<void> {
+  const parser = new NDJSONParser();
+  const controller = new AbortController();
+  const signal = options?.signal ?? controller.signal;
+
+  // RU-002-S1: AbortError 발생 시 onComplete 호출 여부 추적
+  let aborted = false;
+
+  try {
+    const response = await fetch(TURN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/x-ndjson',
+      },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+
+    // 스트림 읽기 루프
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const events = parser.parse(chunk);
+
+      for (const event of events) {
+        dispatchEvent(event, callbacks, input.language);
+      }
+    }
+
+    // 남은 버퍼 플러시
+    const remaining = parser.flush();
+    if (remaining) {
+      dispatchEvent(remaining, callbacks, input.language);
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
+      aborted = true;
+      return;
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    // RU-002-S1: 네트워크 에러 시에도 onError 호출
+    callbacks.onError?.({
+      type: StreamEventType.ERROR,
+      message: errorMessage,
+      code: 'STREAM_ERROR',
+    });
+
+    // RU-002-S1: 네트워크 에러 시 클라이언트 측 폴백 final 생성
+    // 서버에서 final이 오지 못한 경우 UI가 멈추지 않도록 함
+    const fallback = createClientFallbackTurnOutput(input.language, input.economy_snapshot);
+    callbacks.onFinal?.({
+      type: StreamEventType.FINAL,
+      data: fallback,
+    });
+  } finally {
+    // RU-002-S1: 스트림 종료 인바리언트 - 성공/실패 모두에서 onComplete 호출 보장
+    if (!aborted) {
+      callbacks.onComplete?.();
+    }
+  }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
+ * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
+ * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
+ */
+function createClientFallbackTurnOutput(
+  language: Language,
+  economySnapshot: { signal: number; memory_shard: number },
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
+      : '[System] Failed to connect to server. Please try again.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
+      balance_after: {
+        signal: economySnapshot.signal,
+        memory_shard: economySnapshot.memory_shard,
+      },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
+}
+
+/**
+ * 턴 스트림을 시작하고 취소 함수를 반환합니다.
+ *
+ * @param input - 턴 입력 데이터
+ * @param callbacks - 이벤트 콜백
+ * @returns 취소 함수
+ */
+export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): () => void {
+  const controller = new AbortController();
+
+  executeTurnStream(input, callbacks, { signal: controller.signal });
+
+  return () => controller.abort();
 }
 </file>
 
