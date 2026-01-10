@@ -20,6 +20,11 @@ D:\Dev\unknown-world\
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   ├── vite.config.ts
+│   ├── public/             # 정적 에셋
+│   │   └── ui/             # UI 이미지 에셋 SSOT (U-030)
+│   │       ├── README.md   # 제작/관리 규칙
+│   │       ├── manifest.json # 에셋 목록
+│   │       └── manifest.schema.json # 매니페스트 스키마
     ├── src/
 │       ├── main.tsx
 │       ├── App.tsx
@@ -72,12 +77,13 @@ D:\Dev\unknown-world\
 │   ├── unit-plans/
 │   ├── unit-results/       # 유닛 개발 보고서 (CP-MVP-01[Mvp] 포함)
 │   └── unit-runbooks/      # 유닛 실행 가이드 (CP-MVP-01[Mvp] 포함)
-└── shared/                # 공유 리소스 (SSOT)
+└── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ```
 
 ### 주요 디렉토리 책임
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
+    - `public/ui/`: `nanobanana mcp`로 제작된 정적 이미지 에셋(아이콘, 프레임, Placeholder) 저장소. 매니페스트를 통한 에셋 추적 및 폴백 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
     - `stores/`: Agent Console 상태(단계/배지) 및 월드 상태, **UI 가독성 설정**을 관리하는 Zustand 스토어.
     - `components/`: Agent Console, Narrative Feed 등 게임 전용 UI 컴포넌트 모음.
@@ -144,6 +150,18 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - Readable 모드 활성화 시 보조 텍스트의 대비를 상향 조정하고 마이크로 텍스트 크기를 추가로 상향한다.
 3. **설정 영속성 (Persistence)**: 사용자의 UI 설정은 `localStorage`에 저장되어 페이지 새로고침 후에도 유지된다. 향후 SaveGame 시스템과 통합되어 계정/세션별로 관리될 수 있다.
 4. **마이크로 텍스트 하한선 (Micro-text Baseline)**: Agent Console 등 정보 밀도가 높은 영역에서도 텍스트가 읽힐 수 있도록 최소 폰트 크기 기준(`--font-size-xs`, `--font-size-sm`)을 준수한다.
+
+
+7. UI 이미지 에셋 SSOT 정책 (U-030[Mvp])
+
+1. **Dev-only 제작 원칙**: `nanobanana mcp`는 개발 과정에서 정적 에셋을 제작하는 도구로만 사용하며, 런타임에는 생성된 `frontend/public/ui/` 내 파일에만 의존한다. (RULE-007 준수)
+2. **네이밍 및 포맷**: 모든 에셋은 `kebab-case`를 사용하며, 아이콘/프레임은 PNG(투명), Placeholder는 WebP(용량 최적화) 포맷을 우선한다.
+3. **성능 예산(Performance Budget)**:
+    - 개별 아이콘 상한: 30KB (권장 20KB 이하)
+    - 개별 Placeholder 상한: 300KB (권장 200KB 이하)
+    - `ui/` 폴더 총합 상한: 1.5MB (권장 1MB 이하)
+4. **폴백 강제 (Fallback-first)**: 에셋 로딩 실패 시에도 UI가 깨지지 않도록 이모지나 텍스트 라벨을 `manifest.json`에 정의하고 클라이언트에서 이를 활용한다.
+5. **테마 정합성**: 에셋 제작 시 `style.css`에 정의된 CRT 테마 색상(인광 녹색 `#33ff00` 등)과 조화를 이루도록 프롬프트를 제어한다.
 
 
 ---

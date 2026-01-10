@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unknown-world.dev/schemas/ui-asset-manifest.json",
+  "title": "UI Asset Manifest",
+  "description": "nanobanana mcp로 제작된 UI 에셋의 매니페스트 스키마",
+  "type": "object",
+  "required": ["version", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema 참조"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "매니페스트 버전 (SemVer)",
+      "examples": ["1.0.0"]
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "매니페스트 생성 시각 (ISO 8601)"
+    },
+    "totalBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "모든 에셋의 총 바이트 수"
+    },
+    "budgetBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1572864,
+      "description": "성능 예산 상한 (기본: 1.5MB = 1572864 bytes)"
+    },
+    "assets": {
+      "type": "array",
+      "description": "에셋 목록",
+      "items": {
+        "$ref": "#/$defs/Asset"
+      }
+    }
+  },
+  "$defs": {
+    "Asset": {
+      "type": "object",
+      "required": ["id", "path", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "에셋 고유 ID (kebab-case)",
+          "examples": ["signal-24", "badge-ok-16", "scene-loading"]
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^[a-z0-9-/]+\\.(png|webp|svg)$",
+          "description": "ui/ 디렉토리 기준 상대 경로",
+          "examples": ["icons/signal-24.png", "placeholders/scene-loading.webp"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["icon", "placeholder", "chrome"],
+          "description": "에셋 유형"
+        },
+        "size": {
+          "type": "integer",
+          "enum": [16, 24, 32, 64, 128, 256, 512],
+          "description": "픽셀 사이즈 (아이콘용)"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "가로 픽셀 (placeholder/chrome용)"
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "세로 픽셀 (placeholder/chrome용)"
+        },
+        "fallback": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "로딩 실패 시 대체 이모지/텍스트",
+          "examples": ["📡", "⚠️", "OK"]
+        },
+        "usedIn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "사용처 컴포넌트 목록",
+          "examples": [["EconomyHUD", "AgentConsole"]]
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "파일 크기 (bytes)"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["png", "webp", "svg"],
+          "description": "파일 포맷"
+        },
+        "retina": {
+          "type": "boolean",
+          "default": false,
+          "description": "@2x Retina 버전 존재 여부"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "에셋 설명"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "생성 시각 (ISO 8601)"
+        },
+        "promptHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}$",
+          "description": "생성 프롬프트 해시 (재현성, 8자)"
+        }
+      }
+    }
+  }
+}

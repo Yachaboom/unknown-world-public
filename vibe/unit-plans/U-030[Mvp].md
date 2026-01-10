@@ -92,8 +92,9 @@
 ## 페어링 질문 (결정 필요)
 
 - [ ] **Q1**: placeholder(상태 이미지)는 PNG로 고정할까, WebP를 허용할까?
-  - Option A: PNG 고정(단순/예측 가능) ✅
+  - Option A: PNG 고정(단순/예측 가능)
   - Option B: placeholder만 WebP 허용(용량 절감) — 단, 브라우저 호환/품질 기준 필요
+  **A1**: Option B
 
 ## 참고 자료
 

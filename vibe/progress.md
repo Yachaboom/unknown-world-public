@@ -1,5 +1,42 @@
 # 프로젝트 진행 상황
 
+## [2026-01-10 16:40] U-030[Mvp]: nanobanana mcp 에셋 SSOT(폴더/네이밍/사이즈/폴백/라이선스) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: UI 에셋 제작 및 관리를 위한 SSOT 체계(저장소/규칙/매니페스트/스키마) 구축
+- **추가 컴포넌트**: `frontend/public/ui/README.md` (규칙), `manifest.schema.json` (스키마), `manifest.json` (매니페스트), `vibe/unit-results/U-030[Mvp].md`
+- **달성 요구사항**: [PRD 9.7] UI 이미지 에셋 파이프라인 규칙, [RULE-007] Dev-only 원칙(MCP 의존성 격리)
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **JSON Schema (Draft-07)**: 에셋 매니페스트의 정형성 및 QA 자동화를 위한 스키마 정의
+- **Static Asset Serving**: Vite `public/` 디렉토리 기반의 고성능 정적 에셋 서빙 구조 활용
+
+**설계 패턴 및 아키텍처 선택**:
+- **Asset Manifest 패턴**: 매니페스트를 통한 에셋 추적 및 런타임 폴백 데이터(이모지/텍스트) SSOT 관리
+- **Theme-aligned Styling**: `style.css`의 CRT 테마 토큰(인광 녹색 등)을 제작 가이드에 명시하여 비주얼 일관성 확보
+
+**코드 구조**:
+repo-root/
+└── frontend/public/ui/
+    ├── README.md (제작 가이드 및 SSOT 규칙)
+    ├── manifest.schema.json (에셋 데이터 스키마)
+    └── manifest.json (에셋 등록 정보)
+
+### 성능 및 품질 지표
+- **성능 예산**: 개별 아이콘 20KB, 전체 1.5MB 상한 설정으로 초기 로딩 속도 보장
+- **안정성**: 필수 폴백 원칙 및 접근성 가이드(ARIA) 내재화로 에셋 로딩 실패 대응력 강화
+
+### 의존성 변경
+- 없음 (개발 도구 및 정적 자원 구조화)
+
+### 다음 단계
+- [U-029[Mvp]] ⚡nanobanana mcp 에셋 패스 (아이콘/프레임/Placeholder 제작)
+
+---
+
 ## [2026-01-10 14:35] U-028[Mvp]: UI 가독성 패스(폰트 스케일/효과 토글/대비) 완료
 
 ### 구현 완료 항목
