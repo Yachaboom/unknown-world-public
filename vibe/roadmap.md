@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 12/57 (21%) | **MVP**: 12/44 (27%) | **MMP**: 0/13 (0%)
+**전체**: 13/57 (22%) | **MVP**: 13/44 (29%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-8 | MMP D-12  
+**예상 완료(가정)**: MVP D-7 | MMP D-11  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) 기준. `vibe/refactors/*`는 하위 리팩토링 기록으로 분모에서 제외._
 
-**진행 중**: 없음 / **최근 완료**: [CP-MVP-01](unit-results/CP-MVP-01.md) (2026-01-10)
+**진행 중**: 없음 / **최근 완료**: [U-028[Mvp]](unit-results/U-028[Mvp].md) (2026-01-10)
 
 **블로커**: 없음
 
@@ -121,7 +121,6 @@ _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) �
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-028[Mvp]](unit-plans/U-028[Mvp].md) | UI 가독성 패스(폰트 스케일/효과 토글/대비) | Depends=U-004,U-008 | ⏸️
 ID=[U-030[Mvp]](unit-plans/U-030[Mvp].md) | nanobanana mcp 에셋 SSOT(폴더/네이밍/사이즈/폴백/라이선스) | Depends=U-004 | ⏸️
 ID=[U-034[Mvp]](unit-plans/U-034[Mvp].md) | nanobanana mcp 에셋 요청 스키마 + 프롬프트 템플릿(재현성) | Depends=U-030 | ⏸️
 ID=[U-029[Mvp]](unit-plans/U-029[Mvp].md) | nanobanana mcp 에셋 패스(UI 아이콘/프레임/placeholder) | Depends=U-030,U-028,U-008 | ⏸️
@@ -177,6 +176,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-028[Mvp]](unit-results/U-028[Mvp].md): UI 가독성 패스(폰트 스케일/효과 토글/대비) (2026-01-10)
 - ✅ [CP-MVP-01](unit-results/CP-MVP-01.md): 체크포인트 - 스트리밍/스키마/폴백 (2026-01-10)
 - ✅ [RU-002[Mvp]](unit-results/RU-002[Mvp].md): 리팩토링: validation/폴백/이벤트 타입 통일 (2026-01-10)
 - ✅ [RU-002-S2](refactors/RU-002-S2.md): 스트림 이벤트 검증 강화(Zod) 및 Unknown 이벤트 폴백 처리 (2026-01-10)

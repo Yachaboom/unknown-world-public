@@ -89,6 +89,7 @@
 - [ ] **Q1**: UI 설정(스케일/Readable) 저장 위치는 어디가 SSOT가 좋을까?
   - Option A: localStorage(persist) - MVP에서 빠르고 단순(권장)
   - Option B: SaveGame에 포함 - 세션/디바이스 간 일관(하지만 SaveGame/Reset 설계 영향)
+  **A1**: Option B
 
 ## 참고 자료
 

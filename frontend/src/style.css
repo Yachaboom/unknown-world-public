@@ -25,6 +25,8 @@
   --crt-scanline: rgba(18, 16, 16, 0.1);
   --crt-flicker: 0.03;
   --glow-intensity: 5px;
+  --crt-flicker-opacity-min: 0.97;
+  --crt-flicker-opacity-max: 1;
 
   /* 타이포그래피 */
   --font-main: 'NeoDunggeunmo', 'VT323', monospace;
@@ -33,6 +35,13 @@
   --font-size-xl: 1.5rem;
   --font-size-2xl: 2rem;
   --line-height-base: 1.5;
+
+  /* 마이크로 텍스트 (U-028: 가독성 상향) */
+  --font-size-xs: 0.75rem; /* 12px at 1.0 scale - 최소 마이크로 텍스트 */
+  --font-size-sm: 0.875rem; /* 14px at 1.0 scale - 작은 텍스트 */
+
+  /* UI 스케일 (U-028: 전역 스케일 조절) */
+  --ui-scale-factor: 1;
 
   /* 레이아웃 */
   --spacing-xs: 4px;
@@ -72,7 +81,8 @@
 }
 
 html {
-  font-size: var(--font-size-base);
+  /* U-028: UI 스케일 적용 - font-size가 스케일 팩터에 반응 */
+  font-size: calc(var(--font-size-base) * var(--ui-scale-factor));
   line-height: var(--line-height-base);
 }
 
@@ -931,4 +941,209 @@ button:disabled,
 
 .flex-1 {
   flex: 1;
+}
+
+/* ============================================
+   21. Readable 모드 (U-028: 가독성 패스)
+   - CRT 효과 완화, 대비 향상, 마이크로 텍스트 상향
+   ============================================ */
+
+/* Readable 모드: CRT 오버레이 숨김 */
+html[data-readable='true'] .crt-overlay {
+  display: none;
+}
+
+/* Readable 모드: 글로우/텍스트 쉐도우 완화 */
+html[data-readable='true'] body {
+  text-shadow: none;
+}
+
+html[data-readable='true'] .text-glow {
+  text-shadow: none;
+}
+
+/* Readable 모드: 글리치 효과 비활성화 */
+html[data-readable='true'] .glitch::before,
+html[data-readable='true'] .glitch::after {
+  display: none;
+}
+
+/* Readable 모드: 배경 대비 향상 */
+html[data-readable='true'] {
+  --panel-bg: rgba(0, 30, 0, 0.5);
+  --text-dim: #2aaa00; /* 보조 텍스트 밝기 상향 */
+}
+
+/* Readable 모드: 입력창 글로우 제거 */
+html[data-readable='true'] .command-input {
+  text-shadow: none;
+}
+
+/* Readable 모드: 상태 표시기 펄스 완화 */
+html[data-readable='true'] .status-indicator {
+  animation: none;
+  opacity: 1;
+}
+
+/* Readable 모드: 스트리밍 상태 펄스 완화 */
+html[data-readable='true'] .streaming-status .status-dot.active {
+  animation: none;
+}
+
+/* Readable 모드: 단계 아이템 펄스 완화 */
+html[data-readable='true'] .phase-item.in_progress,
+html[data-readable='true'] .phase-item.in-progress {
+  animation: none;
+}
+
+/* ============================================
+   22. 마이크로 텍스트 가독성 상향 (U-028)
+   - 0.625rem → --font-size-xs (0.75rem)
+   - 0.75rem → --font-size-sm (0.875rem) (Readable 모드)
+   ============================================ */
+
+/* Agent Console 기본 폰트 상향 */
+.agent-console-content {
+  font-size: var(--font-size-xs);
+}
+
+/* 큐 라벨 폰트 상향 */
+.phase-queue .queue-label {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+/* 단계 아이템 폰트 상향 */
+.phase-item {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+/* 배지 패널 라벨 상향 */
+.badges-panel .badges-label {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+.badges-panel .badges-empty {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+/* 배지 아이템 상향 */
+.badge-item {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+/* 복구 트레이스 상향 */
+.repair-trace {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+.repair-trace .repair-status {
+  font-size: calc(var(--font-size-xs) * 0.7);
+}
+
+/* 에러 표시 상향 */
+.agent-error {
+  font-size: calc(var(--font-size-xs) * 0.85);
+}
+
+.agent-error .error-code {
+  font-size: calc(var(--font-size-xs) * 0.7);
+}
+
+/* 내러티브 타임스탬프 상향 */
+.narrative-timestamp {
+  font-size: var(--font-size-xs);
+}
+
+/* 단계 아이콘 상향 */
+.phase-icon {
+  font-size: calc(var(--font-size-xs) * 0.7);
+}
+
+/* Readable 모드: 마이크로 텍스트 추가 상향 */
+html[data-readable='true'] .agent-console-content {
+  font-size: var(--font-size-sm);
+}
+
+html[data-readable='true'] .phase-queue .queue-label,
+html[data-readable='true'] .phase-item,
+html[data-readable='true'] .badges-panel .badges-label,
+html[data-readable='true'] .badges-panel .badges-empty,
+html[data-readable='true'] .badge-item,
+html[data-readable='true'] .repair-trace,
+html[data-readable='true'] .agent-error {
+  font-size: var(--font-size-xs);
+}
+
+html[data-readable='true'] .narrative-timestamp {
+  font-size: var(--font-size-sm);
+}
+
+/* ============================================
+   23. UI 스케일 컨트롤 버튼 스타일 (U-028)
+   ============================================ */
+
+.ui-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.ui-scale-btn,
+.readable-toggle-btn {
+  background: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--text-dim);
+  padding: 2px 6px;
+  font-family: var(--font-main);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+  min-width: 28px;
+  text-align: center;
+}
+
+.ui-scale-btn:hover,
+.readable-toggle-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.ui-scale-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ui-scale-btn:disabled:hover {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+.readable-toggle-btn[aria-pressed='true'] {
+  background: var(--text-color);
+  color: var(--bg-color);
+  border-color: var(--text-color);
+}
+
+.readable-toggle-btn[aria-pressed='true']:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.ui-scale-display {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  min-width: 32px;
+  text-align: center;
+}
+
+.ui-controls-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--text-dim);
+  margin: 0 var(--spacing-xs);
 }

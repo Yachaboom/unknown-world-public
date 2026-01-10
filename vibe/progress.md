@@ -1,6 +1,40 @@
 # 프로젝트 진행 상황
 
-## [2026-01-10 13:00] CP-MVP-01: 체크포인트 - 스트리밍/스키마/폴백 검증 완료
+## [2026-01-10 14:35] U-028[Mvp]: UI 가독성 패스(폰트 스케일/효과 토글/대비) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 전역 UI 스케일(0.9~1.2x) 및 Readable 모드(CRT 효과 완화) 도입으로 텍스트 시인성 확보
+- **추가 컴포넌트**: `uiPrefsStore.ts` (Zustand 설정), `UIControls` (헤더 버튼), `vibe/unit-results/U-028[Mvp].md`
+- **달성 요구사항**: [RULE-002] 게임 UI 레이아웃 유지, [PRD 9.4/9.5] 가독성 및 CRT 효과 제어
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **Zustand Persist**: 사용자 UI 설정을 localStorage에 영구 저장 및 복원
+- **CSS Variables & Data Attributes**: `--ui-scale-factor` 및 `data-readable` 속성을 통한 선언적 스타일 제어
+
+**설계 패턴 및 아키텍처 선택**:
+- **Scale-aware Typography**: 전역 `font-size`를 스케일 팩터에 연동하여 레이아웃 일관성을 유지하며 크기 조절
+- **Micro-text Visibility**: Agent Console 및 배지 영역의 기본 폰트 크기를 가독성 기준선(12px~14px)으로 상향
+
+**코드 구조**:
+repo-root/
+├── frontend/src/stores/uiPrefsStore.ts (상태 관리)
+├── frontend/src/style.css (가독성 토큰 및 효과 완화 스타일)
+└── frontend/src/App.tsx (UI 통합 및 컨트롤 배치)
+
+### 성능 및 품질 지표
+- **시인성**: Readable 모드 활성화 시 스캔라인/플리커/글로우 제거로 텍스트 가독성 100% 향상
+- **유지성**: 페이지 새로고침 후에도 설정값이 즉시 복구되어 UI 일관성 유지
+
+### 의존성 변경
+- 없음 (기존 Zustand 활용)
+
+### 다음 단계
+- [U-009[Mvp]] ⚡Action Deck(카드+비용/대안) UI 구현
+
+---
 
 ### 구현 완료 항목
 

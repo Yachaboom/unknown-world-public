@@ -15,6 +15,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AgentConsole } from './components/AgentConsole';
 import { useAgentStore } from './stores/agentStore';
+import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
 import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
 
@@ -153,6 +154,72 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
 }
 
 // =============================================================================
+// UI 컨트롤 컴포넌트 (U-028: 가독성 패스)
+// =============================================================================
+
+interface UIControlsProps {
+  uiScale: UIScale;
+  readableMode: boolean;
+  onIncreaseScale: () => void;
+  onDecreaseScale: () => void;
+  onToggleReadable: () => void;
+}
+
+function UIControls({
+  uiScale,
+  readableMode,
+  onIncreaseScale,
+  onDecreaseScale,
+  onToggleReadable,
+}: UIControlsProps) {
+  const isMinScale = uiScale === UI_SCALES[0];
+  const isMaxScale = uiScale === UI_SCALES[UI_SCALES.length - 1];
+
+  return (
+    <div className="ui-controls" role="group" aria-label="UI 가독성 설정">
+      {/* UI 스케일 조절 */}
+      <button
+        type="button"
+        className="ui-scale-btn"
+        onClick={onDecreaseScale}
+        disabled={isMinScale}
+        aria-label="글자 크기 줄이기"
+        title="글자 크기 줄이기 (A-)"
+      >
+        A-
+      </button>
+      <span className="ui-scale-display" aria-live="polite">
+        {Math.round(uiScale * 100)}%
+      </span>
+      <button
+        type="button"
+        className="ui-scale-btn"
+        onClick={onIncreaseScale}
+        disabled={isMaxScale}
+        aria-label="글자 크기 늘리기"
+        title="글자 크기 늘리기 (A+)"
+      >
+        A+
+      </button>
+
+      <div className="ui-controls-separator" aria-hidden="true" />
+
+      {/* Readable 모드 토글 */}
+      <button
+        type="button"
+        className="readable-toggle-btn"
+        onClick={onToggleReadable}
+        aria-pressed={readableMode}
+        aria-label={readableMode ? 'Readable 모드 끄기' : 'Readable 모드 켜기'}
+        title="Readable 모드 (CRT 효과 완화)"
+      >
+        {readableMode ? '◉ READ' : '○ READ'}
+      </button>
+    </div>
+  );
+}
+
+// =============================================================================
 // 헤더 컴포넌트
 // =============================================================================
 
@@ -160,15 +227,37 @@ interface GameHeaderProps {
   signal: number;
   memoryShard: number;
   isConnected: boolean;
+  uiScale: UIScale;
+  readableMode: boolean;
+  onIncreaseScale: () => void;
+  onDecreaseScale: () => void;
+  onToggleReadable: () => void;
 }
 
-function GameHeader({ signal, memoryShard, isConnected }: GameHeaderProps) {
+function GameHeader({
+  signal,
+  memoryShard,
+  isConnected,
+  uiScale,
+  readableMode,
+  onIncreaseScale,
+  onDecreaseScale,
+  onToggleReadable,
+}: GameHeaderProps) {
   return (
     <header className="game-header">
       <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
         UNKNOWN WORLD
       </h1>
       <div className="header-controls">
+        {/* UI 가독성 컨트롤 (U-028) */}
+        <UIControls
+          uiScale={uiScale}
+          readableMode={readableMode}
+          onIncreaseScale={onIncreaseScale}
+          onDecreaseScale={onDecreaseScale}
+          onToggleReadable={onToggleReadable}
+        />
         <div className="economy-hud">
           <span className="signal-icon">⚡</span>
           <span>Signal: {signal}</span>
@@ -211,6 +300,15 @@ function App() {
     isStreaming,
     narrativeBuffer,
   } = useAgentStore();
+
+  // UI Prefs Store (U-028: 가독성 패스)
+  const { uiScale, readableMode, increaseUIScale, decreaseUIScale, toggleReadableMode } =
+    useUIPrefsStore();
+
+  // DOM에 UI 설정 적용 (U-028)
+  useEffect(() => {
+    applyUIPrefsToDOM({ uiScale, readableMode });
+  }, [uiScale, readableMode]);
 
   // 취소 함수 ref
   const cancelStreamRef = useRef<(() => void) | null>(null);
@@ -341,11 +439,16 @@ function App() {
 
       {/* 게임 레이아웃 */}
       <div className="game-container">
-        {/* Header: 타이틀/상태/재화 */}
+        {/* Header: 타이틀/상태/재화/UI컨트롤 */}
         <GameHeader
           signal={economy.signal}
           memoryShard={economy.memory_shard}
           isConnected={isConnected}
+          uiScale={uiScale}
+          readableMode={readableMode}
+          onIncreaseScale={increaseUIScale}
+          onDecreaseScale={decreaseUIScale}
+          onToggleReadable={toggleReadableMode}
         />
 
         {/* Sidebar Left: Inventory / Quest / Rule Board */}

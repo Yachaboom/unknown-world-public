@@ -31,8 +31,9 @@ D:\Dev\unknown-world\
 │       │   └── AgentConsole.tsx
 │       ├── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
 │       │   └── turn.ts
-│       ├── stores/         # 상태 관리 (Zustand) (U-008)
-│       │   └── agentStore.ts
+│       ├── stores/         # 상태 관리 (Zustand) (U-008, U-028)
+│       │   ├── agentStore.ts
+│       │   └── uiPrefsStore.ts # UI 가독성 설정 (스케일/Readable)
 │       └── types/          # 스트림 이벤트 계약 타입 (RU-002-Q4)
 │           └── turn_stream.ts
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
@@ -78,7 +79,7 @@ D:\Dev\unknown-world\
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
-    - `stores/`: Agent Console 상태(단계/배지) 및 월드 상태를 관리하는 Zustand 스토어.
+    - `stores/`: Agent Console 상태(단계/배지) 및 월드 상태, **UI 가독성 설정**을 관리하는 Zustand 스토어.
     - `components/`: Agent Console, Narrative Feed 등 게임 전용 UI 컴포넌트 모음.
     - `schemas/`: Zod를 활용한 턴 계약(Turn Contract) 검증 및 폴백 로직 정의.
     - `types/`: 서버-클라이언트 간 스트림 이벤트(NDJSON) 계약 타입을 정의 (SSOT).
@@ -132,6 +133,17 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **상태 보존형 폴백 (State-preserving Fallback)**: 폴백 시 발생하는 `TurnOutput`은 입력 시점의 재화 스냅샷(`economy_snapshot`)을 그대로 유지하며, 비용(`cost`)은 0으로 설정하여 재화 HUD의 일관성을 보장한다. (RULE-005 준수)
 5. **가시성 보장 (Observability)**: 에러 발생 시 `error` 이벤트를 통해 사용자에게 상황을 알리되, 시스템의 최종 상태는 항상 구조화된 `final` 데이터를 통해 확정한다.
 6. **복구 루프 (Repair Loop)**: 스키마 검증 실패 시 최대 N회(기본 3회) 자동 복구를 시도하며, UI에는 `repair` 이벤트를 통해 상태를 알린다. (CP-MVP-01에서 검증 완료)
+
+
+6. UI 가독성 및 설정 정책 (U-028[Mvp])
+
+1. **전역 UI 스케일 (Global UI Scale)**: 사용자는 UI 전체 크기를 0.9x에서 1.2x까지 조절할 수 있다.
+    - 이는 CSS 변수 `--ui-scale-factor`를 통해 제어되며, `rem` 단위 기반의 모든 타이포그래피와 간격에 영향을 미친다.
+2. **Readable 모드 (Readable Mode)**: 텍스트 시인성을 저해할 수 있는 CRT 효과(스캔라인, 플리커, 글로우)를 선택적으로 완화하거나 제거할 수 있다.
+    - `html[data-readable="true"]` 속성을 통해 CSS 레벨에서 선언적으로 처리한다.
+    - Readable 모드 활성화 시 보조 텍스트의 대비를 상향 조정하고 마이크로 텍스트 크기를 추가로 상향한다.
+3. **설정 영속성 (Persistence)**: 사용자의 UI 설정은 `localStorage`에 저장되어 페이지 새로고침 후에도 유지된다. 향후 SaveGame 시스템과 통합되어 계정/세션별로 관리될 수 있다.
+4. **마이크로 텍스트 하한선 (Micro-text Baseline)**: Agent Console 등 정보 밀도가 높은 영역에서도 텍스트가 읽힐 수 있도록 최소 폰트 크기 기준(`--font-size-xs`, `--font-size-sm`)을 준수한다.
 
 
 ---
