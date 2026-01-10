@@ -143,9 +143,48 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
         >
           <div className="action-card-title">{card.label}</div>
           <div className="action-card-cost">
-            ⚡ {card.cost.signal} Signal
-            {card.cost.memory_shard > 0 && ` | 💎 ${card.cost.memory_shard}`}
-            {' | '}⚠ {card.risk}
+            <span className="icon-wrapper" aria-label="Signal cost">
+              <img
+                src="/ui/icons/signal-24.png"
+                alt=""
+                aria-hidden="true"
+                className="icon-img"
+                style={{ width: 14, height: 14 }}
+                onError={(e) => e.currentTarget.classList.add('hidden')}
+              />
+              <span className="icon-fallback">⚡</span>
+            </span>{' '}
+            {card.cost.signal}
+            {card.cost.memory_shard > 0 && (
+              <>
+                {' | '}
+                <span className="icon-wrapper" aria-label="Shard cost">
+                  <img
+                    src="/ui/icons/shard-24.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="icon-img"
+                    style={{ width: 14, height: 14 }}
+                    onError={(e) => e.currentTarget.classList.add('hidden')}
+                  />
+                  <span className="icon-fallback">💎</span>
+                </span>{' '}
+                {card.cost.memory_shard}
+              </>
+            )}
+            {' | '}
+            <span className="icon-wrapper" aria-label="Risk level">
+              <img
+                src={`/ui/icons/risk-${card.risk}-16.png`}
+                alt=""
+                aria-hidden="true"
+                className={`icon-img risk-${card.risk}`}
+                style={{ width: 14, height: 14 }}
+                onError={(e) => e.currentTarget.classList.add('hidden')}
+              />
+              <span className="icon-fallback">⚠</span>
+            </span>{' '}
+            {card.risk}
           </div>
         </button>
       ))}
@@ -259,9 +298,31 @@ function GameHeader({
           onToggleReadable={onToggleReadable}
         />
         <div className="economy-hud">
-          <span className="signal-icon">⚡</span>
+          <span className="icon-wrapper signal-icon" aria-label="Signal">
+            <img
+              src="/ui/icons/signal-24.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              onError={(e) => {
+                e.currentTarget.classList.add('hidden');
+              }}
+            />
+            <span className="icon-fallback">⚡</span>
+          </span>
           <span>Signal: {signal}</span>
-          <span className="shard-icon">💎</span>
+          <span className="icon-wrapper shard-icon" aria-label="Memory Shard">
+            <img
+              src="/ui/icons/shard-24.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              onError={(e) => {
+                e.currentTarget.classList.add('hidden');
+              }}
+            />
+            <span className="icon-fallback">💎</span>
+          </span>
           <span>Shard: {memoryShard}</span>
         </div>
         <div className="connection-status">
@@ -468,8 +529,8 @@ function App() {
         <main className="game-center">
           <div className="scene-canvas">
             <div className="scene-placeholder">
-              <p>[ Scene Canvas ]</p>
-              <p className="text-dim">이미지 + 핫스팟 오버레이 영역</p>
+              <p className="text-glow">NO SIGNAL DATA</p>
+              <p className="text-dim" style={{ fontSize: '0.875rem' }}>전역 데이터 동기화 대기 중...</p>
             </div>
           </div>
           <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />

@@ -1,6 +1,43 @@
 # 프로젝트 진행 상황
 
-## [2026-01-11 15:30] U-034[Mvp]: nanobanana mcp 에셋 요청 스키마 + 프롬프트 템플릿(재현성) 완료
+## [2026-01-11 16:30] U-029[Mvp]: nanobanana mcp 에셋 패스(UI 아이콘/프레임/placeholder) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: UI의 시각적 완성도 향상을 위해 nanobanana mcp로 제작된 13종의 에셋(아이콘/플레이스홀더) 반영
+- **추가 컴포넌트**: `frontend/public/ui/icons/` (에셋), `manifest.json` (업데이트), `U-029-nanobanana-asset-runbook.md` (런북), `vibe/unit-results/U-029[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 6.7/9장] 게임 UI 고정 HUD 미학 확보, [RULE-007] 에셋 파이프라인(rembg) 준수
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **nanobanana mcp**: STYLE HEADER v1 기반의 일관된 레트로 픽셀 아트 생성
+- **rembg (birefnet-general)**: 자동 배경 제거를 통한 투명 PNG 확보
+- **CSS Fallback Pattern**: 이미지 로딩 실패 시 이모지로 자동 전환되는 견고한 UI 구조
+
+**설계 패턴 및 아키텍처 선택**:
+- **Asset SSOT (manifest.json)**: 에셋의 경로, 크기, 사용처, 폴백 데이터를 중앙에서 관리
+- **Scale-aware Icons**: `U-028` 가독성 설정과 연동되어 UI 스케일에 따른 아이콘 시인성 보장
+
+**코드 구조**:
+repo-root/
+├── frontend/public/ui/
+│   ├── icons/ (24px/16px 아이콘 세트)
+│   ├── placeholders/ (Scene 플레이스홀더)
+│   └── manifest.json (에셋 SSOT)
+└── frontend/src/style.css (아이콘/폴백 스타일 정의)
+
+### 성능 및 품질 지표
+- **리소스 최적화**: 총 에셋 크기 267KB (예산 1.5MB 대비 17.8%) 달성으로 로딩 성능 확보
+- **견고성**: 이미지 차단 시에도 이모지 폴백을 통해 UI 기능 100% 유지
+
+### 의존성 변경
+- 없음
+
+### 다음 단계
+- [U-031[Mvp]] nanobanana mcp 상태 Placeholder Pack (Scene/오프라인/에러)
+
+---
 
 ### 구현 완료 항목
 

@@ -1,8 +1,136 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.0.0",
-  "generatedAt": "2026-01-10T00:00:00Z",
-  "totalBytes": 0,
+  "version": "1.1.0",
+  "generatedAt": "2026-01-11T02:30:00Z",
+  "totalBytes": 267099,
   "budgetBytes": 1572864,
-  "assets": []
+  "assets": [
+    {
+      "id": "signal-24",
+      "path": "icons/signal-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚡",
+      "usedIn": ["EconomyHUD", "ActionDeck"],
+      "bytes": 122,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 및 최적화 완료"
+    },
+    {
+      "id": "signal-16",
+      "path": "icons/signal-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚡",
+      "usedIn": [],
+      "bytes": 389,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "shard-24",
+      "path": "icons/shard-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "💎",
+      "usedIn": ["EconomyHUD", "ActionDeck"],
+      "bytes": 103,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 및 최적화 완료"
+    },
+    {
+      "id": "badge-ok-24",
+      "path": "icons/badge-ok-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✓",
+      "usedIn": ["AgentConsole"],
+      "bytes": 910,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "badge-ok-16",
+      "path": "icons/badge-ok-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "✓",
+      "usedIn": [],
+      "bytes": 586,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "badge-fail-24",
+      "path": "icons/badge-fail-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✗",
+      "usedIn": ["AgentConsole"],
+      "bytes": 822,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "risk-medium-16",
+      "path": "icons/risk-medium-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚠",
+      "usedIn": ["ActionDeck"],
+      "bytes": 601,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "risk-low-24",
+      "path": "icons/risk-low-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✓",
+      "usedIn": ["ActionDeck"],
+      "bytes": 226,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 완료"
+    },
+    {
+      "id": "risk-low-16",
+      "path": "icons/risk-low-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "✓",
+      "usedIn": [],
+      "bytes": 147
+    },
+    {
+      "id": "risk-high-24",
+      "path": "icons/risk-high-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚠",
+      "usedIn": ["ActionDeck"],
+      "bytes": 969,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 완료"
+    },
+    {
+      "id": "risk-high-16",
+      "path": "icons/risk-high-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚠",
+      "usedIn": [],
+      "bytes": 543
+    },
+    {
+      "id": "status-online-16",
+      "path": "icons/status-online-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "●",
+      "usedIn": [],
+      "bytes": 264,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "scene-placeholder-default",
+      "path": "placeholders/scene-placeholder-default.png",
+      "type": "placeholder",
+      "fallback": "[SCENE]",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 261407,
+      "notes": "nanobanana mcp 생성, 레트로 터미널 스타일"
+    }
+  ]
 }

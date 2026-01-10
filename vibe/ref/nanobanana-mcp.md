@@ -38,13 +38,23 @@
 
 ---
 
-## 3. 배경 제거 (rembg) 및 후처리
+## 3. 후처리 도구
+
+### 3.1 배경 제거 (rembg)
 
 투명 배경이 필요한 에셋(아이콘, 크롬 등)은 생성 결과에 배경이 섞인 경우 `rembg` 도구를 사용하여 알파 채널을 확보합니다.
 
 - **필수 규칙**: 배경 제거 품질을 위해 원본 생성 시 배경은 반드시 **순백(#FFFFFF) 단색**이어야 합니다.
 - **세부 가이드**: 모델 선택, 명령어 옵션, Alpha Matting 기준 등 상세 내용은 아래 가이드를 참조하십시오.
   - **참조**: `vibe/ref/rembg-guide.md` (배경 제거 도구 사용 가이드)
+
+### 3.2 크기 조정 및 Crop (ImageMagick)
+
+생성된 에셋의 사이즈 조정, 배율 변경, 여백 제거(trim), Crop 등은 `ImageMagick` 도구를 사용합니다.
+
+- **일반적인 작업 흐름**: trim → resize → extent (캔버스 확장)
+- **세부 가이드**: 크기 프리셋, 복합 작업 패턴, 주의사항 등 상세 내용은 아래 가이드를 참조하십시오.
+  - **참조**: `vibe/ref/imagemagick-guide.md` (이미지 처리 도구 사용 가이드)
 
 ---
 
@@ -53,6 +63,7 @@
 1. **요청 기록**: `vibe/ref/nanobanana-asset-request.schema.json`에 맞게 에셋 사양 정의.
 2. **에셋 생성**: `nanobanana mcp`와 위 템플릿을 사용하여 이미지 생성.
 3. **배경 제거**: 필요한 경우 `rembg` 실행 (가이드: `vibe/ref/rembg-guide.md`).
-4. **경로 저장**: `frontend/public/ui/` 아래 카테고리별 폴더에 저장.
-5. **매니페스트 갱신**: `manifest.json`에 에셋 정보 추가 (U-033).
-6. **QA 체크**: 스타일 일관성 및 폴백(텍스트/이모지) 동작 확인.
+4. **크기 조정**: 필요한 경우 `ImageMagick`으로 trim/resize/extent (가이드: `vibe/ref/imagemagick-guide.md`).
+5. **경로 저장**: `frontend/public/ui/` 아래 카테고리별 폴더에 저장.
+6. **매니페스트 갱신**: `manifest.json`에 에셋 정보 추가 (U-033).
+7. **QA 체크**: 스타일 일관성 및 폴백(텍스트/이모지) 동작 확인.

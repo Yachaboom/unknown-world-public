@@ -23,8 +23,16 @@ D:\Dev\unknown-world\
 │   ├── public/             # 정적 에셋
 │   │   └── ui/             # UI 이미지 에셋 SSOT (U-030)
 │   │       ├── README.md   # 제작/관리 규칙
-│   │       ├── manifest.json # 에셋 목록
-│   │       └── manifest.schema.json # 매니페스트 스키마
+│   │       ├── manifest.json # 에셋 목록 (U-029)
+│   │       ├── manifest.schema.json # 매니페스트 스키마
+│   │       ├── icons/      # UI 아이콘 세트 (24px/16px) (U-029)
+│   │       │   ├── badge-fail-24.png
+│   │       │   ├── badge-ok-24.png
+│   │       │   ├── risk-high-24.png
+│   │       │   ├── shard-24.png
+│   │       │   └── signal-24.png
+│   │       └── placeholders/ # Scene 플레이스홀더 (U-029)
+│   │           └── scene-placeholder-default.png
     ├── src/
 │       ├── main.tsx
 │       ├── App.tsx
@@ -169,6 +177,8 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - `ui/` 폴더 총합 상한: 1.5MB (권장 1MB 이하)
 4. **폴백 강제 (Fallback-first)**: 에셋 로딩 실패 시에도 UI가 깨지지 않도록 이모지나 텍스트 라벨을 `manifest.json`에 정의하고 클라이언트에서 이를 활용한다.
 5. **테마 정합성**: 에셋 제작 시 `style.css`에 정의된 CRT 테마 색상(인광 녹색 `#33ff00` 등)과 조화를 이루도록 프롬프트를 제어한다.
+6. **배경 제거 파이프라인 (rembg)**: 아이콘/프레임 등 투명 배경이 필요한 에셋은 `rembg` (isnet-anime 또는 birefnet-general 모델)를 사용하여 배경을 제거한다.
+    - 재현성 및 품질을 위해 원본 생성 시 **순백(#FFFFFF) 단색 배경**을 강제한다. (참조: `vibe/ref/rembg-guide.md`)
 
 
 ---

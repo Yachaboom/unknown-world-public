@@ -105,11 +105,27 @@ function BadgeItem({ badge }: { badge: ValidationBadge }) {
 
   const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
   const statusText = info.isOk ? 'OK' : 'FAIL';
+  const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
+  const fallbackIcon = info.isOk ? '✓' : '✗';
 
   return (
     <div className={`badge-item ${statusClass}`}>
       <span className="badge-label">{info.label}</span>
-      <span className="badge-status">{statusText}</span>
+      <span className="badge-status">
+        <span className="icon-wrapper">
+          <img
+            src={`/ui/icons/${iconName}`}
+            alt=""
+            aria-hidden="true"
+            className="badge-icon-img"
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback" style={{ fontSize: '0.625rem' }}>
+            {fallbackIcon}
+          </span>
+        </span>
+        {statusText}
+      </span>
     </div>
   );
 }
