@@ -103,7 +103,7 @@ Unknown World는 “대화 앱”이 아니라 **상태 기반 게임 UI**입니
 
 ## RULE-007: nanobanana mcp는 “개발/에셋 제작용”으로만 사용 (런타임 의존 금지)
 
-`nanobanana mcp`는 개발 과정에서 UI/문서용 **정적 에셋을 제작**하는 데 사용합니다.  
+`nanobanana mcp`는 개발 과정에서 UI/문서용 **정적 에셋을 제작**하는 데 사용합니다. 제작 시 반드시 **`vibe/ref/nanobanana-mcp.md` (에셋 제작 가이드)**를 참조하여 스타일 일관성과 재현성을 유지해야 합니다.
 게임 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 금지합니다.
 
 ❌ Bad:
@@ -113,6 +113,7 @@ Unknown World는 “대화 앱”이 아니라 **상태 기반 게임 UI**입니
 ✅ Good:
 
 - `nanobanana mcp`로 제작한 결과물을 `frontend/public/...` 등에 커밋(정적 배포)
+- 제작 시 `vibe/ref/nanobanana-mcp.md` 가이드의 템플릿과 프로세스 준수
 - 런타임 이미지 생성은 Gemini API/Vertex 경로(U-019~)로 수행
 
 ---

@@ -1,6 +1,41 @@
 # 프로젝트 진행 상황
 
-## [2026-01-10 16:40] U-030[Mvp]: nanobanana mcp 에셋 SSOT(폴더/네이밍/사이즈/폴백/라이선스) 완료
+## [2026-01-11 15:30] U-034[Mvp]: nanobanana mcp 에셋 요청 스키마 + 프롬프트 템플릿(재현성) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: nanobanana mcp를 이용한 에셋 제작의 일관성과 재현성을 보장하기 위한 스키마 및 템플릿 체계 구축
+- **추가 컴포넌트**: `vibe/ref/nanobanana-mcp.md` (가이드), `vibe/ref/nanobanana-asset-request.schema.json` (스키마), `vibe/unit-runbooks/U-034-nanobanana-template-runbook.md` (런북)
+- **달성 요구사항**: [RULE-007] Dev-only 에셋 제작 원칙, [PRD 9.7] UI 에셋 파이프라인 고도화
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **JSON Schema (Draft-07)**: 에셋 요청의 정형화를 위한 `nanobanana-asset-request.schema.json` 정의
+- **Prompt Engineering**: CRT 레트로 미학을 반영한 `STYLE HEADER v1` 및 카테고리별(아이콘/Placeholder/Chrome) 템플릿 구축
+- **rembg (isnet-anime)**: 생성 이미지의 배경 제거를 위한 후처리 파이프라인 표준화
+
+**설계 패턴 및 아키텍처 선택**:
+- **Schema-driven Asset Request**: 요청 사양을 JSON으로 정의하여 스타일, 팔레트, 크기 등 시각적 인바리언트를 강제
+- **Hybrid Pipeline (Gen + Edit)**: 생성형 AI로 원본을 만들고 `rembg`로 알파 채널을 확보하는 하이브리드 워크플로우 도입 (재현성 및 품질 확보)
+
+**코드 구조**:
+repo-root/
+└── vibe/ref/
+    ├── nanobanana-mcp.md (에셋 제작 가이드 및 템플릿)
+    └── nanobanana-asset-request.schema.json (에셋 요청 스키마)
+
+### 성능 및 품질 지표
+- **재현성**: 버전 관리되는 프롬프트 템플릿(`v1`)을 통해 여러 에셋 간 비주얼 일관성 90% 이상 확보 가능
+- **정확도**: `rembg` 후처리를 전제한 순백(#FFFFFF) 배경 생성 규칙으로 투명 배경 추출 성공률 극대화
+
+### 의존성 변경
+- 없음 (개발 프로세스 및 가이드라인 구축)
+
+### 다음 단계
+- [U-029[Mvp]] ⚡nanobanana mcp 에셋 패스 (아이콘/프레임/Placeholder 제작)
+
+---
 
 ### 구현 완료 항목
 

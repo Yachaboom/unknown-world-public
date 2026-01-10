@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unknown-world.dev/schemas/nanobanana-asset-request.json",
+  "title": "nanobanana mcp Asset Request Schema",
+  "description": "nanobanana mcp로 에셋을 요청할 때 사용하는 표준 스키마 (개발용, RULE-007 준수)",
+  "type": "object",
+  "required": ["id", "category", "purpose", "size_px"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "에셋 고유 ID (kebab-case, 네이밍 규칙 준수)",
+      "examples": ["signal-24", "badge-ok-16", "scene-loading", "panel-corner-tl"]
+    },
+    "category": {
+      "type": "string",
+      "enum": ["icon", "placeholder", "chrome"],
+      "description": "에셋 카테고리 (아이콘/placeholder/chrome)"
+    },
+    "purpose": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "에셋 용도 (무엇을 표현하는가, 어디에 쓰이는가)",
+      "examples": [
+        "Economy HUD의 Signal 재화 아이콘",
+        "스트리밍 로딩 중 Scene Canvas placeholder",
+        "Action Deck 카드 프레임 코너"
+      ]
+    },
+    "size_px": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "enum": [16, 24, 32, 64, 128, 256, 512],
+          "description": "정사각형 아이콘 사이즈 (px)"
+        },
+        {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false,
+          "description": "비정사각형 placeholder/chrome 사이즈"
+        }
+      ],
+      "description": "에셋 크기 (px)"
+    },
+    "palette": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^#[0-9a-fA-F]{6}$"
+      },
+      "default": ["#33ff00", "#ff00ff", "#ffaa00", "#ff3333"],
+      "description": "사용할 색상 팔레트 (CRT 테마 기본값 적용)",
+      "examples": [
+        ["#33ff00"],
+        ["#33ff00", "#ff00ff"],
+        ["#33ff00", "#0d0d0d"]
+      ]
+    },
+    "mood": {
+      "type": "string",
+      "enum": [
+        "retro",
+        "glitch",
+        "minimal",
+        "danger",
+        "warning",
+        "success",
+        "neutral"
+      ],
+      "default": "retro",
+      "description": "에셋 분위기/톤 (CRT 레트로 기본)"
+    },
+    "background": {
+      "type": "string",
+      "enum": ["transparent", "solid_white", "solid_black"],
+      "default": "transparent",
+      "description": "배경 유형 (투명 필요 시 solid_white로 생성 후 rembg 제거)"
+    },
+    "must_have": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 50 },
+      "maxItems": 5,
+      "description": "반드시 포함할 시각 요소",
+      "examples": [
+        ["인광 녹색 글로우", "단순한 실루엣"],
+        ["스캔라인 느낌", "CRT 잔상"]
+      ]
+    },
+    "must_not_have": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 50 },
+      "maxItems": 5,
+      "description": "반드시 제외할 시각 요소",
+      "examples": [
+        ["텍스트 렌더링", "복잡한 그라데이션"],
+        ["사진 스타일", "밝은 파스텔 색상"]
+      ]
+    },
+    "fallback_text": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "에셋 로딩 실패 시 대체 이모지/텍스트",
+      "examples": ["📡", "⚡", "💎", "⚠️", "OK", "FAIL"]
+    },
+    "output_path": {
+      "type": "string",
+      "pattern": "^(icons|placeholders|chrome)/[a-z0-9-]+\\.(png|webp)$",
+      "description": "frontend/public/ui/ 기준 저장 경로",
+      "examples": [
+        "icons/signal-24.png",
+        "placeholders/scene-loading.webp",
+        "chrome/panel-corner-tl.png"
+      ]
+    },
+    "requires_rembg": {
+      "type": "boolean",
+      "default": false,
+      "description": "rembg 배경 제거 필요 여부 (true면 solid_white 배경으로 생성 권장)"
+    },
+    "rembg_model": {
+      "type": "string",
+      "enum": [
+        "isnet-anime",
+        "birefnet-general",
+        "u2net",
+        "u2netp",
+        "birefnet-portrait"
+      ],
+      "default": "isnet-anime",
+      "description": "rembg 모델 선택 (아이콘/일러스트 계열은 isnet-anime 권장)"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "추가 참고사항 (스타일 레퍼런스, 수정 요청 등)"
+    },
+    "prompt_version": {
+      "type": "string",
+      "pattern": "^v\\d+$",
+      "default": "v1",
+      "description": "프롬프트 템플릿 버전 (재현성 추적용)"
+    }
+  }
+}

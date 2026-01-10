@@ -7,12 +7,12 @@
 | Unit ID   | U-031[Mvp]  |
 | Phase     | MVP         |
 | 예상 소요 | 60분        |
-| 의존성    | U-030,U-004 |
+| 의존성    | U-030,U-004,U-034 |
 | 우선순위  | Medium      |
 
 ## 작업 목표
 
-Scene Canvas와 주요 시스템 상태(로딩/오프라인/차단/저신호 등)에 대해, 텍스트만 있는 빈 화면 대신 **게임스러운 상태 이미지(placeholder)** 를 `nanobanana mcp`로 제작하고 UI에 반영한다.
+Scene Canvas와 주요 시스템 상태(로딩/오프라인/차단/저신호 등)에 대해, 텍스트만 있는 빈 화면 대신 **게임스러운 상태 이미지(placeholder)** 를 `nanobanana mcp`로 제작하고 UI에 반영한다. (가이드 준수: `vibe/ref/nanobanana-mcp.md`)
 
 **배경**: 데모에서 “이미지 생성이 아직 없거나 실패한 상황”이 자주 발생한다. 이때 상태 화면이 허전하면 제품이 덜 완성돼 보이고, 사용자에게 실패로 인식된다. placeholder는 **실패/지연을 UX로 흡수**하는 핵심 장치다. (PRD: Lazy image loading/폴백)
 
@@ -41,6 +41,7 @@ Scene Canvas와 주요 시스템 상태(로딩/오프라인/차단/저신호 등
 
 **참조**:
 
+- `vibe/ref/nanobanana-mcp.md` - nanobanana mcp 에셋 제작 가이드(SSOT)
 - `vibe/unit-plans/U-030[Mvp].md` - 에셋 SSOT(경로/네이밍/예산/폴백)
 - `vibe/unit-plans/U-028[Mvp].md` - Readable 모드/스케일(placeholder 대비/텍스트 가독성)
 - `vibe/prd.md` 6.3/10.2 - 텍스트 우선 + Lazy loading + 실패 폴백

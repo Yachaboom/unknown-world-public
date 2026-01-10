@@ -7,12 +7,12 @@
 | Unit ID   | U-029[Mvp]  |
 | Phase     | MVP         |
 | 예상 소요 | 60분        |
-| 의존성    | U-030,U-028,U-008 |
+| 의존성    | U-030,U-028,U-008,U-034 |
 | 우선순위  | Medium      |
 
 ## 작업 목표
 
-UI에서 “텍스트/이모지”만으로 표현되던 요소 중 **에셋이 효과적인 지점**(아이콘/프레임/placeholder)을 선별해, **nanobanana mcp로 제작한 이미지 에셋을 1차 반영**한다.
+UI에서 “텍스트/이모지”만으로 표현되던 요소 중 **에셋이 효과적인 지점**(아이콘/프레임/placeholder)을 선별해, **nanobanana mcp로 제작한 이미지 에셋을 1차 반영**한다. (가이드 준수: `vibe/ref/nanobanana-mcp.md`)
 
 **배경**: Unknown World는 “채팅 앱이 아닌 게임 UI” 인상이 중요하다. (PRD 6.7) 작은 아이콘/패널 프레임/placeholder 같은 시각 요소가 있으면, 데모에서 **게임성(UX)과 몰입감**이 즉시 상승한다. 다만, 에셋이 가독성/성능/번들 크기를 해치면 역효과이므로 “필요한 곳만, 작게, 폴백 포함”이 원칙이다.
 
@@ -40,6 +40,7 @@ UI에서 “텍스트/이모지”만으로 표현되던 요소 중 **에셋이 
 
 **참조**:
 
+- `vibe/ref/nanobanana-mcp.md` - nanobanana mcp 에셋 제작 가이드(SSOT)
 - `vibe/ref/frontend-style-guide.md` - CRT 테마 톤(레트로/인광/스캔라인과 조화)
 - `frontend/public/logo-retro.png` - 기존 레포 에셋(톤 참조)
 - `vibe/prd.md` 6.7/9장 - “채팅 UI 금지 + 게임스러운 고정 HUD”

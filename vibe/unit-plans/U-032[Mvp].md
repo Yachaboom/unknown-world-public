@@ -7,12 +7,12 @@
 | Unit ID   | U-032[Mvp]  |
 | Phase     | MVP         |
 | 예상 소요 | 60분        |
-| 의존성    | U-030,U-004 |
+| 의존성    | U-030,U-004,U-034 |
 | 우선순위  | Medium      |
 
 ## 작업 목표
 
-UI의 “게임스러움”을 강화하기 위해, 패널/카드/캔버스에 적용할 **프레임(코너/라인/리벳 등)과 간단한 크롬(UI 장식)** 에셋을 `nanobanana mcp`로 제작하고 최소 범위에 반영한다.
+UI의 “게임스러움”을 강화하기 위해, 패널/카드/캔버스에 적용할 **프레임(코너/라인/리벳 등)과 간단한 크롬(UI 장식)** 에셋을 `nanobanana mcp`로 제작하고 최소 범위에 반영한다. (가이드 준수: `vibe/ref/nanobanana-mcp.md`)
 
 **배경**: Unknown World의 평가 포인트 중 하나는 “채팅 UI가 아닌 게임 UI”의 첫 인상이다. CSS만으로도 가능하지만, 적절한 크롬(프레임/코너)을 넣으면 **즉시 게임 HUD 느낌**이 살아난다. 다만 남용하면 가독성/성능이 악화되므로 “필요한 패널 1~2개에만” 적용한다.
 
@@ -39,6 +39,7 @@ UI의 “게임스러움”을 강화하기 위해, 패널/카드/캔버스에 �
 
 **참조**:
 
+- `vibe/ref/nanobanana-mcp.md` - nanobanana mcp 에셋 제작 가이드(SSOT)
 - `vibe/unit-plans/U-030[Mvp].md` - 에셋 SSOT(예산/네이밍/폴백)
 - `vibe/ref/frontend-style-guide.md` - CRT 톤/색상 변수 원칙
 - `frontend/public/logo-retro.png` - 기존 톤 레퍼런스

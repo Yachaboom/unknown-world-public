@@ -53,7 +53,8 @@
       "ShellTool(docker)",
       "ShellTool(ffmpeg)",
       "ShellTool(node)",
-      "ShellTool(uvicorn)"
+      "ShellTool(uvicorn)",
+      "ShellTool(rembg)"
     ],
     "exclude": ["ShellTool(git push)", "ShellTool(git reset)"]
   },

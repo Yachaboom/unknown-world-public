@@ -74,9 +74,15 @@ D:\Dev\unknown-world\
 │   ├── progress.md
 │   ├── roadmap.md
 │   ├── tech-stack.md
+│   ├── ref/                # 가이드 및 참조 문서 (SSOT)
+│   │   ├── frontend-style-guide.md
+│   │   ├── standard-guide.md
+│   │   ├── rembg-guide.md
+│   │   ├── nanobanana-mcp.md # 에셋 제작 가이드 및 템플릿 (U-034)
+│   │   └── nanobanana-asset-request.schema.json # 에셋 요청 스키마 (U-034)
 │   ├── unit-plans/
-│   ├── unit-results/       # 유닛 개발 보고서 (CP-MVP-01[Mvp] 포함)
-│   └── unit-runbooks/      # 유닛 실행 가이드 (CP-MVP-01[Mvp] 포함)
+│   ├── unit-results/       # 유닛 개발 보고서 (U-034[Mvp] 포함)
+│   └── unit-runbooks/      # 유닛 실행 가이드 (U-034-nanobanana-template-runbook.md 포함)
 └── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ```
 
@@ -96,6 +102,7 @@ D:\Dev\unknown-world\
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
     - `schemas/`: 언어 중립적인 JSON Schema 포맷으로 TurnInput/TurnOutput 규약 관리.
 - **`vibe/`**: 프로젝트의 모든 명세와 진행 상황을 기록하는 단일 진실 공급원(SSOT).
+    - `ref/`: `nanobanana mcp` 에셋 제작 스키마 및 프롬프트 템플릿, `rembg` 배경 제거 가이드 등 개발 프로세스 가이드 모음.
 
 ---
 
