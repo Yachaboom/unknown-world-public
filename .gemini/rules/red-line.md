@@ -1,3 +1,165 @@
+# AI 필수 준수 규칙 (Critical Rules) - Unknown World
+
+> 이 문서는 Unknown World 레포에서 작업하는 AI 에이전트가 **절대 위반하면 안 되는 규칙**을 모은 “레드라인(금지선)”입니다.  
+> SSOT 우선순위: `vibe/prd.md` → `vibe/tech-stack.md` → `vibe/ref/*` → `.cursor/rules/*.mdc` → `.gemini/rules/*`
+
+---
+
+## RULE-001: “채팅 앱”으로 보이게 만드는 UI 변경 금지
+
+Unknown World는 “대화 앱”이 아니라 **상태 기반 게임 UI**입니다. 메신저형 채팅 버블/대화창 중심 UI로 회귀하는 변경은 금지합니다.
+
+❌ Bad:
+
+- 메시지 버블(좌/우 정렬)로 내러티브/선택지를 표현
+- 화면 대부분을 텍스트 채팅이 차지하고, HUD/패널이 사라짐
+
+✅ Good:
+
+- 내러티브는 **게임 로그/피드** 형태로 표시
+- Action Deck/Inventory/Quest/Rule Board/Economy HUD/Agent Console이 “게임스럽게” 상시 노출
+
+---
+
+## RULE-002: 구조화 출력(JSON Schema) 없이 “텍스트만 반환”하는 API/로직 금지
+
+모델 출력/서버 응답은 기본적으로 **`application/json` + JSON Schema**를 만족해야 합니다. 실패 시에도 **safe fallback**으로 구조화된 결과를 반환해야 합니다.
+
+❌ Bad:
+
+- TurnOutput 스키마를 제거하고 문자열만 반환
+- 검증 실패 시 예외로 종료(클라이언트가 빈 화면)
+
+✅ Good:
+
+- 서버(Pydantic) + 클라(Zod) 이중 검증
+- 실패 시 Auto-repair → 폴백 TurnOutput으로 `final`까지 보장
+
+---
+
+## RULE-003: Economy(재화) 인바리언트 위반 금지 (잔액 음수/비용 누락)
+
+비용/잔액은 반드시 원장(ledger) 관점으로 일관되어야 하며, 잔액 음수는 금지입니다.
+
+❌ Bad:
+
+- cost를 계산하지 않거나, balance_after가 cost 반영과 불일치
+- 잔액이 음수가 되어도 UI가 그대로 진행
+
+✅ Good:
+
+- 행동 전 예상 비용(최소/최대) 표시 + 부족 시 대안 제시
+- balance_after는 항상 0 이상, ledger로 추적 가능
+
+---
+
+## RULE-004: ko/en 혼합 출력 금지 (i18n SSOT 준수)
+
+게임/시스템/내러티브 출력은 `language: "ko-KR" | "en-US"`에 따라 고정되어야 하며, 혼합 출력은 금지입니다.
+
+❌ Bad:
+
+- UI는 한국어인데 내러티브가 영어로 섞여 나옴
+- i18n 키 대신 문자열 하드코딩을 무분별하게 추가
+
+✅ Good:
+
+- i18n 리소스 키를 우선 사용하고, 필요 시 최소한의 폴백만 허용
+- TurnInput/TurnOutput의 `language`를 SSOT로 유지
+
+---
+
+## RULE-005: 보안/비밀정보 유출 및 커밋 금지 (특히 키/토큰)
+
+서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장하거나, 로그/UI에 노출하는 것은 금지입니다.
+
+❌ Bad:
+
+- API 키를 코드/문서에 하드코딩
+- 디버그 로그로 Authorization/토큰을 출력
+
+✅ Good:
+
+- 비밀정보는 환경변수/시크릿 스토어로만 관리
+- 로깅 시 민감값 마스킹/제거
+
+---
+
+## RULE-006: “nanobanana mcp” 용어 SSOT 고정 (동일 개념에 다른 이름 금지)
+
+이 레포에서 **MCP 기반 이미지 에셋 제작 도구**는 반드시 **`nanobanana mcp`** 로 표기합니다.  
+동일 개념을 “나노바나나 MCP”, “Nano Banana MCP”, “banana mcp” 등으로 혼용하지 않습니다.
+
+❌ Bad:
+
+- 문서마다 “나노바나나 MCP”, “Nano Banana Pro”, “nanobanana”를 뒤섞어 사용(도구/모델 구분 불가)
+
+✅ Good:
+
+- 도구/파이프라인: **`nanobanana mcp`**
+- 모델 별칭(문서 인용): “Nano Banana / Nano Banana Pro”는 **모델 별칭**으로만 제한적으로 사용
+
+---
+
+## RULE-007: nanobanana mcp는 “개발/에셋 제작용”으로만 사용 (런타임 의존 금지)
+
+`nanobanana mcp`는 개발 과정에서 UI/문서용 **정적 에셋을 제작**하는 데 사용합니다.  
+게임 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 금지합니다.
+
+❌ Bad:
+
+- 서비스 런타임에서 MCP를 호출해 이미지를 생성(배포/보안/재현성/비용 통제 실패)
+
+✅ Good:
+
+- `nanobanana mcp`로 제작한 결과물을 `frontend/public/...` 등에 커밋(정적 배포)
+- 런타임 이미지 생성은 Gemini API/Vertex 경로(U-019~)로 수행
+
+---
+
+## RULE-008: 프롬프트/내부 추론 노출 금지 (관측은 “단계/배지”로)
+
+사용자 UI/로그에 프롬프트 원문이나 내부 추론을 노출하는 것은 금지입니다.
+
+❌ Bad:
+
+- 디버그 패널에 시스템 프롬프트 전문 출력
+- chain-of-thought(내부 추론)을 그대로 표출
+
+✅ Good:
+
+- 단계(stage)/배지(badges)/복구 트레이스 같은 **사용자 친화 라벨**로 관측 제공
+
+---
+
+## RULE-009: 좌표 규약 위반 금지 (0~1000, bbox=[ymin,xmin,ymax,xmax])
+
+클릭 가능한 오브젝트/핫스팟 좌표는 프로젝트 규약을 반드시 준수합니다.
+
+❌ Bad:
+
+- 픽셀 좌표로 반환하거나, bbox 순서가 뒤바뀜
+
+✅ Good:
+
+- 0~1000 정규화
+- bbox 순서: `[ymin, xmin, ymax, xmax]`
+
+---
+
+## RULE-010: SSOT 문서/계약을 깨는 “임의 변경” 금지
+
+문서/코드/스키마가 어긋나지 않도록 SSOT 우선순위를 지키고, 변경 시 문서 동기화를 함께 수행합니다.
+
+❌ Bad:
+
+- PRD/roadmap/스키마/코드 중 한 곳만 수정
+- 완료 유닛 ID/Phase를 바꾸거나, 진행 중 유닛을 임의로 삭제
+
+✅ Good:
+
+- 변경 범위가 계약/정책에 영향을 주면 PRD/roadmap/unit-plans/changelog를 함께 업데이트
+
 # AI 에이전트 필수 준수 규칙 (CRITICAL RULES)
 
 > **⚠️ AI 에이전트에게: 이 문서의 규칙들은 다른 모든 지침보다 우선합니다. 어떤 상황에서도 이 규칙들을 위반해서는 안 됩니다.**

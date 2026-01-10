@@ -4,10 +4,12 @@
 
 ## 진행 현황
 
-**전체**: 21/50 (42%) | **MVP**: 21/37 (57%) | **MMP**: 0/13 (0%)
+**전체**: 12/57 (21%) | **MVP**: 12/44 (27%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-5 | MMP D-21  
+**예상 완료(가정)**: MVP D-8 | MMP D-12  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
+
+_진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) 기준. `vibe/refactors/*`는 하위 리팩토링 기록으로 분모에서 제외._
 
 **진행 중**: 없음 / **최근 완료**: [CP-MVP-01](unit-results/CP-MVP-01.md) (2026-01-10)
 
@@ -48,12 +50,12 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 
 | 단계 | ID        | 이름                                   | 목표일     | 진행률 | 상태 |
 | ---- | --------- | -------------------------------------- | ---------- | ------ | ---- |
-| MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 9/11   | 🚧   |
+| MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 11/11  | ✅   |
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD)             | 2026-01-10 | 0/10   | ⏸️   |
-| MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-10 | -      | ⏸️   |
-| MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-15 | 0/10   | ⏸️   |
-| MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-15 | -      | ⏸️   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 0/17   | ⏸️   |
+| MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ⏸️   |
+| MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-18 | 0/10   | ⏸️   |
+| MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-20 | -      | ⏸️   |
 | MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
 | MMP  | CP-MMP-01 | **✓ 체크포인트: 배포/관측 게이트**     | 2026-02-01 | -      | ⏸️   |
 | MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/6    | ⏸️   |
@@ -69,8 +71,8 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 
 ### “채팅이 아닌” 고정 게임 UI + 핵심 인터랙션
 
-- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014
+- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 “읽을 수 있는” 수준으로 유지된다
+- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034
 - **상태**: ⏸️
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
@@ -98,6 +100,8 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 | R-001 | 스키마/의미 불일치로 Hard Gate 실패 | High | 35%  | Repair loop + Safe fallback + Mock     |
 | R-002 | 이미지/Thinking로 지연/비용 폭발    | High | 30%  | Economy 정책 + Lazy 이미지 + 티어링    |
 | R-003 | UI가 채팅처럼 보여 제출/데모 실패   | High | 25%  | 고정 HUD + DnD/핫스팟/스캐너/콘솔 강조 |
+| R-004 | 작은 글씨/과한 CRT 효과로 가독성 저하 | Medium | 25% | UI 스케일/Readable 모드 + 대비/라인하이트 가이드 |
+| R-005 | 에셋 난립/용량 비대화/스타일 불일치  | Medium | 25% | nanobanana mcp 에셋 SSOT + 매니페스트/QA + 예산 상한 |
 
 ## 메트릭
 
@@ -117,6 +121,13 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
+ID=[U-028[Mvp]](unit-plans/U-028[Mvp].md) | UI 가독성 패스(폰트 스케일/효과 토글/대비) | Depends=U-004,U-008 | ⏸️
+ID=[U-030[Mvp]](unit-plans/U-030[Mvp].md) | nanobanana mcp 에셋 SSOT(폴더/네이밍/사이즈/폴백/라이선스) | Depends=U-004 | ⏸️
+ID=[U-034[Mvp]](unit-plans/U-034[Mvp].md) | nanobanana mcp 에셋 요청 스키마 + 프롬프트 템플릿(재현성) | Depends=U-030 | ⏸️
+ID=[U-029[Mvp]](unit-plans/U-029[Mvp].md) | nanobanana mcp 에셋 패스(UI 아이콘/프레임/placeholder) | Depends=U-030,U-028,U-008 | ⏸️
+ID=[U-031[Mvp]](unit-plans/U-031[Mvp].md) | nanobanana mcp 상태 Placeholder Pack(Scene/오프라인/에러/차단) | Depends=U-030,U-004 | ⏸️
+ID=[U-032[Mvp]](unit-plans/U-032[Mvp].md) | nanobanana mcp UI Chrome Pack(패널/카드 프레임/코너) | Depends=U-030,U-004 | ⏸️
+ID=[U-033[Mvp]](unit-plans/U-033[Mvp].md) | nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백) | Depends=U-030 | ⏸️
 ID=[U-009[Mvp]](unit-plans/U-009[Mvp].md) | ⚡Action Deck(카드+비용/대안) | Depends=U-004,U-008 | ⏸️
 ID=[U-010[Mvp]](unit-plans/U-010[Mvp].md) | ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox) | Depends=U-004,U-008 | ⏸️
 ID=[U-011[Mvp]](unit-plans/U-011[Mvp].md) | ⚡Inventory 패널(DnD) 기본 | Depends=U-004 | ⏸️
@@ -187,7 +198,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-007[Mvp]](unit-plans/U-007[Mvp].md) - 모의 Orchestrator + /api/turn HTTP Streaming(POST)
+**현재 작업**: [U-030[Mvp]](unit-plans/U-030[Mvp].md) - nanobanana mcp 에셋 SSOT(폴더/네이밍/사이즈/폴백/라이선스)
 
 ```bash
 # Frontend (RULE-011: 8001~8010)

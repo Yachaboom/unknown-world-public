@@ -53,7 +53,7 @@
 
 #### C. Creative Autopilot
 
-- 목표: Gemini 3의 추론을 **Nano Banana Pro** 같은 멀티모달 생성/편집과 결합해,
+- 목표: Gemini 3의 추론을 **nanobanana mcp** 같은 멀티모달 생성/편집(개발용 에셋 제작 도구)과 결합해,
 - “고정밀(High-precision) 제작”을 수행하는 **크리에이티브 오토파일럿**을 만들라는 방향입니다.
 - 특히 **더 높은 해상도**, **국소적(Paint-to-Edit) 편집 컨트롤**, **브랜드 일관성**, **가독성 있는 텍스트** 등 “프로덕션 품질의 에셋 생성”을 강조합니다. :contentReference[oaicite:14]{index=14}
 
