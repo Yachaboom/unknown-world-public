@@ -69,8 +69,8 @@ D:\Dev\unknown-world\
 │   ├── roadmap.md
 │   ├── tech-stack.md
 │   ├── unit-plans/
-│   ├── unit-results/       # 유닛 개발 보고서 (U-027[Mvp] 포함)
-│   └── unit-runbooks/      # 유닛 실행 가이드 (U-027[Mvp] 포함)
+│   ├── unit-results/       # 유닛 개발 보고서 (CP-MVP-01[Mvp] 포함)
+│   └── unit-runbooks/      # 유닛 실행 가이드 (CP-MVP-01[Mvp] 포함)
 └── shared/                # 공유 리소스 (SSOT)
 ```
 
@@ -117,7 +117,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **Decoupled UI**: 게임의 시각적 요소는 월드 상태로부터 독립적으로 렌더링(Data-driven UI).
 4. **Resilient Pipeline**: LLM의 불안정한 출력을 Pydantic/Zod 이중 검증과 Repair loop로 방어.
 
-## 5. 스트리밍 및 에러 핸들링 정책 (RU-002[Mvp])
+## 5. 스트리밍 및 에러 핸들링 정책 (RU-002[Mvp] / CP-MVP-01)
 
 1. **프로토콜 버전 및 하위 호환성 (Protocol Versioning)**:
     - **Version 1 (현행)**: MVP 안정화 계약. `final.data`, `stage.status: "complete"`, `badges: string[]` 형식을 사용한다.
@@ -126,11 +126,13 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 2. **스트림 이벤트 검증 (Event Validation)**: 모든 스트림 이벤트(`stage`, `badges`, `error` 등)는 소비되기 전 Zod 스키마를 통해 경량 검증을 거친다.
     - 검증 실패 시 해당 이벤트만 무시(drop)하거나 기본 폴백을 적용하며, 전체 스트림 파이프라인이나 UI가 중단되지 않도록 한다.
     - **Unknown Event**: 정의되지 않은 타입의 이벤트가 수신되면 콘솔 경고를 남기되 UI 상태에는 영향을 주지 않고 안전하게 폐기한다. 이는 향후 프로토콜 확장(telemetry, repair 등)에 대한 전방 호환성을 제공한다.
-3. **종료 인바리언트 (Terminal Invariant)**: 모든 `/api/turn` 스트림은 성공, 내부 실패, 네트워크 장애 여부와 상관없이 **정확히 1개의 `final` 이벤트**로 종료되어야 한다.
+3. **종료 인바리언트 (Terminal Invariant)**: 모든 `/api/turn` 스트림은 성공, 내부 실패, 네트워크 장애 여부와 상관없이 **정확히 1개의 `final` 이벤트**로 종료되어야 한다. (CP-MVP-01에서 검증 완료)
     - 서버는 예외 발생 시 `error` 이벤트를 송출한 뒤 반드시 폴백 `TurnOutput`을 포함한 `final` 이벤트를 송출한다.
     - 클라이언트는 서버 연결 실패 시 직접 폴백 `TurnOutput`을 생성하여 스트림 종료 상태를 UI에 전달한다.
-3. **상태 보존형 폴백 (State-preserving Fallback)**: 폴백 시 발생하는 `TurnOutput`은 입력 시점의 재화 스냅샷(`economy_snapshot`)을 그대로 유지하며, 비용(`cost`)은 0으로 설정하여 재화 HUD의 일관성을 보장한다. (RULE-005 준수)
-4. **가시성 보장 (Observability)**: 에러 발생 시 `error` 이벤트를 통해 사용자에게 상황을 알리되, 시스템의 최종 상태는 항상 구조화된 `final` 데이터를 통해 확정한다.
+4. **상태 보존형 폴백 (State-preserving Fallback)**: 폴백 시 발생하는 `TurnOutput`은 입력 시점의 재화 스냅샷(`economy_snapshot`)을 그대로 유지하며, 비용(`cost`)은 0으로 설정하여 재화 HUD의 일관성을 보장한다. (RULE-005 준수)
+5. **가시성 보장 (Observability)**: 에러 발생 시 `error` 이벤트를 통해 사용자에게 상황을 알리되, 시스템의 최종 상태는 항상 구조화된 `final` 데이터를 통해 확정한다.
+6. **복구 루프 (Repair Loop)**: 스키마 검증 실패 시 최대 N회(기본 3회) 자동 복구를 시도하며, UI에는 `repair` 이벤트를 통해 상태를 알린다. (CP-MVP-01에서 검증 완료)
+
 
 ---
 _본 문서는 프로젝트의 진화에 따라 수시로 업데이트됩니다._

@@ -87,6 +87,7 @@
 - [ ] **Q1**: 체크포인트 런북/결과를 어디에 SSOT로 둘까?
   - Option A: `vibe/unit-runbooks/CP-MVP-01.md`에 재현 절차, `vibe/unit-results/CP-MVP-01.md`에 결과/증거
   - Option B: 결과 문서(unit-results)에 런북까지 포함(파일 수는 줄지만 절차/결과가 섞임)
+  **A1**: Option A
 
 ## 참고 자료
 

@@ -1,6 +1,40 @@
 # 프로젝트 진행 상황
 
-## [2026-01-10 11:30] RU-002[Mvp]: 리팩토링 - validation/폴백/이벤트 타입 통일 완료
+## [2026-01-10 13:00] CP-MVP-01: 체크포인트 - 스트리밍/스키마/폴백 검증 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 스트리밍 루프의 안정성 및 Hard Gate(스키마/복구/폴백) 인바리언트 최종 검증
+- **추가 컴포넌트**: `vibe/unit-results/CP-MVP-01.md` (검증 보고서), `vibe/unit-runbooks/CP-MVP-01.md` (검증 런북)
+- **달성 요구사항**: [RULE-004] Repair loop + 안전 폴백, [RULE-008] 과정 가시화 및 TTFB 최적화
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **NDJSON Streaming**: FastAPI StreamingResponse 기반 라인 단위 실시간 이벤트 송출
+- **Zod / Pydantic**: 서버-클라이언트 간 데이터 무결성 이중 보장
+
+**설계 패턴 및 아키텍처 선택**:
+- **Fail-safe 종료**: 예외 발생 시에도 반드시 `final` 이벤트를 송출하여 스트림 종료 및 UI 가용성 보장
+- **Agent Phase 가시화**: 오케스트레이터의 내부 단계를 투명하게 공개하여 시스템 신뢰성 확보
+
+**코드 구조**:
+repo-root/
+├── backend/src/unknown_world/api/ (turn.py, turn_stream_events.py)
+└── frontend/src/ (api/turnStream.ts, schemas/turn.ts)
+
+### 성능 및 품질 지표
+- **안정성**: 스키마 오류 및 네트워크 단절 시나리오에서 100% 안전 폴백 전환 확인
+- **가독성**: Agent Console을 통해 단계/배지/복구 시도가 시각적으로 명확히 노출됨
+
+### 의존성 변경
+- 없음 (기존 리팩토링 결과 통합 검증)
+
+### 다음 단계
+- [U-009[Mvp]] ⚡Action Deck(카드+비용/대안) UI 구현
+
+---
+
 
 ### 구현 완료 항목
 
