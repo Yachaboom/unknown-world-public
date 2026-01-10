@@ -64,7 +64,7 @@
 
 ### 4단계: 팀 사용 가이드(최소 런북) 작성
 
-- “에셋 요청 → nanobanana mcp로 제작 → 리사이즈/압축 → 폴더 반영 → UI 적용/폴백 확인”의 최소 절차를 `README.md`에 기록한다.
+- “에셋 요청 → nanobanana mcp로 제작(**배경 제거가 필요하면 원본 배경은 순백(#FFFFFF) 단색으로 생성**) → (필요 시) `rembg`로 배경 제거 → 리사이즈/압축 → 폴더 반영 → UI 적용/폴백 확인”의 최소 절차를 `README.md`에 기록한다. (참조: `vibe/ref/rembg-guide.md`)
 
 ## 의존성 & 연결
 
@@ -101,4 +101,5 @@
 - `.gemini/rules/red-line.md` - 용어/보안/dev-only 규칙
 - `vibe/prd.md` - 데모 표면/접근성/CRT 효과 원칙
 - `vibe/ref/frontend-style-guide.md` - CRT 스타일 가이드
+- `vibe/ref/rembg-guide.md` - rembg 배경 제거(모델 선택/옵션/명령) 가이드
 

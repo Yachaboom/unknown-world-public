@@ -68,8 +68,9 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 
 **다음 작업에 전달할 것**:
 
-- U-018에서 비즈니스 룰 검증 + repair loop를 수행할 “스키마 검증된(또는 실패한) 결과/에러 정보”
-- RU-005에서 정리할 orchestrator stage 중 “Resolve/Render”의 핵심 생성 단계
+- U-018에서 비즈니스 룰 검증 + repair loop를 수행할 "스키마 검증된(또는 실패한) 결과/에러 정보"
+- U-036에서 프롬프트 파일 분리/핫리로드를 위한 최소 로딩 구조 기반
+- RU-005에서 정리할 orchestrator stage 중 "Resolve/Render"의 핵심 생성 단계
 
 ## 주의사항
 

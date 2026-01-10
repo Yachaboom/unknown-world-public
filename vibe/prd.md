@@ -51,17 +51,24 @@
 ### 3.2 프롬프트/출력 언어 설계 원칙 (✅ 기반 디렉토리 생성 완료)
 
 - 모든 핵심 프롬프트는 **백엔드의 별도 `.md` 파일**로 관리한다.
-- 언어별로 프롬프트를 분리하거나(권장), 단일 프롬프트 내에 언어 분기 규칙을 포함한다.
-- 턴 입력에 `language`를 포함하고, 응답도 동일 언어로 고정한다(혼합 출력 방지).
+- 언어별로 프롬프트를 분리하고(권장), 턴 입력에 `language`를 포함하여 응답도 동일 언어로 고정한다(혼합 출력 방지).
+- 프롬프트 로더는 `language` 파라미터에 따라 올바른 파일을 로드하며, 개발 모드에서는 **핫리로드**를 지원한다.
 
 예시 디렉토리(개념):
 
-- `backend/prompts/system/game_master.ko.md`
-- `backend/prompts/system/game_master.en.md`
-- `backend/prompts/turn/turn_output_instructions.ko.md`
-- `backend/prompts/turn/turn_output_instructions.en.md`
-- `backend/prompts/image/scene_prompt.ko.md`
-- `backend/prompts/image/scene_prompt.en.md`
+- `backend/prompts/system/game_master.ko.md` - 시스템 프롬프트(한국어)
+- `backend/prompts/system/game_master.en.md` - 시스템 프롬프트(영어)
+- `backend/prompts/turn/turn_output_instructions.ko.md` - 턴 출력 지시(한국어)
+- `backend/prompts/turn/turn_output_instructions.en.md` - 턴 출력 지시(영어)
+- `backend/prompts/image/scene_prompt.ko.md` - 이미지 생성 프롬프트(한국어)
+- `backend/prompts/image/scene_prompt.en.md` - 이미지 생성 프롬프트(영어)
+
+**프롬프트 관리 원칙**:
+
+- 코드 하드코딩 금지: 모든 핵심 프롬프트는 `.md` 파일에서 로드한다.
+- 편집 용이성: 마크다운 형식으로 작성하되, 렌더링 없이 텍스트 그대로 모델에 전달된다.
+- 버전 관리: 프론트매터(선택)로 `prompt_version`, `policy_preset` 등 메타를 포함할 수 있다.
+- 핫리로드: 개발 모드에서 서버 재시작 없이 프롬프트 변경이 반영된다.
 
 ## 4. 사용자 정의
 
@@ -124,6 +131,7 @@
 
 - 텍스트 상황 묘사 → (조건부) 이미지 생성/편집 → UI 오버레이(핫스팟) 제공
 - 이미지 생성이 느릴 경우 **텍스트 우선 출력 + Lazy Loading**.
+- **오브젝트/아이템 이미지 배경 제거(조건부)**: 투명 합성이 필요한 경우 `rembg`를 사용해 배경을 제거한다. (가이드: `vibe/ref/rembg-guide.md`)
 
 ### 6.4 룰 변형 시스템(Rule Mutation)
 
@@ -429,6 +437,8 @@
   - 아이콘: 16/24/32/64(최소 2종), 1개 20KB 이하 권장
   - placeholder: 1개 200KB 이하 권장
   - `frontend/public/ui/` 총합 1MB 이하 권장
+- **배경 제거(필수 조건부)**: 아이콘/크롬 등 **투명 배경(알파)이 필요한 에셋**은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리한다. (가이드: `vibe/ref/rembg-guide.md`)
+- **배경 단순화(필수 조건부)**: 배경 제거(rembg)를 전제하는 에셋은 **생성 단계에서 배경을 순백(#FFFFFF) 단색**으로 만들도록 강하게 지시한다(그라데이션/텍스처/그림자 금지) → 배경 제거 품질/재현성/속도 향상.
 - **폴백(필수)**: 에셋 로딩 실패/미지원 시에도 텍스트/이모지 라벨로 기능이 유지되어야 한다.
 - **접근성(필수)**: 색상만으로 의미 전달 금지(라벨/텍스트 병행), 장식성 이미지는 `aria-hidden` 등으로 의도 명시.
 - **추적/QA(권장)**: 에셋은 `manifest`와 체크리스트로 사용처/규칙 준수 여부를 관리한다(용량/대비/Readable 모드).

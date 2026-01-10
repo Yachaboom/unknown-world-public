@@ -22,6 +22,12 @@
   - Uvicorn `0.40.0` (ASGI)
   - Pydantic `2.12.5` (스키마/검증/직렬화)
 
+- **Dev/Build Tools (이미지 후처리)**
+  - rembg `2.0.67` (배경 제거, Dev/런타임 모두 사용 가능)
+    - 개발용: nanobanana mcp 에셋 투명 PNG 제작
+    - 런타임: 실시간 오브젝트 이미지 배경 제거(조건부)
+    - 모델 선택: `vibe/ref/rembg-guide.md` 기준
+
 - **Streaming / Realtime**
   - HTTP Streaming (Fetch + POST): 턴 요청(POST body) → 응답을 스트림으로 수신(타자 효과 + Queue/Badges)
   - (확장) WebSocket: 양방향 실시간 상호작용이 필요할 때만
@@ -82,6 +88,7 @@
 | 심사/데모 즉시 접근            | 데모 프로필(프리셋 유저)        | 온보딩 10초         |
 | 이미지 “선택적” 생성/편집      | `gemini-3-pro-image-preview`    | 편집/일관성 우선    |
 | 이미지 업로드→단서/아이템화    | Gemini 비전 + Files API         | 멀티모달 핵심       |
+| 오브젝트 이미지 배경 제거      | rembg (조건부 후처리)           | 투명 합성 지원      |
 | API 키 노출 없이 Gemini 사용   | Vertex AI 서비스계정            | 보안/운영 단순      |
 
 ## 3. 대안 기술 비교 (빠른 판단)

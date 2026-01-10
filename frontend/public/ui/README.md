@@ -2,7 +2,7 @@
 
 > **SSOT 경로**: `frontend/public/ui/`  
 > **도구**: `nanobanana mcp` (개발 전용, 런타임 의존 금지)  
-> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7
+> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7, `vibe/ref/rembg-guide.md`
 
 ---
 
@@ -86,6 +86,8 @@ frontend/public/ui/
 | **아이콘** | PNG (투명) | - | 작은 크기, 투명도 필수 |
 | **placeholder** | WebP | PNG | 용량 절감 우선 (Q1 결정: Option B) |
 | **chrome** | PNG (투명) | - | 프레임/장식, 투명도 필수 |
+
+> **배경 제거(필수 조건부)**: 아이콘/chrome 등 투명 배경이 필요한 에셋은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리합니다. (가이드: `vibe/ref/rembg-guide.md`)
 
 ### 4.2 사이즈 규격
 
@@ -231,20 +233,25 @@ frontend/public/ui/
 2. nanobanana mcp로 제작
    └── 프롬프트에 CRT 스타일 키워드 포함
    └── 색상 팔레트 준수
-   
-3. 리사이즈/압축
+   └── (필수 조건부) 배경 제거(rembg) 예정이면 **배경은 순백(#FFFFFF) 단색**으로 생성(그라데이션/텍스처/그림자 금지)
+
+3. (필수 조건부) rembg로 배경 제거
+   └── 아이콘/chrome 등 투명 배경이 필요한 에셋에서 배경이 남아 있으면 rembg로 제거
+   └── 모델 선택/옵션은 `vibe/ref/rembg-guide.md` 준수
+  
+4. 리사이즈/압축
    └── 성능 예산 확인
    └── 필요 사이즈로 리사이즈
-   
-4. 디렉토리 반영
+  
+5. 디렉토리 반영
    └── 네이밍 규칙 준수
    └── manifest.json 업데이트
-   
-5. UI 적용 + 폴백 확인
+  
+6. UI 적용 + 폴백 확인
    └── 컴포넌트에 적용
    └── 폴백 동작 테스트
-   
-6. QA
+  
+7. QA
    └── 크기/대비/폴백/Readable 모드 확인
 ```
 
@@ -257,6 +264,7 @@ CRT 터미널 스타일 아이콘,
 심플한 라인 아트, 
 픽셀 아트 또는 레트로 스타일,
 24x24 픽셀, 투명 배경
+(배경 제거 필요 시) solid white background (#FFFFFF), no gradient/texture/shadow
 ```
 
 ---
@@ -306,6 +314,8 @@ CRT 터미널 스타일 아이콘,
 - [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
 - [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
 - [ ] 성능 예산 준수 (개별/총합)
+- [ ] (조건부) 투명 배경이 필요한 에셋은 `rembg`로 배경 제거 완료(알파 채널 확인)
+- [ ] (조건부) 배경 제거(rembg) 예정이면 원본 생성 단계에서 배경이 순백(#FFFFFF) 단색인지 확인(그라데이션/텍스처/그림자 금지)
 - [ ] CRT 테마 색상과 조화
 - [ ] 폴백 구현 확인
 - [ ] 접근성 속성 적용 (`aria-hidden` 또는 `alt`)
