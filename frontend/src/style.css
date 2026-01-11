@@ -1325,3 +1325,213 @@ html[data-readable='true'] .narrative-timestamp {
   background: var(--text-dim);
   margin: 0 var(--spacing-xs);
 }
+
+/* ============================================
+   24. UI Chrome Pack (U-032)
+   - 패널/카드에 적용되는 장식(코너/프레임)
+   - Readable 모드에서 완화
+   ============================================ */
+
+/* Chrome 에셋 경로 변수 */
+:root {
+  --chrome-panel-corner: url('/ui/chrome/panel-corner-br.png');
+  --chrome-card-frame: url('/ui/chrome/card-frame.png');
+  --chrome-scanner-frame: url('/ui/chrome/scanner-frame.png');
+  --chrome-corner-size: 32px;
+  --chrome-glow-color: rgba(51, 255, 0, 0.3);
+}
+
+/* Game Header Chrome - 상단 코너 (U-032) */
+.game-header.has-chrome {
+  position: relative;
+}
+
+.game-header.has-chrome::before,
+.game-header.has-chrome::after {
+  content: '';
+  position: absolute;
+  width: var(--chrome-corner-size);
+  height: var(--chrome-corner-size);
+  background-image: var(--chrome-panel-corner);
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 5px var(--chrome-glow-color));
+  z-index: 2;
+}
+
+.game-header.has-chrome::before {
+  top: -2px;
+  left: -2px;
+  transform: rotate(90deg);
+}
+
+.game-header.has-chrome::after {
+  top: -2px;
+  right: -2px;
+  transform: rotate(180deg);
+}
+
+/* Panel Header Chrome - 코너 장식 (4방향 CSS transform) */
+.panel-header.has-chrome {
+  position: relative;
+}
+
+.panel-header.has-chrome::before,
+.panel-header.has-chrome::after {
+  content: '';
+  position: absolute;
+  width: var(--chrome-corner-size);
+  height: var(--chrome-corner-size);
+  background-image: var(--chrome-panel-corner);
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 4px var(--chrome-glow-color));
+}
+
+/* 좌상단 코너 */
+.panel-header.has-chrome::before {
+  top: -2px;
+  left: -2px;
+  transform: rotate(90deg);
+}
+
+/* 우상단 코너 */
+.panel-header.has-chrome::after {
+  top: -2px;
+  right: -2px;
+  transform: rotate(180deg);
+}
+
+/* Panel Chrome - 하단 코너용 래퍼 */
+.panel.has-chrome {
+  position: relative;
+}
+
+.panel.has-chrome .panel-content {
+  position: relative;
+}
+
+.panel.has-chrome .panel-content::before,
+.panel.has-chrome .panel-content::after {
+  content: '';
+  position: absolute;
+  width: var(--chrome-corner-size);
+  height: var(--chrome-corner-size);
+  background-image: var(--chrome-panel-corner);
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 3px var(--chrome-glow-color));
+}
+
+/* 좌하단 코너 */
+.panel.has-chrome .panel-content::before {
+  bottom: 0;
+  left: -2px;
+  transform: rotate(0deg);
+}
+
+/* 우하단 코너 (원본 방향) */
+.panel.has-chrome .panel-content::after {
+  bottom: 0;
+  right: -2px;
+  transform: rotate(270deg);
+}
+
+/* Action Card Chrome - 프레임 오버레이 */
+.action-card.has-chrome {
+  position: relative;
+  overflow: visible;
+}
+
+.action-card.has-chrome::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background-image: var(--chrome-card-frame);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 6px var(--chrome-glow-color));
+  z-index: 1;
+}
+
+/* Scanner Slot Chrome - 장식 프레임 (U-032) */
+.scanner-slot.has-chrome {
+  position: relative;
+  min-height: 100px;
+  border: 1px dashed var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--spacing-md) var(--spacing-sm);
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.scanner-slot.has-chrome::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background-image: var(--chrome-scanner-frame);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 8px var(--chrome-glow-color));
+  z-index: 1;
+}
+
+/* Chrome 호버 효과 강화 */
+.action-card.has-chrome:hover::before,
+.scanner-slot.has-chrome:hover::before {
+  opacity: 1;
+  filter: drop-shadow(0 0 10px var(--accent-color));
+}
+
+/* Readable 모드: Chrome 완화/제거 */
+html[data-readable='true'] .game-header.has-chrome::before,
+html[data-readable='true'] .game-header.has-chrome::after,
+html[data-readable='true'] .panel-header.has-chrome::before,
+html[data-readable='true'] .panel-header.has-chrome::after,
+html[data-readable='true'] .panel.has-chrome .panel-content::before,
+html[data-readable='true'] .panel.has-chrome .panel-content::after {
+  opacity: 0.3;
+  filter: none;
+}
+
+html[data-readable='true'] .action-card.has-chrome::before,
+html[data-readable='true'] .scanner-slot.has-chrome::before {
+  opacity: 0.4;
+  filter: none;
+}
+
+/* Chrome 폴백: 이미지 로딩 실패 시 CSS 테두리로 대체 */
+.panel-header.has-chrome.chrome-fallback::before,
+.panel-header.has-chrome.chrome-fallback::after,
+.panel.has-chrome.chrome-fallback .panel-content::before,
+.panel.has-chrome.chrome-fallback .panel-content::after {
+  background-image: none;
+  background-color: var(--text-color);
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+.action-card.has-chrome.chrome-fallback::before,
+.scanner-slot.has-chrome.chrome-fallback::before {
+  background-image: none;
+  border: 1px solid var(--text-color);
+  background-color: transparent;
+}

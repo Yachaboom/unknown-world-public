@@ -1,5 +1,42 @@
 # 프로젝트 진행 상황
 
+## [2026-01-12 11:35] U-032[Mvp]: nanobanana mcp UI Chrome Pack(패널/카드 프레임/코너) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: nanobanana mcp로 제작된 Chrome 에셋(코너/프레임) 적용으로 게임 UI 미학 강화 및 Readable 모드 연동
+- **추가 컴포넌트**: `frontend/public/ui/chrome/` (에셋), `vibe/unit-results/U-032[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 6.7] 게임 UI 고정 HUD 미학, [RULE-002] 채팅 UI 탈피, [U-028] Readable 모드 호환
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **CSS Pseudo-elements**: `:before`, `:after`를 활용한 장식 오버레이 구현 (DOM 오염 최소화)
+- **CSS Transform**: 단일 코너 에셋 회전 재사용으로 리소스 최적화
+- **nanobanana mcp & rembg**: 일관된 레트로 스타일 생성 및 투명 배경 처리
+
+**설계 패턴 및 아키텍처 선택**:
+- **Decorative Overlay 패턴**: 기능적 컴포넌트(`Panel`, `ActionCard`)와 장식적 요소(`Chrome`)의 스타일 분리
+- **Visual Fallback**: 에셋 로드 실패 시에도 기존 CSS 테두리가 유지되도록 설계
+
+**코드 구조**:
+repo-root/
+├── frontend/public/ui/chrome/ (신규 에셋 3종)
+├── frontend/src/style.css (Chrome 스타일 및 Readable 모드 예외 처리)
+└── frontend/src/App.tsx (Chrome 적용 대상 지정)
+
+### 성능 및 품질 지표
+- **리소스 최적화**: 단일 코너 에셋 재사용으로 불필요한 네트워크 요청 3회 절감
+- **접근성**: 모든 장식 요소에 `aria-hidden="true"` 및 `pointer-events: none` 적용
+
+### 의존성 변경
+- 없음
+
+### 다음 단계
+- [U-033[Mvp]] nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백)
+
+---
+
 ## [2026-01-11 23:10] U-031[Mvp]: nanobanana mcp 상태 Placeholder Pack 완료
 
 ### 구현 완료 항목

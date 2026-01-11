@@ -23,8 +23,12 @@ D:\Dev\unknown-world\
 │   ├── public/             # 정적 에셋
 │   │   └── ui/             # UI 이미지 에셋 SSOT (U-030)
 │   │       ├── README.md   # 제작/관리 규칙
-│   │       ├── manifest.json # 에셋 목록 (U-029)
+│   │       ├── manifest.json # 에셋 목록 (U-029, U-032)
 │   │       ├── manifest.schema.json # 매니페스트 스키마
+│   │       ├── chrome/     # UI 장식/프레임 에셋 (U-032)
+│   │       │   ├── card-frame.png
+│   │       │   ├── panel-corner-br.png
+│   │       │   └── scanner-frame.png
 │   │       ├── icons/      # UI 아이콘 세트 (24px/16px) (U-029)
 │   │       │   ├── badge-fail-24.png
 │   │       │   ├── badge-ok-24.png
@@ -98,7 +102,7 @@ D:\Dev\unknown-world\
 │   │   └── nanobanana-asset-request.schema.json # 에셋 요청 스키마 (U-034)
 │   ├── unit-plans/
 │   ├── unit-results/       # 유닛 개발 보고서 (U-034[Mvp] 포함)
-│   └── unit-runbooks/      # 유닛 실행 가이드 (U-034-nanobanana-template-runbook.md 포함)
+│   └── unit-runbooks/      # 유닛 실행 가이드 (U-032-chrome-pack-runbook.md 포함)
 └── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ```
 

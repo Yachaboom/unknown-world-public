@@ -38,12 +38,17 @@ interface PanelProps {
   title: string;
   children?: React.ReactNode;
   className?: string;
+  /** U-032: Chrome 장식 적용 여부 */
+  hasChrome?: boolean;
 }
 
-function Panel({ title, children, className = '' }: PanelProps) {
+function Panel({ title, children, className = '', hasChrome = false }: PanelProps) {
+  const panelClass = `panel ${className} ${hasChrome ? 'has-chrome' : ''}`.trim();
+  const headerClass = `panel-header ${hasChrome ? 'has-chrome' : ''}`.trim();
+
   return (
-    <div className={`panel ${className}`}>
-      <div className="panel-header">
+    <div className={panelClass}>
+      <div className={headerClass}>
         <span className="panel-title">{title}</span>
       </div>
       <div className="panel-content">
@@ -139,7 +144,7 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
         <button
           key={card.id}
           type="button"
-          className="action-card"
+          className="action-card has-chrome"
           onClick={() => onCardClick?.(card)}
           disabled={disabled}
         >
@@ -286,7 +291,7 @@ function GameHeader({
   onToggleReadable,
 }: GameHeaderProps) {
   return (
-    <header className="game-header">
+    <header className="game-header has-chrome">
       <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
         UNKNOWN WORLD
       </h1>
@@ -556,14 +561,16 @@ function App() {
 
         {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
         <aside className="sidebar-right">
-          <Panel title="Agent Console" className="flex-1">
+          <Panel title="Agent Console" className="flex-1" hasChrome>
             <AgentConsole />
           </Panel>
-          <Panel title="Memory Pin">
+          <Panel title="Memory Pin" hasChrome>
             <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
           </Panel>
-          <Panel title="Scanner">
-            <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
+          <Panel title="Scanner" hasChrome>
+            <div className="scanner-slot has-chrome">
+              <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
+            </div>
           </Panel>
         </aside>
 

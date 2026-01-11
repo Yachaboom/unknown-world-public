@@ -2,7 +2,7 @@
   "$schema": "./manifest.schema.json",
   "version": "1.2.0",
   "generatedAt": "2026-01-11T22:55:00Z",
-  "totalBytes": 445369,
+  "totalBytes": 456369,
   "budgetBytes": 1572864,
   "assets": [
     {
@@ -167,6 +167,33 @@
       "usedIn": ["SceneCanvas"],
       "bytes": 68454,
       "notes": "U-031: 저신호 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "panel-corner-br",
+      "path": "chrome/panel-corner-br.png",
+      "type": "chrome",
+      "fallback": "",
+      "usedIn": ["PanelHeader"],
+      "bytes": 1899,
+      "notes": "U-032: 패널 코너 장식, nanobanana mcp 생성, rembg 배경 제거, ImageMagick 최적화(48x48), CSS transform으로 4방향 적용"
+    },
+    {
+      "id": "card-frame",
+      "path": "chrome/card-frame.png",
+      "type": "chrome",
+      "fallback": "",
+      "usedIn": ["ActionCard"],
+      "bytes": 9101,
+      "notes": "U-032: 액션 카드 프레임, nanobanana mcp 생성, rembg 배경 제거, ImageMagick 최적화(160x80)"
+    },
+    {
+      "id": "scanner-frame",
+      "path": "chrome/scanner-frame.png",
+      "type": "chrome",
+      "fallback": "",
+      "usedIn": ["Scanner"],
+      "bytes": 100165,
+      "notes": "U-032: 스캐너 슬롯 프레임, nanobanana mcp 생성, rembg(birefnet-general) 배경 제거, ImageMagick 최적화(346x200) 완료"
     }
   ]
 }

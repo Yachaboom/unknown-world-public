@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 17/61 (28%) | **MVP**: 17/48 (35%) | **MMP**: 0/13 (0%)
+**전체**: 18/61 (29%) | **MVP**: 18/48 (37%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-8 | MMP D-12  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) 기준. `vibe/refactors/*`는 하위 리팩토링 기록으로 분모에서 제외._
 
-**진행 중**: [U-032[Mvp]](unit-plans/U-032[Mvp].md) / **최근 완료**: [U-031[Mvp]](unit-results/U-031[Mvp].md) (2026-01-11)
+**진행 중**: [U-033[Mvp]](unit-plans/U-033[Mvp].md) / **최근 완료**: [U-032[Mvp]](unit-results/U-032[Mvp].md) (2026-01-12)
 
 **블로커**: 없음
 
@@ -121,8 +121,7 @@ _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) �
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-032[Mvp]](unit-plans/U-032[Mvp].md) | nanobanana mcp UI Chrome Pack(패널/카드 프레임/코너) | Depends=U-030,U-004,U-034 | 🚧
-ID=[U-033[Mvp]](unit-plans/U-033[Mvp].md) | nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백) | Depends=U-030 | ⏸️
+ID=[U-033[Mvp]](unit-plans/U-033[Mvp].md) | nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백) | Depends=U-030 | 🚧
 ID=[U-037[Mvp]](unit-plans/U-037[Mvp].md) | CRT 지글거림 보강(Readable 완화 프로파일) | Depends=U-004,U-028 | ⏸️
 ID=[U-038[Mvp]](unit-plans/U-038[Mvp].md) | 핵심 UI 아이콘 12종 재생성(v2, 퀄리티/용량/사이즈/식별성) | Depends=U-033,U-034,U-030,U-028 | ⏸️
 ID=[U-009[Mvp]](unit-plans/U-009[Mvp].md) | ⚡Action Deck(카드+비용/대안) | Depends=U-004,U-008 | ⏸️
@@ -176,6 +175,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-032[Mvp]](unit-results/U-032[Mvp].md): nanobanana mcp UI Chrome Pack(패널/카드 프레임/코너) (2026-01-12)
 - ✅ [U-031[Mvp]](unit-results/U-031[Mvp].md): nanobanana mcp 상태 Placeholder Pack(Scene/오프라인/에러/차단) (2026-01-11)
 - ✅ [U-029[Mvp]](unit-results/U-029[Mvp].md): nanobanana mcp 에셋 패스(UI 아이콘/프레임/placeholder) (2026-01-11)
 - ✅ [U-034[Mvp]](unit-results/U-034[Mvp].md): nanobanana mcp 에셋 요청 스키마 + 프롬프트 템플릿(재현성) (2026-01-11)
