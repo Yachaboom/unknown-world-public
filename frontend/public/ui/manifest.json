@@ -1,8 +1,8 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.1.0",
-  "generatedAt": "2026-01-11T02:30:00Z",
-  "totalBytes": 267099,
+  "version": "1.2.0",
+  "generatedAt": "2026-01-11T22:55:00Z",
+  "totalBytes": 445369,
   "budgetBytes": 1572864,
   "assets": [
     {
@@ -131,6 +131,42 @@
       "usedIn": ["SceneCanvas"],
       "bytes": 261407,
       "notes": "nanobanana mcp 생성, 레트로 터미널 스타일"
+    },
+    {
+      "id": "scene-loading",
+      "path": "placeholders/scene-loading.webp",
+      "type": "placeholder",
+      "fallback": "⏳",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 47850,
+      "notes": "U-031: 로딩 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-offline",
+      "path": "placeholders/scene-offline.webp",
+      "type": "placeholder",
+      "fallback": "🔌",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 44658,
+      "notes": "U-031: 오프라인 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-blocked",
+      "path": "placeholders/scene-blocked.webp",
+      "type": "placeholder",
+      "fallback": "🚫",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 17318,
+      "notes": "U-031: 차단 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-low-signal",
+      "path": "placeholders/scene-low-signal.webp",
+      "type": "placeholder",
+      "fallback": "📉",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 68454,
+      "notes": "U-031: 저신호 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
     }
   ]
 }

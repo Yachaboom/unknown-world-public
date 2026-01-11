@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,py,css,json}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, backend/.venv/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml,css}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, .venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,6 +42,7 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/__init__.py
 backend/src/unknown_world/api/turn_stream_events.py
@@ -56,8 +57,11 @@ backend/tests/integration/test_turn_streaming.py
 backend/tests/unit/models/test_turn.py
 backend/tests/unit/test_u034_verification.py
 frontend/coverage/base.css
+frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.css
+frontend/coverage/prettify.js
+frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
@@ -65,6 +69,9 @@ frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
 frontend/src/App.tsx
 frontend/src/components/AgentConsole.tsx
+frontend/src/components/SceneCanvas.test.tsx
+frontend/src/components/SceneCanvas.tsx
+frontend/src/i18n.ts
 frontend/src/main.tsx
 frontend/src/schemas/index.ts
 frontend/src/schemas/turn.test.ts
@@ -75,6 +82,7 @@ frontend/src/stores/agentStore.ts
 frontend/src/stores/uiPrefsStore.test.ts
 frontend/src/stores/uiPrefsStore.ts
 frontend/src/style.css
+frontend/src/types/scene.ts
 frontend/src/types/turn_stream.ts
 frontend/src/vite-env.d.ts
 frontend/tsconfig.json
@@ -1356,6 +1364,96 @@ pre.prettyprint {
 }
 </file>
 
+<file path="frontend/coverage/block-navigation.js">
+/* eslint-disable */
+var jumpToCode = (function init() {
+    // Classes of code we would like to highlight in the file view
+    var missingCoverageClasses = ['.cbranch-no', '.cstat-no', '.fstat-no'];
+
+    // Elements to highlight in the file listing view
+    var fileListingElements = ['td.pct.low'];
+
+    // We don't want to select elements that are direct descendants of another match
+    var notSelector = ':not(' + missingCoverageClasses.join('):not(') + ') > '; // becomes `:not(a):not(b) > `
+
+    // Selector that finds elements on the page to which we can jump
+    var selector =
+        fileListingElements.join(', ') +
+        ', ' +
+        notSelector +
+        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
+
+    // The NodeList of matching elements
+    var missingCoverageElements = document.querySelectorAll(selector);
+
+    var currentIndex;
+
+    function toggleClass(index) {
+        missingCoverageElements
+            .item(currentIndex)
+            .classList.remove('highlighted');
+        missingCoverageElements.item(index).classList.add('highlighted');
+    }
+
+    function makeCurrent(index) {
+        toggleClass(index);
+        currentIndex = index;
+        missingCoverageElements.item(index).scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+        });
+    }
+
+    function goToPrevious() {
+        var nextIndex = 0;
+        if (typeof currentIndex !== 'number' || currentIndex === 0) {
+            nextIndex = missingCoverageElements.length - 1;
+        } else if (missingCoverageElements.length > 1) {
+            nextIndex = currentIndex - 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    function goToNext() {
+        var nextIndex = 0;
+
+        if (
+            typeof currentIndex === 'number' &&
+            currentIndex < missingCoverageElements.length - 1
+        ) {
+            nextIndex = currentIndex + 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    return function jump(event) {
+        if (
+            document.getElementById('fileSearch') === document.activeElement &&
+            document.activeElement != null
+        ) {
+            // if we're currently focused on the search input, we don't want to navigate
+            return;
+        }
+
+        switch (event.which) {
+            case 78: // n
+            case 74: // j
+                goToNext();
+                break;
+            case 66: // b
+            case 75: // k
+            case 80: // p
+                goToPrevious();
+                break;
+        }
+    };
+})();
+window.addEventListener('keydown', jumpToCode);
+</file>
+
 <file path="frontend/coverage/coverage-final.json">
 {"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts": {"path":"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts","statementMap":{"0":{"start":{"line":30,"column":30},"end":{"line":30,"column":null}},"1":{"start":{"line":41,"column":30},"end":{"line":41,"column":null}},"2":{"start":{"line":47,"column":27},"end":{"line":47,"column":null}},"3":{"start":{"line":54,"column":32},"end":{"line":62,"column":null}},"4":{"start":{"line":69,"column":37},"end":{"line":78,"column":null}},"5":{"start":{"line":85,"column":32},"end":{"line":85,"column":null}},"6":{"start":{"line":91,"column":31},"end":{"line":91,"column":null}},"7":{"start":{"line":102,"column":32},"end":{"line":107,"column":null}},"8":{"start":{"line":115,"column":27},"end":{"line":122,"column":null}},"9":{"start":{"line":129,"column":36},"end":{"line":138,"column":null}},"10":{"start":{"line":149,"column":32},"end":{"line":156,"column":null}},"11":{"start":{"line":162,"column":32},"end":{"line":176,"column":null}},"12":{"start":{"line":183,"column":37},"end":{"line":192,"column":null}},"13":{"start":{"line":199,"column":31},"end":{"line":209,"column":null}},"14":{"start":{"line":220,"column":32},"end":{"line":229,"column":null}},"15":{"start":{"line":236,"column":33},"end":{"line":247,"column":null}},"16":{"start":{"line":254,"column":32},"end":{"line":262,"column":null}},"17":{"start":{"line":270,"column":30},"end":{"line":278,"column":null}},"18":{"start":{"line":289,"column":31},"end":{"line":295,"column":null}},"19":{"start":{"line":302,"column":31},"end":{"line":312,"column":null}},"20":{"start":{"line":319,"column":27},"end":{"line":325,"column":null}},"21":{"start":{"line":332,"column":32},"end":{"line":359,"column":null}},"22":{"start":{"line":370,"column":30},"end":{"line":382,"column":null}},"23":{"start":{"line":389,"column":34},"end":{"line":395,"column":null}},"24":{"start":{"line":407,"column":35},"end":{"line":412,"column":null}},"25":{"start":{"line":424,"column":34},"end":{"line":436,"column":null}},"26":{"start":{"line":447,"column":34},"end":{"line":453,"column":null}},"27":{"start":{"line":469,"column":32},"end":{"line":502,"column":null}},"28":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"29":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"30":{"start":{"line":532,"column":2},"end":{"line":563,"column":null}},"31":{"start":{"line":590,"column":17},"end":{"line":590,"column":null}},"32":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"33":{"start":{"line":593,"column":4},"end":{"line":593,"column":null}},"34":{"start":{"line":596,"column":2},"end":{"line":600,"column":null}},"35":{"start":{"line":611,"column":2},"end":{"line":611,"column":null}},"36":{"start":{"line":625,"column":2},"end":{"line":625,"column":null}}},"fnMap":{"0":{"name":"createFallbackTurnOutput","decl":{"start":{"line":517,"column":16},"end":{"line":517,"column":null}},"loc":{"start":{"line":521,"column":14},"end":{"line":564,"column":null}},"line":521},"1":{"name":"safeParseTurnOutput","decl":{"start":{"line":585,"column":16},"end":{"line":585,"column":null}},"loc":{"start":{"line":589,"column":25},"end":{"line":601,"column":null}},"line":589},"2":{"name":"parseTurnInput","decl":{"start":{"line":610,"column":16},"end":{"line":610,"column":31}},"loc":{"start":{"line":610,"column":57},"end":{"line":612,"column":null}},"line":610},"3":{"name":"safeParseTurnInput","decl":{"start":{"line":624,"column":16},"end":{"line":624,"column":35}},"loc":{"start":{"line":624,"column":76},"end":{"line":626,"column":null}},"line":624}},"branchMap":{"0":{"loc":{"start":{"line":519,"column":2},"end":{"line":519,"column":null}},"type":"default-arg","locations":[{"start":{"line":519,"column":24},"end":{"line":519,"column":null}}],"line":519},"1":{"loc":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"type":"cond-expr","locations":[{"start":{"line":524,"column":8},"end":{"line":524,"column":null}},{"start":{"line":525,"column":8},"end":{"line":525,"column":null}}],"line":523},"2":{"loc":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"type":"cond-expr","locations":[{"start":{"line":529,"column":8},"end":{"line":529,"column":null}},{"start":{"line":530,"column":8},"end":{"line":530,"column":null}}],"line":528},"3":{"loc":{"start":{"line":534,"column":15},"end":{"line":534,"column":null}},"type":"binary-expr","locations":[{"start":{"line":534,"column":15},"end":{"line":534,"column":31}},{"start":{"line":534,"column":31},"end":{"line":534,"column":null}}],"line":534},"4":{"loc":{"start":{"line":587,"column":2},"end":{"line":587,"column":null}},"type":"default-arg","locations":[{"start":{"line":587,"column":23},"end":{"line":587,"column":null}}],"line":587},"5":{"loc":{"start":{"line":588,"column":2},"end":{"line":588,"column":null}},"type":"default-arg","locations":[{"start":{"line":588,"column":24},"end":{"line":588,"column":null}}],"line":588},"6":{"loc":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"type":"if","locations":[{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},{"start":{},"end":{}}],"line":592}},"s":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1,"9":1,"10":1,"11":1,"12":1,"13":1,"14":1,"15":1,"16":1,"17":1,"18":1,"19":1,"20":1,"21":1,"22":1,"23":1,"24":1,"25":1,"26":1,"27":1,"28":1,"29":1,"30":1,"31":2,"32":2,"33":1,"34":1,"35":2,"36":2},"f":{"0":1,"1":2,"2":2,"3":2},"b":{"0":[1],"1":[1,0],"2":[1,0],"3":[1,1],"4":[2],"5":[2],"6":[1,1]},"meta":{"lastBranch":7,"lastFunction":4,"lastStatement":37,"seen":{"s:30:30:30:Infinity":0,"s:41:30:41:Infinity":1,"s:47:27:47:Infinity":2,"s:54:32:62:Infinity":3,"s:69:37:78:Infinity":4,"s:85:32:85:Infinity":5,"s:91:31:91:Infinity":6,"s:102:32:107:Infinity":7,"s:115:27:122:Infinity":8,"s:129:36:138:Infinity":9,"s:149:32:156:Infinity":10,"s:162:32:176:Infinity":11,"s:183:37:192:Infinity":12,"s:199:31:209:Infinity":13,"s:220:32:229:Infinity":14,"s:236:33:247:Infinity":15,"s:254:32:262:Infinity":16,"s:270:30:278:Infinity":17,"s:289:31:295:Infinity":18,"s:302:31:312:Infinity":19,"s:319:27:325:Infinity":20,"s:332:32:359:Infinity":21,"s:370:30:382:Infinity":22,"s:389:34:395:Infinity":23,"s:407:35:412:Infinity":24,"s:424:34:436:Infinity":25,"s:447:34:453:Infinity":26,"s:469:32:502:Infinity":27,"f:517:16:517:Infinity":0,"b:519:24:519:Infinity":0,"s:523:4:525:Infinity":28,"b:524:8:524:Infinity:525:8:525:Infinity":1,"s:528:4:530:Infinity":29,"b:529:8:529:Infinity:530:8:530:Infinity":2,"s:532:2:563:Infinity":30,"b:534:15:534:31:534:31:534:Infinity":3,"f:585:16:585:Infinity":1,"b:587:23:587:Infinity":4,"b:588:24:588:Infinity":5,"s:590:17:590:Infinity":31,"b:592:2:594:Infinity:undefined:undefined:undefined:undefined":6,"s:592:2:594:Infinity":32,"s:593:4:593:Infinity":33,"s:596:2:600:Infinity":34,"f:610:16:610:31":2,"s:611:2:611:Infinity":35,"f:624:16:624:35":3,"s:625:2:625:Infinity":36}}}
 }
@@ -1363,6 +1461,224 @@ pre.prettyprint {
 
 <file path="frontend/coverage/prettify.css">
 .pln{color:#000}@media screen{.str{color:#080}.kwd{color:#008}.com{color:#800}.typ{color:#606}.lit{color:#066}.pun,.opn,.clo{color:#660}.tag{color:#008}.atn{color:#606}.atv{color:#080}.dec,.var{color:#606}.fun{color:red}}@media print,projection{.str{color:#060}.kwd{color:#006;font-weight:bold}.com{color:#600;font-style:italic}.typ{color:#404;font-weight:bold}.lit{color:#044}.pun,.opn,.clo{color:#440}.tag{color:#006;font-weight:bold}.atn{color:#404}.atv{color:#060}}pre.prettyprint{padding:2px;border:1px solid #888}ol.linenums{margin-top:0;margin-bottom:0}li.L0,li.L1,li.L2,li.L3,li.L5,li.L6,li.L7,li.L8{list-style-type:none}li.L1,li.L3,li.L5,li.L7,li.L9{background:#eee}
+</file>
+
+<file path="frontend/coverage/prettify.js">
+/* eslint-disable */
+window.PR_SHOULD_USE_CONTINUATION=true;(function(){var h=["break,continue,do,else,for,if,return,while"];var u=[h,"auto,case,char,const,default,double,enum,extern,float,goto,int,long,register,short,signed,sizeof,static,struct,switch,typedef,union,unsigned,void,volatile"];var p=[u,"catch,class,delete,false,import,new,operator,private,protected,public,this,throw,true,try,typeof"];var l=[p,"alignof,align_union,asm,axiom,bool,concept,concept_map,const_cast,constexpr,decltype,dynamic_cast,explicit,export,friend,inline,late_check,mutable,namespace,nullptr,reinterpret_cast,static_assert,static_cast,template,typeid,typename,using,virtual,where"];var x=[p,"abstract,boolean,byte,extends,final,finally,implements,import,instanceof,null,native,package,strictfp,super,synchronized,throws,transient"];var R=[x,"as,base,by,checked,decimal,delegate,descending,dynamic,event,fixed,foreach,from,group,implicit,in,interface,internal,into,is,lock,object,out,override,orderby,params,partial,readonly,ref,sbyte,sealed,stackalloc,string,select,uint,ulong,unchecked,unsafe,ushort,var"];var r="all,and,by,catch,class,else,extends,false,finally,for,if,in,is,isnt,loop,new,no,not,null,of,off,on,or,return,super,then,true,try,unless,until,when,while,yes";var w=[p,"debugger,eval,export,function,get,null,set,undefined,var,with,Infinity,NaN"];var s="caller,delete,die,do,dump,elsif,eval,exit,foreach,for,goto,if,import,last,local,my,next,no,our,print,package,redo,require,sub,undef,unless,until,use,wantarray,while,BEGIN,END";var I=[h,"and,as,assert,class,def,del,elif,except,exec,finally,from,global,import,in,is,lambda,nonlocal,not,or,pass,print,raise,try,with,yield,False,True,None"];var f=[h,"alias,and,begin,case,class,def,defined,elsif,end,ensure,false,in,module,next,nil,not,or,redo,rescue,retry,self,super,then,true,undef,unless,until,when,yield,BEGIN,END"];var H=[h,"case,done,elif,esac,eval,fi,function,in,local,set,then,until"];var A=[l,R,w,s+I,f,H];var e=/^(DIR|FILE|vector|(de|priority_)?queue|list|stack|(const_)?iterator|(multi)?(set|map)|bitset|u?(int|float)\d*)/;var C="str";var z="kwd";var j="com";var O="typ";var G="lit";var L="pun";var F="pln";var m="tag";var E="dec";var J="src";var P="atn";var n="atv";var N="nocode";var M="(?:^^\\.?|[+-]|\\!|\\!=|\\!==|\\#|\\%|\\%=|&|&&|&&=|&=|\\(|\\*|\\*=|\\+=|\\,|\\-=|\\->|\\/|\\/=|:|::|\\;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\@|\\[|\\^|\\^=|\\^\\^|\\^\\^=|\\{|\\||\\|=|\\|\\||\\|\\|=|\\~|break|case|continue|delete|do|else|finally|instanceof|return|throw|try|typeof)\\s*";function k(Z){var ad=0;var S=false;var ac=false;for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.ignoreCase){ac=true}else{if(/[a-z]/i.test(ae.source.replace(/\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[^ux]/gi,""))){S=true;ac=false;break}}}var Y={b:8,t:9,n:10,v:11,f:12,r:13};function ab(ah){var ag=ah.charCodeAt(0);if(ag!==92){return ag}var af=ah.charAt(1);ag=Y[af];if(ag){return ag}else{if("0"<=af&&af<="7"){return parseInt(ah.substring(1),8)}else{if(af==="u"||af==="x"){return parseInt(ah.substring(2),16)}else{return ah.charCodeAt(1)}}}}function T(af){if(af<32){return(af<16?"\\x0":"\\x")+af.toString(16)}var ag=String.fromCharCode(af);if(ag==="\\"||ag==="-"||ag==="["||ag==="]"){ag="\\"+ag}return ag}function X(am){var aq=am.substring(1,am.length-1).match(new RegExp("\\\\u[0-9A-Fa-f]{4}|\\\\x[0-9A-Fa-f]{2}|\\\\[0-3][0-7]{0,2}|\\\\[0-7]{1,2}|\\\\[\\s\\S]|-|[^-\\\\]","g"));var ak=[];var af=[];var ao=aq[0]==="^";for(var ar=ao?1:0,aj=aq.length;ar<aj;++ar){var ah=aq[ar];if(/\\[bdsw]/i.test(ah)){ak.push(ah)}else{var ag=ab(ah);var al;if(ar+2<aj&&"-"===aq[ar+1]){al=ab(aq[ar+2]);ar+=2}else{al=ag}af.push([ag,al]);if(!(al<65||ag>122)){if(!(al<65||ag>90)){af.push([Math.max(65,ag)|32,Math.min(al,90)|32])}if(!(al<97||ag>122)){af.push([Math.max(97,ag)&~32,Math.min(al,122)&~32])}}}}af.sort(function(av,au){return(av[0]-au[0])||(au[1]-av[1])});var ai=[];var ap=[NaN,NaN];for(var ar=0;ar<af.length;++ar){var at=af[ar];if(at[0]<=ap[1]+1){ap[1]=Math.max(ap[1],at[1])}else{ai.push(ap=at)}}var an=["["];if(ao){an.push("^")}an.push.apply(an,ak);for(var ar=0;ar<ai.length;++ar){var at=ai[ar];an.push(T(at[0]));if(at[1]>at[0]){if(at[1]+1>at[0]){an.push("-")}an.push(T(at[1]))}}an.push("]");return an.join("")}function W(al){var aj=al.source.match(new RegExp("(?:\\[(?:[^\\x5C\\x5D]|\\\\[\\s\\S])*\\]|\\\\u[A-Fa-f0-9]{4}|\\\\x[A-Fa-f0-9]{2}|\\\\[0-9]+|\\\\[^ux0-9]|\\(\\?[:!=]|[\\(\\)\\^]|[^\\x5B\\x5C\\(\\)\\^]+)","g"));var ah=aj.length;var an=[];for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){an[af]=-1}}}}for(var ak=1;ak<an.length;++ak){if(-1===an[ak]){an[ak]=++ad}}for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am;if(an[am]===undefined){aj[ak]="(?:"}}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){aj[ak]="\\"+an[am]}}}}for(var ak=0,am=0;ak<ah;++ak){if("^"===aj[ak]&&"^"!==aj[ak+1]){aj[ak]=""}}if(al.ignoreCase&&S){for(var ak=0;ak<ah;++ak){var ag=aj[ak];var ai=ag.charAt(0);if(ag.length>=2&&ai==="["){aj[ak]=X(ag)}else{if(ai!=="\\"){aj[ak]=ag.replace(/[a-zA-Z]/g,function(ao){var ap=ao.charCodeAt(0);return"["+String.fromCharCode(ap&~32,ap|32)+"]"})}}}}return aj.join("")}var aa=[];for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.global||ae.multiline){throw new Error(""+ae)}aa.push("(?:"+W(ae)+")")}return new RegExp(aa.join("|"),ac?"gi":"g")}function a(V){var U=/(?:^|\s)nocode(?:\s|$)/;var X=[];var T=0;var Z=[];var W=0;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=document.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Y=S&&"pre"===S.substring(0,3);function aa(ab){switch(ab.nodeType){case 1:if(U.test(ab.className)){return}for(var ae=ab.firstChild;ae;ae=ae.nextSibling){aa(ae)}var ad=ab.nodeName;if("BR"===ad||"LI"===ad){X[W]="\n";Z[W<<1]=T++;Z[(W++<<1)|1]=ab}break;case 3:case 4:var ac=ab.nodeValue;if(ac.length){if(!Y){ac=ac.replace(/[ \t\r\n]+/g," ")}else{ac=ac.replace(/\r\n?/g,"\n")}X[W]=ac;Z[W<<1]=T;T+=ac.length;Z[(W++<<1)|1]=ab}break}}aa(V);return{sourceCode:X.join("").replace(/\n$/,""),spans:Z}}function B(S,U,W,T){if(!U){return}var V={sourceCode:U,basePos:S};W(V);T.push.apply(T,V.decorations)}var v=/\S/;function o(S){var V=undefined;for(var U=S.firstChild;U;U=U.nextSibling){var T=U.nodeType;V=(T===1)?(V?S:U):(T===3)?(v.test(U.nodeValue)?S:V):V}return V===S?undefined:V}function g(U,T){var S={};var V;(function(){var ad=U.concat(T);var ah=[];var ag={};for(var ab=0,Z=ad.length;ab<Z;++ab){var Y=ad[ab];var ac=Y[3];if(ac){for(var ae=ac.length;--ae>=0;){S[ac.charAt(ae)]=Y}}var af=Y[1];var aa=""+af;if(!ag.hasOwnProperty(aa)){ah.push(af);ag[aa]=null}}ah.push(/[\0-\uffff]/);V=k(ah)})();var X=T.length;var W=function(ah){var Z=ah.sourceCode,Y=ah.basePos;var ad=[Y,F];var af=0;var an=Z.match(V)||[];var aj={};for(var ae=0,aq=an.length;ae<aq;++ae){var ag=an[ae];var ap=aj[ag];var ai=void 0;var am;if(typeof ap==="string"){am=false}else{var aa=S[ag.charAt(0)];if(aa){ai=ag.match(aa[1]);ap=aa[0]}else{for(var ao=0;ao<X;++ao){aa=T[ao];ai=ag.match(aa[1]);if(ai){ap=aa[0];break}}if(!ai){ap=F}}am=ap.length>=5&&"lang-"===ap.substring(0,5);if(am&&!(ai&&typeof ai[1]==="string")){am=false;ap=J}if(!am){aj[ag]=ap}}var ab=af;af+=ag.length;if(!am){ad.push(Y+ab,ap)}else{var al=ai[1];var ak=ag.indexOf(al);var ac=ak+al.length;if(ai[2]){ac=ag.length-ai[2].length;ak=ac-al.length}var ar=ap.substring(5);B(Y+ab,ag.substring(0,ak),W,ad);B(Y+ab+ak,al,q(ar,al),ad);B(Y+ab+ac,ag.substring(ac),W,ad)}}ah.decorations=ad};return W}function i(T){var W=[],S=[];if(T.tripleQuotedStrings){W.push([C,/^(?:\'\'\'(?:[^\'\\]|\\[\s\S]|\'{1,2}(?=[^\']))*(?:\'\'\'|$)|\"\"\"(?:[^\"\\]|\\[\s\S]|\"{1,2}(?=[^\"]))*(?:\"\"\"|$)|\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$))/,null,"'\""])}else{if(T.multiLineStrings){W.push([C,/^(?:\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$)|\`(?:[^\\\`]|\\[\s\S])*(?:\`|$))/,null,"'\"`"])}else{W.push([C,/^(?:\'(?:[^\\\'\r\n]|\\.)*(?:\'|$)|\"(?:[^\\\"\r\n]|\\.)*(?:\"|$))/,null,"\"'"])}}if(T.verbatimStrings){S.push([C,/^@\"(?:[^\"]|\"\")*(?:\"|$)/,null])}var Y=T.hashComments;if(Y){if(T.cStyleComments){if(Y>1){W.push([j,/^#(?:##(?:[^#]|#(?!##))*(?:###|$)|.*)/,null,"#"])}else{W.push([j,/^#(?:(?:define|elif|else|endif|error|ifdef|include|ifndef|line|pragma|undef|warning)\b|[^\r\n]*)/,null,"#"])}S.push([C,/^<(?:(?:(?:\.\.\/)*|\/?)(?:[\w-]+(?:\/[\w-]+)+)?[\w-]+\.h|[a-z]\w*)>/,null])}else{W.push([j,/^#[^\r\n]*/,null,"#"])}}if(T.cStyleComments){S.push([j,/^\/\/[^\r\n]*/,null]);S.push([j,/^\/\*[\s\S]*?(?:\*\/|$)/,null])}if(T.regexLiterals){var X=("/(?=[^/*])(?:[^/\\x5B\\x5C]|\\x5C[\\s\\S]|\\x5B(?:[^\\x5C\\x5D]|\\x5C[\\s\\S])*(?:\\x5D|$))+/");S.push(["lang-regex",new RegExp("^"+M+"("+X+")")])}var V=T.types;if(V){S.push([O,V])}var U=(""+T.keywords).replace(/^ | $/g,"");if(U.length){S.push([z,new RegExp("^(?:"+U.replace(/[\s,]+/g,"|")+")\\b"),null])}W.push([F,/^\s+/,null," \r\n\t\xA0"]);S.push([G,/^@[a-z_$][a-z_$@0-9]*/i,null],[O,/^(?:[@_]?[A-Z]+[a-z][A-Za-z_$@0-9]*|\w+_t\b)/,null],[F,/^[a-z_$][a-z_$@0-9]*/i,null],[G,new RegExp("^(?:0x[a-f0-9]+|(?:\\d(?:_\\d+)*\\d*(?:\\.\\d*)?|\\.\\d\\+)(?:e[+\\-]?\\d+)?)[a-z]*","i"),null,"0123456789"],[F,/^\\[\s\S]?/,null],[L,/^.[^\s\w\.$@\'\"\`\/\#\\]*/,null]);return g(W,S)}var K=i({keywords:A,hashComments:true,cStyleComments:true,multiLineStrings:true,regexLiterals:true});function Q(V,ag){var U=/(?:^|\s)nocode(?:\s|$)/;var ab=/\r\n?|\n/;var ac=V.ownerDocument;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=ac.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Z=S&&"pre"===S.substring(0,3);var af=ac.createElement("LI");while(V.firstChild){af.appendChild(V.firstChild)}var W=[af];function ae(al){switch(al.nodeType){case 1:if(U.test(al.className)){break}if("BR"===al.nodeName){ad(al);if(al.parentNode){al.parentNode.removeChild(al)}}else{for(var an=al.firstChild;an;an=an.nextSibling){ae(an)}}break;case 3:case 4:if(Z){var am=al.nodeValue;var aj=am.match(ab);if(aj){var ai=am.substring(0,aj.index);al.nodeValue=ai;var ah=am.substring(aj.index+aj[0].length);if(ah){var ak=al.parentNode;ak.insertBefore(ac.createTextNode(ah),al.nextSibling)}ad(al);if(!ai){al.parentNode.removeChild(al)}}}break}}function ad(ak){while(!ak.nextSibling){ak=ak.parentNode;if(!ak){return}}function ai(al,ar){var aq=ar?al.cloneNode(false):al;var ao=al.parentNode;if(ao){var ap=ai(ao,1);var an=al.nextSibling;ap.appendChild(aq);for(var am=an;am;am=an){an=am.nextSibling;ap.appendChild(am)}}return aq}var ah=ai(ak.nextSibling,0);for(var aj;(aj=ah.parentNode)&&aj.nodeType===1;){ah=aj}W.push(ah)}for(var Y=0;Y<W.length;++Y){ae(W[Y])}if(ag===(ag|0)){W[0].setAttribute("value",ag)}var aa=ac.createElement("OL");aa.className="linenums";var X=Math.max(0,((ag-1))|0)||0;for(var Y=0,T=W.length;Y<T;++Y){af=W[Y];af.className="L"+((Y+X)%10);if(!af.firstChild){af.appendChild(ac.createTextNode("\xA0"))}aa.appendChild(af)}V.appendChild(aa)}function D(ac){var aj=/\bMSIE\b/.test(navigator.userAgent);var am=/\n/g;var al=ac.sourceCode;var an=al.length;var V=0;var aa=ac.spans;var T=aa.length;var ah=0;var X=ac.decorations;var Y=X.length;var Z=0;X[Y]=an;var ar,aq;for(aq=ar=0;aq<Y;){if(X[aq]!==X[aq+2]){X[ar++]=X[aq++];X[ar++]=X[aq++]}else{aq+=2}}Y=ar;for(aq=ar=0;aq<Y;){var at=X[aq];var ab=X[aq+1];var W=aq+2;while(W+2<=Y&&X[W+1]===ab){W+=2}X[ar++]=at;X[ar++]=ab;aq=W}Y=X.length=ar;var ae=null;while(ah<T){var af=aa[ah];var S=aa[ah+2]||an;var ag=X[Z];var ap=X[Z+2]||an;var W=Math.min(S,ap);var ak=aa[ah+1];var U;if(ak.nodeType!==1&&(U=al.substring(V,W))){if(aj){U=U.replace(am,"\r")}ak.nodeValue=U;var ai=ak.ownerDocument;var ao=ai.createElement("SPAN");ao.className=X[Z+1];var ad=ak.parentNode;ad.replaceChild(ao,ak);ao.appendChild(ak);if(V<S){aa[ah+1]=ak=ai.createTextNode(al.substring(W,S));ad.insertBefore(ak,ao.nextSibling)}}V=W;if(V>=S){ah+=2}if(V>=ap){Z+=2}}}var t={};function c(U,V){for(var S=V.length;--S>=0;){var T=V[S];if(!t.hasOwnProperty(T)){t[T]=U}else{if(window.console){console.warn("cannot override language handler %s",T)}}}}function q(T,S){if(!(T&&t.hasOwnProperty(T))){T=/^\s*</.test(S)?"default-markup":"default-code"}return t[T]}c(K,["default-code"]);c(g([],[[F,/^[^<?]+/],[E,/^<!\w[^>]*(?:>|$)/],[j,/^<\!--[\s\S]*?(?:-\->|$)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],[L,/^(?:<[%?]|[%?]>)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i]]),["default-markup","htm","html","mxml","xhtml","xml","xsl"]);c(g([[F,/^[\s]+/,null," \t\r\n"],[n,/^(?:\"[^\"]*\"?|\'[^\']*\'?)/,null,"\"'"]],[[m,/^^<\/?[a-z](?:[\w.:-]*\w)?|\/?>$/i],[P,/^(?!style[\s=]|on)[a-z](?:[\w:-]*\w)?/i],["lang-uq.val",/^=\s*([^>\'\"\s]*(?:[^>\'\"\s\/]|\/(?=\s)))/],[L,/^[=<>\/]+/],["lang-js",/^on\w+\s*=\s*\"([^\"]+)\"/i],["lang-js",/^on\w+\s*=\s*\'([^\']+)\'/i],["lang-js",/^on\w+\s*=\s*([^\"\'>\s]+)/i],["lang-css",/^style\s*=\s*\"([^\"]+)\"/i],["lang-css",/^style\s*=\s*\'([^\']+)\'/i],["lang-css",/^style\s*=\s*([^\"\'>\s]+)/i]]),["in.tag"]);c(g([],[[n,/^[\s\S]+/]]),["uq.val"]);c(i({keywords:l,hashComments:true,cStyleComments:true,types:e}),["c","cc","cpp","cxx","cyc","m"]);c(i({keywords:"null,true,false"}),["json"]);c(i({keywords:R,hashComments:true,cStyleComments:true,verbatimStrings:true,types:e}),["cs"]);c(i({keywords:x,cStyleComments:true}),["java"]);c(i({keywords:H,hashComments:true,multiLineStrings:true}),["bsh","csh","sh"]);c(i({keywords:I,hashComments:true,multiLineStrings:true,tripleQuotedStrings:true}),["cv","py"]);c(i({keywords:s,hashComments:true,multiLineStrings:true,regexLiterals:true}),["perl","pl","pm"]);c(i({keywords:f,hashComments:true,multiLineStrings:true,regexLiterals:true}),["rb"]);c(i({keywords:w,cStyleComments:true,regexLiterals:true}),["js"]);c(i({keywords:r,hashComments:3,cStyleComments:true,multilineStrings:true,tripleQuotedStrings:true,regexLiterals:true}),["coffee"]);c(g([],[[C,/^[\s\S]+/]]),["regex"]);function d(V){var U=V.langExtension;try{var S=a(V.sourceNode);var T=S.sourceCode;V.sourceCode=T;V.spans=S.spans;V.basePos=0;q(U,T)(V);D(V)}catch(W){if("console" in window){console.log(W&&W.stack?W.stack:W)}}}function y(W,V,U){var S=document.createElement("PRE");S.innerHTML=W;if(U){Q(S,U)}var T={langExtension:V,numberLines:U,sourceNode:S};d(T);return S.innerHTML}function b(ad){function Y(af){return document.getElementsByTagName(af)}var ac=[Y("pre"),Y("code"),Y("xmp")];var T=[];for(var aa=0;aa<ac.length;++aa){for(var Z=0,V=ac[aa].length;Z<V;++Z){T.push(ac[aa][Z])}}ac=null;var W=Date;if(!W.now){W={now:function(){return +(new Date)}}}var X=0;var S;var ab=/\blang(?:uage)?-([\w.]+)(?!\S)/;var ae=/\bprettyprint\b/;function U(){var ag=(window.PR_SHOULD_USE_CONTINUATION?W.now()+250:Infinity);for(;X<T.length&&W.now()<ag;X++){var aj=T[X];var ai=aj.className;if(ai.indexOf("prettyprint")>=0){var ah=ai.match(ab);var am;if(!ah&&(am=o(aj))&&"CODE"===am.tagName){ah=am.className.match(ab)}if(ah){ah=ah[1]}var al=false;for(var ak=aj.parentNode;ak;ak=ak.parentNode){if((ak.tagName==="pre"||ak.tagName==="code"||ak.tagName==="xmp")&&ak.className&&ak.className.indexOf("prettyprint")>=0){al=true;break}}if(!al){var af=aj.className.match(/\blinenums\b(?::(\d+))?/);af=af?af[1]&&af[1].length?+af[1]:true:false;if(af){Q(aj,af)}S={langExtension:ah,sourceNode:aj,numberLines:af};d(S)}}}if(X<T.length){setTimeout(U,250)}else{if(ad){ad()}}}U()}window.prettyPrintOne=y;window.prettyPrint=b;window.PR={createSimpleLexer:g,registerLangHandler:c,sourceDecorator:i,PR_ATTRIB_NAME:P,PR_ATTRIB_VALUE:n,PR_COMMENT:j,PR_DECLARATION:E,PR_KEYWORD:z,PR_LITERAL:G,PR_NOCODE:N,PR_PLAIN:F,PR_PUNCTUATION:L,PR_SOURCE:J,PR_STRING:C,PR_TAG:m,PR_TYPE:O}})();PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_DECLARATION,/^<!\w[^>]*(?:>|$)/],[PR.PR_COMMENT,/^<\!--[\s\S]*?(?:-\->|$)/],[PR.PR_PUNCTUATION,/^(?:<[%?]|[%?]>)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-handlebars",/^<script\b[^>]*type\s*=\s*['"]?text\/x-handlebars-template['"]?\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i],[PR.PR_DECLARATION,/^{{[#^>/]?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{&?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{{>?\s*[\w.][^}]*}}}/],[PR.PR_COMMENT,/^{{![^}]*}}/]]),["handlebars","hbs"]);PR.registerLangHandler(PR.createSimpleLexer([[PR.PR_PLAIN,/^[ \t\r\n\f]+/,null," \t\r\n\f"]],[[PR.PR_STRING,/^\"(?:[^\n\r\f\\\"]|\\(?:\r\n?|\n|\f)|\\[\s\S])*\"/,null],[PR.PR_STRING,/^\'(?:[^\n\r\f\\\']|\\(?:\r\n?|\n|\f)|\\[\s\S])*\'/,null],["lang-css-str",/^url\(([^\)\"\']*)\)/i],[PR.PR_KEYWORD,/^(?:url|rgb|\!important|@import|@page|@media|@charset|inherit)(?=[^\-\w]|$)/i,null],["lang-css-kw",/^(-?(?:[_a-z]|(?:\\[0-9a-f]+ ?))(?:[_a-z0-9\-]|\\(?:\\[0-9a-f]+ ?))*)\s*:/i],[PR.PR_COMMENT,/^\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\//],[PR.PR_COMMENT,/^(?:<!--|-->)/],[PR.PR_LITERAL,/^(?:\d+|\d*\.\d+)(?:%|[a-z]+)?/i],[PR.PR_LITERAL,/^#(?:[0-9a-f]{3}){1,2}/i],[PR.PR_PLAIN,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i],[PR.PR_PUNCTUATION,/^[^\s\w\'\"]+/]]),["css"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_KEYWORD,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i]]),["css-kw"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_STRING,/^[^\)\"\']+/]]),["css-str"]);
+</file>
+
+<file path="frontend/coverage/sorter.js">
+/* eslint-disable */
+var addSorting = (function() {
+    'use strict';
+    var cols,
+        currentSort = {
+            index: 0,
+            desc: false
+        };
+
+    // returns the summary table element
+    function getTable() {
+        return document.querySelector('.coverage-summary');
+    }
+    // returns the thead element of the summary table
+    function getTableHeader() {
+        return getTable().querySelector('thead tr');
+    }
+    // returns the tbody element of the summary table
+    function getTableBody() {
+        return getTable().querySelector('tbody');
+    }
+    // returns the th element for nth column
+    function getNthColumn(n) {
+        return getTableHeader().querySelectorAll('th')[n];
+    }
+
+    function onFilterInput() {
+        const searchValue = document.getElementById('fileSearch').value;
+        const rows = document.getElementsByTagName('tbody')[0].children;
+
+        // Try to create a RegExp from the searchValue. If it fails (invalid regex),
+        // it will be treated as a plain text search
+        let searchRegex;
+        try {
+            searchRegex = new RegExp(searchValue, 'i'); // 'i' for case-insensitive
+        } catch (error) {
+            searchRegex = null;
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            let isMatch = false;
+
+            if (searchRegex) {
+                // If a valid regex was created, use it for matching
+                isMatch = searchRegex.test(row.textContent);
+            } else {
+                // Otherwise, fall back to the original plain text search
+                isMatch = row.textContent
+                    .toLowerCase()
+                    .includes(searchValue.toLowerCase());
+            }
+
+            row.style.display = isMatch ? '' : 'none';
+        }
+    }
+
+    // loads the search box
+    function addSearchBox() {
+        var template = document.getElementById('filterTemplate');
+        var templateClone = template.content.cloneNode(true);
+        templateClone.getElementById('fileSearch').oninput = onFilterInput;
+        template.parentElement.appendChild(templateClone);
+    }
+
+    // loads all columns
+    function loadColumns() {
+        var colNodes = getTableHeader().querySelectorAll('th'),
+            colNode,
+            cols = [],
+            col,
+            i;
+
+        for (i = 0; i < colNodes.length; i += 1) {
+            colNode = colNodes[i];
+            col = {
+                key: colNode.getAttribute('data-col'),
+                sortable: !colNode.getAttribute('data-nosort'),
+                type: colNode.getAttribute('data-type') || 'string'
+            };
+            cols.push(col);
+            if (col.sortable) {
+                col.defaultDescSort = col.type === 'number';
+                colNode.innerHTML =
+                    colNode.innerHTML + '<span class="sorter"></span>';
+            }
+        }
+        return cols;
+    }
+    // attaches a data attribute to every tr element with an object
+    // of data values keyed by column name
+    function loadRowData(tableRow) {
+        var tableCols = tableRow.querySelectorAll('td'),
+            colNode,
+            col,
+            data = {},
+            i,
+            val;
+        for (i = 0; i < tableCols.length; i += 1) {
+            colNode = tableCols[i];
+            col = cols[i];
+            val = colNode.getAttribute('data-value');
+            if (col.type === 'number') {
+                val = Number(val);
+            }
+            data[col.key] = val;
+        }
+        return data;
+    }
+    // loads all row data
+    function loadData() {
+        var rows = getTableBody().querySelectorAll('tr'),
+            i;
+
+        for (i = 0; i < rows.length; i += 1) {
+            rows[i].data = loadRowData(rows[i]);
+        }
+    }
+    // sorts the table using the data for the ith column
+    function sortByIndex(index, desc) {
+        var key = cols[index].key,
+            sorter = function(a, b) {
+                a = a.data[key];
+                b = b.data[key];
+                return a < b ? -1 : a > b ? 1 : 0;
+            },
+            finalSorter = sorter,
+            tableBody = document.querySelector('.coverage-summary tbody'),
+            rowNodes = tableBody.querySelectorAll('tr'),
+            rows = [],
+            i;
+
+        if (desc) {
+            finalSorter = function(a, b) {
+                return -1 * sorter(a, b);
+            };
+        }
+
+        for (i = 0; i < rowNodes.length; i += 1) {
+            rows.push(rowNodes[i]);
+            tableBody.removeChild(rowNodes[i]);
+        }
+
+        rows.sort(finalSorter);
+
+        for (i = 0; i < rows.length; i += 1) {
+            tableBody.appendChild(rows[i]);
+        }
+    }
+    // removes sort indicators for current column being sorted
+    function removeSortIndicators() {
+        var col = getNthColumn(currentSort.index),
+            cls = col.className;
+
+        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');
+        col.className = cls;
+    }
+    // adds sort indicators for current column being sorted
+    function addSortIndicators() {
+        getNthColumn(currentSort.index).className += currentSort.desc
+            ? ' sorted-desc'
+            : ' sorted';
+    }
+    // adds event listeners for all sorter widgets
+    function enableUI() {
+        var i,
+            el,
+            ithSorter = function ithSorter(i) {
+                var col = cols[i];
+
+                return function() {
+                    var desc = col.defaultDescSort;
+
+                    if (currentSort.index === i) {
+                        desc = !currentSort.desc;
+                    }
+                    sortByIndex(i, desc);
+                    removeSortIndicators();
+                    currentSort.index = i;
+                    currentSort.desc = desc;
+                    addSortIndicators();
+                };
+            };
+        for (i = 0; i < cols.length; i += 1) {
+            if (cols[i].sortable) {
+                // add the click event handler on the th so users
+                // dont have to click on those tiny arrows
+                el = getNthColumn(i).querySelector('.sorter').parentElement;
+                if (el.addEventListener) {
+                    el.addEventListener('click', ithSorter(i));
+                } else {
+                    el.attachEvent('onclick', ithSorter(i));
+                }
+            }
+        }
+    }
+    // adds sorting functionality to the UI
+    return function() {
+        if (!getTable()) {
+            return;
+        }
+        cols = loadColumns();
+        loadData();
+        addSearchBox();
+        addSortIndicators();
+        enableUI();
+    };
+})();
+
+window.addEventListener('load', addSorting);
 </file>
 
 <file path="frontend/public/ui/manifest.schema.json">
@@ -1497,17 +1813,220 @@ pre.prettyprint {
 }
 </file>
 
-<file path="frontend/src/main.tsx">
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import './style.css';
-import App from './App.tsx';
+<file path="frontend/src/components/SceneCanvas.test.tsx">
+import { describe, it, expect } from 'vitest';
+import { SCENE_PLACEHOLDERS } from './SceneCanvas';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+describe('SCENE_PLACEHOLDERS', () => {
+  it('should have all required statuses', () => {
+    const statuses = ['default', 'loading', 'offline', 'blocked', 'low_signal'];
+    statuses.forEach((status) => {
+      expect(SCENE_PLACEHOLDERS).toHaveProperty(status);
+    });
+  });
+
+  it('should have correct image paths', () => {
+    expect(SCENE_PLACEHOLDERS.default.imagePath).toBe(
+      '/ui/placeholders/scene-placeholder-default.png',
+    );
+    expect(SCENE_PLACEHOLDERS.loading.imagePath).toBe('/ui/placeholders/scene-loading.webp');
+    expect(SCENE_PLACEHOLDERS.offline.imagePath).toBe('/ui/placeholders/scene-offline.webp');
+    expect(SCENE_PLACEHOLDERS.blocked.imagePath).toBe('/ui/placeholders/scene-blocked.webp');
+    expect(SCENE_PLACEHOLDERS.low_signal.imagePath).toBe('/ui/placeholders/scene-low-signal.webp');
+  });
+
+  it('should have correct i18n label keys', () => {
+    expect(SCENE_PLACEHOLDERS.default.labelKey).toBe('scene.status.default');
+    expect(SCENE_PLACEHOLDERS.loading.labelKey).toBe('scene.status.loading');
+    expect(SCENE_PLACEHOLDERS.offline.labelKey).toBe('scene.status.offline');
+    expect(SCENE_PLACEHOLDERS.blocked.labelKey).toBe('scene.status.blocked');
+    expect(SCENE_PLACEHOLDERS.low_signal.labelKey).toBe('scene.status.low_signal');
+  });
+});
+</file>
+
+<file path="frontend/src/components/SceneCanvas.tsx">
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
+
+/**
+ * 상태별 placeholder 정보 (U-031: Placeholder Pack)
+ * labelKey는 i18n 번역 키로 사용됩니다.
+ */
+export const SCENE_PLACEHOLDERS: Record<Exclude<SceneCanvasStatus, 'scene'>, PlaceholderInfo> = {
+  default: {
+    imagePath: '/ui/placeholders/scene-placeholder-default.png',
+    fallbackEmoji: '📡',
+    labelKey: 'scene.status.default',
+  },
+  loading: {
+    imagePath: '/ui/placeholders/scene-loading.webp',
+    fallbackEmoji: '⏳',
+    labelKey: 'scene.status.loading',
+  },
+  offline: {
+    imagePath: '/ui/placeholders/scene-offline.webp',
+    fallbackEmoji: '🔌',
+    labelKey: 'scene.status.offline',
+  },
+  blocked: {
+    imagePath: '/ui/placeholders/scene-blocked.webp',
+    fallbackEmoji: '🚫',
+    labelKey: 'scene.status.blocked',
+  },
+  low_signal: {
+    imagePath: '/ui/placeholders/scene-low-signal.webp',
+    fallbackEmoji: '📉',
+    labelKey: 'scene.status.low_signal',
+  },
+};
+
+interface SceneCanvasProps {
+  state: SceneCanvasState;
+}
+
+/**
+ * Scene Canvas 컴포넌트 (U-031: Placeholder Pack)
+ *
+ * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
+ * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
+ */
+export function SceneCanvas({ state }: SceneCanvasProps) {
+  const { status, imageUrl, message } = state;
+  const [imageError, setImageError] = useState(false);
+  const { t } = useTranslation();
+
+  // 정상 장면 표시 중이거나 이미지 에러가 발생한 경우
+  const isSceneActive = status === 'scene' && imageUrl && !imageError;
+
+  // placeholder 정보 결정 (scene 상태에서 에러 시 default로 폴백)
+  const effectiveStatus = status === 'scene' && imageError ? 'default' : status;
+  const isPlaceholderVisible = effectiveStatus !== 'scene';
+
+  const placeholder = isPlaceholderVisible
+    ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
+    : null;
+
+  return (
+    <div
+      className={`scene-canvas ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`}`}
+      style={placeholder ? { backgroundImage: `url('${placeholder.imagePath}')` } : {}}
+    >
+      {isSceneActive && (
+        <img
+          src={imageUrl}
+          alt="Scene"
+          className="scene-image"
+          onError={() => setImageError(true)}
+        />
+      )}
+
+      {isPlaceholderVisible && placeholder && (
+        <div className="scene-placeholder">
+          {/* 텍스트 폴백 (이미지 로드 실패 시에도 표시) */}
+          <p className="text-glow scene-status-label">
+            <span className="scene-status-emoji" aria-hidden="true">
+              {placeholder.fallbackEmoji}
+            </span>{' '}
+            {t(placeholder.labelKey)}
+          </p>
+          {(message || (status === 'scene' && imageError)) && (
+            <p className="text-dim scene-status-message" style={{ fontSize: '0.875rem' }}>
+              {message || (imageError ? t('scene.status.image_error') : '')}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/i18n.ts">
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+// i18n 리소스 정의 (RULE-006 준수)
+const resources = {
+  ko: {
+    translation: {
+      scene: {
+        status: {
+          default: '데이터 대기 중',
+          loading: '동기화 중...',
+          offline: '연결 끊김',
+          blocked: '접근 제한됨',
+          low_signal: '신호 약함',
+          image_error: '장면 이미지를 불러올 수 없습니다.',
+        },
+      },
+      agent: {
+        console: {
+          queue: '대기열',
+          badges: '검증 배지',
+          repair: '자동 복구',
+          status: {
+            idle: '대기 중',
+            processing: '처리 중',
+          },
+          badges_empty: '[ 검증 대기 중 ]',
+          repaired: '(복구됨)',
+        },
+      },
+      ui: {
+        command_placeholder: '명령을 입력하세요...',
+        processing: '처리 중...',
+        execute: '실행',
+        wait: '대기',
+      },
+    },
+  },
+  en: {
+    translation: {
+      scene: {
+        status: {
+          default: 'NO SIGNAL DATA',
+          loading: 'SYNCHRONIZING...',
+          offline: 'CONNECTION LOST',
+          blocked: 'ACCESS RESTRICTED',
+          low_signal: 'LOW SIGNAL',
+          image_error: 'Unable to load scene image.',
+        },
+      },
+      agent: {
+        console: {
+          queue: 'Queue',
+          badges: 'Badges',
+          repair: 'Auto-repair',
+          status: {
+            idle: 'IDLE',
+            processing: 'PROCESSING',
+          },
+          badges_empty: '[ Awaiting Validation ]',
+          repaired: '(Repaired)',
+        },
+      },
+      ui: {
+        command_placeholder: 'Enter command...',
+        processing: 'Processing...',
+        execute: 'EXECUTE',
+        wait: 'WAIT',
+      },
+    },
+  },
+};
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: 'ko', // 기본 언어
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false,
+  },
+});
+
+export default i18n;
 </file>
 
 <file path="frontend/src/schemas/index.ts">
@@ -3109,6 +3628,47 @@ export function applyUIPrefsToDOM(state: UIPrefsState): void {
 }
 </file>
 
+<file path="frontend/src/types/scene.ts">
+/**
+ * Scene Canvas 관련 타입 정의 (U-031: Placeholder Pack)
+ */
+
+/**
+ * Scene Canvas 상태 타입
+ * - default: 기본 상태 (장면 이미지 없음)
+ * - loading: 데이터 로딩 중
+ * - offline: 오프라인/연결 끊김
+ * - blocked: 안전/정책 차단
+ * - low_signal: 재화/신호 부족
+ * - scene: 정상 장면 표시 (이미지 URL 포함)
+ */
+export type SceneCanvasStatus =
+  | 'default'
+  | 'loading'
+  | 'offline'
+  | 'blocked'
+  | 'low_signal'
+  | 'scene';
+
+/**
+ * Scene Canvas 상태 데이터 구조
+ */
+export interface SceneCanvasState {
+  status: SceneCanvasStatus;
+  imageUrl?: string;
+  message?: string;
+}
+
+/**
+ * 상태별 placeholder 정보 구조
+ */
+export interface PlaceholderInfo {
+  imagePath: string;
+  fallbackEmoji: string;
+  labelKey: string;
+}
+</file>
+
 <file path="frontend/src/vite-env.d.ts">
 /// <reference types="vite/client" />
 </file>
@@ -3491,145 +4051,6 @@ def test_turn_streaming_repair_loop(monkeypatch):
     assert len(repair_events) >= 1
     assert "attempt" in repair_events[0]
     assert repair_events[0]["attempt"] == 1
-</file>
-
-<file path="frontend/public/ui/manifest.json">
-{
-  "$schema": "./manifest.schema.json",
-  "version": "1.1.0",
-  "generatedAt": "2026-01-11T02:30:00Z",
-  "totalBytes": 267099,
-  "budgetBytes": 1572864,
-  "assets": [
-    {
-      "id": "signal-24",
-      "path": "icons/signal-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "⚡",
-      "usedIn": ["EconomyHUD", "ActionDeck"],
-      "bytes": 122,
-      "notes": "nanobanana mcp 생성, rembg 배경 제거 및 최적화 완료"
-    },
-    {
-      "id": "signal-16",
-      "path": "icons/signal-16.png",
-      "type": "icon",
-      "size": 16,
-      "fallback": "⚡",
-      "usedIn": [],
-      "bytes": 389,
-      "notes": "최적화 완료"
-    },
-    {
-      "id": "shard-24",
-      "path": "icons/shard-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "💎",
-      "usedIn": ["EconomyHUD", "ActionDeck"],
-      "bytes": 103,
-      "notes": "nanobanana mcp 생성, rembg 배경 제거 및 최적화 완료"
-    },
-    {
-      "id": "badge-ok-24",
-      "path": "icons/badge-ok-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "✓",
-      "usedIn": ["AgentConsole"],
-      "bytes": 910,
-      "notes": "최적화 완료"
-    },
-    {
-      "id": "badge-ok-16",
-      "path": "icons/badge-ok-16.png",
-      "type": "icon",
-      "size": 16,
-      "fallback": "✓",
-      "usedIn": [],
-      "bytes": 586,
-      "notes": "최적화 완료"
-    },
-    {
-      "id": "badge-fail-24",
-      "path": "icons/badge-fail-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "✗",
-      "usedIn": ["AgentConsole"],
-      "bytes": 822,
-      "notes": "최적화 완료"
-    },
-    {
-      "id": "risk-medium-16",
-      "path": "icons/risk-medium-16.png",
-      "type": "icon",
-      "size": 16,
-      "fallback": "⚠",
-      "usedIn": ["ActionDeck"],
-      "bytes": 601,
-      "notes": "최적화 완료"
-    },
-    {
-      "id": "risk-low-24",
-      "path": "icons/risk-low-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "✓",
-      "usedIn": ["ActionDeck"],
-      "bytes": 226,
-      "notes": "nanobanana mcp 생성, rembg 배경 제거 완료"
-    },
-    {
-      "id": "risk-low-16",
-      "path": "icons/risk-low-16.png",
-      "type": "icon",
-      "size": 16,
-      "fallback": "✓",
-      "usedIn": [],
-      "bytes": 147
-    },
-    {
-      "id": "risk-high-24",
-      "path": "icons/risk-high-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "⚠",
-      "usedIn": ["ActionDeck"],
-      "bytes": 969,
-      "notes": "nanobanana mcp 생성, rembg 배경 제거 완료"
-    },
-    {
-      "id": "risk-high-16",
-      "path": "icons/risk-high-16.png",
-      "type": "icon",
-      "size": 16,
-      "fallback": "⚠",
-      "usedIn": [],
-      "bytes": 543
-    },
-    {
-      "id": "status-online-16",
-      "path": "icons/status-online-16.png",
-      "type": "icon",
-      "size": 16,
-      "fallback": "●",
-      "usedIn": [],
-      "bytes": 264,
-      "notes": "최적화 완료"
-    },
-    {
-      "id": "scene-placeholder-default",
-      "path": "placeholders/scene-placeholder-default.png",
-      "type": "placeholder",
-      "fallback": "[SCENE]",
-      "usedIn": ["SceneCanvas"],
-      "bytes": 261407,
-      "notes": "nanobanana mcp 생성, 레트로 터미널 스타일"
-    }
-  ]
-}
 </file>
 
 <file path="frontend/src/api/turnStream.test.ts">
@@ -4038,6 +4459,20 @@ export function AgentConsole() {
 }
 
 export default AgentConsole;
+</file>
+
+<file path="frontend/src/main.tsx">
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './i18n'; // i18n 초기화
+import './style.css';
+import App from './App.tsx';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
 </file>
 
 <file path="frontend/tsconfig.json">
@@ -4604,6 +5039,181 @@ class MockOrchestrator:
         )
 </file>
 
+<file path="frontend/public/ui/manifest.json">
+{
+  "$schema": "./manifest.schema.json",
+  "version": "1.2.0",
+  "generatedAt": "2026-01-11T22:55:00Z",
+  "totalBytes": 445369,
+  "budgetBytes": 1572864,
+  "assets": [
+    {
+      "id": "signal-24",
+      "path": "icons/signal-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚡",
+      "usedIn": ["EconomyHUD", "ActionDeck"],
+      "bytes": 122,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 및 최적화 완료"
+    },
+    {
+      "id": "signal-16",
+      "path": "icons/signal-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚡",
+      "usedIn": [],
+      "bytes": 389,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "shard-24",
+      "path": "icons/shard-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "💎",
+      "usedIn": ["EconomyHUD", "ActionDeck"],
+      "bytes": 103,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 및 최적화 완료"
+    },
+    {
+      "id": "badge-ok-24",
+      "path": "icons/badge-ok-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✓",
+      "usedIn": ["AgentConsole"],
+      "bytes": 910,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "badge-ok-16",
+      "path": "icons/badge-ok-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "✓",
+      "usedIn": [],
+      "bytes": 586,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "badge-fail-24",
+      "path": "icons/badge-fail-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✗",
+      "usedIn": ["AgentConsole"],
+      "bytes": 822,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "risk-medium-16",
+      "path": "icons/risk-medium-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚠",
+      "usedIn": ["ActionDeck"],
+      "bytes": 601,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "risk-low-24",
+      "path": "icons/risk-low-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✓",
+      "usedIn": ["ActionDeck"],
+      "bytes": 226,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 완료"
+    },
+    {
+      "id": "risk-low-16",
+      "path": "icons/risk-low-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "✓",
+      "usedIn": [],
+      "bytes": 147
+    },
+    {
+      "id": "risk-high-24",
+      "path": "icons/risk-high-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚠",
+      "usedIn": ["ActionDeck"],
+      "bytes": 969,
+      "notes": "nanobanana mcp 생성, rembg 배경 제거 완료"
+    },
+    {
+      "id": "risk-high-16",
+      "path": "icons/risk-high-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚠",
+      "usedIn": [],
+      "bytes": 543
+    },
+    {
+      "id": "status-online-16",
+      "path": "icons/status-online-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "●",
+      "usedIn": [],
+      "bytes": 264,
+      "notes": "최적화 완료"
+    },
+    {
+      "id": "scene-placeholder-default",
+      "path": "placeholders/scene-placeholder-default.png",
+      "type": "placeholder",
+      "fallback": "[SCENE]",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 261407,
+      "notes": "nanobanana mcp 생성, 레트로 터미널 스타일"
+    },
+    {
+      "id": "scene-loading",
+      "path": "placeholders/scene-loading.webp",
+      "type": "placeholder",
+      "fallback": "⏳",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 47850,
+      "notes": "U-031: 로딩 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-offline",
+      "path": "placeholders/scene-offline.webp",
+      "type": "placeholder",
+      "fallback": "🔌",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 44658,
+      "notes": "U-031: 오프라인 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-blocked",
+      "path": "placeholders/scene-blocked.webp",
+      "type": "placeholder",
+      "fallback": "🚫",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 17318,
+      "notes": "U-031: 차단 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-low-signal",
+      "path": "placeholders/scene-low-signal.webp",
+      "type": "placeholder",
+      "fallback": "📉",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 68454,
+      "notes": "U-031: 저신호 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    }
+  ]
+}
+</file>
+
 <file path="frontend/src/stores/agentStore.ts">
 /**
  * Unknown World - Agent Console 상태 관리 (Zustand).
@@ -4953,6 +5563,76 @@ export default defineConfig({
   "required": ["language", "text", "client", "economy_snapshot"],
   "additionalProperties": false
 }
+</file>
+
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+    "google-genai==1.56.0",
+    "google-cloud-aiplatform==1.132.0",
+    "google-cloud-storage==3.7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.407",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
 </file>
 
 <file path="backend/src/unknown_world/api/turn.py">
@@ -6349,6 +7029,500 @@ export interface StreamCallbacks {
 }
 </file>
 
+<file path="package.json">
+{
+  "name": "unknown-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": "24.12.0"
+  },
+  "scripts": {
+    "kill": "pnpm kill:port",
+    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
+    "dev:front": "pnpm -C frontend dev"
+  }
+}
+</file>
+
+<file path="frontend/src/api/turnStream.ts">
+/**
+ * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
+ *
+ * fetch 기반으로 POST 요청을 보내고 응답 스트림을 NDJSON으로 파싱합니다.
+ * 중간 청크 파싱 실패가 전체 UI를 멈추지 않도록 설계되었습니다.
+ *
+ * 설계 원칙:
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+ *   - RULE-004: 검증 실패 시 안전 폴백 제공
+ *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-011: 백엔드 포트 8011 사용
+ *
+ * @module api/turnStream
+ */
+
+import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
+import { safeParseTurnOutput } from '../schemas/turn';
+import type { StreamCallbacks } from '../types/turn_stream';
+import {
+  StreamEventType,
+  BaseEventSchema,
+  safeParseStageEvent,
+  safeParseRepairEvent,
+  safeParseBadgesEvent,
+  safeParseNarrativeDeltaEvent,
+  safeParseFinalEventRaw,
+  safeParseErrorEvent,
+  normalizeStageStatus,
+} from '../types/turn_stream';
+
+// Re-export 스트림 이벤트 타입들 (하위 호환성 유지)
+export type {
+  StreamEventTypeName,
+  StageStatusName,
+  StageEvent,
+  RepairEvent,
+  BadgesEvent,
+  NarrativeDeltaEvent,
+  FinalEvent,
+  ErrorEvent,
+  StreamEvent,
+  StreamCallbacks,
+} from '../types/turn_stream';
+export { StreamEventType, StageStatus } from '../types/turn_stream';
+
+// =============================================================================
+// NDJSON 파서 (Q1 결정: Option A - 직접 구현)
+// =============================================================================
+
+/**
+ * NDJSON 라인 파서.
+ * 부분 청크를 버퍼링하고 완전한 라인을 파싱합니다.
+ */
+export class NDJSONParser {
+  private buffer = '';
+
+  /**
+   * 청크를 파싱하고 완전한 JSON 객체들을 반환합니다.
+   *
+   * @param chunk - 수신된 텍스트 청크
+   * @returns 파싱된 JSON 객체 배열
+   */
+  parse(chunk: string): unknown[] {
+    this.buffer += chunk;
+    const results: unknown[] = [];
+
+    // 줄바꿈으로 분할
+    const lines = this.buffer.split('\n');
+
+    // 마지막 라인은 불완전할 수 있으므로 버퍼에 유지
+    this.buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === '') continue;
+
+      try {
+        const parsed = JSON.parse(trimmed);
+        results.push(parsed);
+      } catch {
+        // 파싱 실패 시 해당 라인 무시 (RULE-004: 전체 중단 방지)
+        console.warn('[NDJSON] Failed to parse line:', trimmed);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 버퍼를 초기화합니다.
+   */
+  reset(): void {
+    this.buffer = '';
+  }
+
+  /**
+   * 남은 버퍼를 플러시하고 마지막 객체를 파싱합니다.
+   */
+  flush(): unknown | null {
+    const trimmed = this.buffer.trim();
+    this.buffer = '';
+
+    if (trimmed === '') return null;
+
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      console.warn('[NDJSON] Failed to parse remaining buffer:', trimmed);
+      return null;
+    }
+  }
+}
+
+// =============================================================================
+// 스트림 이벤트 핸들러
+// =============================================================================
+
+/**
+ * 파싱된 이벤트를 타입별로 분배합니다.
+ *
+ * RU-002-S2: 캐스팅 대신 Zod safeParse를 적용하여 검증 강화.
+ * Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력.
+ *
+ * @param event - 파싱된 이벤트 객체
+ * @param callbacks - 콜백 함수들
+ * @param language - 폴백 언어
+ */
+function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Language): void {
+  if (!event || typeof event !== 'object') return;
+
+  // 기본 이벤트 타입 추출
+  const baseResult = BaseEventSchema.safeParse(event);
+  if (!baseResult.success) {
+    console.warn('[TurnStream] Invalid event format (no type field):', event);
+    return;
+  }
+
+  const type = baseResult.data.type;
+
+  switch (type) {
+    case StreamEventType.STAGE: {
+      // RU-002-S2: stage 이벤트 검증
+      const stageResult = safeParseStageEvent(event);
+      if (stageResult.success) {
+        // status 정규화: 'ok' → 'complete'
+        const normalizedStatus = normalizeStageStatus(stageResult.data.status);
+        callbacks.onStage?.({
+          type: StreamEventType.STAGE,
+          name: stageResult.data.name,
+          status: normalizedStatus,
+        });
+      } else {
+        console.warn('[TurnStream] Invalid stage event:', stageResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.REPAIR: {
+      // RU-002-S2: repair 이벤트 검증
+      const repairResult = safeParseRepairEvent(event);
+      if (repairResult.success) {
+        callbacks.onRepair?.(repairResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid repair event:', repairResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.BADGES: {
+      // RU-002-S2: badges 이벤트 검증 (v1/v2 정규화 포함)
+      const badgesResult = safeParseBadgesEvent(event);
+      if (badgesResult.success) {
+        callbacks.onBadges?.(badgesResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid badges event:', badgesResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.NARRATIVE_DELTA: {
+      // RU-002-S2: narrative_delta 이벤트 검증
+      const narrativeResult = safeParseNarrativeDeltaEvent(event);
+      if (narrativeResult.success) {
+        callbacks.onNarrativeDelta?.(narrativeResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid narrative_delta event:', narrativeResult.error.message);
+      }
+      break;
+    }
+
+    case StreamEventType.FINAL: {
+      // RU-002-S2: final 이벤트 구조 검증
+      const finalRawResult = safeParseFinalEventRaw(event);
+      if (!finalRawResult.success) {
+        console.warn('[TurnStream] Invalid final event structure:', finalRawResult.error.message);
+        // 구조가 잘못되어도 폴백 제공
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: createFallbackTurnOutput(language),
+        });
+        break;
+      }
+
+      // RULE-003/004: Zod strict parse + 폴백
+      const turnOutputPayload = finalRawResult.data.data;
+      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
+
+      if (parseResult.success) {
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: parseResult.data,
+        });
+      } else {
+        console.warn('[TurnStream] TurnOutput validation failed:', parseResult.error);
+        callbacks.onFinal?.({
+          type: StreamEventType.FINAL,
+          data: parseResult.fallback,
+        });
+      }
+      break;
+    }
+
+    case StreamEventType.ERROR: {
+      // RU-002-S2: error 이벤트 검증
+      const errorResult = safeParseErrorEvent(event);
+      if (errorResult.success) {
+        callbacks.onError?.(errorResult.data);
+      } else {
+        console.warn('[TurnStream] Invalid error event:', errorResult.error.message);
+        // 에러 이벤트가 깨진 경우에도 기본 에러 전달
+        callbacks.onError?.({
+          type: StreamEventType.ERROR,
+          message: 'Unknown error (malformed error event)',
+          code: 'INVALID_ERROR_EVENT',
+        });
+      }
+      break;
+    }
+
+    default:
+      // RU-002-S2: Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력
+      // 향후 protocol, repair, telemetry 등 확장 이벤트 도입 시 여기서 처리 가능
+      console.warn('[TurnStream] Unknown/ignored event type:', type, event);
+  }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
+ * dispatchEvent 내부에서 사용하는 간단한 폴백.
+ */
+function createFallbackTurnOutput(language: Language): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.'
+      : '[System] An error occurred while processing response data.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
+}
+
+// =============================================================================
+// API 설정
+// =============================================================================
+
+/** 백엔드 API URL (RULE-011: 포트 8011) */
+const API_BASE_URL = 'http://localhost:8011';
+
+/** 턴 스트림 API 엔드포인트 */
+const TURN_ENDPOINT = `${API_BASE_URL}/api/turn`;
+
+// =============================================================================
+// 스트림 클라이언트
+// =============================================================================
+
+/** 스트림 요청 옵션 */
+export interface TurnStreamOptions {
+  /** 요청 타임아웃 (ms) */
+  timeout?: number;
+  /** AbortSignal */
+  signal?: AbortSignal;
+}
+
+/**
+ * 턴 스트림 요청을 실행합니다.
+ *
+ * @param input - 턴 입력 데이터
+ * @param callbacks - 이벤트 콜백
+ * @param options - 요청 옵션
+ * @returns 취소 함수
+ */
+export async function executeTurnStream(
+  input: TurnInput,
+  callbacks: StreamCallbacks,
+  options?: TurnStreamOptions,
+): Promise<void> {
+  const parser = new NDJSONParser();
+  const controller = new AbortController();
+  const signal = options?.signal ?? controller.signal;
+
+  // RU-002-S1: AbortError 발생 시 onComplete 호출 여부 추적
+  let aborted = false;
+
+  try {
+    const response = await fetch(TURN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/x-ndjson',
+      },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+
+    // 스트림 읽기 루프
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const events = parser.parse(chunk);
+
+      for (const event of events) {
+        dispatchEvent(event, callbacks, input.language);
+      }
+    }
+
+    // 남은 버퍼 플러시
+    const remaining = parser.flush();
+    if (remaining) {
+      dispatchEvent(remaining, callbacks, input.language);
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
+      aborted = true;
+      return;
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    // RU-002-S1: 네트워크 에러 시에도 onError 호출
+    callbacks.onError?.({
+      type: StreamEventType.ERROR,
+      message: errorMessage,
+      code: 'STREAM_ERROR',
+    });
+
+    // RU-002-S1: 네트워크 에러 시 클라이언트 측 폴백 final 생성
+    // 서버에서 final이 오지 못한 경우 UI가 멈추지 않도록 함
+    const fallback = createClientFallbackTurnOutput(input.language, input.economy_snapshot);
+    callbacks.onFinal?.({
+      type: StreamEventType.FINAL,
+      data: fallback,
+    });
+  } finally {
+    // RU-002-S1: 스트림 종료 인바리언트 - 성공/실패 모두에서 onComplete 호출 보장
+    if (!aborted) {
+      callbacks.onComplete?.();
+    }
+  }
+}
+
+/**
+ * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
+ * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
+ * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
+ */
+function createClientFallbackTurnOutput(
+  language: Language,
+  economySnapshot: { signal: number; memory_shard: number },
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
+      : '[System] Failed to connect to server. Please try again.';
+
+  return {
+    language,
+    narrative: fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
+      balance_after: {
+        signal: economySnapshot.signal,
+        memory_shard: economySnapshot.memory_shard,
+      },
+    },
+    safety: {
+      blocked: false,
+      message: null,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: 1,
+    },
+  };
+}
+
+/**
+ * 턴 스트림을 시작하고 취소 함수를 반환합니다.
+ *
+ * @param input - 턴 입력 데이터
+ * @param callbacks - 이벤트 콜백
+ * @returns 취소 함수
+ */
+export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): () => void {
+  const controller = new AbortController();
+
+  executeTurnStream(input, callbacks, { signal: controller.signal });
+
+  return () => controller.abort();
+}
+</file>
+
 <file path="frontend/src/App.tsx">
 /**
  * Unknown World - 메인 게임 UI 레이아웃
@@ -6366,6 +7540,8 @@ export interface StreamCallbacks {
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AgentConsole } from './components/AgentConsole';
+import { SceneCanvas } from './components/SceneCanvas';
+import type { SceneCanvasState } from './types/scene';
 import { useAgentStore } from './stores/agentStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
@@ -6701,6 +7877,12 @@ function App() {
   const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
   const [isConnected, setIsConnected] = useState(true);
 
+  // Scene Canvas 상태 (U-031: Placeholder Pack)
+  const [sceneState, setSceneState] = useState<SceneCanvasState>({
+    status: 'default',
+    message: '전역 데이터 동기화 대기 중...',
+  });
+
   // Agent Store 액션
   const {
     startStream,
@@ -6770,6 +7952,9 @@ function App() {
       // Agent Store 시작
       startStream();
 
+      // Scene Canvas를 로딩 상태로 전환 (U-031)
+      setSceneState({ status: 'loading', message: '데이터 동기화 중...' });
+
       // 스트림 콜백 설정
       const callbacks: StreamCallbacks = {
         onStage: handleStage,
@@ -6782,9 +7967,21 @@ function App() {
         onError: (event) => {
           handleError(event);
           setIsConnected(false);
+          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
+          const errorCode = event.code;
+          if (errorCode === 'SAFETY_BLOCKED') {
+            setSceneState({ status: 'blocked', message: event.message });
+          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+            setSceneState({ status: 'low_signal', message: event.message });
+          } else {
+            setSceneState({ status: 'offline', message: event.message });
+          }
         },
         onComplete: () => {
           completeStream();
+          // Scene Canvas를 기본 상태로 복원 (U-031)
+          // TODO: TurnOutput에 scene.imageUrl이 있으면 scene 상태로 전환
+          setSceneState({ status: 'default', message: '' });
         },
       };
 
@@ -6879,12 +8076,7 @@ function App() {
 
         {/* Center: Scene Canvas + Narrative Feed */}
         <main className="game-center">
-          <div className="scene-canvas">
-            <div className="scene-placeholder">
-              <p className="text-glow">NO SIGNAL DATA</p>
-              <p className="text-dim" style={{ fontSize: '0.875rem' }}>전역 데이터 동기화 대기 중...</p>
-            </div>
-          </div>
+          <SceneCanvas state={sceneState} />
           <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
         </main>
 
@@ -7278,6 +8470,128 @@ body {
   padding: var(--spacing-md);
   border: 1px solid var(--text-dim);
   text-shadow: 0 0 10px var(--text-color);
+}
+
+/* U-031: Scene Canvas 상태별 placeholder 스타일 */
+.scene-status-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.scene-status-emoji {
+  font-size: 1.5em;
+}
+
+.scene-status-message {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+/* 상태별 배경 이미지 적용 */
+.scene-canvas.scene-status-loading,
+.scene-canvas.scene-status-offline,
+.scene-canvas.scene-status-blocked,
+.scene-canvas.scene-status-low_signal,
+.scene-canvas.scene-status-default {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 로딩 상태: 펄스 애니메이션 */
+.scene-canvas.scene-status-loading .scene-placeholder {
+  animation: loading-pulse 2s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 오프라인 상태: 정적 노이즈 효과 */
+.scene-canvas.scene-status-offline {
+  position: relative;
+}
+
+.scene-canvas.scene-status-offline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  animation: static-noise 0.5s steps(5) infinite;
+}
+
+@keyframes static-noise {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 차단 상태: 경고색 테두리 */
+.scene-canvas.scene-status-blocked {
+  border-color: var(--warning-color);
+  box-shadow: inset 0 0 30px rgba(255, 170, 0, 0.2);
+}
+
+.scene-canvas.scene-status-blocked .scene-status-label {
+  color: var(--warning-color);
+}
+
+/* 저신호 상태: 희미한 표시 */
+.scene-canvas.scene-status-low_signal .scene-placeholder {
+  opacity: 0.8;
+}
+
+.scene-canvas.scene-status-low_signal .scene-status-label {
+  color: var(--text-dim);
+}
+
+/* 정상 장면 표시 */
+.scene-canvas.scene-active {
+  background-color: transparent;
+}
+
+.scene-canvas .scene-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Readable 모드에서 placeholder 대비 향상 (U-028 연동) */
+html[data-readable='true'] .scene-placeholder {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+html[data-readable='true'] .scene-canvas.scene-status-loading .scene-placeholder {
+  animation: none;
+}
+
+html[data-readable='true'] .scene-canvas.scene-status-offline::before {
+  display: none;
 }
 
 /* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
@@ -8134,500 +9448,6 @@ html[data-readable='true'] .narrative-timestamp {
   height: 16px;
   background: var(--text-dim);
   margin: 0 var(--spacing-xs);
-}
-</file>
-
-<file path="package.json">
-{
-  "name": "unknown-world",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
-  "packageManager": "pnpm@10.27.0",
-  "engines": {
-    "node": "24.12.0"
-  },
-  "scripts": {
-    "kill": "pnpm kill:port",
-    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
-    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
-    "dev:front": "pnpm -C frontend dev"
-  }
-}
-</file>
-
-<file path="frontend/src/api/turnStream.ts">
-/**
- * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
- *
- * fetch 기반으로 POST 요청을 보내고 응답 스트림을 NDJSON으로 파싱합니다.
- * 중간 청크 파싱 실패가 전체 UI를 멈추지 않도록 설계되었습니다.
- *
- * 설계 원칙:
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
- *   - RULE-004: 검증 실패 시 안전 폴백 제공
- *   - RULE-008: 단계/배지 가시화 (프롬프트/내부 추론 노출 금지)
- *   - RULE-011: 백엔드 포트 8011 사용
- *
- * @module api/turnStream
- */
-
-import type { TurnInput, TurnOutput, Language } from '../schemas/turn';
-import { safeParseTurnOutput } from '../schemas/turn';
-import type { StreamCallbacks } from '../types/turn_stream';
-import {
-  StreamEventType,
-  BaseEventSchema,
-  safeParseStageEvent,
-  safeParseRepairEvent,
-  safeParseBadgesEvent,
-  safeParseNarrativeDeltaEvent,
-  safeParseFinalEventRaw,
-  safeParseErrorEvent,
-  normalizeStageStatus,
-} from '../types/turn_stream';
-
-// Re-export 스트림 이벤트 타입들 (하위 호환성 유지)
-export type {
-  StreamEventTypeName,
-  StageStatusName,
-  StageEvent,
-  RepairEvent,
-  BadgesEvent,
-  NarrativeDeltaEvent,
-  FinalEvent,
-  ErrorEvent,
-  StreamEvent,
-  StreamCallbacks,
-} from '../types/turn_stream';
-export { StreamEventType, StageStatus } from '../types/turn_stream';
-
-// =============================================================================
-// NDJSON 파서 (Q1 결정: Option A - 직접 구현)
-// =============================================================================
-
-/**
- * NDJSON 라인 파서.
- * 부분 청크를 버퍼링하고 완전한 라인을 파싱합니다.
- */
-export class NDJSONParser {
-  private buffer = '';
-
-  /**
-   * 청크를 파싱하고 완전한 JSON 객체들을 반환합니다.
-   *
-   * @param chunk - 수신된 텍스트 청크
-   * @returns 파싱된 JSON 객체 배열
-   */
-  parse(chunk: string): unknown[] {
-    this.buffer += chunk;
-    const results: unknown[] = [];
-
-    // 줄바꿈으로 분할
-    const lines = this.buffer.split('\n');
-
-    // 마지막 라인은 불완전할 수 있으므로 버퍼에 유지
-    this.buffer = lines.pop() ?? '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed === '') continue;
-
-      try {
-        const parsed = JSON.parse(trimmed);
-        results.push(parsed);
-      } catch {
-        // 파싱 실패 시 해당 라인 무시 (RULE-004: 전체 중단 방지)
-        console.warn('[NDJSON] Failed to parse line:', trimmed);
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * 버퍼를 초기화합니다.
-   */
-  reset(): void {
-    this.buffer = '';
-  }
-
-  /**
-   * 남은 버퍼를 플러시하고 마지막 객체를 파싱합니다.
-   */
-  flush(): unknown | null {
-    const trimmed = this.buffer.trim();
-    this.buffer = '';
-
-    if (trimmed === '') return null;
-
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      console.warn('[NDJSON] Failed to parse remaining buffer:', trimmed);
-      return null;
-    }
-  }
-}
-
-// =============================================================================
-// 스트림 이벤트 핸들러
-// =============================================================================
-
-/**
- * 파싱된 이벤트를 타입별로 분배합니다.
- *
- * RU-002-S2: 캐스팅 대신 Zod safeParse를 적용하여 검증 강화.
- * Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력.
- *
- * @param event - 파싱된 이벤트 객체
- * @param callbacks - 콜백 함수들
- * @param language - 폴백 언어
- */
-function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Language): void {
-  if (!event || typeof event !== 'object') return;
-
-  // 기본 이벤트 타입 추출
-  const baseResult = BaseEventSchema.safeParse(event);
-  if (!baseResult.success) {
-    console.warn('[TurnStream] Invalid event format (no type field):', event);
-    return;
-  }
-
-  const type = baseResult.data.type;
-
-  switch (type) {
-    case StreamEventType.STAGE: {
-      // RU-002-S2: stage 이벤트 검증
-      const stageResult = safeParseStageEvent(event);
-      if (stageResult.success) {
-        // status 정규화: 'ok' → 'complete'
-        const normalizedStatus = normalizeStageStatus(stageResult.data.status);
-        callbacks.onStage?.({
-          type: StreamEventType.STAGE,
-          name: stageResult.data.name,
-          status: normalizedStatus,
-        });
-      } else {
-        console.warn('[TurnStream] Invalid stage event:', stageResult.error.message);
-      }
-      break;
-    }
-
-    case StreamEventType.REPAIR: {
-      // RU-002-S2: repair 이벤트 검증
-      const repairResult = safeParseRepairEvent(event);
-      if (repairResult.success) {
-        callbacks.onRepair?.(repairResult.data);
-      } else {
-        console.warn('[TurnStream] Invalid repair event:', repairResult.error.message);
-      }
-      break;
-    }
-
-    case StreamEventType.BADGES: {
-      // RU-002-S2: badges 이벤트 검증 (v1/v2 정규화 포함)
-      const badgesResult = safeParseBadgesEvent(event);
-      if (badgesResult.success) {
-        callbacks.onBadges?.(badgesResult.data);
-      } else {
-        console.warn('[TurnStream] Invalid badges event:', badgesResult.error.message);
-      }
-      break;
-    }
-
-    case StreamEventType.NARRATIVE_DELTA: {
-      // RU-002-S2: narrative_delta 이벤트 검증
-      const narrativeResult = safeParseNarrativeDeltaEvent(event);
-      if (narrativeResult.success) {
-        callbacks.onNarrativeDelta?.(narrativeResult.data);
-      } else {
-        console.warn('[TurnStream] Invalid narrative_delta event:', narrativeResult.error.message);
-      }
-      break;
-    }
-
-    case StreamEventType.FINAL: {
-      // RU-002-S2: final 이벤트 구조 검증
-      const finalRawResult = safeParseFinalEventRaw(event);
-      if (!finalRawResult.success) {
-        console.warn('[TurnStream] Invalid final event structure:', finalRawResult.error.message);
-        // 구조가 잘못되어도 폴백 제공
-        callbacks.onFinal?.({
-          type: StreamEventType.FINAL,
-          data: createFallbackTurnOutput(language),
-        });
-        break;
-      }
-
-      // RULE-003/004: Zod strict parse + 폴백
-      const turnOutputPayload = finalRawResult.data.data;
-      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
-
-      if (parseResult.success) {
-        callbacks.onFinal?.({
-          type: StreamEventType.FINAL,
-          data: parseResult.data,
-        });
-      } else {
-        console.warn('[TurnStream] TurnOutput validation failed:', parseResult.error);
-        callbacks.onFinal?.({
-          type: StreamEventType.FINAL,
-          data: parseResult.fallback,
-        });
-      }
-      break;
-    }
-
-    case StreamEventType.ERROR: {
-      // RU-002-S2: error 이벤트 검증
-      const errorResult = safeParseErrorEvent(event);
-      if (errorResult.success) {
-        callbacks.onError?.(errorResult.data);
-      } else {
-        console.warn('[TurnStream] Invalid error event:', errorResult.error.message);
-        // 에러 이벤트가 깨진 경우에도 기본 에러 전달
-        callbacks.onError?.({
-          type: StreamEventType.ERROR,
-          message: 'Unknown error (malformed error event)',
-          code: 'INVALID_ERROR_EVENT',
-        });
-      }
-      break;
-    }
-
-    default:
-      // RU-002-S2: Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력
-      // 향후 protocol, repair, telemetry 등 확장 이벤트 도입 시 여기서 처리 가능
-      console.warn('[TurnStream] Unknown/ignored event type:', type, event);
-  }
-}
-
-/**
- * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
- * dispatchEvent 내부에서 사용하는 간단한 폴백.
- */
-function createFallbackTurnOutput(language: Language): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.'
-      : '[System] An error occurred while processing response data.';
-
-  return {
-    language,
-    narrative: fallbackNarrative,
-    economy: {
-      cost: { signal: 0, memory_shard: 0 },
-      balance_after: { signal: 0, memory_shard: 0 },
-    },
-    safety: {
-      blocked: false,
-      message: null,
-    },
-    ui: {
-      action_deck: { cards: [] },
-      objects: [],
-    },
-    world: {
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    },
-    render: {
-      image_job: null,
-    },
-    agent_console: {
-      current_phase: 'commit',
-      badges: ['schema_fail'],
-      repair_count: 1,
-    },
-  };
-}
-
-// =============================================================================
-// API 설정
-// =============================================================================
-
-/** 백엔드 API URL (RULE-011: 포트 8011) */
-const API_BASE_URL = 'http://localhost:8011';
-
-/** 턴 스트림 API 엔드포인트 */
-const TURN_ENDPOINT = `${API_BASE_URL}/api/turn`;
-
-// =============================================================================
-// 스트림 클라이언트
-// =============================================================================
-
-/** 스트림 요청 옵션 */
-export interface TurnStreamOptions {
-  /** 요청 타임아웃 (ms) */
-  timeout?: number;
-  /** AbortSignal */
-  signal?: AbortSignal;
-}
-
-/**
- * 턴 스트림 요청을 실행합니다.
- *
- * @param input - 턴 입력 데이터
- * @param callbacks - 이벤트 콜백
- * @param options - 요청 옵션
- * @returns 취소 함수
- */
-export async function executeTurnStream(
-  input: TurnInput,
-  callbacks: StreamCallbacks,
-  options?: TurnStreamOptions,
-): Promise<void> {
-  const parser = new NDJSONParser();
-  const controller = new AbortController();
-  const signal = options?.signal ?? controller.signal;
-
-  // RU-002-S1: AbortError 발생 시 onComplete 호출 여부 추적
-  let aborted = false;
-
-  try {
-    const response = await fetch(TURN_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/x-ndjson',
-      },
-      body: JSON.stringify(input),
-      signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    if (!response.body) {
-      throw new Error('Response body is null');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    // 스트림 읽기 루프
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const events = parser.parse(chunk);
-
-      for (const event of events) {
-        dispatchEvent(event, callbacks, input.language);
-      }
-    }
-
-    // 남은 버퍼 플러시
-    const remaining = parser.flush();
-    if (remaining) {
-      dispatchEvent(remaining, callbacks, input.language);
-    }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
-      aborted = true;
-      return;
-    }
-
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
-    // RU-002-S1: 네트워크 에러 시에도 onError 호출
-    callbacks.onError?.({
-      type: StreamEventType.ERROR,
-      message: errorMessage,
-      code: 'STREAM_ERROR',
-    });
-
-    // RU-002-S1: 네트워크 에러 시 클라이언트 측 폴백 final 생성
-    // 서버에서 final이 오지 못한 경우 UI가 멈추지 않도록 함
-    const fallback = createClientFallbackTurnOutput(input.language, input.economy_snapshot);
-    callbacks.onFinal?.({
-      type: StreamEventType.FINAL,
-      data: fallback,
-    });
-  } finally {
-    // RU-002-S1: 스트림 종료 인바리언트 - 성공/실패 모두에서 onComplete 호출 보장
-    if (!aborted) {
-      callbacks.onComplete?.();
-    }
-  }
-}
-
-/**
- * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
- * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
- * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
- */
-function createClientFallbackTurnOutput(
-  language: Language,
-  economySnapshot: { signal: number; memory_shard: number },
-): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
-      : '[System] Failed to connect to server. Please try again.';
-
-  return {
-    language,
-    narrative: fallbackNarrative,
-    economy: {
-      cost: { signal: 0, memory_shard: 0 },
-      // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
-      balance_after: {
-        signal: economySnapshot.signal,
-        memory_shard: economySnapshot.memory_shard,
-      },
-    },
-    safety: {
-      blocked: false,
-      message: null,
-    },
-    ui: {
-      action_deck: { cards: [] },
-      objects: [],
-    },
-    world: {
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    },
-    render: {
-      image_job: null,
-    },
-    agent_console: {
-      current_phase: 'commit',
-      badges: ['schema_fail'],
-      repair_count: 1,
-    },
-  };
-}
-
-/**
- * 턴 스트림을 시작하고 취소 함수를 반환합니다.
- *
- * @param input - 턴 입력 데이터
- * @param callbacks - 이벤트 콜백
- * @returns 취소 함수
- */
-export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): () => void {
-  const controller = new AbortController();
-
-  executeTurnStream(input, callbacks, { signal: controller.signal });
-
-  return () => controller.abort();
 }
 </file>
 

@@ -54,7 +54,8 @@
       "ShellTool(ffmpeg)",
       "ShellTool(node)",
       "ShellTool(uvicorn)",
-      "ShellTool(rembg)"
+      "ShellTool(rembg)",
+      "ShellTool(magick)"
     ],
     "exclude": ["ShellTool(git push)", "ShellTool(git reset)"]
   },

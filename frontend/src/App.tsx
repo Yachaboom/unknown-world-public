@@ -14,6 +14,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AgentConsole } from './components/AgentConsole';
+import { SceneCanvas } from './components/SceneCanvas';
+import type { SceneCanvasState } from './types/scene';
 import { useAgentStore } from './stores/agentStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
@@ -349,6 +351,12 @@ function App() {
   const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
   const [isConnected, setIsConnected] = useState(true);
 
+  // Scene Canvas 상태 (U-031: Placeholder Pack)
+  const [sceneState, setSceneState] = useState<SceneCanvasState>({
+    status: 'default',
+    message: '전역 데이터 동기화 대기 중...',
+  });
+
   // Agent Store 액션
   const {
     startStream,
@@ -418,6 +426,9 @@ function App() {
       // Agent Store 시작
       startStream();
 
+      // Scene Canvas를 로딩 상태로 전환 (U-031)
+      setSceneState({ status: 'loading', message: '데이터 동기화 중...' });
+
       // 스트림 콜백 설정
       const callbacks: StreamCallbacks = {
         onStage: handleStage,
@@ -430,9 +441,21 @@ function App() {
         onError: (event) => {
           handleError(event);
           setIsConnected(false);
+          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
+          const errorCode = event.code;
+          if (errorCode === 'SAFETY_BLOCKED') {
+            setSceneState({ status: 'blocked', message: event.message });
+          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+            setSceneState({ status: 'low_signal', message: event.message });
+          } else {
+            setSceneState({ status: 'offline', message: event.message });
+          }
         },
         onComplete: () => {
           completeStream();
+          // Scene Canvas를 기본 상태로 복원 (U-031)
+          // TODO: TurnOutput에 scene.imageUrl이 있으면 scene 상태로 전환
+          setSceneState({ status: 'default', message: '' });
         },
       };
 
@@ -527,12 +550,7 @@ function App() {
 
         {/* Center: Scene Canvas + Narrative Feed */}
         <main className="game-center">
-          <div className="scene-canvas">
-            <div className="scene-placeholder">
-              <p className="text-glow">NO SIGNAL DATA</p>
-              <p className="text-dim" style={{ fontSize: '0.875rem' }}>전역 데이터 동기화 대기 중...</p>
-            </div>
-          </div>
+          <SceneCanvas state={sceneState} />
           <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
         </main>
 

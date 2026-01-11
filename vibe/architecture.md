@@ -31,24 +31,32 @@ D:\Dev\unknown-world\
 │   │       │   ├── risk-high-24.png
 │   │       │   ├── shard-24.png
 │   │       │   └── signal-24.png
-│   │       └── placeholders/ # Scene 플레이스홀더 (U-029)
-│   │           └── scene-placeholder-default.png
+│       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
+│           ├── scene-placeholder-default.png
+│           ├── scene-loading.webp
+│           ├── scene-offline.webp
+│           ├── scene-blocked.webp
+│           └── scene-low-signal.webp
     ├── src/
 │       ├── main.tsx
 │       ├── App.tsx
 │       ├── style.css
+│       ├── i18n.ts         # 다국어 설정 SSOT (U-031)
 │       ├── vite-env.d.ts
 │       ├── api/            # HTTP Streaming 클라이언트 (U-008)
 │       │   └── turnStream.ts
 │       ├── components/     # 게임 UI 컴포넌트 (U-008)
-│       │   └── AgentConsole.tsx
+│       │   ├── AgentConsole.tsx
+│       │   ├── SceneCanvas.tsx # 씬 캔버스 및 상태별 렌더링 (U-031)
+│       │   └── SceneCanvas.test.tsx
 │       ├── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
 │       │   └── turn.ts
 │       ├── stores/         # 상태 관리 (Zustand) (U-008, U-028)
 │       │   ├── agentStore.ts
 │       │   └── uiPrefsStore.ts # UI 가독성 설정 (스케일/Readable)
 │       └── types/          # 스트림 이벤트 계약 타입 (RU-002-Q4)
-│           └── turn_stream.ts
+│           ├── turn_stream.ts
+│           └── scene.ts    # Scene Canvas 상태 타입 SSOT (U-031)
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock
@@ -100,9 +108,10 @@ D:\Dev\unknown-world\
     - `public/ui/`: `nanobanana mcp`로 제작된 정적 이미지 에셋(아이콘, 프레임, Placeholder) 저장소. 매니페스트를 통한 에셋 추적 및 폴백 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
     - `stores/`: Agent Console 상태(단계/배지) 및 월드 상태, **UI 가독성 설정**을 관리하는 Zustand 스토어.
-    - `components/`: Agent Console, Narrative Feed 등 게임 전용 UI 컴포넌트 모음.
+    - `components/`: Agent Console, Narrative Feed, **Scene Canvas** 등 게임 전용 UI 컴포넌트 모음.
+    - `i18n.ts`: `react-i18next` 기반의 다국어 번역 리소스 및 설정 SSOT.
     - `schemas/`: Zod를 활용한 턴 계약(Turn Contract) 검증 및 폴백 로직 정의.
-    - `types/`: 서버-클라이언트 간 스트림 이벤트(NDJSON) 계약 타입을 정의 (SSOT).
+    - `types/`: 서버-클라이언트 간 스트림 이벤트(NDJSON) 계약 타입 및 **Scene 상태 타입** 정의 (SSOT).
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
     - `api/`: `/api/turn` 등 클라이언트 통신을 위한 엔드포인트 관리 및 스트림 이벤트 모델(`turn_stream_events.py`) 정의.
     - `orchestrator/`: 실모델(Gemini) 또는 모의(Mock)를 통한 게임 엔진 오케스트레이션 핵심 로직 담당.

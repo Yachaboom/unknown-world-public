@@ -348,6 +348,128 @@ body {
   text-shadow: 0 0 10px var(--text-color);
 }
 
+/* U-031: Scene Canvas 상태별 placeholder 스타일 */
+.scene-status-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.scene-status-emoji {
+  font-size: 1.5em;
+}
+
+.scene-status-message {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+/* 상태별 배경 이미지 적용 */
+.scene-canvas.scene-status-loading,
+.scene-canvas.scene-status-offline,
+.scene-canvas.scene-status-blocked,
+.scene-canvas.scene-status-low_signal,
+.scene-canvas.scene-status-default {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 로딩 상태: 펄스 애니메이션 */
+.scene-canvas.scene-status-loading .scene-placeholder {
+  animation: loading-pulse 2s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 오프라인 상태: 정적 노이즈 효과 */
+.scene-canvas.scene-status-offline {
+  position: relative;
+}
+
+.scene-canvas.scene-status-offline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  animation: static-noise 0.5s steps(5) infinite;
+}
+
+@keyframes static-noise {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 차단 상태: 경고색 테두리 */
+.scene-canvas.scene-status-blocked {
+  border-color: var(--warning-color);
+  box-shadow: inset 0 0 30px rgba(255, 170, 0, 0.2);
+}
+
+.scene-canvas.scene-status-blocked .scene-status-label {
+  color: var(--warning-color);
+}
+
+/* 저신호 상태: 희미한 표시 */
+.scene-canvas.scene-status-low_signal .scene-placeholder {
+  opacity: 0.8;
+}
+
+.scene-canvas.scene-status-low_signal .scene-status-label {
+  color: var(--text-dim);
+}
+
+/* 정상 장면 표시 */
+.scene-canvas.scene-active {
+  background-color: transparent;
+}
+
+.scene-canvas .scene-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Readable 모드에서 placeholder 대비 향상 (U-028 연동) */
+html[data-readable='true'] .scene-placeholder {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+html[data-readable='true'] .scene-canvas.scene-status-loading .scene-placeholder {
+  animation: none;
+}
+
+html[data-readable='true'] .scene-canvas.scene-status-offline::before {
+  display: none;
+}
+
 /* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
 .narrative-feed {
   height: 180px;

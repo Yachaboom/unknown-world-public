@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import './i18n'; // i18n 초기화
 import './style.css';
 import App from './App.tsx';
 

@@ -2,7 +2,11 @@
 
 ### 기본 명령어
 ```bash
+# 시스템 PATH가 설정된 경우
 magick <input> [옵션] <output>
+
+# 환경별 절대 경로 사용 시 (현재 프로젝트 권장)
+"C:\Program Files\ImageMagick-7.1.2-Q16-HDRI\magick.exe" <input> [옵션] <output>
 ```
 
 ### 작업 자동 선택 규칙
@@ -22,6 +26,8 @@ magick <input> [옵션] <output>
 | 형식 변환 | jpg, webp, ico | 출력 확장자 변경 |
 
 ### 복합 작업 패턴
+
+> **Tip**: 아래 예시의 `magick`은 환경에 따라 `"C:\Program Files\ImageMagick-7.1.2-Q16-HDRI\magick.exe"`로 대체하여 사용하세요.
 
 ```bash
 # 아이콘/썸네일 생성 (가장 많이 사용)

@@ -1,5 +1,44 @@
 # 프로젝트 진행 상황
 
+## [2026-01-11 23:10] U-031[Mvp]: nanobanana mcp 상태 Placeholder Pack 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Scene Canvas 및 시스템 상태(로딩/오프라인/차단/저신호)를 위한 게임스러운 Placeholder 에셋 반영 및 UI 연동
+- **추가 컴포넌트**: `frontend/src/components/SceneCanvas.tsx`, `frontend/src/types/scene.ts`, `frontend/src/i18n.ts`, `vibe/unit-results/U-031[Mvp].md`
+- **달성 요구사항**: [PRD 6.3/10.2] Lazy loading 실패 폴백 확보, [RULE-006] ko/en i18n 정책 준수, [RULE-007] 정적 에셋 SSOT 준수
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **react-i18next**: 플레이스홀더 라벨 및 에러 메시지의 다국어 지원 체계 구축
+- **Vitest**: `SceneCanvas` 상태 매핑 및 이미지 경로의 정확성을 검증하는 단위 테스트 구현
+- **React 19 State**: `imageError` 로컬 상태를 이용한 런타임 이미지 로드 실패 대응 로직 강화
+
+**설계 패턴 및 아키텍처 선택**:
+- **Component Refactoring**: `App.tsx`에 비대하게 모여있던 로직을 기능별로 분리하여 모듈성 및 테스트 용이성 향상
+- **Double Fallback**: 배경 이미지(CSS)와 전면 텍스트(UI)의 이중 구조로 어떤 상황에서도 상태 정보 전달 보장
+
+**코드 구조**:
+repo-root/
+├── frontend/src/
+│   ├── components/SceneCanvas.tsx (상태별 렌더링)
+│   ├── types/scene.ts (상태 타입 SSOT)
+│   └── i18n.ts (다국어 설정 SSOT)
+└── frontend/public/ui/placeholders/ (4종 신규 WebP 에셋)
+
+### 성능 및 품질 지표
+- **견고성**: 이미지 차단/삭제 시에도 이모지 + i18n 라벨을 통해 시스템 상태 100% 식별 가능
+- **테스트 커버리지**: `SceneCanvas` 관련 핵심 상수 및 경로에 대한 검증 통과 (49개 테스트 pass)
+
+### 의존성 변경
+- `react-i18next`, `i18next` 활성화 (기존 의존성 활용 시작)
+
+### 다음 단계
+- [U-034[Mvp]] nanobanana mcp 프롬프트 템플릿 표준화
+
+---
+
 ## [2026-01-11 16:30] U-029[Mvp]: nanobanana mcp 에셋 패스(UI 아이콘/프레임/placeholder) 완료
 
 ### 구현 완료 항목
