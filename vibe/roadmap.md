@@ -100,7 +100,7 @@ _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) �
 | R-001 | 스키마/의미 불일치로 Hard Gate 실패 | High | 35%  | Repair loop + Safe fallback + Mock     |
 | R-002 | 이미지/Thinking로 지연/비용 폭발    | High | 30%  | Economy 정책 + Lazy 이미지 + 티어링    |
 | R-003 | UI가 채팅처럼 보여 제출/데모 실패   | High | 25%  | 고정 HUD + DnD/핫스팟/스캐너/콘솔 강조 |
-| R-004 | 작은 글씨/CRT 튜닝으로 가독성·정체성 균형 붕괴 | Medium | 25% | UI 스케일 + CRT 강도 프로파일(Readable=완화) + 대비/라인하이트 가이드 |
+| R-004 | 작은 글씨/CRT 튜닝으로 가독성·정체성 균형 붕괴 | Medium | 25% | UI 스케일 + 중요도(critical/ambient) 기반 효과 분리 + 대비/라인하이트 가이드 + reduced-motion 가드 |
 | R-005 | 에셋 난립/용량 비대화/스타일 불일치  | Medium | 25% | nanobanana mcp 에셋 SSOT + 매니페스트/QA + 예산 상한 + (필요 시) rembg 배경 제거 |
 
 ## 메트릭
@@ -121,7 +121,7 @@ _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) �
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-037[Mvp]](unit-plans/U-037[Mvp].md) | CRT 지글거림 보강(Readable 완화 프로파일) | Depends=U-004,U-028 | ⏸️
+ID=[U-037[Mvp]](unit-plans/U-037[Mvp].md) | CRT/가독성 레이어링(Readable 모드 제거, 중요 영역 보호) | Depends=U-004,U-028 | ⏸️
 ID=[U-038[Mvp]](unit-plans/U-038[Mvp].md) | 핵심 UI 아이콘 12종 재생성(v2, 퀄리티/용량/사이즈/식별성) | Depends=U-033,U-034,U-030,U-028 | 🚧
 ID=[U-009[Mvp]](unit-plans/U-009[Mvp].md) | ⚡Action Deck(카드+비용/대안) | Depends=U-004,U-008 | ⏸️
 ID=[U-010[Mvp]](unit-plans/U-010[Mvp].md) | ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox) | Depends=U-004,U-008 | ⏸️

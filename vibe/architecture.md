@@ -58,7 +58,7 @@ D:\Dev\unknown-world\
 │       │   └── turn.ts
 │       ├── stores/         # 상태 관리 (Zustand) (U-008, U-028)
 │       │   ├── agentStore.ts
-│       │   └── uiPrefsStore.ts # UI 가독성 설정 (스케일/Readable)
+│       │   └── uiPrefsStore.ts # UI 설정 (스케일/가독성 정책)
 │       └── types/          # 스트림 이벤트 계약 타입 (RU-002-Q4)
 │           ├── turn_stream.ts
 │           └── scene.ts    # Scene Canvas 상태 타입 SSOT (U-031)
@@ -174,9 +174,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 1. **전역 UI 스케일 (Global UI Scale)**: 사용자는 UI 전체 크기를 0.9x에서 1.2x까지 조절할 수 있다.
     - 이는 CSS 변수 `--ui-scale-factor`를 통해 제어되며, `rem` 단위 기반의 모든 타이포그래피와 간격에 영향을 미친다.
-2. **Readable 모드 (Readable Mode)**: 텍스트 시인성을 저해할 수 있는 CRT 효과(스캔라인, 플리커, 글로우)를 선택적으로 완화하거나 제거할 수 있다.
-    - `html[data-readable="true"]` 속성을 통해 CSS 레벨에서 선언적으로 처리한다.
-    - Readable 모드 활성화 시 보조 텍스트의 대비를 상향 조정하고 마이크로 텍스트 크기를 추가로 상향한다.
+2. **Readable 모드(정책 제거) → 중요도 기반 가독성 레이어링**: 별도의 “Readable 토글” 대신, UI를 `critical/ambient` 중요도로 구분하여 중요한 정보(재화/비용/배지/버튼)는 항상 읽히게 보호하고, 분위기(CRT)는 비중요 영역에 집중 적용한다. (SSOT: `vibe/prd.md` 9.4/9.5, 구현 계획: U-037)
 3. **설정 영속성 (Persistence)**: 사용자의 UI 설정은 `localStorage`에 저장되어 페이지 새로고침 후에도 유지된다. 향후 SaveGame 시스템과 통합되어 계정/세션별로 관리될 수 있다.
 4. **마이크로 텍스트 하한선 (Micro-text Baseline)**: Agent Console 등 정보 밀도가 높은 영역에서도 텍스트가 읽힐 수 있도록 최소 폰트 크기 기준(`--font-size-xs`, `--font-size-sm`)을 준수한다.
 
