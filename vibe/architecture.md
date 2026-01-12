@@ -21,9 +21,10 @@ D:\Dev\unknown-world\
 │   ├── tsconfig.node.json
 │   ├── vite.config.ts
 │   ├── public/             # 정적 에셋
-│   │   └── ui/             # UI 이미지 에셋 SSOT (U-030)
+│   │   └── ui/             # UI 이미지 에셋 SSOT (U-030, U-033)
 │   │       ├── README.md   # 제작/관리 규칙
-│   │       ├── manifest.json # 에셋 목록 (U-029, U-032)
+│   │       ├── QA_CHECKLIST.md # 품질 검증 체크리스트 (U-033)
+│   │       ├── manifest.json # 에셋 목록 및 메타데이터 (U-033)
 │   │       ├── manifest.schema.json # 매니페스트 스키마
 │   │       ├── chrome/     # UI 장식/프레임 에셋 (U-032)
 │   │       │   ├── card-frame.png

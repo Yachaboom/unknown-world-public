@@ -1,5 +1,41 @@
 # 프로젝트 진행 상황
 
+## [2026-01-12 14:20] U-033[Mvp]: nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: nanobanana mcp로 생성되는 에셋의 품질 유지 및 추적을 위한 매니페스트(`manifest.json`)와 QA 체크리스트 도입
+- **추가 컴포넌트**: `frontend/public/ui/manifest.json` (에셋 SSOT), `frontend/public/ui/QA_CHECKLIST.md` (품질 기준), `vibe/unit-results/U-033[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 9.7] UI 이미지 에셋 파이프라인 관리, [RULE-007] 에셋 예산/규칙 준수 강제
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **JSON Schema**: 에셋 메타데이터(크기, 경로, 폴백 등)의 구조화된 관리를 위한 매니페스트 포맷 정의
+- **Performance Budgeting**: 1.5MB 총 용량 상한 및 개별 에셋 유형별 예산 설정
+
+**설계 패턴 및 아키텍처 선택**:
+- **Asset Manifest SSOT**: 에셋의 존재 여부와 메타데이터를 파일 시스템이 아닌 매니페스트를 통해 관리하여 정합성 확보
+- **Fail-safe Fallback Strategy**: 모든 에셋에 대해 명시적인 텍스트/이모지 폴백을 지정하여 로딩 실패 시 UI 가용성 보장
+
+**코드 구조**:
+repo-root/
+└── frontend/public/ui/
+    ├── manifest.json (에셋 목록 및 메타데이터)
+    └── QA_CHECKLIST.md (품질 검증 절차)
+
+### 성능 및 품질 지표
+- **정합성**: 매니페스트와 실제 파일 간 100% 경로 일치 확인 (런북 검증)
+- **최적화**: 현재 총 용량 약 556KB로 예산(1.5MB) 대비 35% 수준 유지, 여유 확보
+
+### 의존성 변경
+- 없음
+
+### 다음 단계
+- [U-030[Mvp]] 에셋 SSOT/예산 규칙 (완료)
+
+---
+
 ## [2026-01-12 11:35] U-032[Mvp]: nanobanana mcp UI Chrome Pack(패널/카드 프레임/코너) 완료
 
 ### 구현 완료 항목

@@ -122,6 +122,11 @@
           "type": "string",
           "pattern": "^[a-f0-9]{8}$",
           "description": "생성 프롬프트 해시 (재현성, 8자)"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "에셋 관련 메모 (생성 도구, 배경 제거, 최적화 등 QA 관련 기록)"
         }
       }
     }
