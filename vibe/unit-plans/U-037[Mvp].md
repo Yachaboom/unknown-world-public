@@ -104,12 +104,15 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 중요도 레벨을 몇 단계로 가져갈까?
-  - Option A: 2단(critical/ambient) - 단순/빠름(권장) ✅
+- [x] **Q1**: 중요도 레벨을 몇 단계로 가져갈까?
+  - Option A: 2단(critical/ambient) - 단순/빠름(권장)
   - Option B: 3단(critical/normal/ambient) - 튜닝 여지 ↑, 규칙/마킹 비용 ↑
-- [ ] **Q2**: CRT 오버레이의 분위기 SSOT를 어디에 둘까?
-  - Option A: Scene Canvas 중심(장면에 분위기 집중, 텍스트 보호) ✅
+  **A1**: Option A
+
+- [x] **Q2**: CRT 오버레이의 분위기 SSOT를 어디에 둘까?
+  - Option A: Scene Canvas 중심(장면에 분위기 집중, 텍스트 보호) 
   - Option B: 전역 오버레이 유지(레트로 감성 ↑) — 대신 critical 보호 토큰이 더 중요
+  **A2**: Option A
 
 ## 참고 자료
 

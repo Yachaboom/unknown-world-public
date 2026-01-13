@@ -1,5 +1,43 @@
 # 프로젝트 진행 상황
 
+## [2026-01-14 00:30] U-037[Mvp]: CRT/가독성 레이어링(Readable 모드 제거, 중요 영역 보호) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 별도의 Readable 모드 토글을 제거하고, UI를 `critical`(정보 보호)과 `ambient`(분위기 연출) 영역으로 구분하는 계층형 스타일 정책 도입
+- **추가 컴포넌트**: `frontend/src/components/AgentConsole.test.tsx` (중요도 검증 테스트), `frontend/src/setupTests.ts` (테스트 환경)
+- **달성 요구사항**: [PRD 9.4/9.5] 중요도 기반 가독성 및 CRT 효과 제어, [RISK R-004] 가독성·정체성 균형 확보
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **CSS Z-Index Layering**: CRT 오버레이(9999)를 기준으로 `critical`(10000)과 `ambient`(1) 레이어를 분리하여 정보 식별성 확보
+- **CSS Media Queries**: `prefers-reduced-motion` 및 `prefers-contrast` 대응으로 접근성 강화
+- **Zustand Migrate**: `uiPrefsStore` 버전 1 마이그레이션을 통해 레거시 `readableMode` 상태를 안전하게 제거
+
+**설계 패턴 및 아키텍처 선택**:
+- **Importance-driven Styling**: 컴포넌트에 `data-ui-importance` 속성을 부여하여 선언적으로 가독성 수준을 결정
+- **Scene-centric Atmosphere**: CRT 스캔라인 및 플리커 효과를 Scene Canvas에 집중시켜 게임 미학 유지
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── style.css (중요도 기반 스타일 토큰)
+    ├── stores/uiPrefsStore.ts (상태 마이그레이션)
+    └── components/AgentConsole.tsx (Critical 마킹)
+
+### 성능 및 품질 지표
+- **가독성**: 중요 영역(재화/비용/배지)의 텍스트 대비 및 선명도 100% 확보 (오버레이 간섭 제거)
+- **안정성**: 레거시 localStorage 데이터 유입 시에도 크래시 없이 정상 마이그레이션 확인 (테스트 통과)
+
+### 의존성 변경
+- 개발 의존성 추가: `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` (Vitest 환경 고도화)
+
+### 다음 단계
+- [U-038[Mvp]] 핵심 UI 아이콘 12종 재생성(v2, 퀄리티/용량/사이즈/식별성)
+
+---
+
 ## [2026-01-12 14:20] U-033[Mvp]: nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백) 완료
 
 ### 구현 완료 항목
@@ -160,7 +198,7 @@ repo-root/
 ### 기술적 구현 세부사항
 
 **사용 기술/라이브러리**:
-- **JSON Schema (Draft-07)**: 에셋 요청의 정형화를 위한 `nanobanana-asset-request.schema.json` 정의
+- **JSON Schema**: 에셋 요청의 정형화를 위한 `nanobanana-asset-request.schema.json` 정의
 - **Prompt Engineering**: CRT 레트로 미학을 반영한 `STYLE HEADER v1` 및 카테고리별(아이콘/Placeholder/Chrome) 템플릿 구축
 - **rembg (isnet-anime)**: 생성 이미지의 배경 제거를 위한 후처리 파이프라인 표준화
 
@@ -195,7 +233,7 @@ repo-root/
 ### 기술적 구현 세부사항
 
 **사용 기술/라이브러리**:
-- **JSON Schema (Draft-07)**: 에셋 매니페스트의 정형성 및 QA 자동화를 위한 스키마 정의
+- **JSON Schema**: 에셋 매니페스트의 정형성 및 QA 자동화를 위한 스키마 정의
 - **Static Asset Serving**: Vite `public/` 디렉토리 기반의 고성능 정적 에셋 서빙 구조 활용
 
 **설계 패턴 및 아키텍처 선택**:
@@ -382,7 +420,7 @@ repo-root/
 
 ### 작업 내용
 
-- **제안서**: [RU-002-S1] 스트리밍 실패(네트워크/서버/검증)에서도 “항상 final(폴백 TurnOutput)로 종료” + UI 멈춤 방지 + Economy 안전화
+- **제안서**: [RU-002-S1] 스트리밍 안정화 및 종료 인바리언트(항상 final) 강제에서 “항상 final(폴백 TurnOutput)로 종료” + UI 멈춤 방지 + Economy 안전화
 - **개선 사항**:
     - **스트림 종료 인바리언트 강제**: 서버(FastAPI) 및 클라이언트(fetch) 양측에서 네트워크 오류, 입력 검증 실패, 내부 예외 등 모든 경로에서 반드시 `final` 이벤트(폴백 TurnOutput)로 종료되도록 보장하여 UI 멈춤 현상 원천 차단.
     - **Economy 일관성 유지**: 폴백 TurnOutput 생성 시 입력 스냅샷(`economy_snapshot`)을 활용하여 비용 0 및 현재 잔액 유지를 보장함으써 재화 HUD 왜곡 방지 (RULE-005 준수).

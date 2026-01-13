@@ -200,29 +200,21 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
 }
 
 // =============================================================================
-// UI 컨트롤 컴포넌트 (U-028: 가독성 패스)
+// UI 컨트롤 컴포넌트 (U-028→U-037: Readable 모드 제거, 스케일만 유지)
 // =============================================================================
 
 interface UIControlsProps {
   uiScale: UIScale;
-  readableMode: boolean;
   onIncreaseScale: () => void;
   onDecreaseScale: () => void;
-  onToggleReadable: () => void;
 }
 
-function UIControls({
-  uiScale,
-  readableMode,
-  onIncreaseScale,
-  onDecreaseScale,
-  onToggleReadable,
-}: UIControlsProps) {
+function UIControls({ uiScale, onIncreaseScale, onDecreaseScale }: UIControlsProps) {
   const isMinScale = uiScale === UI_SCALES[0];
   const isMaxScale = uiScale === UI_SCALES[UI_SCALES.length - 1];
 
   return (
-    <div className="ui-controls" role="group" aria-label="UI 가독성 설정">
+    <div className="ui-controls" role="group" aria-label="UI 스케일 설정">
       {/* UI 스케일 조절 */}
       <button
         type="button"
@@ -247,20 +239,6 @@ function UIControls({
       >
         A+
       </button>
-
-      <div className="ui-controls-separator" aria-hidden="true" />
-
-      {/* Readable 모드 토글 */}
-      <button
-        type="button"
-        className="readable-toggle-btn"
-        onClick={onToggleReadable}
-        aria-pressed={readableMode}
-        aria-label={readableMode ? 'Readable 모드 끄기' : 'Readable 모드 켜기'}
-        title="Readable 모드 (CRT 효과 완화)"
-      >
-        {readableMode ? '◉ READ' : '○ READ'}
-      </button>
     </div>
   );
 }
@@ -274,10 +252,8 @@ interface GameHeaderProps {
   memoryShard: number;
   isConnected: boolean;
   uiScale: UIScale;
-  readableMode: boolean;
   onIncreaseScale: () => void;
   onDecreaseScale: () => void;
-  onToggleReadable: () => void;
 }
 
 function GameHeader({
@@ -285,10 +261,8 @@ function GameHeader({
   memoryShard,
   isConnected,
   uiScale,
-  readableMode,
   onIncreaseScale,
   onDecreaseScale,
-  onToggleReadable,
 }: GameHeaderProps) {
   return (
     <header className="game-header has-chrome">
@@ -296,13 +270,11 @@ function GameHeader({
         UNKNOWN WORLD
       </h1>
       <div className="header-controls">
-        {/* UI 가독성 컨트롤 (U-028) */}
+        {/* UI 스케일 컨트롤 (U-028→U-037: Readable 제거) */}
         <UIControls
           uiScale={uiScale}
-          readableMode={readableMode}
           onIncreaseScale={onIncreaseScale}
           onDecreaseScale={onDecreaseScale}
-          onToggleReadable={onToggleReadable}
         />
         <div className="economy-hud">
           <span className="icon-wrapper signal-icon" aria-label="Signal">
@@ -317,7 +289,7 @@ function GameHeader({
             />
             <span className="icon-fallback">⚡</span>
           </span>
-          <span>Signal: {signal}</span>
+          <span className="currency-value">Signal: {signal}</span>
           <span className="icon-wrapper shard-icon" aria-label="Memory Shard">
             <img
               src="/ui/icons/shard-24.png"
@@ -330,7 +302,7 @@ function GameHeader({
             />
             <span className="icon-fallback">💎</span>
           </span>
-          <span>Shard: {memoryShard}</span>
+          <span className="currency-value">Shard: {memoryShard}</span>
         </div>
         <div className="connection-status">
           <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
@@ -375,14 +347,13 @@ function App() {
     narrativeBuffer,
   } = useAgentStore();
 
-  // UI Prefs Store (U-028: 가독성 패스)
-  const { uiScale, readableMode, increaseUIScale, decreaseUIScale, toggleReadableMode } =
-    useUIPrefsStore();
+  // UI Prefs Store (U-028→U-037: Readable 모드 제거)
+  const { uiScale, increaseUIScale, decreaseUIScale } = useUIPrefsStore();
 
-  // DOM에 UI 설정 적용 (U-028)
+  // DOM에 UI 설정 적용 (U-028→U-037)
   useEffect(() => {
-    applyUIPrefsToDOM({ uiScale, readableMode });
-  }, [uiScale, readableMode]);
+    applyUIPrefsToDOM({ uiScale });
+  }, [uiScale]);
 
   // 취소 함수 ref
   const cancelStreamRef = useRef<(() => void) | null>(null);
@@ -534,10 +505,8 @@ function App() {
           memoryShard={economy.memory_shard}
           isConnected={isConnected}
           uiScale={uiScale}
-          readableMode={readableMode}
           onIncreaseScale={increaseUIScale}
           onDecreaseScale={decreaseUIScale}
-          onToggleReadable={toggleReadableMode}
         />
 
         {/* Sidebar Left: Inventory / Quest / Rule Board */}

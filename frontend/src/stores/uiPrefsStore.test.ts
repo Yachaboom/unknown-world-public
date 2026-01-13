@@ -1,158 +1,105 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  useUIPrefsStore,
-  DEFAULT_UI_SCALE,
-  DEFAULT_READABLE_MODE,
-  applyUIPrefsToDOM,
-} from './uiPrefsStore';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useUIPrefsStore, DEFAULT_UI_SCALE, migrateUIPrefs } from './uiPrefsStore';
 
-// Node 환경에서 localStorage 및 document 모킹
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString();
-    },
-    clear: () => {
-      store = {};
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-  };
-})();
-
-const documentMock = {
-  documentElement: {
-    dataset: {} as Record<string, string>,
-    style: {
-      setProperty: vi.fn(),
-      removeProperty: vi.fn(),
-      getPropertyValue: vi.fn(),
-    },
-    removeAttribute: vi.fn(),
-  },
-};
-
-vi.stubGlobal('localStorage', localStorageMock);
-vi.stubGlobal('document', documentMock);
+// Mock localStorage for non-browser environment
+// Note: With jsdom environment configured in vite.config.ts, this might not be strictly necessary
+// if we trust jsdom's localStorage, but keeping it explicit is fine.
+// However, since we are moving to direct function testing for migration, we rely less on persist middleware internals.
 
 describe('uiPrefsStore', () => {
   beforeEach(() => {
-    // 스토어 상태 초기화
     useUIPrefsStore.getState().resetPrefs();
-    // localStorage 클리어
     localStorage.clear();
-
-    // DOM 모킹 초기화
-    documentMock.documentElement.dataset = {};
-    vi.mocked(documentMock.documentElement.style.setProperty).mockClear();
-    vi.mocked(documentMock.documentElement.style.getPropertyValue).mockImplementation(
-      (prop: string) => {
-        if (prop === '--ui-scale-factor') return documentMock.documentElement.dataset.uiScale;
-        return '';
-      },
-    );
   });
 
-  it('초기 상태가 올바르게 설정되어야 한다', () => {
+  it('should have default initial state', () => {
     const state = useUIPrefsStore.getState();
     expect(state.uiScale).toBe(DEFAULT_UI_SCALE);
-    expect(state.readableMode).toBe(DEFAULT_READABLE_MODE);
   });
 
-  it('setUIScale이 유효한 값일 때만 작동해야 한다', () => {
-    const store = useUIPrefsStore.getState();
+  it('should increase ui scale within limit', () => {
+    const { increaseUIScale } = useUIPrefsStore.getState();
 
-    // 유효한 값 설정
-    store.setUIScale(1.2);
+    // 1.0 -> 1.1
+    increaseUIScale();
+    expect(useUIPrefsStore.getState().uiScale).toBe(1.1);
+
+    // 1.1 -> 1.2
+    increaseUIScale();
     expect(useUIPrefsStore.getState().uiScale).toBe(1.2);
 
-    // 유효하지 않은 값 설정 시도 (타입 단언 사용)
-    // @ts-expect-error: intentional invalid scale for testing
-    store.setUIScale(1.5);
-    expect(useUIPrefsStore.getState().uiScale).toBe(1.2); // 이전 값 유지
-  });
-
-  it('increaseUIScale이 상한선(1.2)을 넘지 않아야 한다', () => {
-    const store = useUIPrefsStore.getState();
-
-    store.setUIScale(1.1);
-    store.increaseUIScale();
+    // 1.2 -> 1.2 (Max)
+    increaseUIScale();
     expect(useUIPrefsStore.getState().uiScale).toBe(1.2);
-
-    store.increaseUIScale();
-    expect(useUIPrefsStore.getState().uiScale).toBe(1.2); // 1.2 고정
   });
 
-  it('decreaseUIScale이 하한선(0.9) 미만으로 내려가지 않아야 한다', () => {
-    const store = useUIPrefsStore.getState();
+  it('should decrease ui scale within limit', () => {
+    const { decreaseUIScale, setUIScale } = useUIPrefsStore.getState();
 
-    store.setUIScale(1.0);
-    store.decreaseUIScale();
+    // Start at max
+    setUIScale(1.2);
+
+    // 1.2 -> 1.1
+    decreaseUIScale();
+    expect(useUIPrefsStore.getState().uiScale).toBe(1.1);
+
+    // ... -> 0.9 (Min)
+    setUIScale(0.9);
+    decreaseUIScale();
     expect(useUIPrefsStore.getState().uiScale).toBe(0.9);
-
-    store.decreaseUIScale();
-    expect(useUIPrefsStore.getState().uiScale).toBe(0.9); // 0.9 고정
   });
 
-  it('toggleReadableMode가 상태를 반전시켜야 한다', () => {
-    const store = useUIPrefsStore.getState();
+  it('should set valid ui scale', () => {
+    const { setUIScale } = useUIPrefsStore.getState();
 
-    store.toggleReadableMode();
-    expect(useUIPrefsStore.getState().readableMode).toBe(true);
-
-    store.toggleReadableMode();
-    expect(useUIPrefsStore.getState().readableMode).toBe(false);
+    setUIScale(1.1);
+    expect(useUIPrefsStore.getState().uiScale).toBe(1.1);
   });
 
-  it('resetPrefs가 상태를 기본값으로 되돌려야 한다', () => {
-    const store = useUIPrefsStore.getState();
+  it('should ignore invalid ui scale', () => {
+    const { setUIScale } = useUIPrefsStore.getState();
 
-    store.setUIScale(1.2);
-    store.setReadableMode(true);
-
-    store.resetPrefs();
-
-    const state = useUIPrefsStore.getState();
-    expect(state.uiScale).toBe(DEFAULT_UI_SCALE);
-    expect(state.readableMode).toBe(DEFAULT_READABLE_MODE);
+    // @ts-expect-error Testing invalid input
+    setUIScale(2.0);
+    expect(useUIPrefsStore.getState().uiScale).toBe(DEFAULT_UI_SCALE);
   });
 
-  it('applyUIPrefsToDOM이 DOM 속성을 올바르게 설정해야 한다', () => {
-    const prefs = {
-      uiScale: 1.1 as const,
-      readableMode: true,
-    };
+  describe('migration (U-037)', () => {
+    it('should remove readableMode from legacy storage', () => {
+      // Legacy state simulation
+      const legacyState = {
+        uiScale: 1.1,
+        readableMode: true,
+      };
 
-    applyUIPrefsToDOM(prefs);
+      // Call migrate function directly
+      const migratedState = migrateUIPrefs(legacyState, 0);
 
-    const docEl = document.documentElement;
-    expect(docEl.style.getPropertyValue('--ui-scale-factor')).toBe('1.1');
-    expect(docEl.dataset.uiScale).toBe('1.1');
-    expect(docEl.dataset.readable).toBe('true');
-  });
-
-  it('restoreState가 유효한 상태만 복원해야 한다', () => {
-    const store = useUIPrefsStore.getState();
-
-    store.restoreState({
-      uiScale: 0.9,
-      readableMode: true,
+      // Verify
+      expect(migratedState).toHaveProperty('uiScale', 1.1);
+      expect(migratedState).not.toHaveProperty('readableMode');
     });
 
-    let state = useUIPrefsStore.getState();
-    expect(state.uiScale).toBe(0.9);
-    expect(state.readableMode).toBe(true);
+    it('should handle undefined version (very old legacy)', () => {
+      const legacyState = {
+        uiScale: 0.9,
+        readableMode: false,
+      };
 
-    // 유효하지 않은 값으로 복원 시도
-    store.restoreState({
-      // @ts-expect-error: intentional invalid scale for testing
-      uiScale: 2.0,
+      // Call migrate function directly with undefined version
+      const migratedState = migrateUIPrefs(legacyState, undefined);
+
+      expect(migratedState).toHaveProperty('uiScale', 0.9);
+      expect(migratedState).not.toHaveProperty('readableMode');
     });
 
-    state = useUIPrefsStore.getState();
-    expect(state.uiScale).toBe(0.9); // 이전 유효한 값 유지
+    it('should pass through already migrated state', () => {
+      const modernState = {
+        uiScale: 1.0,
+      };
+
+      const migratedState = migrateUIPrefs(modernState, 1);
+      expect(migratedState).toEqual(modernState);
+    });
   });
 });

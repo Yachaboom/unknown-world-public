@@ -30,6 +30,8 @@
 
   /* 타이포그래피 */
   --font-main: 'NeoDunggeunmo', 'VT323', monospace;
+  --font-micro-en:
+    'Share Tech Mono', 'Consolas', monospace; /* U-037: 영문 마이크로 텍스트 가독성 */
   --font-size-base: 16px;
   --font-size-lg: 1.2rem;
   --font-size-xl: 1.5rem;
@@ -115,8 +117,37 @@ body {
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
   background-size: 100% 4px;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 9999; /* 최상단 배치 (로고/헤더 등 일반 요소 덮음) */
   animation: flicker 0.15s infinite;
+}
+
+/* 
+ * U-037: 중요도 기반 레이어링
+ * - Critical: 오버레이(9999) 위로 뚫고 올라와 선명하게 표시
+ * - Ambient: 오버레이 아래에 위치하여 CRT 분위기 적용
+ */
+
+/* Critical 보호 레이어 (오버레이 위) */
+[data-ui-importance='critical'],
+.ui-critical,
+.phase-item,
+.currency-value,
+.action-card-cost,
+.agent-error {
+  position: relative;
+  z-index: 10000;
+}
+
+/* Ambient 분위기 레이어 (오버레이 아래) */
+.game-title,
+.panel-header,
+.action-card-title {
+  position: relative;
+  z-index: 1; /* 9999 오버레이보다 아래 */
+}
+
+#root {
+  min-height: 100vh;
 }
 
 /* 플리커(깜빡임) 애니메이션 */
@@ -455,19 +486,6 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-/* Readable 모드에서 placeholder 대비 향상 (U-028 연동) */
-html[data-readable='true'] .scene-placeholder {
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
-html[data-readable='true'] .scene-canvas.scene-status-loading .scene-placeholder {
-  animation: none;
-}
-
-html[data-readable='true'] .scene-canvas.scene-status-offline::before {
-  display: none;
 }
 
 /* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
@@ -837,38 +855,127 @@ button:disabled,
   padding: var(--spacing-xs);
 }
 
-.phase-queue .queue-label {
-  font-size: 0.625rem;
+.phase-queue .queue-label,
+.badges-panel .badges-label,
+.repair-trace .repair-label {
+  font-size: 0.75rem; /* 12px로 상향 */
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-  margin-bottom: var(--spacing-xs);
+  letter-spacing: 2px;
+  color: #33ff00; /* 순수 인광 녹색으로 고정 */
+  opacity: 1; /* 투명도 제거하여 최대 밝기 */
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600; /* 더 굵게 */
+  text-shadow: 0 0 5px rgba(51, 255, 0, 0.4); /* 미세 글로우로 강조 */
+}
+
+.badges-panel .badges-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px; /* 간격 상향 */
+  width: 100%;
 }
 
 .phase-queue .queue-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4열 배치 강제 */
+  gap: 6px;
+  width: 100%;
 }
 
+/* U-037: Phase Item 식별성 극대화 */
 .phase-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  background-color: rgba(0, 0, 0, 0.3);
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 2px;
+  background-color: rgba(0, 20, 0, 0.95); /* 배경 더 어둡게 */
   border: 1px solid var(--text-dim);
-  font-size: 0.625rem;
+  border-radius: 2px;
+  font-family: var(--font-micro-en);
+  font-size: 0.8125rem; /* 13px로 상향 */
+  font-weight: 600; /* 더 굵게 */
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
 }
 
+/* 텍스트 선명도 및 글로우 최적화 (번짐 방지) */
+.phase-item > * {
+  position: relative;
+  z-index: 2;
+  text-shadow: none !important; /* 번짐 방지를 위해 그림자 제거 */
+  filter: drop-shadow(0 0 1px rgba(51, 255, 0, 0.3)); /* 미세 테두리 */
+  opacity: 1 !important;
+}
+
+/* 상태별 색상 대비 상향 */
 .phase-item.pending {
-  color: var(--text-dim);
-  border-color: var(--text-dim);
+  color: #88ff88 !important; /* 더 밝은 녹색 */
+  border-color: rgba(51, 255, 0, 0.4);
+}
+
+.phase-item.in_progress,
+.phase-item.in-progress {
+  color: #ff00ff !important;
+  border-color: #ff00ff;
+  background-color: rgba(30, 0, 30, 0.95);
+  box-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
+}
+
+/* 씬 플레이스홀더 서브 메시지 가독성 (Critical) */
+.scene-status-message {
+  color: var(--text-color) !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 1) !important;
+  font-size: 0.9375rem !important; /* 15px로 상향 */
+  font-weight: 500 !important;
+  margin-top: var(--spacing-sm);
+  z-index: 10;
+  position: relative;
+}
+
+/* 씬 플레이스홀더 서브 메시지 보호 */
+.scene-placeholder .status-sub {
+  color: var(--text-color);
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 1);
+  font-size: var(--font-size-sm);
+}
+
+/* Scene Canvas는 여전히 강력한 CRT 분위기 유지 (Q2: Option A) */
+.scene-canvas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 5;
+  animation: flicker 0.15s infinite;
+}
+
+/* Economy HUD 및 기타 Critical 텍스트 보호 */
+.currency-value,
+.action-card-cost {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-micro-en);
+  text-shadow: 0 0 2px rgba(51, 255, 0, 0.3);
+}
+
+/* U-037: pending 상태 - 밝은 색상 + 배경 대비 */
+.phase-item.pending {
+  color: var(--text-color);
+  background-color: rgba(0, 20, 0, 0.5);
+  border-color: rgba(51, 255, 0, 0.3);
+  opacity: 0.8;
 }
 
 .phase-item.in_progress,
 .phase-item.in-progress {
   color: var(--accent-color);
+  background-color: rgba(40, 0, 40, 0.5);
   border-color: var(--accent-color);
   box-shadow: 0 0 5px var(--accent-color);
   animation: pulse 1s infinite;
@@ -876,11 +983,13 @@ button:disabled,
 
 .phase-item.completed {
   color: var(--text-color);
+  background-color: rgba(0, 30, 0, 0.5);
   border-color: var(--text-color);
 }
 
 .phase-item.failed {
   color: var(--error-color);
+  background-color: rgba(40, 0, 0, 0.5);
   border-color: var(--error-color);
 }
 
@@ -920,46 +1029,34 @@ button:disabled,
 }
 
 .badges-panel .badges-empty {
-  color: var(--text-dim);
-  font-size: 0.625rem;
+  color: var(--text-color);
+  font-size: 0.8125rem; /* 13px로 상향 */
+  font-weight: 500;
   text-align: center;
-  padding: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 1);
+  position: relative;
+  z-index: 2;
 }
 
-.badges-panel .badges-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-}
-
+/* 배지 그리드 가독성 상향 (U-037) */
 .badge-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2px 4px;
-  background-color: rgba(0, 0, 0, 0.3);
+  padding: 4px 6px;
+  background-color: rgba(0, 20, 0, 0.9);
   border: 1px solid var(--text-dim);
-  font-size: 0.625rem;
-}
-
-.badge-item.badge-ok {
-  border-color: var(--text-color);
-}
-
-.badge-item.badge-ok .badge-status {
-  color: var(--text-color);
-}
-
-.badge-item.badge-fail {
-  border-color: var(--error-color);
-}
-
-.badge-item.badge-fail .badge-status {
-  color: var(--error-color);
+  font-family: var(--font-micro-en);
+  font-size: 0.75rem;
+  z-index: 2;
+  position: relative;
 }
 
 .badge-label {
-  color: var(--text-dim);
+  color: var(--text-color);
+  opacity: 0.8;
 }
 
 .badge-status {
@@ -1122,62 +1219,122 @@ button:disabled,
 }
 
 /* ============================================
-   21. Readable 모드 (U-028: 가독성 패스)
-   - CRT 효과 완화, 대비 향상, 마이크로 텍스트 상향
+   21. 중요도 기반 레이어링 (U-037: critical/ambient)
+   - critical: 어두운 배경/패널 내부의 작은 텍스트 (마이크로 텍스트)
+   - ambient: 분위기/장식, 로고/타이틀/패널 헤더 (기본 스타일)
+   - Scene Canvas 중심으로 CRT 분위기 집중 (Q2: Option A)
    ============================================ */
 
-/* Readable 모드: CRT 오버레이 숨김 */
-html[data-readable='true'] .crt-overlay {
-  display: none;
+/*
+ * Critical 영역 기준 (U-037 재정의):
+ * - 박스/패널 내부 콘텐츠 (어두운 배경 위 텍스트)
+ * - 마이크로 텍스트 (0.75rem 이하: 배지, 비용, 타임스탬프 등)
+ * - 배경색이 다양할 수 있는 영역 (에러 박스 등)
+ *
+ * Non-Critical (기본 스타일):
+ * - 로고/타이틀 (UNKNOWN WORLD) - 충분히 크고 밝음
+ * - 패널 헤더/라벨 (INVENTORY, QUEST 등) - 밝은 배경
+ * - 액션 카드 제목 (탐색하기 등) - 충분히 큰 폰트
+ */
+
+/* Critical 영역: 패널 내부 작은 텍스트 가독성 보장 */
+[data-ui-importance='critical'],
+.ui-critical {
+  /* 텍스트 대비 강화 - 어두운 배경에서 읽힘 보장 */
+  color: var(--text-color);
+  text-shadow:
+    0 0 2px var(--text-color),
+    0 1px 1px rgba(0, 0, 0, 0.9);
 }
 
-/* Readable 모드: 글로우/텍스트 쉐도우 완화 */
-html[data-readable='true'] body {
-  text-shadow: none;
+/* Critical 영역 내 보조 텍스트(dim)도 가독성 보장 */
+[data-ui-importance='critical'] .text-dim,
+.ui-critical .text-dim {
+  color: var(--text-dim);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
 }
 
-html[data-readable='true'] .text-glow {
-  text-shadow: none;
-}
-
-/* Readable 모드: 글리치 효과 비활성화 */
-html[data-readable='true'] .glitch::before,
-html[data-readable='true'] .glitch::after {
-  display: none;
-}
-
-/* Readable 모드: 배경 대비 향상 */
-html[data-readable='true'] {
-  --panel-bg: rgba(0, 30, 0, 0.5);
-  --text-dim: #2aaa00; /* 보조 텍스트 밝기 상향 */
-}
-
-/* Readable 모드: 입력창 글로우 제거 */
-html[data-readable='true'] .command-input {
-  text-shadow: none;
-}
-
-/* Readable 모드: 상태 표시기 펄스 완화 */
-html[data-readable='true'] .status-indicator {
-  animation: none;
-  opacity: 1;
-}
-
-/* Readable 모드: 스트리밍 상태 펄스 완화 */
-html[data-readable='true'] .streaming-status .status-dot.active {
-  animation: none;
-}
-
-/* Readable 모드: 단계 아이템 펄스 완화 */
-html[data-readable='true'] .phase-item.in_progress,
-html[data-readable='true'] .phase-item.in-progress {
-  animation: none;
+/* Ambient 영역: CRT 분위기 허용 (기본값) */
+[data-ui-importance='ambient'],
+.ui-ambient {
+  /* 기본 CRT 스타일 유지 - 로고/타이틀/패널 헤더 */
 }
 
 /* ============================================
-   22. 마이크로 텍스트 가독성 상향 (U-028)
+   21.1 마이크로 텍스트 Critical 적용 (작은 폰트)
+   - 0.75rem 이하 텍스트는 자동 Critical
+   ============================================ */
+
+/* Action Card 비용/위험 정보 (작은 텍스트, 어두운 카드 배경) */
+.action-card-cost {
+  text-shadow:
+    0 0 2px currentColor,
+    0 1px 1px rgba(0, 0, 0, 0.9);
+}
+
+/* 에러/차단 메시지 (배경색 다양, 중요 정보) */
+.agent-error {
+  text-shadow:
+    0 0 2px var(--error-color),
+    0 1px 1px rgba(0, 0, 0, 0.9);
+}
+
+/* 배지 상태 텍스트 (작은 폰트, 패널 내부) */
+.badge-status {
+  text-shadow: 0 0 1px currentColor;
+}
+
+/* 내러티브 타임스탬프 (작은 폰트) */
+.narrative-timestamp {
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+}
+
+/* 복구 트레이스 (작은 폰트, 경고 정보) */
+.repair-trace .repair-count {
+  text-shadow: 0 0 2px var(--warning-color);
+}
+
+/* ============================================
+   21.1 Scene Canvas 중심 CRT 분위기 (Q2: Option A)
+   - 전역 오버레이 대신 Scene Canvas에 효과 집중
+   ============================================ */
+
+/* 전역 CRT 오버레이: 강도 약화 (critical 영역 보호) */
+.crt-overlay {
+  opacity: 0.3;
+  /* 기존 애니메이션 유지하되 강도 낮춤 */
+}
+
+/* Scene Canvas: CRT 분위기 강화 (ambient 영역) */
+.scene-canvas {
+  position: relative;
+}
+
+.scene-canvas::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 1;
+  animation: flicker 0.15s infinite;
+  opacity: 0.7;
+}
+
+/* Scene Canvas placeholder는 분위기 유지하면서 텍스트 읽힘 보장 */
+.scene-placeholder {
+  position: relative;
+  z-index: 2;
+}
+
+/* ============================================
+   22. 마이크로 텍스트 가독성 상향 (U-028→U-037)
    - 0.625rem → --font-size-xs (0.75rem)
-   - 0.75rem → --font-size-sm (0.875rem) (Readable 모드)
+   - Critical 영역은 자동 가독성 보장
    ============================================ */
 
 /* Agent Console 기본 폰트 상향 */
@@ -1237,27 +1394,98 @@ html[data-readable='true'] .phase-item.in-progress {
   font-size: calc(var(--font-size-xs) * 0.7);
 }
 
-/* Readable 모드: 마이크로 텍스트 추가 상향 */
-html[data-readable='true'] .agent-console-content {
-  font-size: var(--font-size-sm);
-}
+/* ============================================
+   22.1 접근성 가드 (U-037: prefers-reduced-motion)
+   - 광과민/피로 방지를 위한 자동 완화
+   ============================================ */
 
-html[data-readable='true'] .phase-queue .queue-label,
-html[data-readable='true'] .phase-item,
-html[data-readable='true'] .badges-panel .badges-label,
-html[data-readable='true'] .badges-panel .badges-empty,
-html[data-readable='true'] .badge-item,
-html[data-readable='true'] .repair-trace,
-html[data-readable='true'] .agent-error {
-  font-size: var(--font-size-xs);
-}
+@media (prefers-reduced-motion: reduce) {
+  /* 플리커 애니메이션 비활성화 */
+  .crt-overlay {
+    animation: none;
+    opacity: 0.15;
+  }
 
-html[data-readable='true'] .narrative-timestamp {
-  font-size: var(--font-size-sm);
+  .scene-canvas::after {
+    animation: none;
+    opacity: 0.3;
+  }
+
+  /* 글리치 효과 비활성화 */
+  .glitch::before,
+  .glitch::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  /* 펄스 애니메이션 비활성화 */
+  .status-indicator {
+    animation: none;
+  }
+
+  .streaming-status .status-dot.active {
+    animation: none;
+  }
+
+  .phase-item.in_progress,
+  .phase-item.in-progress {
+    animation: none;
+  }
+
+  /* 로딩 펄스 비활성화 */
+  .scene-canvas.scene-status-loading .scene-placeholder {
+    animation: none;
+  }
+
+  /* 스태틱 노이즈 비활성화 */
+  .scene-canvas.scene-status-offline::before {
+    animation: none;
+    opacity: 0.2;
+  }
+
+  /* 커서 깜빡임 정적 표시 */
+  .cursor-blink {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* 스핀 애니메이션 비활성화 */
+  .phase-icon.in-progress {
+    animation: none;
+  }
 }
 
 /* ============================================
-   23. UI 스케일 컨트롤 버튼 스타일 (U-028)
+   22.2 고대비 모드 지원 (prefers-contrast)
+   ============================================ */
+
+@media (prefers-contrast: more) {
+  /* Critical 텍스트 대비 추가 상향 */
+  [data-ui-importance='critical'],
+  .ui-critical,
+  .economy-hud,
+  .action-card-title,
+  .action-card-cost {
+    text-shadow:
+      0 0 4px var(--text-color),
+      0 2px 2px rgba(0, 0, 0, 1);
+  }
+
+  /* 배경 대비 강화 */
+  .panel-content,
+  .narrative-feed {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
+
+  /* 테두리 대비 강화 */
+  .panel,
+  .action-card {
+    border-width: 2px;
+  }
+}
+
+/* ============================================
+   23. UI 스케일 컨트롤 버튼 스타일 (U-028→U-037)
    ============================================ */
 
 .ui-controls {
@@ -1266,8 +1494,7 @@ html[data-readable='true'] .narrative-timestamp {
   gap: var(--spacing-xs);
 }
 
-.ui-scale-btn,
-.readable-toggle-btn {
+.ui-scale-btn {
   background: transparent;
   color: var(--text-color);
   border: 1px solid var(--text-dim);
@@ -1284,8 +1511,7 @@ html[data-readable='true'] .narrative-timestamp {
   text-align: center;
 }
 
-.ui-scale-btn:hover,
-.readable-toggle-btn:hover {
+.ui-scale-btn:hover {
   border-color: var(--accent-color);
   color: var(--accent-color);
 }
@@ -1300,30 +1526,11 @@ html[data-readable='true'] .narrative-timestamp {
   color: var(--text-dim);
 }
 
-.readable-toggle-btn[aria-pressed='true'] {
-  background: var(--text-color);
-  color: var(--bg-color);
-  border-color: var(--text-color);
-}
-
-.readable-toggle-btn[aria-pressed='true']:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
 .ui-scale-display {
   font-size: var(--font-size-xs);
   color: var(--text-dim);
   min-width: 32px;
   text-align: center;
-}
-
-.ui-controls-separator {
-  width: 1px;
-  height: 16px;
-  background: var(--text-dim);
-  margin: 0 var(--spacing-xs);
 }
 
 /* ============================================
@@ -1500,21 +1707,26 @@ html[data-readable='true'] .narrative-timestamp {
   filter: drop-shadow(0 0 10px var(--accent-color));
 }
 
-/* Readable 모드: Chrome 완화/제거 */
-html[data-readable='true'] .game-header.has-chrome::before,
-html[data-readable='true'] .game-header.has-chrome::after,
-html[data-readable='true'] .panel-header.has-chrome::before,
-html[data-readable='true'] .panel-header.has-chrome::after,
-html[data-readable='true'] .panel.has-chrome .panel-content::before,
-html[data-readable='true'] .panel.has-chrome .panel-content::after {
-  opacity: 0.3;
-  filter: none;
-}
+/* reduced-motion: Chrome 효과 완화 */
+@media (prefers-reduced-motion: reduce) {
+  .game-header.has-chrome::before,
+  .game-header.has-chrome::after,
+  .panel-header.has-chrome::before,
+  .panel-header.has-chrome::after,
+  .panel.has-chrome .panel-content::before,
+  .panel.has-chrome .panel-content::after {
+    filter: none;
+  }
 
-html[data-readable='true'] .action-card.has-chrome::before,
-html[data-readable='true'] .scanner-slot.has-chrome::before {
-  opacity: 0.4;
-  filter: none;
+  .action-card.has-chrome::before,
+  .scanner-slot.has-chrome::before {
+    filter: none;
+  }
+
+  .action-card.has-chrome:hover::before,
+  .scanner-slot.has-chrome:hover::before {
+    filter: none;
+  }
 }
 
 /* Chrome 폴백: 이미지 로딩 실패 시 CSS 테두리로 대체 */

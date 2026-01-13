@@ -209,10 +209,12 @@ function StreamingStatus() {
  *
  * Plan/Queue/Badges/Auto-repair를 실시간으로 표시합니다.
  * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
+ *
+ * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
  */
 export function AgentConsole() {
   return (
-    <div className="agent-console-content">
+    <div className="agent-console-content" data-ui-importance="critical">
       <StreamingStatus />
       <PhaseQueue />
       <BadgesPanel />

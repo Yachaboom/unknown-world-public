@@ -84,7 +84,7 @@ export function SceneCanvas({ state }: SceneCanvasProps) {
             {t(placeholder.labelKey)}
           </p>
           {(message || (status === 'scene' && imageError)) && (
-            <p className="text-dim scene-status-message" style={{ fontSize: '0.875rem' }}>
+            <p className="scene-status-message">
               {message || (imageError ? t('scene.status.image_error') : '')}
             </p>
           )}

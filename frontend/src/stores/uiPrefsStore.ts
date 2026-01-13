@@ -1,12 +1,11 @@
 /**
  * Unknown World - UI 설정 상태 관리 (Zustand + persist).
  *
- * UI 가독성 관련 설정(스케일/Readable 모드)을 저장하고,
- * SaveGame 구조와 통합 가능하도록 직렬화 인터페이스를 제공합니다.
+ * UI 스케일 설정을 저장하고, SaveGame 구조와 통합 가능하도록 직렬화 인터페이스를 제공합니다.
  *
  * 설계 원칙:
  *   - PRD 9.4: 가독성(필수) - 전역 UI 스케일 조절 제공
- *   - PRD 9.5: Readable 모드 - CRT 효과 완화 토글
+ *   - U-037: Readable 모드 제거 → critical/ambient 중요도 기반 스타일로 대체
  *   - Q1 결정: Option B (SaveGame에 포함) - persist + 직렬화
  *
  * @module stores/uiPrefsStore
@@ -26,9 +25,6 @@ export type UIScale = (typeof UI_SCALES)[number];
 /** 기본 UI 스케일 */
 export const DEFAULT_UI_SCALE: UIScale = 1.0;
 
-/** 기본 Readable 모드 */
-export const DEFAULT_READABLE_MODE = false;
-
 /** localStorage 키 (SaveGame 통합 시에도 사용 가능) */
 export const UI_PREFS_STORAGE_KEY = 'unknown-world-ui-prefs';
 
@@ -46,13 +42,6 @@ export interface UIPrefsState {
    * - 1.2: 큰 UI (가독성 우선)
    */
   uiScale: UIScale;
-
-  /**
-   * Readable 모드
-   * - true: 스캔라인/플리커/글로우 완화, 대비 향상
-   * - false: 기본 CRT 효과 유지
-   */
-  readableMode: boolean;
 }
 
 /** UI 설정 액션 */
@@ -65,12 +54,6 @@ export interface UIPrefsActions {
 
   /** UI 스케일 감소 (최소 0.9) */
   decreaseUIScale: () => void;
-
-  /** Readable 모드 토글 */
-  toggleReadableMode: () => void;
-
-  /** Readable 모드 설정 */
-  setReadableMode: (enabled: boolean) => void;
 
   /** 설정 초기화 */
   resetPrefs: () => void;
@@ -98,7 +81,6 @@ export type UIPrefsStore = UIPrefsState & UIPrefsActions;
 function createInitialState(): UIPrefsState {
   return {
     uiScale: DEFAULT_UI_SCALE,
-    readableMode: DEFAULT_READABLE_MODE,
   };
 }
 
@@ -120,6 +102,25 @@ function getScaleIndex(scale: UIScale): number {
   return UI_SCALES.indexOf(scale);
 }
 
+/**
+ * U-037: legacy 저장값(readableMode) 마이그레이션/무시
+ * @internal exported for testing
+ */
+export function migrateUIPrefs(persistedState: unknown, version: number | undefined): UIPrefsState {
+  // version 0 또는 undefined에서 version 1로 마이그레이션
+  // readableMode 필드가 있으면 제거
+  if (version === 0 || version === undefined) {
+    const state = persistedState as Record<string, unknown>;
+    // readableMode 필드 제거 (무시)
+    if ('readableMode' in state) {
+      const { readableMode: _, ...rest } = state;
+      return { ...rest, uiScale: state.uiScale ?? DEFAULT_UI_SCALE } as UIPrefsState;
+    }
+    return { ...state, uiScale: state.uiScale ?? DEFAULT_UI_SCALE } as UIPrefsState;
+  }
+  return persistedState as UIPrefsState;
+}
+
 // =============================================================================
 // Zustand Store with persist
 // =============================================================================
@@ -127,16 +128,18 @@ function getScaleIndex(scale: UIScale): number {
 /**
  * UI 설정 스토어.
  *
+ * U-037: Readable 모드 제거됨. CRT 효과는 critical/ambient 중요도 기반으로 자동 적용됩니다.
+ *
  * @example
  * ```tsx
  * // 컴포넌트에서 사용
- * const { uiScale, readableMode, setUIScale, toggleReadableMode } = useUIPrefsStore();
+ * const { uiScale, setUIScale } = useUIPrefsStore();
  *
  * // DOM 적용 (App.tsx에서)
  * useEffect(() => {
  *   document.documentElement.dataset.uiScale = uiScale.toString();
- *   document.documentElement.dataset.readable = readableMode.toString();
- * }, [uiScale, readableMode]);
+ *   document.documentElement.style.setProperty('--ui-scale-factor', uiScale.toString());
+ * }, [uiScale]);
  * ```
  */
 export const useUIPrefsStore = create<UIPrefsStore>()(
@@ -164,21 +167,13 @@ export const useUIPrefsStore = create<UIPrefsStore>()(
         set({ uiScale: UI_SCALES[prevIndex] });
       },
 
-      toggleReadableMode: () => {
-        set((state) => ({ readableMode: !state.readableMode }));
-      },
-
-      setReadableMode: (enabled) => {
-        set({ readableMode: enabled });
-      },
-
       resetPrefs: () => {
         set(createInitialState());
       },
 
       getSerializableState: () => {
-        const { uiScale, readableMode } = get();
-        return { uiScale, readableMode };
+        const { uiScale } = get();
+        return { uiScale };
       },
 
       restoreState: (state) => {
@@ -186,10 +181,6 @@ export const useUIPrefsStore = create<UIPrefsStore>()(
 
         if (state.uiScale !== undefined && isValidScale(state.uiScale)) {
           updates.uiScale = state.uiScale;
-        }
-
-        if (state.readableMode !== undefined) {
-          updates.readableMode = state.readableMode;
         }
 
         if (Object.keys(updates).length > 0) {
@@ -203,8 +194,10 @@ export const useUIPrefsStore = create<UIPrefsStore>()(
       // 직렬화할 필드 지정 (액션 제외)
       partialize: (state) => ({
         uiScale: state.uiScale,
-        readableMode: state.readableMode,
       }),
+      // U-037: legacy 저장값(readableMode) 마이그레이션/무시
+      version: 1,
+      migrate: migrateUIPrefs,
     },
   ),
 );
@@ -215,9 +208,6 @@ export const useUIPrefsStore = create<UIPrefsStore>()(
 
 /** UI 스케일 셀렉터 */
 export const selectUIScale = (state: UIPrefsStore) => state.uiScale;
-
-/** Readable 모드 셀렉터 */
-export const selectReadableMode = (state: UIPrefsStore) => state.readableMode;
 
 // =============================================================================
 // DOM 적용 헬퍼
@@ -233,17 +223,9 @@ export function applyUIScaleToDOM(scale: UIScale): void {
 }
 
 /**
- * Readable 모드 적용
- * 호출 시 html 요소에 data-readable 속성 설정
- */
-export function applyReadableModeToDOM(enabled: boolean): void {
-  document.documentElement.dataset.readable = enabled.toString();
-}
-
-/**
  * 전체 UI 설정 DOM 적용
+ * U-037: readableMode 제거됨 - 스케일만 적용
  */
 export function applyUIPrefsToDOM(state: UIPrefsState): void {
   applyUIScaleToDOM(state.uiScale);
-  applyReadableModeToDOM(state.readableMode);
 }
