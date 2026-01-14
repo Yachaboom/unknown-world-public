@@ -152,7 +152,7 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
           <div className="action-card-cost">
             <span className="icon-wrapper" aria-label="Signal cost">
               <img
-                src="/ui/icons/signal-24.png"
+                src="/ui/icons/signal-16.png"
                 alt=""
                 aria-hidden="true"
                 className="icon-img"
@@ -167,7 +167,7 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
                 {' | '}
                 <span className="icon-wrapper" aria-label="Shard cost">
                   <img
-                    src="/ui/icons/shard-24.png"
+                    src="/ui/icons/shard-16.png"
                     alt=""
                     aria-hidden="true"
                     className="icon-img"

@@ -30,12 +30,21 @@ D:\Dev\unknown-world\
 │   │       │   ├── card-frame.png
 │   │       │   ├── panel-corner-br.png
 │   │       │   └── scanner-frame.png
-│   │       ├── icons/      # UI 아이콘 세트 (24px/16px) (U-029)
+│   │       ├── icons/      # UI 아이콘 세트 (24px/16px) (U-038)
 │   │       │   ├── badge-fail-24.png
+│   │       │   ├── badge-ok-16.png
 │   │       │   ├── badge-ok-24.png
+│   │       │   ├── risk-high-16.png
 │   │       │   ├── risk-high-24.png
+│   │       │   ├── risk-low-16.png
+│   │       │   ├── risk-low-24.png
+│   │       │   ├── risk-medium-16.png
+│   │       │   ├── risk-medium-24.png
+│   │       │   ├── shard-16.png
 │   │       │   ├── shard-24.png
-│   │       │   └── signal-24.png
+│   │       │   ├── signal-16.png
+│   │       │   ├── signal-24.png
+│   │       │   └── status-online-16.png
 │       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
 │           ├── scene-placeholder-default.png
 │           ├── scene-loading.webp
@@ -162,6 +171,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 - **Dev-only 제작**: `nanobanana mcp` 결과물인 `public/ui/` 내 파일에만 의존.
 - **성능 예산**: 전체 에셋 1.5MB 상한 및 개별 에셋 최적화 준수.
 - **폴백 강제**: `manifest.json`에 정의된 텍스트/이모지 폴백 활용.
+- **멀티 사이즈 전략 (U-038[Mvp])**: 핵심 아이콘은 16px(밀집 영역용)과 24px(주요 상태용) 듀얼 사이즈를 제공하여 다양한 UI 컨텍스트에서 식별성 극대화.
 
 ---
 _본 문서는 프로젝트의 진화에 따라 수시로 업데이트됩니다._
