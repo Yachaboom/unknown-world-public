@@ -70,6 +70,16 @@
 - 버전 관리: 프론트매터(선택)로 `prompt_version`, `policy_preset` 등 메타를 포함할 수 있다.
 - 핫리로드: 개발 모드에서 서버 재시작 없이 프롬프트 변경이 반영된다.
 
+### 3.3 UI/System i18n 리소스 파일 구조 (JSON, 확장 가능)
+
+- UI 텍스트/시스템 메시지는 **i18next 기반**으로 관리하며, 언어 리소스는 **JSON 파일**로 분리한다.
+- 권장 디렉토리(SSOT, 예시):
+  - `frontend/src/locales/ko-KR/translation.json`
+  - `frontend/src/locales/en-US/translation.json`
+- 모든 사용자 노출 문자열은 가능한 범위에서 **키 기반(`t('...')`)** 으로 참조하고, 하드코딩 문자열을 최소화한다. (RULE-006/007 준수)
+- 언어 코드는 `TurnInput.language` / `SaveGame.language`와 동일하게 `ko-KR`, `en-US`로 고정하여 UI/내러티브 언어 혼합을 방지한다.
+- 금지: 아이콘/이미지에 텍스트를 “박아” 번역을 회피하지 않는다(언어 확장/리사이즈/접근성 문제). 텍스트는 항상 i18n 리소스로 처리한다.
+
 ## 4. 사용자 정의
 
 ### 4.1 타겟 페르소나
