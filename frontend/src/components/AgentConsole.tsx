@@ -11,6 +11,7 @@
  * @module components/AgentConsole
  */
 
+import { useTranslation } from 'react-i18next';
 import {
   useAgentStore,
   selectIsStreaming,
@@ -26,27 +27,27 @@ import type { ValidationBadge } from '../schemas/turn';
 // 상수 정의
 // =============================================================================
 
-/** 단계 표시 이름 (한국어) */
-const PHASE_LABELS: Record<string, string> = {
-  parse: 'Parse',
-  validate: 'Validate',
-  plan: 'Plan',
-  resolve: 'Resolve',
-  render: 'Render',
-  verify: 'Verify',
-  commit: 'Commit',
+/** 단계 표시 이름 i18n 키 */
+const PHASE_KEYS: Record<string, string> = {
+  parse: 'agent.console.phase.parse',
+  validate: 'agent.console.phase.validate',
+  plan: 'agent.console.phase.plan',
+  resolve: 'agent.console.phase.resolve',
+  render: 'agent.console.phase.render',
+  verify: 'agent.console.phase.verify',
+  commit: 'agent.console.phase.commit',
 };
 
-/** 배지 표시 정보 */
-const BADGE_INFO: Record<ValidationBadge, { label: string; isOk: boolean }> = {
-  schema_ok: { label: 'Schema', isOk: true },
-  schema_fail: { label: 'Schema', isOk: false },
-  economy_ok: { label: 'Economy', isOk: true },
-  economy_fail: { label: 'Economy', isOk: false },
-  safety_ok: { label: 'Safety', isOk: true },
-  safety_blocked: { label: 'Safety', isOk: false },
-  consistency_ok: { label: 'Consistency', isOk: true },
-  consistency_fail: { label: 'Consistency', isOk: false },
+/** 배지 표시 정보 (i18n 키 기반) */
+const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> = {
+  schema_ok: { labelKey: 'agent.console.badge.schema', isOk: true },
+  schema_fail: { labelKey: 'agent.console.badge.schema', isOk: false },
+  economy_ok: { labelKey: 'agent.console.badge.economy', isOk: true },
+  economy_fail: { labelKey: 'agent.console.badge.economy', isOk: false },
+  safety_ok: { labelKey: 'agent.console.badge.safety', isOk: true },
+  safety_blocked: { labelKey: 'agent.console.badge.safety', isOk: false },
+  consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
+  consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
 };
 
 // =============================================================================
@@ -71,7 +72,9 @@ function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
 
 /** 단계 큐 항목 */
 function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
-  const label = PHASE_LABELS[phase.name] ?? phase.name;
+  const { t } = useTranslation();
+  const key = PHASE_KEYS[phase.name];
+  const label = key ? t(key) : phase.name;
   const statusClass = `phase-item ${phase.status}`;
 
   return (
@@ -84,11 +87,12 @@ function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
 
 /** 단계 큐 */
 function PhaseQueue() {
+  const { t } = useTranslation();
   const phases = useAgentStore(selectPhases);
 
   return (
     <div className="phase-queue">
-      <div className="queue-label">Queue</div>
+      <div className="queue-label">{t('agent.console.queue')}</div>
       <div className="queue-items">
         {phases.map((phase) => (
           <PhaseQueueItem key={phase.name} phase={phase} />
@@ -100,17 +104,18 @@ function PhaseQueue() {
 
 /** 배지 아이템 */
 function BadgeItem({ badge }: { badge: ValidationBadge }) {
+  const { t } = useTranslation();
   const info = BADGE_INFO[badge];
   if (!info) return null;
 
   const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
-  const statusText = info.isOk ? 'OK' : 'FAIL';
+  const statusText = info.isOk ? t('agent.console.badge.ok') : t('agent.console.badge.fail');
   const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
   const fallbackIcon = info.isOk ? '✓' : '✗';
 
   return (
     <div className={`badge-item ${statusClass}`}>
-      <span className="badge-label">{info.label}</span>
+      <span className="badge-label">{t(info.labelKey)}</span>
       <span className="badge-status">
         <span className="icon-wrapper">
           <img
@@ -132,20 +137,21 @@ function BadgeItem({ badge }: { badge: ValidationBadge }) {
 
 /** 배지 패널 */
 function BadgesPanel() {
+  const { t } = useTranslation();
   const badges = useAgentStore(selectBadges);
 
   if (badges.length === 0) {
     return (
       <div className="badges-panel">
-        <div className="badges-label">Badges</div>
-        <div className="badges-empty">[ 검증 대기 중 ]</div>
+        <div className="badges-label">{t('agent.console.badges')}</div>
+        <div className="badges-empty">{t('agent.console.badges_empty')}</div>
       </div>
     );
   }
 
   return (
     <div className="badges-panel">
-      <div className="badges-label">Badges</div>
+      <div className="badges-label">{t('agent.console.badges')}</div>
       <div className="badges-grid">
         {badges.map((badge, index) => (
           <BadgeItem key={`${badge}-${index}`} badge={badge} />
@@ -157,6 +163,7 @@ function BadgesPanel() {
 
 /** Auto-repair 트레이스 */
 function RepairTrace() {
+  const { t } = useTranslation();
   const repairCount = useAgentStore(selectRepairCount);
   const isStreaming = useAgentStore(selectIsStreaming);
 
@@ -166,9 +173,11 @@ function RepairTrace() {
 
   return (
     <div className="repair-trace">
-      <span className="repair-label">Auto-repair</span>
+      <span className="repair-label">{t('agent.console.repair')}</span>
       <span className="repair-count">#{repairCount}</span>
-      {repairCount > 0 && <span className="repair-status text-warning"> (복구됨)</span>}
+      {repairCount > 0 && (
+        <span className="repair-status text-warning"> {t('agent.console.repaired')}</span>
+      )}
     </div>
   );
 }
@@ -190,12 +199,15 @@ function ErrorDisplay() {
 
 /** 스트리밍 상태 표시 */
 function StreamingStatus() {
+  const { t } = useTranslation();
   const isStreaming = useAgentStore(selectIsStreaming);
 
   return (
     <div className="streaming-status">
       <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
-      <span className="status-text">{isStreaming ? 'PROCESSING' : 'IDLE'}</span>
+      <span className="status-text">
+        {isStreaming ? t('agent.console.status.processing') : t('agent.console.status.idle')}
+      </span>
     </div>
   );
 }

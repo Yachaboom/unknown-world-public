@@ -55,7 +55,7 @@ D:\Dev\unknown-world\
 │       ├── main.tsx
 │       ├── App.tsx
 │       ├── style.css       # 단일 CSS SSOT (CRT/가독성 레이어링 포함)
-│       ├── i18n.ts         # 다국어 설정 SSOT (U-031)
+│       ├── i18n.ts         # 다국어 설정 SSOT (U-031, U-039)
 │       ├── setupTests.ts   # 테스트 환경 설정 (U-037)
 │       ├── vite-env.d.ts
 │       ├── api/            # HTTP Streaming 클라이언트 (U-008)
@@ -65,6 +65,12 @@ D:\Dev\unknown-world\
 │       │   ├── AgentConsole.test.tsx # 중요도 속성 검증 (U-037)
 │       │   ├── SceneCanvas.tsx # 씬 캔버스 및 상태별 렌더링 (U-031)
 │       │   └── SceneCanvas.test.tsx
+│       ├── locales/        # 다국어 리소스 JSON (U-039)
+│       │   ├── README.md   # i18n 리소스 관리 가이드
+│       │   ├── en-US/
+│       │   │   └── translation.json
+│       │   └── ko-KR/
+│       │       └── translation.json
 │       ├── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
 │       │   └── turn.ts
 │       ├── stores/         # 상태 관리 (Zustand) (U-008, U-028)
@@ -113,9 +119,9 @@ D:\Dev\unknown-world\
 │   │   ├── rembg-guide.md
 │   │   ├── nanobanana-mcp.md # 에셋 제작 가이드 및 템플릿 (U-034)
 │   │   └── nanobanana-asset-request.schema.json # 에셋 요청 스키마 (U-034)
-│   ├── unit-plans/
-│   ├── unit-results/       # 유닛 개발 보고서 (U-037[Mvp] 포함)
-│   └── unit-runbooks/      # 유닛 실행 가이드 (U-037-crt-layering-runbook.md 포함)
+    ├── unit-plans/
+    ├── unit-results/       # 유닛 개발 보고서 (U-039[Mvp] 포함)
+    └── unit-runbooks/      # 유닛 실행 가이드 (U-039-i18n-json-structure-runbook.md 포함)
 └── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ```
 

@@ -1,0 +1,114 @@
+{
+  "scene": {
+    "status": {
+      "default": "NO SIGNAL DATA",
+      "loading": "SYNCHRONIZING...",
+      "offline": "CONNECTION LOST",
+      "blocked": "ACCESS RESTRICTED",
+      "low_signal": "LOW SIGNAL",
+      "image_error": "Unable to load scene image.",
+      "initial_sync": "Awaiting global data synchronization...",
+      "syncing": "Synchronizing data...",
+      "alt": "Scene Image"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "Queue",
+      "badges": "Badges",
+      "repair": "Auto-repair",
+      "status": {
+        "idle": "IDLE",
+        "processing": "PROCESSING"
+      },
+      "badges_empty": "[ Awaiting Validation ]",
+      "repaired": "(Repaired)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "Enter command...",
+    "processing": "Processing...",
+    "execute": "EXECUTE",
+    "wait": "WAIT",
+    "panel_placeholder": "[ Ready ]",
+    "scale_decrease": "Decrease text size",
+    "scale_increase": "Increase text size",
+    "scale_label": "UI Scale Settings"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal cost",
+    "shard_cost": "Shard cost",
+    "risk_level": "Risk level"
+  },
+  "connection": {
+    "online": "ONLINE",
+    "offline": "OFFLINE"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ Drag & Drop Area ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ Objectives / Quest List ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ World Rules / Mutation Timeline ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ Pinned Memories / Clues ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ Image Upload Slot ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "Explore",
+        "description": "Look around"
+      },
+      "investigate": {
+        "label": "Investigate",
+        "description": "Examine closely"
+      },
+      "talk": {
+        "label": "Talk",
+        "description": "Start a conversation"
+      }
+    },
+    "card_select": "Card selected: {{cardId}}"
+  },
+  "narrative": {
+    "welcome": "Welcome to the Unknown World...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
+}

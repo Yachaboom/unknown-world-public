@@ -68,7 +68,7 @@ export function SceneCanvas({ state }: SceneCanvasProps) {
       {isSceneActive && (
         <img
           src={imageUrl}
-          alt="Scene"
+          alt={t('scene.status.alt')}
           className="scene-image"
           onError={() => setImageError(true)}
         />

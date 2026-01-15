@@ -2,6 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AgentConsole } from './AgentConsole';
 
+// Mock i18n
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
 // Mock dependencies
 type MockSelector<T> = (state: unknown) => T;
 
@@ -26,7 +33,6 @@ describe('AgentConsole (U-037)', () => {
     const { container } = render(<AgentConsole />);
 
     // The root element of AgentConsole should have data-ui-importance="critical"
-    // We can find it by class name or verify the first child
     const consoleElement = container.firstChild as HTMLElement;
 
     expect(consoleElement).toHaveAttribute('data-ui-importance', 'critical');
@@ -34,6 +40,7 @@ describe('AgentConsole (U-037)', () => {
 
   it('should render streaming status', () => {
     render(<AgentConsole />);
-    expect(screen.getByText('IDLE')).toBeInTheDocument();
+    // Verify that the correct i18n key is used
+    expect(screen.getByText('agent.console.status.idle')).toBeInTheDocument();
   });
 });

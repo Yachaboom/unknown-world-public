@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas } from './components/SceneCanvas';
 import type { SceneCanvasState } from './types/scene';
@@ -20,6 +21,7 @@ import { useAgentStore } from './stores/agentStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
 import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
+import { getResolvedLanguage } from './i18n';
 
 // =============================================================================
 // 타입 정의
@@ -40,9 +42,12 @@ interface PanelProps {
   className?: string;
   /** U-032: Chrome 장식 적용 여부 */
   hasChrome?: boolean;
+  /** 기본 placeholder i18n 키 (children이 없을 때 사용) */
+  placeholderKey?: string;
 }
 
-function Panel({ title, children, className = '', hasChrome = false }: PanelProps) {
+function Panel({ title, children, className = '', hasChrome = false, placeholderKey }: PanelProps) {
+  const { t } = useTranslation();
   const panelClass = `panel ${className} ${hasChrome ? 'has-chrome' : ''}`.trim();
   const headerClass = `panel-header ${hasChrome ? 'has-chrome' : ''}`.trim();
 
@@ -52,7 +57,11 @@ function Panel({ title, children, className = '', hasChrome = false }: PanelProp
         <span className="panel-title">{title}</span>
       </div>
       <div className="panel-content">
-        {children || <p className="panel-placeholder">[ 준비 중 ]</p>}
+        {children || (
+          <p className="panel-placeholder">
+            {placeholderKey ? t(placeholderKey) : t('ui.panel_placeholder')}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -68,6 +77,7 @@ interface NarrativeFeedProps {
 }
 
 function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
+  const { t } = useTranslation();
   const feedRef = useRef<HTMLDivElement>(null);
 
   // 새 엔트리 추가 시 스크롤
@@ -81,13 +91,15 @@ function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
     <div className="narrative-feed" ref={feedRef}>
       {entries.map((entry) => (
         <div key={entry.turn} className="narrative-entry">
-          <span className="narrative-timestamp">[TURN {entry.turn}]</span>
+          <span className="narrative-timestamp">
+            {t('narrative.turn_label', { turn: entry.turn })}
+          </span>
           <span className="narrative-text">{entry.text}</span>
         </div>
       ))}
       {streamingText && (
         <div className="narrative-entry streaming">
-          <span className="narrative-timestamp">[STREAMING]</span>
+          <span className="narrative-timestamp">{t('narrative.streaming_label')}</span>
           <span className="narrative-text">{streamingText}</span>
           <span className="cursor-blink">▌</span>
         </div>
@@ -107,31 +119,33 @@ interface ActionDeckProps {
 }
 
 function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
-  // 카드가 없으면 기본 카드 표시
+  const { t } = useTranslation();
+
+  // 카드가 없으면 기본 카드 표시 (i18n 키 기반)
   const displayCards: ActionCard[] =
     cards.length > 0
       ? cards
       : [
           {
             id: 'default-1',
-            label: '탐색하기',
-            description: '주변을 살펴본다',
+            label: t('action.default.explore.label'),
+            description: t('action.default.explore.description'),
             cost: { signal: 1, memory_shard: 0 },
             risk: 'low',
             hint: null,
           },
           {
             id: 'default-2',
-            label: '조사하기',
-            description: '자세히 살펴본다',
+            label: t('action.default.investigate.label'),
+            description: t('action.default.investigate.description'),
             cost: { signal: 2, memory_shard: 0 },
             risk: 'medium',
             hint: null,
           },
           {
             id: 'default-3',
-            label: '대화하기',
-            description: '말을 걸어본다',
+            label: t('action.default.talk.label'),
+            description: t('action.default.talk.description'),
             cost: { signal: 1, memory_shard: 0 },
             risk: 'low',
             hint: null,
@@ -150,7 +164,7 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
         >
           <div className="action-card-title">{card.label}</div>
           <div className="action-card-cost">
-            <span className="icon-wrapper" aria-label="Signal cost">
+            <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
               <img
                 src="/ui/icons/signal-16.png"
                 alt=""
@@ -165,7 +179,7 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
             {card.cost.memory_shard > 0 && (
               <>
                 {' | '}
-                <span className="icon-wrapper" aria-label="Shard cost">
+                <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
                   <img
                     src="/ui/icons/shard-16.png"
                     alt=""
@@ -180,7 +194,7 @@ function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
               </>
             )}
             {' | '}
-            <span className="icon-wrapper" aria-label="Risk level">
+            <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
               <img
                 src={`/ui/icons/risk-${card.risk}-16.png`}
                 alt=""
@@ -210,19 +224,20 @@ interface UIControlsProps {
 }
 
 function UIControls({ uiScale, onIncreaseScale, onDecreaseScale }: UIControlsProps) {
+  const { t } = useTranslation();
   const isMinScale = uiScale === UI_SCALES[0];
   const isMaxScale = uiScale === UI_SCALES[UI_SCALES.length - 1];
 
   return (
-    <div className="ui-controls" role="group" aria-label="UI 스케일 설정">
+    <div className="ui-controls" role="group" aria-label={t('ui.scale_label')}>
       {/* UI 스케일 조절 */}
       <button
         type="button"
         className="ui-scale-btn"
         onClick={onDecreaseScale}
         disabled={isMinScale}
-        aria-label="글자 크기 줄이기"
-        title="글자 크기 줄이기 (A-)"
+        aria-label={t('ui.scale_decrease')}
+        title={`${t('ui.scale_decrease')} (A-)`}
       >
         A-
       </button>
@@ -234,8 +249,8 @@ function UIControls({ uiScale, onIncreaseScale, onDecreaseScale }: UIControlsPro
         className="ui-scale-btn"
         onClick={onIncreaseScale}
         disabled={isMaxScale}
-        aria-label="글자 크기 늘리기"
-        title="글자 크기 늘리기 (A+)"
+        aria-label={t('ui.scale_increase')}
+        title={`${t('ui.scale_increase')} (A+)`}
       >
         A+
       </button>
@@ -264,10 +279,12 @@ function GameHeader({
   onIncreaseScale,
   onDecreaseScale,
 }: GameHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <header className="game-header has-chrome">
-      <h1 className="game-title glitch" data-text="UNKNOWN WORLD">
-        UNKNOWN WORLD
+      <h1 className="game-title glitch" data-text={t('ui.logo')}>
+        {t('ui.logo')}
       </h1>
       <div className="header-controls">
         {/* UI 스케일 컨트롤 (U-028→U-037: Readable 제거) */}
@@ -277,7 +294,7 @@ function GameHeader({
           onDecreaseScale={onDecreaseScale}
         />
         <div className="economy-hud">
-          <span className="icon-wrapper signal-icon" aria-label="Signal">
+          <span className="icon-wrapper signal-icon" aria-label={t('economy.signal')}>
             <img
               src="/ui/icons/signal-24.png"
               alt=""
@@ -289,8 +306,10 @@ function GameHeader({
             />
             <span className="icon-fallback">⚡</span>
           </span>
-          <span className="currency-value">Signal: {signal}</span>
-          <span className="icon-wrapper shard-icon" aria-label="Memory Shard">
+          <span className="currency-value">
+            {t('economy.signal')}: {signal}
+          </span>
+          <span className="icon-wrapper shard-icon" aria-label={t('economy.shard')}>
             <img
               src="/ui/icons/shard-24.png"
               alt=""
@@ -302,11 +321,13 @@ function GameHeader({
             />
             <span className="icon-fallback">💎</span>
           </span>
-          <span className="currency-value">Shard: {memoryShard}</span>
+          <span className="currency-value">
+            {t('economy.shard')}: {memoryShard}
+          </span>
         </div>
         <div className="connection-status">
           <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
-          <span>{isConnected ? 'ONLINE' : 'OFFLINE'}</span>
+          <span>{isConnected ? t('connection.online') : t('connection.offline')}</span>
         </div>
       </div>
     </header>
@@ -318,11 +339,13 @@ function GameHeader({
 // =============================================================================
 
 function App() {
+  const { t } = useTranslation();
+
   // 상태
   const [inputText, setInputText] = useState('');
   const turnCountRef = useRef(0);
-  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>([
-    { turn: 0, text: '미지의 세계에 오신 것을 환영합니다...' },
+  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>(() => [
+    { turn: 0, text: t('narrative.welcome') },
   ]);
   const [actionCards, setActionCards] = useState<ActionCard[]>([]);
   const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
@@ -331,7 +354,7 @@ function App() {
   // Scene Canvas 상태 (U-031: Placeholder Pack)
   const [sceneState, setSceneState] = useState<SceneCanvasState>({
     status: 'default',
-    message: '전역 데이터 동기화 대기 중...',
+    message: t('scene.status.initial_sync'),
   });
 
   // Agent Store 액션
@@ -386,10 +409,10 @@ function App() {
     (text: string, cardId?: string) => {
       if (isStreaming) return;
 
-      // 입력 데이터 생성
+      // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
       const turnInput: TurnInput = {
-        language: 'ko-KR',
-        text: text || (cardId ? `카드 선택: ${cardId}` : ''),
+        language: getResolvedLanguage(),
+        text: text || (cardId ? t('action.card_select', { cardId }) : ''),
         click: null,
         client: {
           viewport_w: window.innerWidth,
@@ -403,7 +426,7 @@ function App() {
       startStream();
 
       // Scene Canvas를 로딩 상태로 전환 (U-031)
-      setSceneState({ status: 'loading', message: '데이터 동기화 중...' });
+      setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
       // 스트림 콜백 설정
       const callbacks: StreamCallbacks = {
@@ -450,6 +473,7 @@ function App() {
       handleError,
       completeStream,
       applyTurnOutput,
+      t,
     ],
   );
 
@@ -511,15 +535,16 @@ function App() {
 
         {/* Sidebar Left: Inventory / Quest / Rule Board */}
         <aside className="sidebar-left">
-          <Panel title="Inventory" className="flex-1">
-            <p className="panel-placeholder">[ 드래그 앤 드롭 영역 ]</p>
-          </Panel>
-          <Panel title="Quest">
-            <p className="panel-placeholder">[ 목표/퀘스트 목록 ]</p>
-          </Panel>
-          <Panel title="Rule Board">
-            <p className="panel-placeholder">[ 월드 규칙/변형 타임라인 ]</p>
-          </Panel>
+          <Panel
+            title={t('panel.inventory.title')}
+            className="flex-1"
+            placeholderKey="panel.inventory.placeholder"
+          />
+          <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
+          <Panel
+            title={t('panel.rule_board.title')}
+            placeholderKey="panel.rule_board.placeholder"
+          />
         </aside>
 
         {/* Center: Scene Canvas + Narrative Feed */}
@@ -530,15 +555,17 @@ function App() {
 
         {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
         <aside className="sidebar-right">
-          <Panel title="Agent Console" className="flex-1" hasChrome>
+          <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
             <AgentConsole />
           </Panel>
-          <Panel title="Memory Pin" hasChrome>
-            <p className="panel-placeholder">[ 고정된 기억/단서 ]</p>
-          </Panel>
-          <Panel title="Scanner" hasChrome>
+          <Panel
+            title={t('panel.memory_pin.title')}
+            hasChrome
+            placeholderKey="panel.memory_pin.placeholder"
+          />
+          <Panel title={t('panel.scanner.title')} hasChrome>
             <div className="scanner-slot has-chrome">
-              <p className="panel-placeholder">[ 이미지 업로드 슬롯 ]</p>
+              <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
             </div>
           </Panel>
         </aside>
@@ -551,15 +578,15 @@ function App() {
             <input
               type="text"
               className="command-input"
-              placeholder={isStreaming ? '처리 중...' : '명령을 입력하세요...'}
-              aria-label="게임 명령 입력"
+              placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
+              aria-label={t('ui.command_placeholder')}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isStreaming}
             />
             <button type="button" onClick={handleSubmit} disabled={isStreaming}>
-              {isStreaming ? 'WAIT' : 'EXECUTE'}
+              {isStreaming ? t('ui.wait') : t('ui.execute')}
             </button>
           </div>
         </footer>

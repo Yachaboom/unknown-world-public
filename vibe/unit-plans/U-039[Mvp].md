@@ -101,12 +101,15 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: i18n JSON 파일 구조를 어떻게 시작할까?
+- [x] **Q1**: i18n JSON 파일 구조를 어떻게 시작할까?
   - Option A: `translation.json` 1개(언어당)로 시작(권장: MVP 단순) ✅
   - Option B: `common/ui/agent/scene.json` 네임스페이스 분리(확장성 ↑, 초기 파일 수 ↑)
-- [ ] **Q2**: 기본 언어 결정은 어떻게 할까?
+  **A1**: Option A
+
+- [x] **Q2**: 기본 언어 결정은 어떻게 할까?
   - Option A: `ko-KR` 고정(권장: 데모 일관성) ✅
   - Option B: `navigator.language` 감지 + 로컬 저장(편의 ↑, 하지만 QA/데모 일관성 ↓)
+  **A2**: Option A
 
 ## 참고 자료
 
