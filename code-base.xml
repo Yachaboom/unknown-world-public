@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, backend/.venv/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,json,toml,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**, dist/**, coverage/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -72,6 +72,7 @@ frontend/src/components/ActionDeck.test.tsx
 frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.test.tsx
 frontend/src/components/AgentConsole.tsx
+frontend/src/components/DndInteraction.test.tsx
 frontend/src/components/InventoryPanel.test.tsx
 frontend/src/components/InventoryPanel.tsx
 frontend/src/components/SceneCanvas.hotspot.test.tsx
@@ -1382,6 +1383,144 @@ export function ActionDeck({
 }
 
 export default ActionDeck;
+</file>
+
+<file path="frontend/src/components/DndInteraction.test.tsx">
+import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import App from '../App';
+import * as turnStream from '../api/turnStream';
+
+// dnd-kit 모킹용 타입
+interface MockDndCallbacks {
+  onDragEnd: (event: {
+    active: { id: string; data: { current: unknown } };
+    over: { id: string; data: { current: unknown } } | null;
+  }) => void;
+}
+
+// dnd-kit 모킹 (콜백 가로채기용)
+vi.mock('@dnd-kit/core', async () => {
+  const actual = (await vi.importActual('@dnd-kit/core')) as Record<string, unknown>;
+  return {
+    ...actual,
+    DndContext: (props: MockDndCallbacks & { children: React.ReactNode }) => {
+      // 콜백 저장 (테스트에서 접근 가능하도록 global에 저장)
+      (global as unknown as Record<string, unknown>).dndCallbacks = props;
+      return <div data-testid="mock-dnd-context">{props.children}</div>;
+    },
+  };
+});
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key === 'inventory.item_label') return `Item: ${options?.name}`;
+      if (key === 'scene.hotspot.drop_action') {
+        return `Drop: ${options?.item} on ${options?.target}`;
+      }
+      if (key === 'scene.hotspot.drop_invalid') {
+        return `Invalid: ${options?.item}`;
+      }
+      if (key === 'connection.online') return 'ONLINE';
+      return key;
+    },
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+      resolvedLanguage: 'ko-KR',
+    },
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
+}));
+
+// ResizeObserver 모킹
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+window.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+// api 모킹
+vi.mock('../api/turnStream', () => ({
+  startTurnStream: vi.fn(),
+}));
+
+describe('DnD Interaction - Logic Test', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should trigger turn execution when handleDragEnd is called with a hotspot target', async () => {
+    render(<App />);
+    const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+
+    // 성공 시나리오 시뮬레이션
+    act(() => {
+      dndCallbacks.onDragEnd({
+        active: {
+          id: 'keycard-alpha',
+          data: {
+            current: { type: 'inventory-item', item_id: 'keycard-alpha' },
+          },
+        },
+        over: {
+          id: 'hotspot-demo-terminal',
+          data: {
+            current: {
+              type: 'hotspot',
+              object_id: 'demo-terminal',
+              label: '터미널',
+              box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+            },
+          },
+        },
+      });
+    });
+
+    // startTurnStream 호출 확인
+    expect(turnStream.startTurnStream).toHaveBeenCalled();
+    const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
+
+    expect(input.text).toBe('Drop: 키카드 A on 터미널');
+    expect(input.drop).toEqual({
+      item_id: 'keycard-alpha',
+      target_object_id: 'demo-terminal',
+      target_box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+    });
+  });
+
+  it('should show failure feedback when handleDragEnd is called with an invalid target', async () => {
+    render(<App />);
+    const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+
+    // 실패 시나리오 시뮬레이션 (over가 null)
+    act(() => {
+      dndCallbacks.onDragEnd({
+        active: {
+          id: 'keycard-alpha',
+          data: {
+            current: { type: 'inventory-item', item_id: 'keycard-alpha' },
+          },
+        },
+        over: null,
+      });
+    });
+
+    // turn 실행은 발생하지 않아야 함
+    expect(turnStream.startTurnStream).not.toHaveBeenCalled();
+
+    // 내러티브 피드에 실패 메시지가 나타나야 함
+    const failureMessage = await screen.findByText(/Invalid: 키카드 A/);
+    expect(failureMessage).toBeInTheDocument();
+  });
+});
 </file>
 
 <file path="frontend/src/components/InventoryPanel.test.tsx">
@@ -4892,591 +5031,6 @@ createRoot(document.getElementById('root')!).render(
 );
 </file>
 
-<file path="frontend/src/schemas/turn.ts">
-/**
- * Unknown World - TurnInput/TurnOutput Zod 스키마.
- *
- * 이 모듈은 백엔드 Pydantic 모델(U-005)과 1:1 대응하는 Zod 스키마를 정의합니다.
- * 클라이언트 측 검증 및 타입 안전성을 제공합니다.
- *
- * 설계 원칙:
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증 (서버 Pydantic + 클라 Zod)
- *   - RULE-004: 검증 실패 시 안전 폴백 제공 (UI 멈춤 방지)
- *   - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
- *   - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
- *   - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
- *
- * Q1 결정 사항:
- *   - schema_version 포함 (Option A): SaveGame/마이그레이션/검증에 유리
- *
- * @module schemas/turn
- */
-
-import { z } from 'zod';
-
-// =============================================================================
-// 스키마 버전 (Q1 결정: Option A - 포함)
-// =============================================================================
-
-/**
- * 현재 스키마 버전.
- * SaveGame/마이그레이션/검증에 사용됩니다.
- */
-export const SCHEMA_VERSION = '1.0.0' as const;
-
-// =============================================================================
-// 공통 Enum 타입
-// =============================================================================
-
-/**
- * 지원 언어 (RULE-006).
- * ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
- * 모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
- */
-export const LanguageSchema = z.enum(['ko-KR', 'en-US']);
-export type Language = z.infer<typeof LanguageSchema>;
-
-/**
- * 테마 설정.
- */
-export const ThemeSchema = z.enum(['dark', 'light']);
-export type Theme = z.infer<typeof ThemeSchema>;
-
-/**
- * 에이전트 실행 단계 (RULE-008).
- * 에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
- */
-export const AgentPhaseSchema = z.enum([
-  'parse',
-  'validate',
-  'plan',
-  'resolve',
-  'render',
-  'verify',
-  'commit',
-]);
-export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
-
-/**
- * 검증 배지 (RULE-008).
- * 턴 결과에 대한 검증 상태를 표시합니다.
- */
-export const ValidationBadgeSchema = z.enum([
-  'schema_ok',
-  'schema_fail',
-  'economy_ok',
-  'economy_fail',
-  'safety_ok',
-  'safety_blocked',
-  'consistency_ok',
-  'consistency_fail',
-]);
-export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
-
-/**
- * 모델/품질 선택 라벨 (RULE-008).
- * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
- */
-export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
-export type ModelLabel = z.infer<typeof ModelLabelSchema>;
-
-/**
- * 행동 위험도 수준.
- */
-export const RiskLevelSchema = z.enum(['low', 'medium', 'high']);
-export type RiskLevel = z.infer<typeof RiskLevelSchema>;
-
-// =============================================================================
-// 공통 하위 타입
-// =============================================================================
-
-/**
- * 정규화 좌표 (RULE-009).
- * 0~1000 범위의 정수입니다.
- */
-export const CoordinateSchema = z.number().int().min(0).max(1000).describe('정규화 좌표 (0~1000)');
-export type Coordinate = z.infer<typeof CoordinateSchema>;
-
-/**
- * 2D 바운딩 박스 (RULE-009).
- * 좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
- * 이미지 이해 bbox 포맷과 호환됩니다.
- */
-export const Box2DSchema = z
-  .object({
-    ymin: CoordinateSchema.describe('Y 최소값 (상단)'),
-    xmin: CoordinateSchema.describe('X 최소값 (좌측)'),
-    ymax: CoordinateSchema.describe('Y 최대값 (하단)'),
-    xmax: CoordinateSchema.describe('X 최대값 (우측)'),
-  })
-  .strict();
-export type Box2D = z.infer<typeof Box2DSchema>;
-
-/**
- * 재화 수량.
- * signal과 memory_shard는 0 이상이어야 합니다 (RULE-005).
- */
-export const CurrencyAmountSchema = z
-  .object({
-    signal: z.number().int().min(0).describe('시그널 (기본 재화, 0 이상)'),
-    memory_shard: z.number().int().min(0).describe('기억 파편 (희귀 재화, 0 이상)'),
-  })
-  .strict();
-export type CurrencyAmount = z.infer<typeof CurrencyAmountSchema>;
-
-// =============================================================================
-// TurnInput 관련 타입
-// =============================================================================
-
-/**
- * 클릭 입력 정보.
- * 화면 오브젝트 클릭 시 전달되는 정보입니다.
- */
-export const ClickInputSchema = z
-  .object({
-    object_id: z.string().describe('클릭한 오브젝트 ID'),
-    box_2d: Box2DSchema.nullable().default(null).describe('클릭 위치 바운딩 박스 (선택)'),
-  })
-  .strict();
-export type ClickInput = z.infer<typeof ClickInputSchema>;
-
-/**
- * 클라이언트 정보.
- */
-export const ClientInfoSchema = z
-  .object({
-    viewport_w: z.number().int().positive().describe('뷰포트 너비 (픽셀, 양수)'),
-    viewport_h: z.number().int().positive().describe('뷰포트 높이 (픽셀, 양수)'),
-    theme: ThemeSchema.default('dark').describe('현재 테마'),
-  })
-  .strict();
-export type ClientInfo = z.infer<typeof ClientInfoSchema>;
-
-/**
- * 재화 스냅샷 (클라이언트 → 서버).
- * 클라이언트가 보유한 현재 재화 상태입니다.
- */
-export const EconomySnapshotSchema = z
-  .object({
-    signal: z.number().int().min(0).describe('현재 시그널 잔액 (0 이상)'),
-    memory_shard: z.number().int().min(0).describe('현재 기억 파편 잔액 (0 이상)'),
-  })
-  .strict();
-export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
-
-/**
- * 턴 입력 (클라이언트 → 서버).
- * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
- */
-export const TurnInputSchema = z
-  .object({
-    language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
-    text: z.string().default('').describe('사용자 자연어 입력'),
-    action_id: z.string().nullable().default(null).describe('선택한 액션 카드 ID (선택)'),
-    click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
-    client: ClientInfoSchema.describe('클라이언트 환경 정보'),
-    economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
-  })
-  .strict();
-export type TurnInput = z.infer<typeof TurnInputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - UI
-// =============================================================================
-
-/**
- * 비용 추정치 (U-009: 최소/최대 범위).
- * 행동의 예상 비용 범위를 표시합니다.
- */
-export const CostEstimateSchema = z
-  .object({
-    min: CurrencyAmountSchema.describe('최소 예상 비용'),
-    max: CurrencyAmountSchema.describe('최대 예상 비용'),
-  })
-  .strict();
-export type CostEstimate = z.infer<typeof CostEstimateSchema>;
-
-/**
- * 액션 카드 (Action Deck).
- * 매 턴 AI가 추천하는 행동 카드입니다.
- *
- * U-009 확장:
- *   - cost_estimate: 최소/최대 비용 범위 (RULE-005)
- *   - enabled: 서버 측 실행 가능 여부 판단 (Q1: Option A)
- *   - disabled_reason: 비활성화 사유 (잔액 부족 등)
- *   - is_alternative: 저비용/텍스트-only 대안 카드 여부
- */
-export const ActionCardSchema = z
-  .object({
-    id: z.string().describe('카드 고유 ID'),
-    label: z.string().describe('카드 라벨 (표시용)'),
-    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
-    cost: CurrencyAmountSchema.describe('예상 비용 (기본)'),
-    cost_estimate: CostEstimateSchema.nullable().default(null).describe('비용 추정 범위 (선택)'),
-    risk: RiskLevelSchema.default('low').describe('위험도'),
-    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
-    reward_hint: z.string().nullable().default(null).describe('보상 힌트 (선택)'),
-    enabled: z.boolean().default(true).describe('실행 가능 여부 (서버 판단)'),
-    disabled_reason: z.string().nullable().default(null).describe('비활성화 사유 (선택)'),
-    is_alternative: z.boolean().default(false).describe('저비용 대안 카드 여부'),
-  })
-  .strict();
-export type ActionCard = z.infer<typeof ActionCardSchema>;
-
-/**
- * 장면 오브젝트 (클릭 가능한 핫스팟).
- * 좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
- */
-export const SceneObjectSchema = z
-  .object({
-    id: z.string().describe('오브젝트 고유 ID'),
-    label: z.string().describe('오브젝트 라벨 (표시용)'),
-    box_2d: Box2DSchema.describe('바운딩 박스'),
-    interaction_hint: z.string().nullable().default(null).describe('상호작용 힌트 (선택)'),
-  })
-  .strict();
-export type SceneObject = z.infer<typeof SceneObjectSchema>;
-
-/**
- * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
- * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
- */
-export const ActionDeckSchema = z
-  .object({
-    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
-  })
-  .strict();
-export type ActionDeck = z.infer<typeof ActionDeckSchema>;
-
-/**
- * UI 출력 데이터.
- * AI가 생성한 UI 요소들입니다.
- * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
- */
-export const UIOutputSchema = z
-  .object({
-    action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
-    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
-  })
-  .strict();
-export type UIOutput = z.infer<typeof UIOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - World
-// =============================================================================
-
-/**
- * 중요 설정 고정 후보.
- * 사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
- */
-export const MemoryPinSchema = z
-  .object({
-    id: z.string().describe('핀 고유 ID'),
-    content: z.string().describe('고정할 내용'),
-    cost: CurrencyAmountSchema.describe('고정에 필요한 비용'),
-  })
-  .strict();
-export type MemoryPin = z.infer<typeof MemoryPinSchema>;
-
-/**
- * 세계 규칙 (Rule Board).
- * 현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
- */
-export const WorldRuleSchema = z
-  .object({
-    id: z.string().describe('규칙 고유 ID'),
-    label: z.string().describe('규칙 이름'),
-    description: z.string().nullable().default(null).describe('규칙 상세 설명 (선택)'),
-  })
-  .strict();
-export type WorldRule = z.infer<typeof WorldRuleSchema>;
-
-/**
- * 퀘스트/목표 (Quest Panel).
- * 플레이어가 달성해야 하는 현재 목표입니다.
- */
-export const QuestSchema = z
-  .object({
-    id: z.string().describe('퀘스트 고유 ID'),
-    label: z.string().describe('퀘스트 이름'),
-    is_completed: z.boolean().default(false).describe('달성 여부'),
-  })
-  .strict();
-export type Quest = z.infer<typeof QuestSchema>;
-
-/**
- * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
- * 이번 턴에서 변경된 세계 상태를 나타냅니다.
- */
-export const WorldDeltaSchema = z
-  .object({
-    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
-    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
-    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
-    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
-    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
-    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
-  })
-  .strict();
-export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Render
-// =============================================================================
-
-/**
- * 이미지 생성 작업.
- * 조건부 이미지 생성/편집 요청입니다.
- */
-export const ImageJobSchema = z
-  .object({
-    should_generate: z.boolean().describe('이미지를 생성해야 하는지'),
-    prompt: z.string().default('').describe('이미지 생성 프롬프트'),
-    model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
-    aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
-    image_size: z.string().default('1024x1024').describe('이미지 크기'),
-    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
-  })
-  .strict();
-export type ImageJob = z.infer<typeof ImageJobSchema>;
-
-/**
- * 렌더링 출력 데이터.
- * 이미지 생성/편집 관련 정보입니다.
- */
-export const RenderOutputSchema = z
-  .object({
-    image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
-  })
-  .strict();
-export type RenderOutput = z.infer<typeof RenderOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Economy
-// =============================================================================
-
-/**
- * 경제 출력 데이터 (RULE-005).
- * 이번 턴의 비용과 잔액 정보입니다.
- * 잔액 음수는 절대 불가 (서버 Hard gate).
- */
-export const EconomyOutputSchema = z
-  .object({
-    cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
-    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
-  })
-  .strict();
-export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Safety
-// =============================================================================
-
-/**
- * 안전 출력 데이터.
- * 안전 정책 관련 정보입니다.
- * 차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
- */
-export const SafetyOutputSchema = z
-  .object({
-    blocked: z.boolean().default(false).describe('안전 정책에 의해 차단되었는지'),
-    message: z
-      .string()
-      .nullable()
-      .default(null)
-      .describe('차단 시 사용자에게 표시할 메시지 (선택)'),
-  })
-  .strict();
-export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Agent Console
-// =============================================================================
-
-/**
- * 에이전트 콘솔 데이터 (RULE-008).
- * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
- */
-export const AgentConsoleSchema = z
-  .object({
-    current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
-    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
-    repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
-  })
-  .strict();
-export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
-
-// =============================================================================
-// TurnOutput (메인 응답 스키마)
-// =============================================================================
-
-/**
- * 턴 출력 (서버 → 클라이언트).
- * 서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
- *
- * Hard Gate 필드 (RULE-003/004/005):
- *   - economy: cost와 balance_after 필수, 잔액 음수 금지
- *   - safety: blocked 시 안전한 대체 결과 제공
- *   - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
- */
-export const TurnOutputSchema = z
-  .object({
-    // 필수 필드 (Hard Gate)
-    language: LanguageSchema.describe('응답 언어 (요청과 동일)'),
-    narrative: z.string().describe('내러티브 텍스트 (표시용)'),
-    economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
-    safety: SafetyOutputSchema.describe('안전 정책 정보'),
-
-    // UI 관련 필드
-    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
-
-    // 세계 상태 필드
-    world: WorldDeltaSchema.default({
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    }).describe('세계 상태 변화 (delta)'),
-
-    // 렌더링 필드
-    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
-
-    // 에이전트 콘솔 필드
-    agent_console: AgentConsoleSchema.default({
-      current_phase: 'commit',
-      badges: [],
-      repair_count: 0,
-    }).describe('에이전트 실행 정보'),
-  })
-  .strict();
-export type TurnOutput = z.infer<typeof TurnOutputSchema>;
-
-// =============================================================================
-// 안전 폴백 (RULE-004)
-// =============================================================================
-
-/**
- * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
- * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
- *
- * @param language - 요청 언어
- * @param repairCount - 복구 시도 횟수
- * @param errorMessage - 오류 메시지 (선택)
- */
-export function createFallbackTurnOutput(
-  language: Language,
-  repairCount: number = 0,
-  errorMessage?: string,
-): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 응답을 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요.'
-      : '[System] An error occurred while processing the response. Please try again.';
-
-  const safetyMessage =
-    language === 'ko-KR'
-      ? '스키마 검증 실패로 인한 폴백 응답입니다.'
-      : 'This is a fallback response due to schema validation failure.';
-
-  return {
-    language,
-    narrative: errorMessage ?? fallbackNarrative,
-    economy: {
-      cost: { signal: 0, memory_shard: 0 },
-      balance_after: { signal: 0, memory_shard: 0 },
-    },
-    safety: {
-      blocked: false,
-      message: safetyMessage,
-    },
-    ui: {
-      action_deck: { cards: [] },
-      objects: [],
-    },
-    world: {
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    },
-    render: {
-      image_job: null,
-    },
-    agent_console: {
-      current_phase: 'commit',
-      badges: ['schema_fail'],
-      repair_count: repairCount,
-    },
-  };
-}
-
-// =============================================================================
-// 검증 헬퍼 함수
-// =============================================================================
-
-/**
- * TurnOutput 검증 결과 타입.
- */
-export type TurnOutputParseResult =
-  | { success: true; data: TurnOutput }
-  | { success: false; error: z.ZodError; fallback: TurnOutput };
-
-/**
- * TurnOutput을 안전하게 파싱합니다.
- * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
- *
- * @param data - 파싱할 데이터
- * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
- * @param repairCount - 현재 복구 시도 횟수
- */
-export function safeParseTurnOutput(
-  data: unknown,
-  language: Language = 'ko-KR',
-  repairCount: number = 0,
-): TurnOutputParseResult {
-  const result = TurnOutputSchema.safeParse(data);
-
-  if (result.success) {
-    return { success: true, data: result.data };
-  }
-
-  return {
-    success: false,
-    error: result.error,
-    fallback: createFallbackTurnOutput(language, repairCount),
-  };
-}
-
-/**
- * TurnInput을 검증합니다.
- * 입력 데이터의 유효성을 엄격하게 검사합니다.
- *
- * @param data - 검증할 데이터
- * @throws {z.ZodError} 검증 실패 시
- */
-export function parseTurnInput(data: unknown): TurnInput {
-  return TurnInputSchema.parse(data);
-}
-
-/**
- * TurnInput 안전 파싱 결과 타입.
- */
-export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safeParse>;
-
-/**
- * TurnInput을 안전하게 파싱합니다.
- *
- * @param data - 파싱할 데이터
- */
-export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
-  return TurnInputSchema.safeParse(data);
-}
-</file>
-
 <file path="frontend/src/stores/uiPrefsStore.test.ts">
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useUIPrefsStore, DEFAULT_UI_SCALE, migrateUIPrefs } from './uiPrefsStore';
@@ -6383,185 +5937,606 @@ class MockOrchestrator:
         )
 </file>
 
-<file path="frontend/src/api/turnStream.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NDJSONParser } from './turnStream';
+<file path="frontend/src/schemas/turn.ts">
+/**
+ * Unknown World - TurnInput/TurnOutput Zod 스키마.
+ *
+ * 이 모듈은 백엔드 Pydantic 모델(U-005)과 1:1 대응하는 Zod 스키마를 정의합니다.
+ * 클라이언트 측 검증 및 타입 안전성을 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증 (서버 Pydantic + 클라 Zod)
+ *   - RULE-004: 검증 실패 시 안전 폴백 제공 (UI 멈춤 방지)
+ *   - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
+ *   - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
+ *   - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+ *
+ * Q1 결정 사항:
+ *   - schema_version 포함 (Option A): SaveGame/마이그레이션/검증에 유리
+ *
+ * @module schemas/turn
+ */
 
-describe('NDJSONParser', () => {
-  let parser: NDJSONParser;
+import { z } from 'zod';
 
-  beforeEach(() => {
-    parser = new NDJSONParser();
-  });
+// =============================================================================
+// 스키마 버전 (Q1 결정: Option A - 포함)
+// =============================================================================
 
-  it('should parse a single complete line', () => {
-    const chunk = JSON.stringify({ type: 'test', value: 1 }) + '\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ type: 'test', value: 1 });
-  });
+/**
+ * 현재 스키마 버전.
+ * SaveGame/마이그레이션/검증에 사용됩니다.
+ */
+export const SCHEMA_VERSION = '1.0.0' as const;
 
-  it('should parse multiple complete lines in one chunk', () => {
-    const chunk = JSON.stringify({ id: 1 }) + '\n' + JSON.stringify({ id: 2 }) + '\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(2);
-    expect(results[0]).toEqual({ id: 1 });
-    expect(results[1]).toEqual({ id: 2 });
-  });
+// =============================================================================
+// 공통 Enum 타입
+// =============================================================================
 
-  it('should buffer partial lines and parse them when completed', () => {
-    const chunk1 = '{"id": 1';
-    const chunk2 = ', "val": "ok"}\n';
+/**
+ * 지원 언어 (RULE-006).
+ * ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
+ * 모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
+ */
+export const LanguageSchema = z.enum(['ko-KR', 'en-US']);
+export type Language = z.infer<typeof LanguageSchema>;
 
-    const results1 = parser.parse(chunk1);
-    expect(results1).toHaveLength(0);
+/**
+ * 테마 설정.
+ */
+export const ThemeSchema = z.enum(['dark', 'light']);
+export type Theme = z.infer<typeof ThemeSchema>;
 
-    const results2 = parser.parse(chunk2);
-    expect(results2).toHaveLength(1);
-    expect(results2[0]).toEqual({ id: 1, val: 'ok' });
-  });
+/**
+ * 에이전트 실행 단계 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
+ */
+export const AgentPhaseSchema = z.enum([
+  'parse',
+  'validate',
+  'plan',
+  'resolve',
+  'render',
+  'verify',
+  'commit',
+]);
+export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
 
-  it('should ignore empty lines', () => {
-    const chunk = '\n\n{"a":1}\n\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(1);
-  });
+/**
+ * 검증 배지 (RULE-008).
+ * 턴 결과에 대한 검증 상태를 표시합니다.
+ */
+export const ValidationBadgeSchema = z.enum([
+  'schema_ok',
+  'schema_fail',
+  'economy_ok',
+  'economy_fail',
+  'safety_ok',
+  'safety_blocked',
+  'consistency_ok',
+  'consistency_fail',
+]);
+export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
 
-  it('should not crash on invalid JSON and continue', () => {
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const chunk = 'invalid json\n{"valid": true}\n';
-    const results = parser.parse(chunk);
+/**
+ * 모델/품질 선택 라벨 (RULE-008).
+ * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
+ */
+export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
+export type ModelLabel = z.infer<typeof ModelLabelSchema>;
 
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ valid: true });
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
-  });
+/**
+ * 행동 위험도 수준.
+ */
+export const RiskLevelSchema = z.enum(['low', 'medium', 'high']);
+export type RiskLevel = z.infer<typeof RiskLevelSchema>;
 
-  it('should flush remaining buffer', () => {
-    parser.parse('{"id": 1}'); // No newline
-    const result = parser.flush();
-    expect(result).toEqual({ id: 1 });
-  });
+// =============================================================================
+// 공통 하위 타입
+// =============================================================================
 
-  it('should return null on flush with empty buffer', () => {
-    const result = parser.flush();
-    expect(result).toBeNull();
-  });
-});
+/**
+ * 정규화 좌표 (RULE-009).
+ * 0~1000 범위의 정수입니다.
+ */
+export const CoordinateSchema = z.number().int().min(0).max(1000).describe('정규화 좌표 (0~1000)');
+export type Coordinate = z.infer<typeof CoordinateSchema>;
 
-describe('executeTurnStream', () => {
-  const mockInput = {
-    language: 'ko-KR' as const,
-    text: 'Hello',
-    action_id: null,
-    click: null,
-    client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-    economy_snapshot: { signal: 100, memory_shard: 0 },
+/**
+ * 2D 바운딩 박스 (RULE-009).
+ * 좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
+ * 이미지 이해 bbox 포맷과 호환됩니다.
+ */
+export const Box2DSchema = z
+  .object({
+    ymin: CoordinateSchema.describe('Y 최소값 (상단)'),
+    xmin: CoordinateSchema.describe('X 최소값 (좌측)'),
+    ymax: CoordinateSchema.describe('Y 최대값 (하단)'),
+    xmax: CoordinateSchema.describe('X 최대값 (우측)'),
+  })
+  .strict();
+export type Box2D = z.infer<typeof Box2DSchema>;
+
+/**
+ * 재화 수량.
+ * signal과 memory_shard는 0 이상이어야 합니다 (RULE-005).
+ */
+export const CurrencyAmountSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('시그널 (기본 재화, 0 이상)'),
+    memory_shard: z.number().int().min(0).describe('기억 파편 (희귀 재화, 0 이상)'),
+  })
+  .strict();
+export type CurrencyAmount = z.infer<typeof CurrencyAmountSchema>;
+
+// =============================================================================
+// TurnInput 관련 타입
+// =============================================================================
+
+/**
+ * 클릭 입력 정보.
+ * 화면 오브젝트 클릭 시 전달되는 정보입니다.
+ */
+export const ClickInputSchema = z
+  .object({
+    object_id: z.string().describe('클릭한 오브젝트 ID'),
+    box_2d: Box2DSchema.nullable().default(null).describe('클릭 위치 바운딩 박스 (선택)'),
+  })
+  .strict();
+export type ClickInput = z.infer<typeof ClickInputSchema>;
+
+/**
+ * 드롭 입력 정보 (U-012).
+ * 인벤토리 아이템을 핫스팟에 드롭할 때 전달되는 정보입니다.
+ * Q1 결정: Option B - target_box_2d 포함하여 서버가 정확한 위치 해석 가능.
+ */
+export const DropInputSchema = z
+  .object({
+    item_id: z.string().describe('드롭한 인벤토리 아이템 ID'),
+    target_object_id: z.string().describe('드롭 대상 핫스팟 오브젝트 ID'),
+    target_box_2d: Box2DSchema.describe('드롭 대상의 바운딩 박스 (0~1000 정규화)'),
+  })
+  .strict();
+export type DropInput = z.infer<typeof DropInputSchema>;
+
+/**
+ * 클라이언트 정보.
+ */
+export const ClientInfoSchema = z
+  .object({
+    viewport_w: z.number().int().positive().describe('뷰포트 너비 (픽셀, 양수)'),
+    viewport_h: z.number().int().positive().describe('뷰포트 높이 (픽셀, 양수)'),
+    theme: ThemeSchema.default('dark').describe('현재 테마'),
+  })
+  .strict();
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+/**
+ * 재화 스냅샷 (클라이언트 → 서버).
+ * 클라이언트가 보유한 현재 재화 상태입니다.
+ */
+export const EconomySnapshotSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('현재 시그널 잔액 (0 이상)'),
+    memory_shard: z.number().int().min(0).describe('현재 기억 파편 잔액 (0 이상)'),
+  })
+  .strict();
+export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
+
+/**
+ * 턴 입력 (클라이언트 → 서버).
+ * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+ *
+ * U-012: drop 필드 추가 - 인벤토리 아이템을 핫스팟에 드롭할 때 사용.
+ */
+export const TurnInputSchema = z
+  .object({
+    language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
+    text: z.string().default('').describe('사용자 자연어 입력'),
+    action_id: z.string().nullable().default(null).describe('선택한 액션 카드 ID (선택)'),
+    click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
+    drop: DropInputSchema.nullable().default(null).describe('아이템 드롭 정보 (선택, U-012)'),
+    client: ClientInfoSchema.describe('클라이언트 환경 정보'),
+    economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
+  })
+  .strict();
+export type TurnInput = z.infer<typeof TurnInputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - UI
+// =============================================================================
+
+/**
+ * 비용 추정치 (U-009: 최소/최대 범위).
+ * 행동의 예상 비용 범위를 표시합니다.
+ */
+export const CostEstimateSchema = z
+  .object({
+    min: CurrencyAmountSchema.describe('최소 예상 비용'),
+    max: CurrencyAmountSchema.describe('최대 예상 비용'),
+  })
+  .strict();
+export type CostEstimate = z.infer<typeof CostEstimateSchema>;
+
+/**
+ * 액션 카드 (Action Deck).
+ * 매 턴 AI가 추천하는 행동 카드입니다.
+ *
+ * U-009 확장:
+ *   - cost_estimate: 최소/최대 비용 범위 (RULE-005)
+ *   - enabled: 서버 측 실행 가능 여부 판단 (Q1: Option A)
+ *   - disabled_reason: 비활성화 사유 (잔액 부족 등)
+ *   - is_alternative: 저비용/텍스트-only 대안 카드 여부
+ */
+export const ActionCardSchema = z
+  .object({
+    id: z.string().describe('카드 고유 ID'),
+    label: z.string().describe('카드 라벨 (표시용)'),
+    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
+    cost: CurrencyAmountSchema.describe('예상 비용 (기본)'),
+    cost_estimate: CostEstimateSchema.nullable().default(null).describe('비용 추정 범위 (선택)'),
+    risk: RiskLevelSchema.default('low').describe('위험도'),
+    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
+    reward_hint: z.string().nullable().default(null).describe('보상 힌트 (선택)'),
+    enabled: z.boolean().default(true).describe('실행 가능 여부 (서버 판단)'),
+    disabled_reason: z.string().nullable().default(null).describe('비활성화 사유 (선택)'),
+    is_alternative: z.boolean().default(false).describe('저비용 대안 카드 여부'),
+  })
+  .strict();
+export type ActionCard = z.infer<typeof ActionCardSchema>;
+
+/**
+ * 장면 오브젝트 (클릭 가능한 핫스팟).
+ * 좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
+ */
+export const SceneObjectSchema = z
+  .object({
+    id: z.string().describe('오브젝트 고유 ID'),
+    label: z.string().describe('오브젝트 라벨 (표시용)'),
+    box_2d: Box2DSchema.describe('바운딩 박스'),
+    interaction_hint: z.string().nullable().default(null).describe('상호작용 힌트 (선택)'),
+  })
+  .strict();
+export type SceneObject = z.infer<typeof SceneObjectSchema>;
+
+/**
+ * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+ * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+ */
+export const ActionDeckSchema = z
+  .object({
+    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
+  })
+  .strict();
+export type ActionDeck = z.infer<typeof ActionDeckSchema>;
+
+/**
+ * UI 출력 데이터.
+ * AI가 생성한 UI 요소들입니다.
+ * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
+ */
+export const UIOutputSchema = z
+  .object({
+    action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
+    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
+  })
+  .strict();
+export type UIOutput = z.infer<typeof UIOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - World
+// =============================================================================
+
+/**
+ * 중요 설정 고정 후보.
+ * 사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
+ */
+export const MemoryPinSchema = z
+  .object({
+    id: z.string().describe('핀 고유 ID'),
+    content: z.string().describe('고정할 내용'),
+    cost: CurrencyAmountSchema.describe('고정에 필요한 비용'),
+  })
+  .strict();
+export type MemoryPin = z.infer<typeof MemoryPinSchema>;
+
+/**
+ * 세계 규칙 (Rule Board).
+ * 현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
+ */
+export const WorldRuleSchema = z
+  .object({
+    id: z.string().describe('규칙 고유 ID'),
+    label: z.string().describe('규칙 이름'),
+    description: z.string().nullable().default(null).describe('규칙 상세 설명 (선택)'),
+  })
+  .strict();
+export type WorldRule = z.infer<typeof WorldRuleSchema>;
+
+/**
+ * 퀘스트/목표 (Quest Panel).
+ * 플레이어가 달성해야 하는 현재 목표입니다.
+ */
+export const QuestSchema = z
+  .object({
+    id: z.string().describe('퀘스트 고유 ID'),
+    label: z.string().describe('퀘스트 이름'),
+    is_completed: z.boolean().default(false).describe('달성 여부'),
+  })
+  .strict();
+export type Quest = z.infer<typeof QuestSchema>;
+
+/**
+ * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
+ * 이번 턴에서 변경된 세계 상태를 나타냅니다.
+ */
+export const WorldDeltaSchema = z
+  .object({
+    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
+    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
+    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
+    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
+    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
+    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
+  })
+  .strict();
+export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Render
+// =============================================================================
+
+/**
+ * 이미지 생성 작업.
+ * 조건부 이미지 생성/편집 요청입니다.
+ */
+export const ImageJobSchema = z
+  .object({
+    should_generate: z.boolean().describe('이미지를 생성해야 하는지'),
+    prompt: z.string().default('').describe('이미지 생성 프롬프트'),
+    model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
+    aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
+    image_size: z.string().default('1024x1024').describe('이미지 크기'),
+    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
+  })
+  .strict();
+export type ImageJob = z.infer<typeof ImageJobSchema>;
+
+/**
+ * 렌더링 출력 데이터.
+ * 이미지 생성/편집 관련 정보입니다.
+ */
+export const RenderOutputSchema = z
+  .object({
+    image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
+  })
+  .strict();
+export type RenderOutput = z.infer<typeof RenderOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Economy
+// =============================================================================
+
+/**
+ * 경제 출력 데이터 (RULE-005).
+ * 이번 턴의 비용과 잔액 정보입니다.
+ * 잔액 음수는 절대 불가 (서버 Hard gate).
+ */
+export const EconomyOutputSchema = z
+  .object({
+    cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
+    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
+  })
+  .strict();
+export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Safety
+// =============================================================================
+
+/**
+ * 안전 출력 데이터.
+ * 안전 정책 관련 정보입니다.
+ * 차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
+ */
+export const SafetyOutputSchema = z
+  .object({
+    blocked: z.boolean().default(false).describe('안전 정책에 의해 차단되었는지'),
+    message: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('차단 시 사용자에게 표시할 메시지 (선택)'),
+  })
+  .strict();
+export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Agent Console
+// =============================================================================
+
+/**
+ * 에이전트 콘솔 데이터 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+ */
+export const AgentConsoleSchema = z
+  .object({
+    current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
+    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
+    repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
+  })
+  .strict();
+export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
+
+// =============================================================================
+// TurnOutput (메인 응답 스키마)
+// =============================================================================
+
+/**
+ * 턴 출력 (서버 → 클라이언트).
+ * 서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
+ *
+ * Hard Gate 필드 (RULE-003/004/005):
+ *   - economy: cost와 balance_after 필수, 잔액 음수 금지
+ *   - safety: blocked 시 안전한 대체 결과 제공
+ *   - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
+ */
+export const TurnOutputSchema = z
+  .object({
+    // 필수 필드 (Hard Gate)
+    language: LanguageSchema.describe('응답 언어 (요청과 동일)'),
+    narrative: z.string().describe('내러티브 텍스트 (표시용)'),
+    economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
+    safety: SafetyOutputSchema.describe('안전 정책 정보'),
+
+    // UI 관련 필드
+    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
+
+    // 세계 상태 필드
+    world: WorldDeltaSchema.default({
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    }).describe('세계 상태 변화 (delta)'),
+
+    // 렌더링 필드
+    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
+
+    // 에이전트 콘솔 필드
+    agent_console: AgentConsoleSchema.default({
+      current_phase: 'commit',
+      badges: [],
+      repair_count: 0,
+    }).describe('에이전트 실행 정보'),
+  })
+  .strict();
+export type TurnOutput = z.infer<typeof TurnOutputSchema>;
+
+// =============================================================================
+// 안전 폴백 (RULE-004)
+// =============================================================================
+
+/**
+ * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
+ * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
+ *
+ * @param language - 요청 언어
+ * @param repairCount - 복구 시도 횟수
+ * @param errorMessage - 오류 메시지 (선택)
+ */
+export function createFallbackTurnOutput(
+  language: Language,
+  repairCount: number = 0,
+  errorMessage?: string,
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답을 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요.'
+      : '[System] An error occurred while processing the response. Please try again.';
+
+  const safetyMessage =
+    language === 'ko-KR'
+      ? '스키마 검증 실패로 인한 폴백 응답입니다.'
+      : 'This is a fallback response due to schema validation failure.';
+
+  return {
+    language,
+    narrative: errorMessage ?? fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: safetyMessage,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: repairCount,
+    },
   };
+}
 
-  const mockCallbacks = {
-    onStage: vi.fn(),
-    onRepair: vi.fn(),
-    onBadges: vi.fn(),
-    onNarrativeDelta: vi.fn(),
-    onFinal: vi.fn(),
-    onError: vi.fn(),
-    onComplete: vi.fn(),
+// =============================================================================
+// 검증 헬퍼 함수
+// =============================================================================
+
+/**
+ * TurnOutput 검증 결과 타입.
+ */
+export type TurnOutputParseResult =
+  | { success: true; data: TurnOutput }
+  | { success: false; error: z.ZodError; fallback: TurnOutput };
+
+/**
+ * TurnOutput을 안전하게 파싱합니다.
+ * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
+ *
+ * @param data - 파싱할 데이터
+ * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
+ * @param repairCount - 현재 복구 시도 횟수
+ */
+export function safeParseTurnOutput(
+  data: unknown,
+  language: Language = 'ko-KR',
+  repairCount: number = 0,
+): TurnOutputParseResult {
+  const result = TurnOutputSchema.safeParse(data);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  return {
+    success: false,
+    error: result.error,
+    fallback: createFallbackTurnOutput(language, repairCount),
   };
+}
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.fetch = vi.fn();
-  });
+/**
+ * TurnInput을 검증합니다.
+ * 입력 데이터의 유효성을 엄격하게 검사합니다.
+ *
+ * @param data - 검증할 데이터
+ * @throws {z.ZodError} 검증 실패 시
+ */
+export function parseTurnInput(data: unknown): TurnInput {
+  return TurnInputSchema.parse(data);
+}
 
-  it('should process stream events correctly (including repair)', async () => {
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
-        );
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({ type: 'repair', attempt: 1, message: 'Schema fail, retrying' }) + '\n',
-          ),
-        );
-        controller.enqueue(
-          encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
-        );
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              type: 'final',
-              data: {
-                language: 'ko-KR',
-                narrative: 'Hello',
-                economy: {
-                  cost: { signal: 0, memory_shard: 0 },
-                  balance_after: { signal: 100, memory_shard: 0 },
-                },
-                safety: { blocked: false },
-              },
-            }) + '\n',
-          ),
-        );
-        controller.close();
-      },
-    });
+/**
+ * TurnInput 안전 파싱 결과 타입.
+ */
+export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safeParse>;
 
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      body: stream,
-    });
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
-    expect(mockCallbacks.onRepair).toHaveBeenCalledWith(
-      expect.objectContaining({ attempt: 1, message: 'Schema fail, retrying' }),
-    );
-    expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'Hello' }),
-    );
-    expect(mockCallbacks.onFinal).toHaveBeenCalled();
-    expect(mockCallbacks.onComplete).toHaveBeenCalled();
-  });
-
-  it('should handle HTTP errors', async () => {
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-    });
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        code: 'STREAM_ERROR',
-        message: expect.stringContaining('500'),
-      }),
-    );
-  });
-
-  it('should handle fetch rejection', async () => {
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('Network failure'),
-    );
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'Network failure',
-      }),
-    );
-  });
-});
+/**
+ * TurnInput을 안전하게 파싱합니다.
+ *
+ * @param data - 파싱할 데이터
+ */
+export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
+  return TurnInputSchema.safeParse(data);
+}
 </file>
 
 <file path="frontend/src/stores/agentStore.ts">
@@ -7269,6 +7244,188 @@ async def turn_stream(request: Request) -> StreamingResponse:
     )
 </file>
 
+<file path="frontend/src/api/turnStream.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NDJSONParser } from './turnStream';
+
+describe('NDJSONParser', () => {
+  let parser: NDJSONParser;
+
+  beforeEach(() => {
+    parser = new NDJSONParser();
+  });
+
+  it('should parse a single complete line', () => {
+    const chunk = JSON.stringify({ type: 'test', value: 1 }) + '\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ type: 'test', value: 1 });
+  });
+
+  it('should parse multiple complete lines in one chunk', () => {
+    const chunk = JSON.stringify({ id: 1 }) + '\n' + JSON.stringify({ id: 2 }) + '\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(2);
+    expect(results[0]).toEqual({ id: 1 });
+    expect(results[1]).toEqual({ id: 2 });
+  });
+
+  it('should buffer partial lines and parse them when completed', () => {
+    const chunk1 = '{"id": 1';
+    const chunk2 = ', "val": "ok"}\n';
+
+    const results1 = parser.parse(chunk1);
+    expect(results1).toHaveLength(0);
+
+    const results2 = parser.parse(chunk2);
+    expect(results2).toHaveLength(1);
+    expect(results2[0]).toEqual({ id: 1, val: 'ok' });
+  });
+
+  it('should ignore empty lines', () => {
+    const chunk = '\n\n{"a":1}\n\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(1);
+  });
+
+  it('should not crash on invalid JSON and continue', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chunk = 'invalid json\n{"valid": true}\n';
+    const results = parser.parse(chunk);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ valid: true });
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('should flush remaining buffer', () => {
+    parser.parse('{"id": 1}'); // No newline
+    const result = parser.flush();
+    expect(result).toEqual({ id: 1 });
+  });
+
+  it('should return null on flush with empty buffer', () => {
+    const result = parser.flush();
+    expect(result).toBeNull();
+  });
+});
+
+describe('executeTurnStream', () => {
+  const mockInput = {
+    language: 'ko-KR' as const,
+    text: 'Hello',
+    action_id: null,
+    click: null,
+    drop: null, // U-012: 드롭 입력 필드 추가
+    client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+    economy_snapshot: { signal: 100, memory_shard: 0 },
+  };
+
+  const mockCallbacks = {
+    onStage: vi.fn(),
+    onRepair: vi.fn(),
+    onBadges: vi.fn(),
+    onNarrativeDelta: vi.fn(),
+    onFinal: vi.fn(),
+    onError: vi.fn(),
+    onComplete: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+  });
+
+  it('should process stream events correctly (including repair)', async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({ type: 'repair', attempt: 1, message: 'Schema fail, retrying' }) + '\n',
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({
+              type: 'final',
+              data: {
+                language: 'ko-KR',
+                narrative: 'Hello',
+                economy: {
+                  cost: { signal: 0, memory_shard: 0 },
+                  balance_after: { signal: 100, memory_shard: 0 },
+                },
+                safety: { blocked: false },
+              },
+            }) + '\n',
+          ),
+        );
+        controller.close();
+      },
+    });
+
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      body: stream,
+    });
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
+    expect(mockCallbacks.onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ attempt: 1, message: 'Schema fail, retrying' }),
+    );
+    expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Hello' }),
+    );
+    expect(mockCallbacks.onFinal).toHaveBeenCalled();
+    expect(mockCallbacks.onComplete).toHaveBeenCalled();
+  });
+
+  it('should handle HTTP errors', async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'STREAM_ERROR',
+        message: expect.stringContaining('500'),
+      }),
+    );
+  });
+
+  it('should handle fetch rejection', async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Network failure'),
+    );
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Network failure',
+      }),
+    );
+  });
+});
+</file>
+
 <file path="frontend/src/components/AgentConsole.tsx">
 /**
  * Unknown World - Agent Console 컴포넌트.
@@ -7509,424 +7666,6 @@ export function AgentConsole() {
 }
 
 export default AgentConsole;
-</file>
-
-<file path="frontend/src/components/SceneCanvas.tsx">
-/**
- * Unknown World - Scene Canvas 컴포넌트
- *
- * RULE-002 준수: 채팅 버블이 아닌 게임 UI
- * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
- *
- * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
- * - TurnOutput의 objects[]/hotspots[]를 기반으로 오버레이 렌더
- * - hover 시 하이라이트/툴팁 표시
- * - click 시 object_id + box_2d를 TurnInput에 포함해 전송
- *
- * @module components/SceneCanvas
- */
-
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
-import type { SceneObject, Box2D } from '../schemas/turn';
-import { box2dToPixel, type CanvasSize } from '../utils/box2d';
-
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/**
- * 상태별 placeholder 정보 (U-031: Placeholder Pack)
- * labelKey는 i18n 번역 키로 사용됩니다.
- */
-export const SCENE_PLACEHOLDERS: Record<Exclude<SceneCanvasStatus, 'scene'>, PlaceholderInfo> = {
-  default: {
-    imagePath: '/ui/placeholders/scene-placeholder-default.png',
-    fallbackEmoji: '📡',
-    labelKey: 'scene.status.default',
-  },
-  loading: {
-    imagePath: '/ui/placeholders/scene-loading.webp',
-    fallbackEmoji: '⏳',
-    labelKey: 'scene.status.loading',
-  },
-  offline: {
-    imagePath: '/ui/placeholders/scene-offline.webp',
-    fallbackEmoji: '🔌',
-    labelKey: 'scene.status.offline',
-  },
-  blocked: {
-    imagePath: '/ui/placeholders/scene-blocked.webp',
-    fallbackEmoji: '🚫',
-    labelKey: 'scene.status.blocked',
-  },
-  low_signal: {
-    imagePath: '/ui/placeholders/scene-low-signal.webp',
-    fallbackEmoji: '📉',
-    labelKey: 'scene.status.low_signal',
-  },
-};
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/**
- * 핫스팟 클릭 이벤트 데이터 (Q1 결정: Option B - object_id + box_2d)
- */
-export interface HotspotClickData {
-  /** 클릭한 오브젝트 ID */
-  object_id: string;
-  /** 클릭한 오브젝트의 바운딩 박스 (0~1000 정규화) */
-  box_2d: Box2D;
-}
-
-interface SceneCanvasProps {
-  state: SceneCanvasState;
-  /** 클릭 가능한 오브젝트 목록 */
-  objects?: SceneObject[];
-  /** 핫스팟 클릭 콜백 */
-  onHotspotClick?: (data: HotspotClickData) => void;
-  /** 스트리밍 중 여부 (비활성화용) */
-  disabled?: boolean;
-}
-
-// =============================================================================
-// 내부 컴포넌트: 핫스팟 오버레이
-// =============================================================================
-
-interface HotspotOverlayProps {
-  object: SceneObject;
-  canvasSize: CanvasSize;
-  onClick: (data: HotspotClickData) => void;
-  disabled: boolean;
-}
-
-/**
- * 개별 핫스팟 오버레이 컴포넌트
- */
-function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverlayProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const { t } = useTranslation();
-
-  // box_2d(0~1000) → px 변환
-  const pixelBox = box2dToPixel(object.box_2d, canvasSize);
-
-  const handleClick = useCallback(() => {
-    if (disabled) return;
-    onClick({
-      object_id: object.id,
-      box_2d: object.box_2d,
-    });
-  }, [disabled, onClick, object.id, object.box_2d]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (disabled) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleClick();
-      }
-    },
-    [disabled, handleClick],
-  );
-
-  return (
-    <div
-      className={`hotspot-overlay ${isHovered ? 'hovered' : ''} ${disabled ? 'disabled' : ''}`}
-      style={{
-        position: 'absolute',
-        top: `${pixelBox.top}px`,
-        left: `${pixelBox.left}px`,
-        width: `${pixelBox.width}px`,
-        height: `${pixelBox.height}px`,
-      }}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      aria-label={object.label}
-      aria-disabled={disabled}
-    >
-      {/* 호버 시 툴팁 표시 */}
-      {isHovered && !disabled && (
-        <div className="hotspot-tooltip">
-          <span className="hotspot-tooltip-label">{object.label}</span>
-          {object.interaction_hint && (
-            <span className="hotspot-tooltip-hint">
-              {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// 메인 컴포넌트
-// =============================================================================
-
-/**
- * Scene Canvas 컴포넌트
- *
- * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
- * U-031[Mvp]: Placeholder Pack
- *
- * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
- * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
- * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
- */
-export function SceneCanvas({
-  state,
-  objects = [],
-  onHotspotClick,
-  disabled = false,
-}: SceneCanvasProps) {
-  const { status, imageUrl, message } = state;
-  const [imageError, setImageError] = useState(false);
-  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
-
-  // ResizeObserver로 캔버스 크기 추적 (반응형 좌표 변환용)
-  useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setCanvasSize({ width, height });
-      }
-    });
-
-    resizeObserver.observe(element);
-
-    // 초기 크기 설정
-    const rect = element.getBoundingClientRect();
-    setCanvasSize({ width: rect.width, height: rect.height });
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  // 핫스팟 클릭 핸들러
-  const handleHotspotClick = useCallback(
-    (data: HotspotClickData) => {
-      if (onHotspotClick) {
-        onHotspotClick(data);
-      }
-    },
-    [onHotspotClick],
-  );
-
-  // 정상 장면 표시 중이거나 이미지 에러가 발생한 경우
-  const isSceneActive = status === 'scene' && imageUrl && !imageError;
-
-  // placeholder 정보 결정 (scene 상태에서 에러 시 default로 폴백)
-  const effectiveStatus = status === 'scene' && imageError ? 'default' : status;
-  const isPlaceholderVisible = effectiveStatus !== 'scene';
-
-  const placeholder = isPlaceholderVisible
-    ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
-    : null;
-
-  // 핫스팟 렌더링 조건: scene 활성화 상태 + objects 존재 + 캔버스 크기 확보
-  const shouldRenderHotspots =
-    (isSceneActive || status === 'default') && objects.length > 0 && canvasSize.width > 0;
-
-  return (
-    <div
-      ref={canvasRef}
-      className={`scene-canvas ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`} ${shouldRenderHotspots ? 'has-hotspots' : ''}`}
-      style={placeholder ? { backgroundImage: `url('${placeholder.imagePath}')` } : {}}
-    >
-      {isSceneActive && (
-        <img
-          src={imageUrl}
-          alt={t('scene.status.alt')}
-          className="scene-image"
-          onError={() => setImageError(true)}
-        />
-      )}
-
-      {isPlaceholderVisible && placeholder && (
-        <div className="scene-placeholder">
-          {/* 텍스트 폴백 (이미지 로드 실패 시에도 표시) */}
-          <p className="text-glow scene-status-label">
-            <span className="scene-status-emoji" aria-hidden="true">
-              {placeholder.fallbackEmoji}
-            </span>{' '}
-            {t(placeholder.labelKey)}
-          </p>
-          {(message || (status === 'scene' && imageError)) && (
-            <p className="scene-status-message">
-              {message || (imageError ? t('scene.status.image_error') : '')}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* 핫스팟 오버레이 레이어 */}
-      {shouldRenderHotspots && (
-        <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
-          {objects.map((obj) => (
-            <HotspotOverlay
-              key={obj.id}
-              object={obj}
-              canvasSize={canvasSize}
-              onClick={handleHotspotClick}
-              disabled={disabled}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-</file>
-
-<file path="frontend/src/locales/ko-KR/translation.json">
-{
-  "scene": {
-    "status": {
-      "default": "데이터 대기 중",
-      "loading": "동기화 중...",
-      "offline": "연결 끊김",
-      "blocked": "접근 제한됨",
-      "low_signal": "신호 약함",
-      "image_error": "장면 이미지를 불러올 수 없습니다.",
-      "initial_sync": "전역 데이터 동기화 대기 중...",
-      "syncing": "데이터 동기화 중...",
-      "alt": "장면 이미지"
-    },
-    "hotspot": {
-      "layer_label": "클릭 가능한 오브젝트 영역",
-      "hint_prefix": "힌트",
-      "click_action": "{{label}} 클릭"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "대기열",
-      "badges": "검증 배지",
-      "repair": "자동 복구",
-      "status": {
-        "idle": "대기 중",
-        "processing": "처리 중"
-      },
-      "badges_empty": "[ 검증 대기 중 ]",
-      "repaired": "(복구됨)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "명령을 입력하세요...",
-    "processing": "처리 중...",
-    "execute": "실행",
-    "wait": "대기",
-    "panel_placeholder": "[ 준비 중 ]",
-    "scale_decrease": "글자 크기 줄이기",
-    "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal 소모",
-    "shard_cost": "Shard 소모",
-    "risk_level": "위험도"
-  },
-  "connection": {
-    "online": "온라인",
-    "offline": "오프라인"
-  },
-  "inventory": {
-    "empty": "[ 아이템 없음 ]",
-    "grid_label": "인벤토리 아이템 목록",
-    "item_label": "{{name}} (수량: {{quantity}})",
-    "drag_hint": "드래그하여 사용"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ 드래그 앤 드롭 영역 ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ 목표/퀘스트 목록 ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ 고정된 기억/단서 ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ 이미지 업로드 슬롯 ]"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "탐색하기",
-        "description": "주변을 살펴본다"
-      },
-      "investigate": {
-        "label": "조사하기",
-        "description": "자세히 살펴본다"
-      },
-      "talk": {
-        "label": "대화하기",
-        "description": "말을 걸어본다"
-      }
-    },
-    "card_select": "카드 선택: {{cardId}}",
-    "deck_label": "행동 선택 카드",
-    "alternative": "대안",
-    "insufficient_balance": "잔액 부족",
-    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
-    "risk": {
-      "low": "낮음",
-      "medium": "보통",
-      "high": "높음"
-    },
-    "cost_range": "{{min}}~{{max}}"
-  },
-  "narrative": {
-    "welcome": "미지의 세계에 오신 것을 환영합니다...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
-  }
-}
 </file>
 
 <file path="frontend/src/types/turn_stream.ts">
@@ -8989,6 +8728,457 @@ typeCheckingMode = "strict"
 include = ["src"]
 </file>
 
+<file path="frontend/src/components/SceneCanvas.tsx">
+/**
+ * Unknown World - Scene Canvas 컴포넌트
+ *
+ * RULE-002 준수: 채팅 버블이 아닌 게임 UI
+ * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
+ *
+ * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * - TurnOutput의 objects[]/hotspots[]를 기반으로 오버레이 렌더
+ * - hover 시 하이라이트/툴팁 표시
+ * - click 시 object_id + box_2d를 TurnInput에 포함해 전송
+ *
+ * U-012[Mvp]: DnD 드롭 타겟 확장
+ * - 핫스팟을 droppable 영역으로 만들어 인벤토리 아이템 드롭 처리
+ * - 드래그 오버 시 하이라이트 강화
+ * - 드롭 성공/실패 즉시 시각화
+ *
+ * @module components/SceneCanvas
+ */
+
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDroppable } from '@dnd-kit/core';
+import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
+import type { SceneObject, Box2D } from '../schemas/turn';
+import { box2dToPixel, type CanvasSize } from '../utils/box2d';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/**
+ * 상태별 placeholder 정보 (U-031: Placeholder Pack)
+ * labelKey는 i18n 번역 키로 사용됩니다.
+ */
+export const SCENE_PLACEHOLDERS: Record<Exclude<SceneCanvasStatus, 'scene'>, PlaceholderInfo> = {
+  default: {
+    imagePath: '/ui/placeholders/scene-placeholder-default.png',
+    fallbackEmoji: '📡',
+    labelKey: 'scene.status.default',
+  },
+  loading: {
+    imagePath: '/ui/placeholders/scene-loading.webp',
+    fallbackEmoji: '⏳',
+    labelKey: 'scene.status.loading',
+  },
+  offline: {
+    imagePath: '/ui/placeholders/scene-offline.webp',
+    fallbackEmoji: '🔌',
+    labelKey: 'scene.status.offline',
+  },
+  blocked: {
+    imagePath: '/ui/placeholders/scene-blocked.webp',
+    fallbackEmoji: '🚫',
+    labelKey: 'scene.status.blocked',
+  },
+  low_signal: {
+    imagePath: '/ui/placeholders/scene-low-signal.webp',
+    fallbackEmoji: '📉',
+    labelKey: 'scene.status.low_signal',
+  },
+};
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 핫스팟 클릭 이벤트 데이터 (Q1 결정: Option B - object_id + box_2d)
+ */
+export interface HotspotClickData {
+  /** 클릭한 오브젝트 ID */
+  object_id: string;
+  /** 클릭한 오브젝트의 바운딩 박스 (0~1000 정규화) */
+  box_2d: Box2D;
+}
+
+interface SceneCanvasProps {
+  state: SceneCanvasState;
+  /** 클릭 가능한 오브젝트 목록 */
+  objects?: SceneObject[];
+  /** 핫스팟 클릭 콜백 */
+  onHotspotClick?: (data: HotspotClickData) => void;
+  /** 스트리밍 중 여부 (비활성화용) */
+  disabled?: boolean;
+}
+
+// =============================================================================
+// 내부 컴포넌트: 핫스팟 오버레이
+// =============================================================================
+
+interface HotspotOverlayProps {
+  object: SceneObject;
+  canvasSize: CanvasSize;
+  onClick: (data: HotspotClickData) => void;
+  disabled: boolean;
+}
+
+/**
+ * 개별 핫스팟 오버레이 컴포넌트 (U-010 + U-012)
+ *
+ * - 클릭 시 object_id + box_2d 전송 (U-010)
+ * - 드롭 타겟으로 동작 - dnd-kit useDroppable 사용 (U-012)
+ */
+function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverlayProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const { t } = useTranslation();
+
+  // U-012: useDroppable 훅으로 드롭 타겟 설정
+  const { isOver, setNodeRef } = useDroppable({
+    id: `hotspot-${object.id}`,
+    data: {
+      type: 'hotspot',
+      object_id: object.id,
+      box_2d: object.box_2d,
+      label: object.label,
+    },
+    disabled,
+  });
+
+  // box_2d(0~1000) → px 변환
+  const pixelBox = box2dToPixel(object.box_2d, canvasSize);
+
+  const handleClick = useCallback(() => {
+    if (disabled) return;
+    onClick({
+      object_id: object.id,
+      box_2d: object.box_2d,
+    });
+  }, [disabled, onClick, object.id, object.box_2d]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (disabled) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [disabled, handleClick],
+  );
+
+  // 드래그 오버 상태 또는 마우스 호버 상태
+  const isHighlighted = isHovered || isOver;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`hotspot-overlay ${isHighlighted ? 'hovered' : ''} ${disabled ? 'disabled' : ''} ${isOver ? 'drop-target-active' : ''}`}
+      style={{
+        position: 'absolute',
+        top: `${pixelBox.top}px`,
+        left: `${pixelBox.left}px`,
+        width: `${pixelBox.width}px`,
+        height: `${pixelBox.height}px`,
+      }}
+      onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={object.label}
+      aria-disabled={disabled}
+      data-drop-target={!disabled}
+    >
+      {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
+      {isHighlighted && !disabled && (
+        <div className="hotspot-tooltip">
+          <span className="hotspot-tooltip-label">{object.label}</span>
+          {/* U-012: 드래그 오버 시 드롭 힌트 표시 */}
+          {isOver && (
+            <span className="hotspot-tooltip-drop-hint">{t('scene.hotspot.drop_hint')}</span>
+          )}
+          {!isOver && object.interaction_hint && (
+            <span className="hotspot-tooltip-hint">
+              {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Scene Canvas 컴포넌트
+ *
+ * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * U-031[Mvp]: Placeholder Pack
+ *
+ * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
+ * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
+ * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
+ */
+export function SceneCanvas({
+  state,
+  objects = [],
+  onHotspotClick,
+  disabled = false,
+}: SceneCanvasProps) {
+  const { status, imageUrl, message } = state;
+  const [imageError, setImageError] = useState(false);
+  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+
+  // ResizeObserver로 캔버스 크기 추적 (반응형 좌표 변환용)
+  useEffect(() => {
+    const element = canvasRef.current;
+    if (!element) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setCanvasSize({ width, height });
+      }
+    });
+
+    resizeObserver.observe(element);
+
+    // 초기 크기 설정
+    const rect = element.getBoundingClientRect();
+    setCanvasSize({ width: rect.width, height: rect.height });
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // 핫스팟 클릭 핸들러
+  const handleHotspotClick = useCallback(
+    (data: HotspotClickData) => {
+      if (onHotspotClick) {
+        onHotspotClick(data);
+      }
+    },
+    [onHotspotClick],
+  );
+
+  // 정상 장면 표시 중이거나 이미지 에러가 발생한 경우
+  const isSceneActive = status === 'scene' && imageUrl && !imageError;
+
+  // placeholder 정보 결정 (scene 상태에서 에러 시 default로 폴백)
+  const effectiveStatus = status === 'scene' && imageError ? 'default' : status;
+  const isPlaceholderVisible = effectiveStatus !== 'scene';
+
+  const placeholder = isPlaceholderVisible
+    ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
+    : null;
+
+  // 핫스팟 렌더링 조건: scene 활성화 상태 + objects 존재 + 캔버스 크기 확보
+  const shouldRenderHotspots =
+    (isSceneActive || status === 'default') && objects.length > 0 && canvasSize.width > 0;
+
+  return (
+    <div
+      ref={canvasRef}
+      className={`scene-canvas ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`} ${shouldRenderHotspots ? 'has-hotspots' : ''}`}
+      style={placeholder ? { backgroundImage: `url('${placeholder.imagePath}')` } : {}}
+    >
+      {isSceneActive && (
+        <img
+          src={imageUrl}
+          alt={t('scene.status.alt')}
+          className="scene-image"
+          onError={() => setImageError(true)}
+        />
+      )}
+
+      {isPlaceholderVisible && placeholder && (
+        <div className="scene-placeholder">
+          {/* 텍스트 폴백 (이미지 로드 실패 시에도 표시) */}
+          <p className="text-glow scene-status-label">
+            <span className="scene-status-emoji" aria-hidden="true">
+              {placeholder.fallbackEmoji}
+            </span>{' '}
+            {t(placeholder.labelKey)}
+          </p>
+          {(message || (status === 'scene' && imageError)) && (
+            <p className="scene-status-message">
+              {message || (imageError ? t('scene.status.image_error') : '')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* 핫스팟 오버레이 레이어 */}
+      {shouldRenderHotspots && (
+        <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
+          {objects.map((obj) => (
+            <HotspotOverlay
+              key={obj.id}
+              object={obj}
+              canvasSize={canvasSize}
+              onClick={handleHotspotClick}
+              disabled={disabled}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/locales/ko-KR/translation.json">
+{
+  "scene": {
+    "status": {
+      "default": "데이터 대기 중",
+      "loading": "동기화 중...",
+      "offline": "연결 끊김",
+      "blocked": "접근 제한됨",
+      "low_signal": "신호 약함",
+      "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "initial_sync": "전역 데이터 동기화 대기 중...",
+      "syncing": "데이터 동기화 중...",
+      "alt": "장면 이미지"
+    },
+    "hotspot": {
+      "layer_label": "클릭 가능한 오브젝트 영역",
+      "hint_prefix": "힌트",
+      "click_action": "{{label}} 클릭",
+      "drop_hint": "여기에 드롭하여 사용",
+      "drop_action": "{{item}}을(를) {{target}}에 사용",
+      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다."
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "대기열",
+      "badges": "검증 배지",
+      "repair": "자동 복구",
+      "status": {
+        "idle": "대기 중",
+        "processing": "처리 중"
+      },
+      "badges_empty": "[ 검증 대기 중 ]",
+      "repaired": "(복구됨)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "명령을 입력하세요...",
+    "processing": "처리 중...",
+    "execute": "실행",
+    "wait": "대기",
+    "panel_placeholder": "[ 준비 중 ]",
+    "scale_decrease": "글자 크기 줄이기",
+    "scale_increase": "글자 크기 늘리기",
+    "scale_label": "UI 스케일 설정"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal 소모",
+    "shard_cost": "Shard 소모",
+    "risk_level": "위험도"
+  },
+  "connection": {
+    "online": "온라인",
+    "offline": "오프라인"
+  },
+  "inventory": {
+    "empty": "[ 아이템 없음 ]",
+    "grid_label": "인벤토리 아이템 목록",
+    "item_label": "{{name}} (수량: {{quantity}})",
+    "drag_hint": "드래그하여 사용"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ 드래그 앤 드롭 영역 ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ 목표/퀘스트 목록 ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ 고정된 기억/단서 ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ 이미지 업로드 슬롯 ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "탐색하기",
+        "description": "주변을 살펴본다"
+      },
+      "investigate": {
+        "label": "조사하기",
+        "description": "자세히 살펴본다"
+      },
+      "talk": {
+        "label": "대화하기",
+        "description": "말을 걸어본다"
+      }
+    },
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "미지의 세계에 오신 것을 환영합니다...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
+}
+</file>
+
 <file path="package.json">
 {
   "name": "unknown-world",
@@ -9805,7 +9995,7 @@ import { useActionDeckStore } from './stores/actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
-import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
+import type { TurnInput, TurnOutput, ActionCard, DropInput, Box2D } from './schemas/turn';
 import { getResolvedLanguage } from './i18n';
 
 // =============================================================================
@@ -9874,8 +10064,8 @@ function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
 
   return (
     <div className="narrative-feed" ref={feedRef}>
-      {entries.map((entry) => (
-        <div key={entry.turn} className="narrative-entry">
+      {entries.map((entry, index) => (
+        <div key={`${entry.turn}-${index}`} className="narrative-entry">
           <span className="narrative-timestamp">
             {t('narrative.turn_label', { turn: entry.turn })}
           </span>
@@ -10149,9 +10339,10 @@ function App() {
    * 턴을 실행합니다.
    *
    * U-010: click 파라미터 추가 (Q1 결정: Option B - object_id + box_2d 전송)
+   * U-012: drop 파라미터 추가 (인벤토리 아이템 → 핫스팟 드롭)
    */
   const executeTurn = useCallback(
-    (text: string, actionId?: string, clickData?: HotspotClickData) => {
+    (text: string, actionId?: string, clickData?: HotspotClickData, dropData?: DropInput) => {
       if (isStreaming) return;
 
       // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
@@ -10166,6 +10357,8 @@ function App() {
               box_2d: clickData.box_2d,
             }
           : null,
+        // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
+        drop: dropData ?? null,
         client: {
           viewport_w: window.innerWidth,
           viewport_h: window.innerHeight,
@@ -10299,20 +10492,62 @@ function App() {
   );
 
   /**
-   * 드래그 종료 핸들러 (U-011)
-   * 실제 드롭 처리는 U-012에서 구현합니다.
+   * 드래그 종료 핸들러 (U-011 + U-012)
+   *
+   * U-012: 핫스팟에 드롭 시 TurnInput(drop)을 생성하여 턴 실행.
+   * - 드롭 성공: item_id + target_object_id + target_box_2d로 TurnInput 생성
+   * - 드롭 실패: 즉시 피드백 (무반응 금지)
    */
   const handleDragEnd = useCallback(
-    (_event: DragEndEvent) => {
+    (event: DragEndEvent) => {
+      const { active, over } = event;
       endDrag();
-      // TODO: U-012에서 드롭 타겟(핫스팟) 처리 구현
-      // if (event.over) {
-      //   const droppedItemId = event.active.data.current?.item_id;
-      //   const targetId = event.over.id;
-      //   // executeTurn with drop action...
-      // }
+
+      // 드래그된 아이템 정보 추출
+      const activeData = active.data.current;
+      if (activeData?.type !== 'inventory-item') {
+        return;
+      }
+
+      const itemId = activeData.item_id as string;
+      const draggedItem = inventoryItems.find((item) => item.id === itemId);
+      const itemName = draggedItem?.name ?? itemId;
+
+      // 드롭 대상이 없거나 핫스팟이 아니면 실패 피드백 제공 (U-012)
+      if (!over || over.data.current?.type !== 'hotspot') {
+        setNarrativeEntries((prev) => [
+          ...prev,
+          {
+            turn: turnCountRef.current,
+            text: `[${t('connection.online')}] ${t('scene.hotspot.drop_invalid', { item: itemName })}`,
+          },
+        ]);
+        return;
+      }
+
+      // 드롭 대상이 핫스팟인 경우
+      const overData = over.data.current;
+      const targetObjectId = overData.object_id as string;
+      const targetBox2d = overData.box_2d as Box2D;
+      const targetLabel = overData.label as string;
+
+      // 드롭 액션 텍스트 생성
+      const dropText = t('scene.hotspot.drop_action', {
+        item: itemName,
+        target: targetLabel,
+      });
+
+      // DropInput 생성 (Q1: Option B - target_box_2d 포함)
+      const dropInput: DropInput = {
+        item_id: itemId,
+        target_object_id: targetObjectId,
+        target_box_2d: targetBox2d,
+      };
+
+      // 턴 실행
+      executeTurn(dropText, undefined, undefined, dropInput);
     },
-    [endDrag],
+    [endDrag, executeTurn, inventoryItems, t],
   );
 
   return (

@@ -554,6 +554,85 @@ body {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
+/* ============================================
+   8.2 핫스팟 드롭 타겟 상태 (U-012)
+   - 드래그 오버 시 하이라이트 강화
+   - 드롭 가능/불가 상태 시각화
+   ============================================ */
+
+/* 드롭 타겟 활성 상태 (아이템이 위에 있을 때) */
+.hotspot-overlay.drop-target-active {
+  border-color: var(--warning-color);
+  border-width: 3px;
+  background-color: rgba(255, 170, 0, 0.25);
+  box-shadow:
+    0 0 20px rgba(255, 170, 0, 0.6),
+    inset 0 0 15px rgba(255, 170, 0, 0.3);
+  transform: scale(1.05);
+  animation: drop-target-pulse 0.6s ease-in-out infinite;
+}
+
+/* 드롭 타겟 펄스 애니메이션 */
+@keyframes drop-target-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px rgba(255, 170, 0, 0.6),
+      inset 0 0 15px rgba(255, 170, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(255, 170, 0, 0.8),
+      inset 0 0 20px rgba(255, 170, 0, 0.4);
+  }
+}
+
+/* 드롭 힌트 스타일 (툴팁 내) */
+.hotspot-tooltip-drop-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  color: var(--warning-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: drop-hint-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes drop-hint-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 드롭 타겟 활성화 시 툴팁 테두리 변경 */
+.hotspot-overlay.drop-target-active .hotspot-tooltip {
+  border-color: var(--warning-color);
+  box-shadow:
+    0 0 15px rgba(255, 170, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+.hotspot-overlay.drop-target-active .hotspot-tooltip::after {
+  border-top-color: var(--warning-color);
+}
+
+/* reduced-motion: 드롭 애니메이션 완화 */
+@media (prefers-reduced-motion: reduce) {
+  .hotspot-overlay.drop-target-active {
+    animation: none;
+    transform: none;
+  }
+
+  .hotspot-tooltip-drop-hint {
+    animation: none;
+  }
+}
+
 /* 핫스팟 툴팁 */
 .hotspot-tooltip {
   position: absolute;

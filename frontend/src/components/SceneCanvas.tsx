@@ -9,11 +9,17 @@
  * - hover 시 하이라이트/툴팁 표시
  * - click 시 object_id + box_2d를 TurnInput에 포함해 전송
  *
+ * U-012[Mvp]: DnD 드롭 타겟 확장
+ * - 핫스팟을 droppable 영역으로 만들어 인벤토리 아이템 드롭 처리
+ * - 드래그 오버 시 하이라이트 강화
+ * - 드롭 성공/실패 즉시 시각화
+ *
  * @module components/SceneCanvas
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDroppable } from '@dnd-kit/core';
 import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
@@ -90,11 +96,26 @@ interface HotspotOverlayProps {
 }
 
 /**
- * 개별 핫스팟 오버레이 컴포넌트
+ * 개별 핫스팟 오버레이 컴포넌트 (U-010 + U-012)
+ *
+ * - 클릭 시 object_id + box_2d 전송 (U-010)
+ * - 드롭 타겟으로 동작 - dnd-kit useDroppable 사용 (U-012)
  */
 function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverlayProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
+
+  // U-012: useDroppable 훅으로 드롭 타겟 설정
+  const { isOver, setNodeRef } = useDroppable({
+    id: `hotspot-${object.id}`,
+    data: {
+      type: 'hotspot',
+      object_id: object.id,
+      box_2d: object.box_2d,
+      label: object.label,
+    },
+    disabled,
+  });
 
   // box_2d(0~1000) → px 변환
   const pixelBox = box2dToPixel(object.box_2d, canvasSize);
@@ -118,9 +139,13 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverla
     [disabled, handleClick],
   );
 
+  // 드래그 오버 상태 또는 마우스 호버 상태
+  const isHighlighted = isHovered || isOver;
+
   return (
     <div
-      className={`hotspot-overlay ${isHovered ? 'hovered' : ''} ${disabled ? 'disabled' : ''}`}
+      ref={setNodeRef}
+      className={`hotspot-overlay ${isHighlighted ? 'hovered' : ''} ${disabled ? 'disabled' : ''} ${isOver ? 'drop-target-active' : ''}`}
       style={{
         position: 'absolute',
         top: `${pixelBox.top}px`,
@@ -136,12 +161,17 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverla
       tabIndex={disabled ? -1 : 0}
       aria-label={object.label}
       aria-disabled={disabled}
+      data-drop-target={!disabled}
     >
-      {/* 호버 시 툴팁 표시 */}
-      {isHovered && !disabled && (
+      {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
+      {isHighlighted && !disabled && (
         <div className="hotspot-tooltip">
           <span className="hotspot-tooltip-label">{object.label}</span>
-          {object.interaction_hint && (
+          {/* U-012: 드래그 오버 시 드롭 힌트 표시 */}
+          {isOver && (
+            <span className="hotspot-tooltip-drop-hint">{t('scene.hotspot.drop_hint')}</span>
+          )}
+          {!isOver && object.interaction_hint && (
             <span className="hotspot-tooltip-hint">
               {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
             </span>

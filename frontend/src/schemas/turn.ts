@@ -146,6 +146,20 @@ export const ClickInputSchema = z
 export type ClickInput = z.infer<typeof ClickInputSchema>;
 
 /**
+ * 드롭 입력 정보 (U-012).
+ * 인벤토리 아이템을 핫스팟에 드롭할 때 전달되는 정보입니다.
+ * Q1 결정: Option B - target_box_2d 포함하여 서버가 정확한 위치 해석 가능.
+ */
+export const DropInputSchema = z
+  .object({
+    item_id: z.string().describe('드롭한 인벤토리 아이템 ID'),
+    target_object_id: z.string().describe('드롭 대상 핫스팟 오브젝트 ID'),
+    target_box_2d: Box2DSchema.describe('드롭 대상의 바운딩 박스 (0~1000 정규화)'),
+  })
+  .strict();
+export type DropInput = z.infer<typeof DropInputSchema>;
+
+/**
  * 클라이언트 정보.
  */
 export const ClientInfoSchema = z
@@ -172,6 +186,8 @@ export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
 /**
  * 턴 입력 (클라이언트 → 서버).
  * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+ *
+ * U-012: drop 필드 추가 - 인벤토리 아이템을 핫스팟에 드롭할 때 사용.
  */
 export const TurnInputSchema = z
   .object({
@@ -179,6 +195,7 @@ export const TurnInputSchema = z
     text: z.string().default('').describe('사용자 자연어 입력'),
     action_id: z.string().nullable().default(null).describe('선택한 액션 카드 ID (선택)'),
     click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
+    drop: DropInputSchema.nullable().default(null).describe('아이템 드롭 정보 (선택, U-012)'),
     client: ClientInfoSchema.describe('클라이언트 환경 정보'),
     economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
   })

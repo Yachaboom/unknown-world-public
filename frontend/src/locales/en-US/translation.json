@@ -14,7 +14,10 @@
     "hotspot": {
       "layer_label": "Clickable Objects Area",
       "hint_prefix": "Hint",
-      "click_action": "Click {{label}}"
+      "click_action": "Click {{label}}",
+      "drop_hint": "Drop here to use",
+      "drop_action": "Use {{item}} on {{target}}",
+      "drop_invalid": "You cannot use {{item}} there."
     }
   },
   "agent": {

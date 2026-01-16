@@ -34,7 +34,7 @@ import { useActionDeckStore } from './stores/actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
-import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
+import type { TurnInput, TurnOutput, ActionCard, DropInput, Box2D } from './schemas/turn';
 import { getResolvedLanguage } from './i18n';
 
 // =============================================================================
@@ -103,8 +103,8 @@ function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
 
   return (
     <div className="narrative-feed" ref={feedRef}>
-      {entries.map((entry) => (
-        <div key={entry.turn} className="narrative-entry">
+      {entries.map((entry, index) => (
+        <div key={`${entry.turn}-${index}`} className="narrative-entry">
           <span className="narrative-timestamp">
             {t('narrative.turn_label', { turn: entry.turn })}
           </span>
@@ -378,9 +378,10 @@ function App() {
    * 턴을 실행합니다.
    *
    * U-010: click 파라미터 추가 (Q1 결정: Option B - object_id + box_2d 전송)
+   * U-012: drop 파라미터 추가 (인벤토리 아이템 → 핫스팟 드롭)
    */
   const executeTurn = useCallback(
-    (text: string, actionId?: string, clickData?: HotspotClickData) => {
+    (text: string, actionId?: string, clickData?: HotspotClickData, dropData?: DropInput) => {
       if (isStreaming) return;
 
       // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
@@ -395,6 +396,8 @@ function App() {
               box_2d: clickData.box_2d,
             }
           : null,
+        // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
+        drop: dropData ?? null,
         client: {
           viewport_w: window.innerWidth,
           viewport_h: window.innerHeight,
@@ -528,20 +531,62 @@ function App() {
   );
 
   /**
-   * 드래그 종료 핸들러 (U-011)
-   * 실제 드롭 처리는 U-012에서 구현합니다.
+   * 드래그 종료 핸들러 (U-011 + U-012)
+   *
+   * U-012: 핫스팟에 드롭 시 TurnInput(drop)을 생성하여 턴 실행.
+   * - 드롭 성공: item_id + target_object_id + target_box_2d로 TurnInput 생성
+   * - 드롭 실패: 즉시 피드백 (무반응 금지)
    */
   const handleDragEnd = useCallback(
-    (_event: DragEndEvent) => {
+    (event: DragEndEvent) => {
+      const { active, over } = event;
       endDrag();
-      // TODO: U-012에서 드롭 타겟(핫스팟) 처리 구현
-      // if (event.over) {
-      //   const droppedItemId = event.active.data.current?.item_id;
-      //   const targetId = event.over.id;
-      //   // executeTurn with drop action...
-      // }
+
+      // 드래그된 아이템 정보 추출
+      const activeData = active.data.current;
+      if (activeData?.type !== 'inventory-item') {
+        return;
+      }
+
+      const itemId = activeData.item_id as string;
+      const draggedItem = inventoryItems.find((item) => item.id === itemId);
+      const itemName = draggedItem?.name ?? itemId;
+
+      // 드롭 대상이 없거나 핫스팟이 아니면 실패 피드백 제공 (U-012)
+      if (!over || over.data.current?.type !== 'hotspot') {
+        setNarrativeEntries((prev) => [
+          ...prev,
+          {
+            turn: turnCountRef.current,
+            text: `[${t('connection.online')}] ${t('scene.hotspot.drop_invalid', { item: itemName })}`,
+          },
+        ]);
+        return;
+      }
+
+      // 드롭 대상이 핫스팟인 경우
+      const overData = over.data.current;
+      const targetObjectId = overData.object_id as string;
+      const targetBox2d = overData.box_2d as Box2D;
+      const targetLabel = overData.label as string;
+
+      // 드롭 액션 텍스트 생성
+      const dropText = t('scene.hotspot.drop_action', {
+        item: itemName,
+        target: targetLabel,
+      });
+
+      // DropInput 생성 (Q1: Option B - target_box_2d 포함)
+      const dropInput: DropInput = {
+        item_id: itemId,
+        target_object_id: targetObjectId,
+        target_box_2d: targetBox2d,
+      };
+
+      // 턴 실행
+      executeTurn(dropText, undefined, undefined, dropInput);
     },
-    [endDrag],
+    [endDrag, executeTurn, inventoryItems, t],
   );
 
   return (

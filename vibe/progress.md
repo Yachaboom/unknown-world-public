@@ -1,6 +1,42 @@
 # 프로젝트 진행 상황
 
-## [2026-01-17 17:30] U-011[Mvp]: Inventory 패널(DnD) 기본 완료
+## [2026-01-17 18:00] U-012[Mvp]: DnD 드롭(아이템→핫스팟) TurnInput 이벤트 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 인벤토리 아이템을 씬 핫스팟에 드롭 시 `TurnInput(drop)` 생성 및 턴 실행 연동, 드롭 타겟 하이라이트 구현
+- **추가 컴포넌트**: `DndInteraction.test.tsx` (통합 테스트), `U-012-dnd-drop-turn-input-runbook.md`, `vibe/unit-results/U-012[Mvp].md`
+- **달성 요구사항**: [PRD 6.2] 구조화 UI 인터랙션, [PRD 6.7] Inventory DnD 조작 증거 확보, [RULE-009] 0~1000 bbox 규약 준수
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **dnd-kit/core**: `useDroppable`을 활용하여 핫스팟을 드롭 가능한 영역으로 확장
+- **i18next**: 드롭 액션에 대한 자연어 텍스트(`Use X on Y`) 자동 생성 및 다국어 지원
+
+**설계 패턴 및 아키텍처 선택**:
+- **Option B 데이터 패키징**: 드롭 시 `item_id`뿐만 아니라 대상의 `target_box_2d`를 함께 전송하여 서버의 공간 맥락 이해도 극대화
+- **Visual Feedback Layering**: 드래그 오버 시 마젠타색 하이라이트와 펄스 애니메이션을 적용하여 상호작용성 강화
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/SceneCanvas.tsx (Hotspot Droppable 통합)
+    ├── schemas/turn.ts (DropInputSchema 추가)
+    ├── App.tsx (DragEnd 핸들러 확장 및 executeTurn 연동)
+    └── style.css (Drop target 애니메이션 스타일)
+
+### 성능 및 품질 지표
+- **정확성**: 핫스팟 드롭 시 정확한 `object_id`와 정규화된 `box_2d` 전송 확인
+- **견고성**: 스트리밍 중 드래그 비활성화 및 유효하지 않은 드롭 시 사용자 피드백 제공
+
+### 의존성 변경
+- 없음 (기존 dnd-kit 및 i18next 활용 고도화)
+
+### 다음 단계
+- [RU-003[Mvp]] 리팩토링: UI 상태 슬라이스/경계 정리
+
+---
 
 ### 구현 완료 항목
 
