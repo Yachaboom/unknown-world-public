@@ -10,6 +10,11 @@
       "initial_sync": "전역 데이터 동기화 대기 중...",
       "syncing": "데이터 동기화 중...",
       "alt": "장면 이미지"
+    },
+    "hotspot": {
+      "layer_label": "클릭 가능한 오브젝트 영역",
+      "hint_prefix": "힌트",
+      "click_action": "{{label}} 클릭"
     }
   },
   "agent": {

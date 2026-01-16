@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 23/62 (37%) | **MVP**: 23/49 (47%) | **MMP**: 0/13 (0%)
+**전체**: 24/62 (38%) | **MVP**: 24/49 (48%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-4 | MMP D-8  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) 기준. `vibe/refactors/*`는 하위 리팩토링 기록으로 분모에서 제외._
 
-**진행 중**: [U-010[Mvp]](unit-plans/U-010[Mvp].md) / **최근 완료**: [U-009[Mvp]](unit-results/U-009[Mvp].md) (2026-01-17)
+**진행 중**: [U-011[Mvp]](unit-plans/U-011[Mvp].md) / **최근 완료**: [U-010[Mvp]](unit-results/U-010[Mvp].md) (2026-01-17)
 
 **블로커**: 없음
 
@@ -52,7 +52,7 @@ _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) �
 | ---- | --------- | -------------------------------------- | ---------- | ------ | ---- |
 | MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 11/11  | ✅   |
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 7/22   | 🚧   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 8/22   | 🚧   |
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ⏸️   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-18 | 0/10   | ⏸️   |
 | MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-20 | -      | ⏸️   |
@@ -121,7 +121,6 @@ _진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) �
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-010[Mvp]](unit-plans/U-010[Mvp].md) | ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox) | Depends=U-004,U-008 | ⏸️
 ID=[U-011[Mvp]](unit-plans/U-011[Mvp].md) | ⚡Inventory 패널(DnD) 기본 | Depends=U-004 | ⏸️
 ID=[U-012[Mvp]](unit-plans/U-012[Mvp].md) | ⚡DnD 드롭(아이템→핫스팟) TurnInput 이벤트 | Depends=U-010,U-011,U-008 | ⏸️
 ID=[RU-003[Mvp]](unit-plans/RU-003[Mvp].md) | 리팩토링: UI 상태 슬라이스/경계 정리 | Depends=U-012 | ⏸️
@@ -171,6 +170,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-010[Mvp]](unit-results/U-010[Mvp].md): ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox) (2026-01-17)
 - ✅ [U-009[Mvp]](unit-results/U-009[Mvp].md): ⚡Action Deck(카드+비용/대안) (2026-01-17)
 - ✅ [U-039[Mvp]](unit-results/U-039[Mvp].md): i18n 언어 리소스 JSON 구조 도입(ko-KR/en-US, 확장 가능) (2026-01-15)
 - ✅ [U-038[Mvp]](unit-results/U-038[Mvp].md): 핵심 UI 아이콘 12종 재생성(v2, 퀄리티/용량/사이즈/식별성) (2026-01-14)

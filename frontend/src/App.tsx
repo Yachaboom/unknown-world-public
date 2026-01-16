@@ -15,9 +15,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AgentConsole } from './components/AgentConsole';
-import { SceneCanvas } from './components/SceneCanvas';
+import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
 import type { SceneCanvasState } from './types/scene';
+import type { SceneObject } from './schemas/turn';
 import { useAgentStore } from './stores/agentStore';
 import { useActionDeckStore } from './stores/actionDeckStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
@@ -256,6 +257,23 @@ function App() {
     message: t('scene.status.initial_sync'),
   });
 
+  // Scene Objects 상태 (U-010: 핫스팟 오버레이)
+  // DEV: 데모용 mock 오브젝트 - 실제 서버 연동 시 빈 배열로 시작
+  const [sceneObjects, setSceneObjects] = useState<SceneObject[]>([
+    {
+      id: 'demo-terminal',
+      label: '터미널',
+      box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+      interaction_hint: '활성화된 터미널이다',
+    },
+    {
+      id: 'demo-door',
+      label: '문',
+      box_2d: { ymin: 200, xmin: 600, ymax: 800, xmax: 900 },
+      interaction_hint: '잠겨있는 것 같다',
+    },
+  ]);
+
   // Agent Store 액션
   const {
     startStream,
@@ -298,15 +316,20 @@ function App() {
         signal: output.economy.balance_after.signal,
         memory_shard: output.economy.balance_after.memory_shard,
       });
+
+      // Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
+      setSceneObjects(output.ui.objects);
     },
     [setActionCards],
   );
 
   /**
    * 턴을 실행합니다.
+   *
+   * U-010: click 파라미터 추가 (Q1 결정: Option B - object_id + box_2d 전송)
    */
   const executeTurn = useCallback(
-    (text: string, actionId?: string) => {
+    (text: string, actionId?: string, clickData?: HotspotClickData) => {
       if (isStreaming) return;
 
       // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
@@ -314,7 +337,13 @@ function App() {
         language: getResolvedLanguage(),
         text: text || (actionId ? t('action.card_select', { cardId: actionId }) : ''),
         action_id: actionId ?? null,
-        click: null,
+        // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
+        click: clickData
+          ? {
+              object_id: clickData.object_id,
+              box_2d: clickData.box_2d,
+            }
+          : null,
         client: {
           viewport_w: window.innerWidth,
           viewport_h: window.innerHeight,
@@ -398,6 +427,23 @@ function App() {
   );
 
   /**
+   * 핫스팟 클릭 핸들러 (U-010)
+   * 클릭한 오브젝트 정보를 TurnInput에 포함하여 서버로 전송합니다.
+   */
+  const handleHotspotClick = useCallback(
+    (data: HotspotClickData) => {
+      // 클릭한 오브젝트의 라벨을 찾아 텍스트로 사용
+      const clickedObject = sceneObjects.find((obj) => obj.id === data.object_id);
+      const clickText = clickedObject
+        ? t('scene.hotspot.click_action', { label: clickedObject.label })
+        : data.object_id;
+
+      executeTurn(clickText, undefined, data);
+    },
+    [executeTurn, sceneObjects, t],
+  );
+
+  /**
    * 키보드 이벤트 핸들러
    */
   const handleKeyDown = useCallback(
@@ -450,7 +496,12 @@ function App() {
 
         {/* Center: Scene Canvas + Narrative Feed */}
         <main className="game-center">
-          <SceneCanvas state={sceneState} />
+          <SceneCanvas
+            state={sceneState}
+            objects={sceneObjects}
+            onHotspotClick={handleHotspotClick}
+            disabled={isStreaming}
+          />
           <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
         </main>
 

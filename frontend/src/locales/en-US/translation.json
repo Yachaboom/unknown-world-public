@@ -10,6 +10,11 @@
       "initial_sync": "Awaiting global data synchronization...",
       "syncing": "Synchronizing data...",
       "alt": "Scene Image"
+    },
+    "hotspot": {
+      "layer_label": "Clickable Objects Area",
+      "hint_prefix": "Hint",
+      "click_action": "Click {{label}}"
     }
   },
   "agent": {

@@ -488,6 +488,168 @@ body {
   object-fit: cover;
 }
 
+/* ============================================
+   8.1 핫스팟 오버레이 (U-010)
+   - RULE-009: 좌표 규약 (0~1000 정규화)
+   - 클릭 가능한 오브젝트 영역 표시
+   ============================================ */
+
+/* 핫스팟 레이어 (장면 이미지 위 오버레이) */
+.hotspot-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 개별 핫스팟 오버레이 */
+.hotspot-overlay {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 2px solid var(--text-color);
+  border-radius: 2px;
+  background-color: rgba(51, 255, 0, 0.05);
+  box-shadow:
+    0 0 8px rgba(51, 255, 0, 0.3),
+    inset 0 0 4px rgba(51, 255, 0, 0.1);
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+/* 핫스팟 호버 효과 - 게임스러운 하이라이트 */
+.hotspot-overlay.hovered {
+  border-color: var(--accent-color);
+  background-color: rgba(255, 0, 255, 0.15);
+  box-shadow:
+    0 0 15px var(--accent-color),
+    inset 0 0 10px rgba(255, 0, 255, 0.2);
+  transform: scale(1.02);
+}
+
+/* 핫스팟 포커스 효과 (접근성) */
+.hotspot-overlay:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* 비활성화된 핫스팟 */
+.hotspot-overlay.disabled {
+  cursor: not-allowed;
+  border-color: var(--text-dim);
+  background-color: rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.hotspot-overlay.disabled:hover {
+  transform: none;
+  border-color: var(--text-dim);
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* 핫스팟 툴팁 */
+.hotspot-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 100px;
+  max-width: 200px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: rgba(0, 20, 0, 0.95);
+  border: 1px solid var(--accent-color);
+  border-radius: 2px;
+  box-shadow:
+    0 0 10px rgba(255, 0, 255, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.8);
+  z-index: 20;
+  white-space: nowrap;
+  animation: tooltip-fade-in 0.15s ease-out;
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* 툴팁 화살표 (하단 가리키기) */
+.hotspot-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--accent-color);
+}
+
+/* 툴팁 라벨 */
+.hotspot-tooltip-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px var(--text-dim);
+}
+
+/* 툴팁 힌트 */
+.hotspot-tooltip-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+}
+
+/* 핫스팟 있을 때 Scene Canvas 조정 */
+.scene-canvas.has-hotspots {
+  /* 핫스팟 레이어를 위한 position 컨텍스트 확보 */
+  position: relative;
+}
+
+/* 모바일에서 핫스팟 터치 영역 확대 */
+@media (max-width: 768px) {
+  .hotspot-overlay {
+    /* 터치 영역 최소 44px 보장 */
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .hotspot-tooltip {
+    font-size: 0.875rem;
+    max-width: 160px;
+  }
+}
+
+/* 접근성: reduced-motion에서 애니메이션 완화 */
+@media (prefers-reduced-motion: reduce) {
+  .hotspot-overlay {
+    transition: none;
+  }
+
+  .hotspot-overlay.hovered {
+    transform: none;
+  }
+
+  .hotspot-tooltip {
+    animation: none;
+  }
+}
+
 /* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
 .narrative-feed {
   height: 180px;

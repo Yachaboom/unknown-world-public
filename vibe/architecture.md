@@ -65,8 +65,9 @@ D:\Dev\unknown-world\
 │       │   ├── ActionDeck.test.tsx
 │       │   ├── AgentConsole.tsx
 │       │   ├── AgentConsole.test.tsx # 중요도 속성 검증 (U-037)
-│       │   ├── SceneCanvas.tsx # 씬 캔버스 및 상태별 렌더링 (U-031)
-│       │   └── SceneCanvas.test.tsx
+│       │   ├── SceneCanvas.tsx # 씬 캔버스 및 상태별 렌더링, 핫스팟 오버레이 (U-010, U-031)
+│       │   ├── SceneCanvas.test.tsx
+│       │   └── SceneCanvas.hotspot.test.tsx # 핫스팟 상호작용 검증 (U-010)
 │       ├── locales/        # 다국어 리소스 JSON (U-039)
 │       │   ├── README.md   # i18n 리소스 관리 가이드
 │       │   ├── en-US/
@@ -81,9 +82,11 @@ D:\Dev\unknown-world\
 │       │   ├── agentStore.ts
 │       │   ├── uiPrefsStore.ts # UI 설정 (스케일/마이그레이션 정책)
 │       │   └── uiPrefsStore.test.ts
-│       └── types/          # 스트림 이벤트 계약 타입 (RU-002-Q4)
-│           ├── turn_stream.ts
-│           └── scene.ts    # Scene 상태 타입 SSOT (U-031)
+│       ├── types/          # 스트림 이벤트 계약 타입 (RU-002-Q4)
+│       │   ├── turn_stream.ts
+│       │   └── scene.ts    # Scene 상태 타입 SSOT (U-031)
+│       └── utils/          # 공통 유틸리티
+│           └── box2d.ts    # 0~1000 ↔ px 좌표 변환 유틸 (U-010)
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock
@@ -134,7 +137,7 @@ D:\Dev\unknown-world\
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
     - `stores/`: Agent Console 상태 및 UI 설정을 관리하는 Zustand 스토어. **U-009에 따라 Action Deck 상태 관리가 추가되었으며**, **U-037에 따라 Readable 모드가 제거되고 마이그레이션 로직이 포함됨.**
-    - `components/`: 게임 전용 UI 컴포넌트 모음. **U-009 Action Deck이 구현되었으며**, **중요도 기반 레이어링을 위해 `data-ui-importance` 속성을 활용함.**
+    - `components/`: 게임 전용 UI 컴포넌트 모음. **U-009 Action Deck이 구현되었으며**, **U-010에 따라 핫스팟 오버레이 상호작용이 추가됨.** 중요도 기반 레이어링을 위해 `data-ui-importance` 속성을 활용함.
     - `schemas/`: Zod를 활용한 턴 계약 검증 및 폴백 로직 정의.
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
