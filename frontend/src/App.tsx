@@ -14,13 +14,24 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
 import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
+import { InventoryPanel } from './components/InventoryPanel';
 import type { SceneCanvasState } from './types/scene';
 import type { SceneObject } from './schemas/turn';
 import { useAgentStore } from './stores/agentStore';
 import { useActionDeckStore } from './stores/actionDeckStore';
+import { useInventoryStore, parseInventoryAdded } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
 import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
@@ -251,6 +262,38 @@ function App() {
   // Action Deck Store (U-009)
   const { cards: actionCards, setCards: setActionCards } = useActionDeckStore();
 
+  // Inventory Store (U-011)
+  const {
+    addItems: addInventoryItems,
+    removeItems: removeInventoryItems,
+    startDrag,
+    endDrag,
+    items: inventoryItems,
+  } = useInventoryStore();
+
+  // DEV: 데모용 mock 인벤토리 초기화 (U-011)
+  useEffect(() => {
+    if (inventoryItems.length === 0) {
+      addInventoryItems([
+        { id: 'keycard-alpha', name: '키카드 A', icon: '🔑', quantity: 1 },
+        { id: 'medkit', name: '응급 키트', icon: '🩹', quantity: 2 },
+        { id: 'flashlight', name: '손전등', icon: '🔦', quantity: 1 },
+        { id: 'data-chip', name: '데이터칩', icon: '💾', quantity: 3 },
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // dnd-kit 센서 설정 (U-011: Q1 Option A - App 최상단에 DndContext)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이상 움직여야 드래그 시작
+      },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
   // Scene Canvas 상태 (U-031: Placeholder Pack)
   const [sceneState, setSceneState] = useState<SceneCanvasState>({
     status: 'default',
@@ -319,8 +362,16 @@ function App() {
 
       // Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
       setSceneObjects(output.ui.objects);
+
+      // Inventory 업데이트 (U-011)
+      if (output.world.inventory_added.length > 0) {
+        addInventoryItems(parseInventoryAdded(output.world.inventory_added));
+      }
+      if (output.world.inventory_removed.length > 0) {
+        removeInventoryItems(output.world.inventory_removed);
+      }
     },
-    [setActionCards],
+    [setActionCards, addInventoryItems, removeInventoryItems],
   );
 
   /**
@@ -463,91 +514,122 @@ function App() {
     };
   }, []);
 
+  /**
+   * 드래그 시작 핸들러 (U-011)
+   */
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      if (active.data.current?.type === 'inventory-item') {
+        startDrag(active.id as string);
+      }
+    },
+    [startDrag],
+  );
+
+  /**
+   * 드래그 종료 핸들러 (U-011)
+   * 실제 드롭 처리는 U-012에서 구현합니다.
+   */
+  const handleDragEnd = useCallback(
+    (_event: DragEndEvent) => {
+      endDrag();
+      // TODO: U-012에서 드롭 타겟(핫스팟) 처리 구현
+      // if (event.over) {
+      //   const droppedItemId = event.active.data.current?.item_id;
+      //   const targetId = event.over.id;
+      //   // executeTurn with drop action...
+      // }
+    },
+    [endDrag],
+  );
+
   return (
     <>
       {/* CRT 스캔라인 오버레이 */}
       <div className="crt-overlay" aria-hidden="true" />
 
-      {/* 게임 레이아웃 */}
-      <div className="game-container">
-        {/* Header: 타이틀/상태/재화/UI컨트롤 */}
-        <GameHeader
-          signal={economy.signal}
-          memoryShard={economy.memory_shard}
-          isConnected={isConnected}
-          uiScale={uiScale}
-          onIncreaseScale={increaseUIScale}
-          onDecreaseScale={decreaseUIScale}
-        />
+      {/* DndContext: App 최상단 (U-011 Q1: Option A) */}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        {/* 게임 레이아웃 */}
+        <div className="game-container">
+          {/* Header: 타이틀/상태/재화/UI컨트롤 */}
+          <GameHeader
+            signal={economy.signal}
+            memoryShard={economy.memory_shard}
+            isConnected={isConnected}
+            uiScale={uiScale}
+            onIncreaseScale={increaseUIScale}
+            onDecreaseScale={decreaseUIScale}
+          />
 
-        {/* Sidebar Left: Inventory / Quest / Rule Board */}
-        <aside className="sidebar-left">
-          <Panel
-            title={t('panel.inventory.title')}
-            className="flex-1"
-            placeholderKey="panel.inventory.placeholder"
-          />
-          <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
-          <Panel
-            title={t('panel.rule_board.title')}
-            placeholderKey="panel.rule_board.placeholder"
-          />
-        </aside>
+          {/* Sidebar Left: Inventory / Quest / Rule Board */}
+          <aside className="sidebar-left">
+            <Panel title={t('panel.inventory.title')} className="flex-1">
+              <InventoryPanel disabled={isStreaming} />
+            </Panel>
+            <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
+            <Panel
+              title={t('panel.rule_board.title')}
+              placeholderKey="panel.rule_board.placeholder"
+            />
+          </aside>
 
-        {/* Center: Scene Canvas + Narrative Feed */}
-        <main className="game-center">
-          <SceneCanvas
-            state={sceneState}
-            objects={sceneObjects}
-            onHotspotClick={handleHotspotClick}
-            disabled={isStreaming}
-          />
-          <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
-        </main>
-
-        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
-        <aside className="sidebar-right">
-          <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
-            <AgentConsole />
-          </Panel>
-          <Panel
-            title={t('panel.memory_pin.title')}
-            hasChrome
-            placeholderKey="panel.memory_pin.placeholder"
-          />
-          <Panel title={t('panel.scanner.title')} hasChrome>
-            <div className="scanner-slot has-chrome">
-              <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
-            </div>
-          </Panel>
-        </aside>
-
-        {/* Footer: Action Deck + Command Input (U-009) */}
-        <footer className="game-footer">
-          <ActionDeck
-            cards={actionCards}
-            onCardClick={handleCardClick}
-            disabled={isStreaming}
-            currentBalance={economy}
-          />
-          <div className="command-input-area">
-            <span className="command-prompt">&gt;</span>
-            <input
-              type="text"
-              className="command-input"
-              placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
-              aria-label={t('ui.command_placeholder')}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
+          {/* Center: Scene Canvas + Narrative Feed */}
+          <main className="game-center">
+            <SceneCanvas
+              state={sceneState}
+              objects={sceneObjects}
+              onHotspotClick={handleHotspotClick}
               disabled={isStreaming}
             />
-            <button type="button" onClick={handleSubmit} disabled={isStreaming}>
-              {isStreaming ? t('ui.wait') : t('ui.execute')}
-            </button>
-          </div>
-        </footer>
-      </div>
+            <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
+          </main>
+
+          {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
+          <aside className="sidebar-right">
+            <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
+              <AgentConsole />
+            </Panel>
+            <Panel
+              title={t('panel.memory_pin.title')}
+              hasChrome
+              placeholderKey="panel.memory_pin.placeholder"
+            />
+            <Panel title={t('panel.scanner.title')} hasChrome>
+              <div className="scanner-slot has-chrome">
+                <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
+              </div>
+            </Panel>
+          </aside>
+
+          {/* Footer: Action Deck + Command Input (U-009) */}
+          <footer className="game-footer">
+            <ActionDeck
+              cards={actionCards}
+              onCardClick={handleCardClick}
+              disabled={isStreaming}
+              currentBalance={economy}
+            />
+            <div className="command-input-area">
+              <span className="command-prompt">&gt;</span>
+              <input
+                type="text"
+                className="command-input"
+                placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
+                aria-label={t('ui.command_placeholder')}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isStreaming}
+              />
+              <button type="button" onClick={handleSubmit} disabled={isStreaming}>
+                {isStreaming ? t('ui.wait') : t('ui.execute')}
+              </button>
+            </div>
+          </footer>
+        </div>
+      </DndContext>
     </>
   );
 }

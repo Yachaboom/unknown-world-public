@@ -1,5 +1,43 @@
 # 프로젝트 진행 상황
 
+## [2026-01-17 17:30] U-011[Mvp]: Inventory 패널(DnD) 기본 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 인벤토리 패널 구현 및 `dnd-kit` 기반 아이템 드래그 시스템 구축, `InventoryStore`를 통한 상태 관리 연동
+- **추가 컴포넌트**: `InventoryPanel.tsx`, `inventoryStore.ts`, `InventoryPanel.test.tsx`, `vibe/unit-results/U-011[Mvp].md`
+- **달성 요구사항**: [RULE-002] 게임 UI 레이아웃 내 인벤토리 고정 노출, [PRD 6.7] Inventory DnD 조작 증거 확보
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **dnd-kit (core/sortable/utilities)**: 가볍고 확장성 있는 DnD 프레임워크 도입
+- **DragOverlay**: 드래그 중인 아이템의 부드러운 시각적 피드백 제공
+- **Zustand 5.x**: 인벤토리 아이템 및 드래그 상태의 전역 관리
+
+**설계 패턴 및 아키텍처 선택**:
+- **Top-level DndContext**: `App.tsx` 최상단에 컨텍스트를 배치하여 인벤토리와 씬 캔버스 간의 드래그 연동 확장성 확보
+- **Mock Data Initialization**: 초기 데모를 위해 `Key`, `Flashlight` 등 샘플 아이템 자동 생성 로직 포함
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/InventoryPanel.tsx (드래그 가능 UI)
+    ├── stores/inventoryStore.ts (인벤토리 상태 관리)
+    └── App.tsx (DndContext 및 패널 통합)
+
+### 성능 및 품질 지표
+- **유연성**: 다양한 타입의 아이템(아이콘/이모지) 렌더링 지원 및 수량 표시 대응
+- **정확성**: 드래그 시작 시 원본 아이템 반투명 처리 및 오버레이 생성 로직 안정적 작동
+
+### 의존성 변경
+- `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` 추가
+
+### 다음 단계
+- [U-012[Mvp]] DnD 드롭(아이템→핫스팟) TurnInput 이벤트 연동
+
+---
+
 ## [2026-01-17 15:30] U-010[Mvp]: Scene Canvas + Hotspot Overlay(0~1000 bbox) 완료
 
 ### 구현 완료 항목

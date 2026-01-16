@@ -69,6 +69,12 @@
     "online": "ONLINE",
     "offline": "OFFLINE"
   },
+  "inventory": {
+    "empty": "[ NO ITEMS ]",
+    "grid_label": "Inventory Items",
+    "item_label": "{{name}} (Qty: {{quantity}})",
+    "drag_hint": "Drag to use"
+  },
   "panel": {
     "inventory": {
       "title": "Inventory",

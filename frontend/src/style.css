@@ -2111,3 +2111,223 @@ button:disabled,
   border: 1px solid var(--text-color);
   background-color: transparent;
 }
+
+/* ============================================
+   25. Inventory Panel 스타일 (U-011)
+   - RULE-002: 게임 UI로 상시 노출
+   - dnd-kit 드래그 가능 아이템
+   ============================================ */
+
+.inventory-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  height: 100%;
+  min-height: 120px;
+}
+
+/* 인벤토리 그리드 */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+}
+
+/* 빈 인벤토리 */
+.inventory-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-lg);
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.inventory-empty-icon {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.inventory-empty-text {
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 인벤토리 아이템 */
+.inventory-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--text-dim);
+  border-radius: var(--border-radius);
+  background: linear-gradient(180deg, rgba(0, 30, 0, 0.8) 0%, rgba(0, 15, 0, 0.9) 100%);
+  cursor: grab;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s,
+    opacity 0.2s;
+  user-select: none;
+  touch-action: none;
+}
+
+/* 아이템 호버 */
+.inventory-item:hover:not(.disabled):not(.dragging) {
+  border-color: var(--text-color);
+  box-shadow: 0 0 8px rgba(51, 255, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* 아이템 선택 상태 */
+.inventory-item.selected {
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 10px var(--accent-color),
+    inset 0 0 5px rgba(255, 0, 255, 0.1);
+}
+
+/* 아이템 드래그 중 */
+.inventory-item.dragging {
+  opacity: 0.3; /* 드래그 중인 원본은 더 투명하게 */
+  cursor: grabbing;
+  border-style: dashed;
+  box-shadow: none; /* 드래그 중인 원본 글로우 제거 */
+}
+
+/* 아이템 비활성화 */
+.inventory-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-color: var(--text-dim);
+}
+
+.inventory-item.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 드래그 오버레이 (커서 따라다니는 아이템) */
+.inventory-item.overlay {
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 20px var(--accent-color),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  transform: scale(1.05) rotate(3deg);
+  cursor: grabbing;
+  z-index: 10001;
+  pointer-events: none;
+  opacity: 1 !important;
+}
+
+/* 아이템 아이콘 */
+.inventory-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; /* 40px -> 44px */
+  height: 44px;
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.inventory-item-icon-img {
+  width: 36px; /* 32px -> 36px */
+  height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.inventory-item-icon-emoji {
+  font-size: 1.8rem; /* 1.5rem -> 1.8rem */
+}
+
+/* 아이템 정보 */
+.inventory-item-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.inventory-item-name {
+  font-size: var(--font-size-xs);
+  color: var(--text-color);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.inventory-item-quantity {
+  font-family: var(--font-micro-en); /* 수치 식별성을 위해 마이크로 폰트 적용 */
+  font-size: var(--font-size-sm);
+  color: var(--warning-color);
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+}
+
+/* 포커스 상태 (접근성) */
+.inventory-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.inventory-item:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 모바일 조정 */
+@media (max-width: 768px) {
+  .inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 4px;
+  }
+
+  .inventory-item {
+    padding: var(--spacing-xs);
+  }
+
+  .inventory-item-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .inventory-item-icon-img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .inventory-item-icon-emoji {
+    font-size: 1.2rem;
+  }
+
+  .inventory-item-name {
+    font-size: 0.625rem;
+  }
+}
+
+/* reduced-motion: 드래그 애니메이션 완화 */
+@media (prefers-reduced-motion: reduce) {
+  .inventory-item {
+    transition: none;
+  }
+
+  .inventory-item:hover:not(.disabled):not(.dragging) {
+    transform: none;
+  }
+
+  .inventory-item.overlay {
+    transform: none;
+  }
+}

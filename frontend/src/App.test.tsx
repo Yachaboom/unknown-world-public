@@ -56,7 +56,7 @@ describe('App Integration - Hotspot Click', () => {
 
   it('should trigger startTurnStream when a hotspot is clicked', async () => {
     render(<App />);
-    
+
     // 데모용으로 App.tsx에 하드코딩된 '터미널' 핫스팟 찾기
     const terminalHotspot = screen.getByLabelText('터미널');
     expect(terminalHotspot).toBeInTheDocument();
@@ -66,9 +66,9 @@ describe('App Integration - Hotspot Click', () => {
 
     // startTurnStream 호출 확인
     expect(turnStream.startTurnStream).toHaveBeenCalled();
-    
+
     const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
-    
+
     // TurnInput 검증
     expect(input.text).toBe('Click: 터미널');
     expect(input.click).toEqual({

@@ -71,15 +71,23 @@ Unknown World는 **CRT 터미널 레트로** 미학을 기반으로 한 디자�
 
 ```css
 --font-main: 'NeoDonggeunmo', 'VT323', monospace;
+--font-micro-en: 'Share Tech Mono', 'Consolas', monospace; /* 수치/마이크로 데이터용 */
 ```
 
 ### 폰트 정의
 
-| 폰트              | 용도                | 출처                                                    |
-| ----------------- | ------------------- | ------------------------------------------------------- |
-| **NeoDonggeunmo** | 한글 텍스트 (1순위) | [눈누 폰트](https://noonnu.cc/font_page/36)             |
-| **VT323**         | 영문 텍스트 (2순위) | [Google Fonts](https://fonts.google.com/specimen/VT323) |
-| **monospace**     | 폴백                | 시스템 기본                                             |
+| 폰트               | 용도                         | 출처                                                           |
+| ------------------ | ---------------------------- | -------------------------------------------------------------- |
+| **NeoDonggeunmo**  | 한글 텍스트 (1순위)          | [눈누 폰트](https://noonnu.cc/font_page/36)                    |
+| **VT323**          | 영문 텍스트 (2순위)          | [Google Fonts](https://fonts.google.com/specimen/VT323)        |
+| **Share Tech Mono** | 수치 데이터, 마이크로 텍스트 | [Google Fonts](https://fonts.google.com/specimen/Share+Tech+Mono) |
+| **monospace**      | 폴백                         | 시스템 기본                                                    |
+
+### 데이터 표기 원칙 (U-011 추가)
+
+1.  **일반 텍스트**: `var(--font-main)`을 사용하여 레트로 테마 유지.
+2.  **수치/데이터**: 아이템 수량, 재화 잔액, 타임스탬프 등 식별성이 중요한 작은 수치 데이터에는 `var(--font-micro-en)` (Share Tech Mono)을 적용하여 가독성을 확보.
+3.  **마이크로 텍스트**: 0.75rem 이하의 작은 텍스트는 가독성을 위해 고대비 스타일을 적용.
 
 ### 폰트 로딩
 

@@ -69,6 +69,12 @@
     "online": "온라인",
     "offline": "오프라인"
   },
+  "inventory": {
+    "empty": "[ 아이템 없음 ]",
+    "grid_label": "인벤토리 아이템 목록",
+    "item_label": "{{name}} (수량: {{quantity}})",
+    "drag_hint": "드래그하여 사용"
+  },
   "panel": {
     "inventory": {
       "title": "Inventory",

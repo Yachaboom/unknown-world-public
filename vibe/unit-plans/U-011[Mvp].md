@@ -81,9 +81,10 @@ Inventory 패널을 구현하고, 아이템을 **드래그 가능한 엔티티**
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: DnD 컨텍스트(DndContext)는 어디에 둘까?
+- [x] **Q1**: DnD 컨텍스트(DndContext)는 어디에 둘까?
   - Option A: App 최상단(권장: 여러 패널/드롭 타겟 확장 용이)
   - Option B: InventoryPanel 내부(단순하지만 SceneCanvas 드롭 연동이 어려워질 수 있음)
+  **A1**: Option A
 
 ## 참고 자료
 

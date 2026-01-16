@@ -80,7 +80,7 @@ describe('SceneCanvas Hotspots', () => {
 
   it('should render hotspots when objects are provided and status is scene', () => {
     render(<SceneCanvas state={defaultState} objects={mockObjects} />);
-    
+
     // 핫스팟 레이어 확인
     const layer = screen.getByLabelText('scene.hotspot.layer_label');
     expect(layer).toBeInTheDocument();
@@ -95,15 +95,17 @@ describe('SceneCanvas Hotspots', () => {
   it('should not render hotspots when status is loading', () => {
     const loadingState: SceneCanvasState = { status: 'loading' };
     render(<SceneCanvas state={loadingState} objects={mockObjects} />);
-    
+
     const layer = screen.queryByLabelText('scene.hotspot.layer_label');
     expect(layer).not.toBeInTheDocument();
   });
 
   it('should call onHotspotClick when a hotspot is clicked', () => {
     const onHotspotClick = vi.fn();
-    render(<SceneCanvas state={defaultState} objects={mockObjects} onHotspotClick={onHotspotClick} />);
-    
+    render(
+      <SceneCanvas state={defaultState} objects={mockObjects} onHotspotClick={onHotspotClick} />,
+    );
+
     const firstHotspot = screen.getByLabelText('Object 1');
     fireEvent.click(firstHotspot);
 
@@ -115,12 +117,12 @@ describe('SceneCanvas Hotspots', () => {
 
   it('should show tooltip on hover', async () => {
     render(<SceneCanvas state={defaultState} objects={mockObjects} />);
-    
+
     const firstHotspot = screen.getByLabelText('Object 1');
-    
+
     // Hover 시작
     fireEvent.mouseEnter(firstHotspot);
-    
+
     // 툴팁 라벨 확인
     expect(screen.getByText('Object 1')).toBeInTheDocument();
     expect(screen.getByText(/scene.hotspot.hint_prefix/)).toBeInTheDocument();
@@ -133,8 +135,15 @@ describe('SceneCanvas Hotspots', () => {
 
   it('should be disabled when disabled prop is true', () => {
     const onHotspotClick = vi.fn();
-    render(<SceneCanvas state={defaultState} objects={mockObjects} onHotspotClick={onHotspotClick} disabled={true} />);
-    
+    render(
+      <SceneCanvas
+        state={defaultState}
+        objects={mockObjects}
+        onHotspotClick={onHotspotClick}
+        disabled={true}
+      />,
+    );
+
     const firstHotspot = screen.getByLabelText('Object 1');
     expect(firstHotspot).toHaveAttribute('aria-disabled', 'true');
     expect(firstHotspot).toHaveAttribute('tabindex', '-1');
@@ -145,9 +154,9 @@ describe('SceneCanvas Hotspots', () => {
 
   it('should reposition hotspots when canvas size changes (reactive resize)', () => {
     render(<SceneCanvas state={defaultState} objects={mockObjects} />);
-    
+
     const firstHotspot = screen.getByLabelText('Object 1');
-    
+
     // 초기 크기 (800x600) 기반 위치 확인
     // ymin: 100, xmin: 100, ymax: 200, xmax: 200
     // top: 100 * (600/1000) = 60px
@@ -161,7 +170,7 @@ describe('SceneCanvas Hotspots', () => {
 
     // 크기 변경 트리거 (400x300)
     triggerResize(400, 300);
-    
+
     // 변경된 크기 기반 위치 확인
     // top: 100 * (300/1000) = 30px
     // left: 100 * (400/1000) = 40px

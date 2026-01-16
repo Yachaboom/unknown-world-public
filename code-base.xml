@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,py,toml,json}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, backend/.venv/**, frontend/node_modules/**, vibe/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, backend/.venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -57,7 +57,10 @@ backend/tests/integration/test_turn_streaming.py
 backend/tests/qa/test_asset_manifest.py
 backend/tests/unit/models/test_turn.py
 backend/tests/unit/test_u034_verification.py
+frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
+frontend/coverage/prettify.js
+frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
@@ -69,6 +72,8 @@ frontend/src/components/ActionDeck.test.tsx
 frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.test.tsx
 frontend/src/components/AgentConsole.tsx
+frontend/src/components/InventoryPanel.test.tsx
+frontend/src/components/InventoryPanel.tsx
 frontend/src/components/SceneCanvas.hotspot.test.tsx
 frontend/src/components/SceneCanvas.test.tsx
 frontend/src/components/SceneCanvas.tsx
@@ -86,6 +91,8 @@ frontend/src/stores/actionDeckStore.test.ts
 frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/agentStore.test.ts
 frontend/src/stores/agentStore.ts
+frontend/src/stores/inventoryStore.test.ts
+frontend/src/stores/inventoryStore.ts
 frontend/src/stores/uiPrefsStore.test.ts
 frontend/src/stores/uiPrefsStore.ts
 frontend/src/types/scene.ts
@@ -605,91 +612,317 @@ def test_turn_output_json_schema():
     assert box_props["ymin"]["minimum"] == 0
 </file>
 
+<file path="frontend/coverage/block-navigation.js">
+/* eslint-disable */
+var jumpToCode = (function init() {
+    // Classes of code we would like to highlight in the file view
+    var missingCoverageClasses = ['.cbranch-no', '.cstat-no', '.fstat-no'];
+
+    // Elements to highlight in the file listing view
+    var fileListingElements = ['td.pct.low'];
+
+    // We don't want to select elements that are direct descendants of another match
+    var notSelector = ':not(' + missingCoverageClasses.join('):not(') + ') > '; // becomes `:not(a):not(b) > `
+
+    // Selector that finds elements on the page to which we can jump
+    var selector =
+        fileListingElements.join(', ') +
+        ', ' +
+        notSelector +
+        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
+
+    // The NodeList of matching elements
+    var missingCoverageElements = document.querySelectorAll(selector);
+
+    var currentIndex;
+
+    function toggleClass(index) {
+        missingCoverageElements
+            .item(currentIndex)
+            .classList.remove('highlighted');
+        missingCoverageElements.item(index).classList.add('highlighted');
+    }
+
+    function makeCurrent(index) {
+        toggleClass(index);
+        currentIndex = index;
+        missingCoverageElements.item(index).scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+        });
+    }
+
+    function goToPrevious() {
+        var nextIndex = 0;
+        if (typeof currentIndex !== 'number' || currentIndex === 0) {
+            nextIndex = missingCoverageElements.length - 1;
+        } else if (missingCoverageElements.length > 1) {
+            nextIndex = currentIndex - 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    function goToNext() {
+        var nextIndex = 0;
+
+        if (
+            typeof currentIndex === 'number' &&
+            currentIndex < missingCoverageElements.length - 1
+        ) {
+            nextIndex = currentIndex + 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    return function jump(event) {
+        if (
+            document.getElementById('fileSearch') === document.activeElement &&
+            document.activeElement != null
+        ) {
+            // if we're currently focused on the search input, we don't want to navigate
+            return;
+        }
+
+        switch (event.which) {
+            case 78: // n
+            case 74: // j
+                goToNext();
+                break;
+            case 66: // b
+            case 75: // k
+            case 80: // p
+                goToPrevious();
+                break;
+        }
+    };
+})();
+window.addEventListener('keydown', jumpToCode);
+</file>
+
 <file path="frontend/coverage/coverage-final.json">
 {"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts": {"path":"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts","statementMap":{"0":{"start":{"line":30,"column":30},"end":{"line":30,"column":null}},"1":{"start":{"line":41,"column":30},"end":{"line":41,"column":null}},"2":{"start":{"line":47,"column":27},"end":{"line":47,"column":null}},"3":{"start":{"line":54,"column":32},"end":{"line":62,"column":null}},"4":{"start":{"line":69,"column":37},"end":{"line":78,"column":null}},"5":{"start":{"line":85,"column":32},"end":{"line":85,"column":null}},"6":{"start":{"line":91,"column":31},"end":{"line":91,"column":null}},"7":{"start":{"line":102,"column":32},"end":{"line":107,"column":null}},"8":{"start":{"line":115,"column":27},"end":{"line":122,"column":null}},"9":{"start":{"line":129,"column":36},"end":{"line":138,"column":null}},"10":{"start":{"line":149,"column":32},"end":{"line":156,"column":null}},"11":{"start":{"line":162,"column":32},"end":{"line":176,"column":null}},"12":{"start":{"line":183,"column":37},"end":{"line":192,"column":null}},"13":{"start":{"line":199,"column":31},"end":{"line":209,"column":null}},"14":{"start":{"line":220,"column":32},"end":{"line":229,"column":null}},"15":{"start":{"line":236,"column":33},"end":{"line":247,"column":null}},"16":{"start":{"line":254,"column":32},"end":{"line":262,"column":null}},"17":{"start":{"line":270,"column":30},"end":{"line":278,"column":null}},"18":{"start":{"line":289,"column":31},"end":{"line":295,"column":null}},"19":{"start":{"line":302,"column":31},"end":{"line":312,"column":null}},"20":{"start":{"line":319,"column":27},"end":{"line":325,"column":null}},"21":{"start":{"line":332,"column":32},"end":{"line":359,"column":null}},"22":{"start":{"line":370,"column":30},"end":{"line":382,"column":null}},"23":{"start":{"line":389,"column":34},"end":{"line":395,"column":null}},"24":{"start":{"line":407,"column":35},"end":{"line":412,"column":null}},"25":{"start":{"line":424,"column":34},"end":{"line":436,"column":null}},"26":{"start":{"line":447,"column":34},"end":{"line":453,"column":null}},"27":{"start":{"line":469,"column":32},"end":{"line":502,"column":null}},"28":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"29":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"30":{"start":{"line":532,"column":2},"end":{"line":563,"column":null}},"31":{"start":{"line":590,"column":17},"end":{"line":590,"column":null}},"32":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"33":{"start":{"line":593,"column":4},"end":{"line":593,"column":null}},"34":{"start":{"line":596,"column":2},"end":{"line":600,"column":null}},"35":{"start":{"line":611,"column":2},"end":{"line":611,"column":null}},"36":{"start":{"line":625,"column":2},"end":{"line":625,"column":null}}},"fnMap":{"0":{"name":"createFallbackTurnOutput","decl":{"start":{"line":517,"column":16},"end":{"line":517,"column":null}},"loc":{"start":{"line":521,"column":14},"end":{"line":564,"column":null}},"line":521},"1":{"name":"safeParseTurnOutput","decl":{"start":{"line":585,"column":16},"end":{"line":585,"column":null}},"loc":{"start":{"line":589,"column":25},"end":{"line":601,"column":null}},"line":589},"2":{"name":"parseTurnInput","decl":{"start":{"line":610,"column":16},"end":{"line":610,"column":31}},"loc":{"start":{"line":610,"column":57},"end":{"line":612,"column":null}},"line":610},"3":{"name":"safeParseTurnInput","decl":{"start":{"line":624,"column":16},"end":{"line":624,"column":35}},"loc":{"start":{"line":624,"column":76},"end":{"line":626,"column":null}},"line":624}},"branchMap":{"0":{"loc":{"start":{"line":519,"column":2},"end":{"line":519,"column":null}},"type":"default-arg","locations":[{"start":{"line":519,"column":24},"end":{"line":519,"column":null}}],"line":519},"1":{"loc":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"type":"cond-expr","locations":[{"start":{"line":524,"column":8},"end":{"line":524,"column":null}},{"start":{"line":525,"column":8},"end":{"line":525,"column":null}}],"line":523},"2":{"loc":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"type":"cond-expr","locations":[{"start":{"line":529,"column":8},"end":{"line":529,"column":null}},{"start":{"line":530,"column":8},"end":{"line":530,"column":null}}],"line":528},"3":{"loc":{"start":{"line":534,"column":15},"end":{"line":534,"column":null}},"type":"binary-expr","locations":[{"start":{"line":534,"column":15},"end":{"line":534,"column":31}},{"start":{"line":534,"column":31},"end":{"line":534,"column":null}}],"line":534},"4":{"loc":{"start":{"line":587,"column":2},"end":{"line":587,"column":null}},"type":"default-arg","locations":[{"start":{"line":587,"column":23},"end":{"line":587,"column":null}}],"line":587},"5":{"loc":{"start":{"line":588,"column":2},"end":{"line":588,"column":null}},"type":"default-arg","locations":[{"start":{"line":588,"column":24},"end":{"line":588,"column":null}}],"line":588},"6":{"loc":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"type":"if","locations":[{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},{"start":{},"end":{}}],"line":592}},"s":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1,"9":1,"10":1,"11":1,"12":1,"13":1,"14":1,"15":1,"16":1,"17":1,"18":1,"19":1,"20":1,"21":1,"22":1,"23":1,"24":1,"25":1,"26":1,"27":1,"28":1,"29":1,"30":1,"31":2,"32":2,"33":1,"34":1,"35":2,"36":2},"f":{"0":1,"1":2,"2":2,"3":2},"b":{"0":[1],"1":[1,0],"2":[1,0],"3":[1,1],"4":[2],"5":[2],"6":[1,1]},"meta":{"lastBranch":7,"lastFunction":4,"lastStatement":37,"seen":{"s:30:30:30:Infinity":0,"s:41:30:41:Infinity":1,"s:47:27:47:Infinity":2,"s:54:32:62:Infinity":3,"s:69:37:78:Infinity":4,"s:85:32:85:Infinity":5,"s:91:31:91:Infinity":6,"s:102:32:107:Infinity":7,"s:115:27:122:Infinity":8,"s:129:36:138:Infinity":9,"s:149:32:156:Infinity":10,"s:162:32:176:Infinity":11,"s:183:37:192:Infinity":12,"s:199:31:209:Infinity":13,"s:220:32:229:Infinity":14,"s:236:33:247:Infinity":15,"s:254:32:262:Infinity":16,"s:270:30:278:Infinity":17,"s:289:31:295:Infinity":18,"s:302:31:312:Infinity":19,"s:319:27:325:Infinity":20,"s:332:32:359:Infinity":21,"s:370:30:382:Infinity":22,"s:389:34:395:Infinity":23,"s:407:35:412:Infinity":24,"s:424:34:436:Infinity":25,"s:447:34:453:Infinity":26,"s:469:32:502:Infinity":27,"f:517:16:517:Infinity":0,"b:519:24:519:Infinity":0,"s:523:4:525:Infinity":28,"b:524:8:524:Infinity:525:8:525:Infinity":1,"s:528:4:530:Infinity":29,"b:529:8:529:Infinity:530:8:530:Infinity":2,"s:532:2:563:Infinity":30,"b:534:15:534:31:534:31:534:Infinity":3,"f:585:16:585:Infinity":1,"b:587:23:587:Infinity":4,"b:588:24:588:Infinity":5,"s:590:17:590:Infinity":31,"b:592:2:594:Infinity:undefined:undefined:undefined:undefined":6,"s:592:2:594:Infinity":32,"s:593:4:593:Infinity":33,"s:596:2:600:Infinity":34,"f:610:16:610:31":2,"s:611:2:611:Infinity":35,"f:624:16:624:35":3,"s:625:2:625:Infinity":36}}}
 }
 </file>
 
-<file path="frontend/src/App.test.tsx">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import App from './App';
-import * as turnStream from './api/turnStream';
+<file path="frontend/coverage/prettify.js">
+/* eslint-disable */
+window.PR_SHOULD_USE_CONTINUATION=true;(function(){var h=["break,continue,do,else,for,if,return,while"];var u=[h,"auto,case,char,const,default,double,enum,extern,float,goto,int,long,register,short,signed,sizeof,static,struct,switch,typedef,union,unsigned,void,volatile"];var p=[u,"catch,class,delete,false,import,new,operator,private,protected,public,this,throw,true,try,typeof"];var l=[p,"alignof,align_union,asm,axiom,bool,concept,concept_map,const_cast,constexpr,decltype,dynamic_cast,explicit,export,friend,inline,late_check,mutable,namespace,nullptr,reinterpret_cast,static_assert,static_cast,template,typeid,typename,using,virtual,where"];var x=[p,"abstract,boolean,byte,extends,final,finally,implements,import,instanceof,null,native,package,strictfp,super,synchronized,throws,transient"];var R=[x,"as,base,by,checked,decimal,delegate,descending,dynamic,event,fixed,foreach,from,group,implicit,in,interface,internal,into,is,lock,object,out,override,orderby,params,partial,readonly,ref,sbyte,sealed,stackalloc,string,select,uint,ulong,unchecked,unsafe,ushort,var"];var r="all,and,by,catch,class,else,extends,false,finally,for,if,in,is,isnt,loop,new,no,not,null,of,off,on,or,return,super,then,true,try,unless,until,when,while,yes";var w=[p,"debugger,eval,export,function,get,null,set,undefined,var,with,Infinity,NaN"];var s="caller,delete,die,do,dump,elsif,eval,exit,foreach,for,goto,if,import,last,local,my,next,no,our,print,package,redo,require,sub,undef,unless,until,use,wantarray,while,BEGIN,END";var I=[h,"and,as,assert,class,def,del,elif,except,exec,finally,from,global,import,in,is,lambda,nonlocal,not,or,pass,print,raise,try,with,yield,False,True,None"];var f=[h,"alias,and,begin,case,class,def,defined,elsif,end,ensure,false,in,module,next,nil,not,or,redo,rescue,retry,self,super,then,true,undef,unless,until,when,yield,BEGIN,END"];var H=[h,"case,done,elif,esac,eval,fi,function,in,local,set,then,until"];var A=[l,R,w,s+I,f,H];var e=/^(DIR|FILE|vector|(de|priority_)?queue|list|stack|(const_)?iterator|(multi)?(set|map)|bitset|u?(int|float)\d*)/;var C="str";var z="kwd";var j="com";var O="typ";var G="lit";var L="pun";var F="pln";var m="tag";var E="dec";var J="src";var P="atn";var n="atv";var N="nocode";var M="(?:^^\\.?|[+-]|\\!|\\!=|\\!==|\\#|\\%|\\%=|&|&&|&&=|&=|\\(|\\*|\\*=|\\+=|\\,|\\-=|\\->|\\/|\\/=|:|::|\\;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\@|\\[|\\^|\\^=|\\^\\^|\\^\\^=|\\{|\\||\\|=|\\|\\||\\|\\|=|\\~|break|case|continue|delete|do|else|finally|instanceof|return|throw|try|typeof)\\s*";function k(Z){var ad=0;var S=false;var ac=false;for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.ignoreCase){ac=true}else{if(/[a-z]/i.test(ae.source.replace(/\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[^ux]/gi,""))){S=true;ac=false;break}}}var Y={b:8,t:9,n:10,v:11,f:12,r:13};function ab(ah){var ag=ah.charCodeAt(0);if(ag!==92){return ag}var af=ah.charAt(1);ag=Y[af];if(ag){return ag}else{if("0"<=af&&af<="7"){return parseInt(ah.substring(1),8)}else{if(af==="u"||af==="x"){return parseInt(ah.substring(2),16)}else{return ah.charCodeAt(1)}}}}function T(af){if(af<32){return(af<16?"\\x0":"\\x")+af.toString(16)}var ag=String.fromCharCode(af);if(ag==="\\"||ag==="-"||ag==="["||ag==="]"){ag="\\"+ag}return ag}function X(am){var aq=am.substring(1,am.length-1).match(new RegExp("\\\\u[0-9A-Fa-f]{4}|\\\\x[0-9A-Fa-f]{2}|\\\\[0-3][0-7]{0,2}|\\\\[0-7]{1,2}|\\\\[\\s\\S]|-|[^-\\\\]","g"));var ak=[];var af=[];var ao=aq[0]==="^";for(var ar=ao?1:0,aj=aq.length;ar<aj;++ar){var ah=aq[ar];if(/\\[bdsw]/i.test(ah)){ak.push(ah)}else{var ag=ab(ah);var al;if(ar+2<aj&&"-"===aq[ar+1]){al=ab(aq[ar+2]);ar+=2}else{al=ag}af.push([ag,al]);if(!(al<65||ag>122)){if(!(al<65||ag>90)){af.push([Math.max(65,ag)|32,Math.min(al,90)|32])}if(!(al<97||ag>122)){af.push([Math.max(97,ag)&~32,Math.min(al,122)&~32])}}}}af.sort(function(av,au){return(av[0]-au[0])||(au[1]-av[1])});var ai=[];var ap=[NaN,NaN];for(var ar=0;ar<af.length;++ar){var at=af[ar];if(at[0]<=ap[1]+1){ap[1]=Math.max(ap[1],at[1])}else{ai.push(ap=at)}}var an=["["];if(ao){an.push("^")}an.push.apply(an,ak);for(var ar=0;ar<ai.length;++ar){var at=ai[ar];an.push(T(at[0]));if(at[1]>at[0]){if(at[1]+1>at[0]){an.push("-")}an.push(T(at[1]))}}an.push("]");return an.join("")}function W(al){var aj=al.source.match(new RegExp("(?:\\[(?:[^\\x5C\\x5D]|\\\\[\\s\\S])*\\]|\\\\u[A-Fa-f0-9]{4}|\\\\x[A-Fa-f0-9]{2}|\\\\[0-9]+|\\\\[^ux0-9]|\\(\\?[:!=]|[\\(\\)\\^]|[^\\x5B\\x5C\\(\\)\\^]+)","g"));var ah=aj.length;var an=[];for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){an[af]=-1}}}}for(var ak=1;ak<an.length;++ak){if(-1===an[ak]){an[ak]=++ad}}for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am;if(an[am]===undefined){aj[ak]="(?:"}}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){aj[ak]="\\"+an[am]}}}}for(var ak=0,am=0;ak<ah;++ak){if("^"===aj[ak]&&"^"!==aj[ak+1]){aj[ak]=""}}if(al.ignoreCase&&S){for(var ak=0;ak<ah;++ak){var ag=aj[ak];var ai=ag.charAt(0);if(ag.length>=2&&ai==="["){aj[ak]=X(ag)}else{if(ai!=="\\"){aj[ak]=ag.replace(/[a-zA-Z]/g,function(ao){var ap=ao.charCodeAt(0);return"["+String.fromCharCode(ap&~32,ap|32)+"]"})}}}}return aj.join("")}var aa=[];for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.global||ae.multiline){throw new Error(""+ae)}aa.push("(?:"+W(ae)+")")}return new RegExp(aa.join("|"),ac?"gi":"g")}function a(V){var U=/(?:^|\s)nocode(?:\s|$)/;var X=[];var T=0;var Z=[];var W=0;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=document.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Y=S&&"pre"===S.substring(0,3);function aa(ab){switch(ab.nodeType){case 1:if(U.test(ab.className)){return}for(var ae=ab.firstChild;ae;ae=ae.nextSibling){aa(ae)}var ad=ab.nodeName;if("BR"===ad||"LI"===ad){X[W]="\n";Z[W<<1]=T++;Z[(W++<<1)|1]=ab}break;case 3:case 4:var ac=ab.nodeValue;if(ac.length){if(!Y){ac=ac.replace(/[ \t\r\n]+/g," ")}else{ac=ac.replace(/\r\n?/g,"\n")}X[W]=ac;Z[W<<1]=T;T+=ac.length;Z[(W++<<1)|1]=ab}break}}aa(V);return{sourceCode:X.join("").replace(/\n$/,""),spans:Z}}function B(S,U,W,T){if(!U){return}var V={sourceCode:U,basePos:S};W(V);T.push.apply(T,V.decorations)}var v=/\S/;function o(S){var V=undefined;for(var U=S.firstChild;U;U=U.nextSibling){var T=U.nodeType;V=(T===1)?(V?S:U):(T===3)?(v.test(U.nodeValue)?S:V):V}return V===S?undefined:V}function g(U,T){var S={};var V;(function(){var ad=U.concat(T);var ah=[];var ag={};for(var ab=0,Z=ad.length;ab<Z;++ab){var Y=ad[ab];var ac=Y[3];if(ac){for(var ae=ac.length;--ae>=0;){S[ac.charAt(ae)]=Y}}var af=Y[1];var aa=""+af;if(!ag.hasOwnProperty(aa)){ah.push(af);ag[aa]=null}}ah.push(/[\0-\uffff]/);V=k(ah)})();var X=T.length;var W=function(ah){var Z=ah.sourceCode,Y=ah.basePos;var ad=[Y,F];var af=0;var an=Z.match(V)||[];var aj={};for(var ae=0,aq=an.length;ae<aq;++ae){var ag=an[ae];var ap=aj[ag];var ai=void 0;var am;if(typeof ap==="string"){am=false}else{var aa=S[ag.charAt(0)];if(aa){ai=ag.match(aa[1]);ap=aa[0]}else{for(var ao=0;ao<X;++ao){aa=T[ao];ai=ag.match(aa[1]);if(ai){ap=aa[0];break}}if(!ai){ap=F}}am=ap.length>=5&&"lang-"===ap.substring(0,5);if(am&&!(ai&&typeof ai[1]==="string")){am=false;ap=J}if(!am){aj[ag]=ap}}var ab=af;af+=ag.length;if(!am){ad.push(Y+ab,ap)}else{var al=ai[1];var ak=ag.indexOf(al);var ac=ak+al.length;if(ai[2]){ac=ag.length-ai[2].length;ak=ac-al.length}var ar=ap.substring(5);B(Y+ab,ag.substring(0,ak),W,ad);B(Y+ab+ak,al,q(ar,al),ad);B(Y+ab+ac,ag.substring(ac),W,ad)}}ah.decorations=ad};return W}function i(T){var W=[],S=[];if(T.tripleQuotedStrings){W.push([C,/^(?:\'\'\'(?:[^\'\\]|\\[\s\S]|\'{1,2}(?=[^\']))*(?:\'\'\'|$)|\"\"\"(?:[^\"\\]|\\[\s\S]|\"{1,2}(?=[^\"]))*(?:\"\"\"|$)|\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$))/,null,"'\""])}else{if(T.multiLineStrings){W.push([C,/^(?:\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$)|\`(?:[^\\\`]|\\[\s\S])*(?:\`|$))/,null,"'\"`"])}else{W.push([C,/^(?:\'(?:[^\\\'\r\n]|\\.)*(?:\'|$)|\"(?:[^\\\"\r\n]|\\.)*(?:\"|$))/,null,"\"'"])}}if(T.verbatimStrings){S.push([C,/^@\"(?:[^\"]|\"\")*(?:\"|$)/,null])}var Y=T.hashComments;if(Y){if(T.cStyleComments){if(Y>1){W.push([j,/^#(?:##(?:[^#]|#(?!##))*(?:###|$)|.*)/,null,"#"])}else{W.push([j,/^#(?:(?:define|elif|else|endif|error|ifdef|include|ifndef|line|pragma|undef|warning)\b|[^\r\n]*)/,null,"#"])}S.push([C,/^<(?:(?:(?:\.\.\/)*|\/?)(?:[\w-]+(?:\/[\w-]+)+)?[\w-]+\.h|[a-z]\w*)>/,null])}else{W.push([j,/^#[^\r\n]*/,null,"#"])}}if(T.cStyleComments){S.push([j,/^\/\/[^\r\n]*/,null]);S.push([j,/^\/\*[\s\S]*?(?:\*\/|$)/,null])}if(T.regexLiterals){var X=("/(?=[^/*])(?:[^/\\x5B\\x5C]|\\x5C[\\s\\S]|\\x5B(?:[^\\x5C\\x5D]|\\x5C[\\s\\S])*(?:\\x5D|$))+/");S.push(["lang-regex",new RegExp("^"+M+"("+X+")")])}var V=T.types;if(V){S.push([O,V])}var U=(""+T.keywords).replace(/^ | $/g,"");if(U.length){S.push([z,new RegExp("^(?:"+U.replace(/[\s,]+/g,"|")+")\\b"),null])}W.push([F,/^\s+/,null," \r\n\t\xA0"]);S.push([G,/^@[a-z_$][a-z_$@0-9]*/i,null],[O,/^(?:[@_]?[A-Z]+[a-z][A-Za-z_$@0-9]*|\w+_t\b)/,null],[F,/^[a-z_$][a-z_$@0-9]*/i,null],[G,new RegExp("^(?:0x[a-f0-9]+|(?:\\d(?:_\\d+)*\\d*(?:\\.\\d*)?|\\.\\d\\+)(?:e[+\\-]?\\d+)?)[a-z]*","i"),null,"0123456789"],[F,/^\\[\s\S]?/,null],[L,/^.[^\s\w\.$@\'\"\`\/\#\\]*/,null]);return g(W,S)}var K=i({keywords:A,hashComments:true,cStyleComments:true,multiLineStrings:true,regexLiterals:true});function Q(V,ag){var U=/(?:^|\s)nocode(?:\s|$)/;var ab=/\r\n?|\n/;var ac=V.ownerDocument;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=ac.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Z=S&&"pre"===S.substring(0,3);var af=ac.createElement("LI");while(V.firstChild){af.appendChild(V.firstChild)}var W=[af];function ae(al){switch(al.nodeType){case 1:if(U.test(al.className)){break}if("BR"===al.nodeName){ad(al);if(al.parentNode){al.parentNode.removeChild(al)}}else{for(var an=al.firstChild;an;an=an.nextSibling){ae(an)}}break;case 3:case 4:if(Z){var am=al.nodeValue;var aj=am.match(ab);if(aj){var ai=am.substring(0,aj.index);al.nodeValue=ai;var ah=am.substring(aj.index+aj[0].length);if(ah){var ak=al.parentNode;ak.insertBefore(ac.createTextNode(ah),al.nextSibling)}ad(al);if(!ai){al.parentNode.removeChild(al)}}}break}}function ad(ak){while(!ak.nextSibling){ak=ak.parentNode;if(!ak){return}}function ai(al,ar){var aq=ar?al.cloneNode(false):al;var ao=al.parentNode;if(ao){var ap=ai(ao,1);var an=al.nextSibling;ap.appendChild(aq);for(var am=an;am;am=an){an=am.nextSibling;ap.appendChild(am)}}return aq}var ah=ai(ak.nextSibling,0);for(var aj;(aj=ah.parentNode)&&aj.nodeType===1;){ah=aj}W.push(ah)}for(var Y=0;Y<W.length;++Y){ae(W[Y])}if(ag===(ag|0)){W[0].setAttribute("value",ag)}var aa=ac.createElement("OL");aa.className="linenums";var X=Math.max(0,((ag-1))|0)||0;for(var Y=0,T=W.length;Y<T;++Y){af=W[Y];af.className="L"+((Y+X)%10);if(!af.firstChild){af.appendChild(ac.createTextNode("\xA0"))}aa.appendChild(af)}V.appendChild(aa)}function D(ac){var aj=/\bMSIE\b/.test(navigator.userAgent);var am=/\n/g;var al=ac.sourceCode;var an=al.length;var V=0;var aa=ac.spans;var T=aa.length;var ah=0;var X=ac.decorations;var Y=X.length;var Z=0;X[Y]=an;var ar,aq;for(aq=ar=0;aq<Y;){if(X[aq]!==X[aq+2]){X[ar++]=X[aq++];X[ar++]=X[aq++]}else{aq+=2}}Y=ar;for(aq=ar=0;aq<Y;){var at=X[aq];var ab=X[aq+1];var W=aq+2;while(W+2<=Y&&X[W+1]===ab){W+=2}X[ar++]=at;X[ar++]=ab;aq=W}Y=X.length=ar;var ae=null;while(ah<T){var af=aa[ah];var S=aa[ah+2]||an;var ag=X[Z];var ap=X[Z+2]||an;var W=Math.min(S,ap);var ak=aa[ah+1];var U;if(ak.nodeType!==1&&(U=al.substring(V,W))){if(aj){U=U.replace(am,"\r")}ak.nodeValue=U;var ai=ak.ownerDocument;var ao=ai.createElement("SPAN");ao.className=X[Z+1];var ad=ak.parentNode;ad.replaceChild(ao,ak);ao.appendChild(ak);if(V<S){aa[ah+1]=ak=ai.createTextNode(al.substring(W,S));ad.insertBefore(ak,ao.nextSibling)}}V=W;if(V>=S){ah+=2}if(V>=ap){Z+=2}}}var t={};function c(U,V){for(var S=V.length;--S>=0;){var T=V[S];if(!t.hasOwnProperty(T)){t[T]=U}else{if(window.console){console.warn("cannot override language handler %s",T)}}}}function q(T,S){if(!(T&&t.hasOwnProperty(T))){T=/^\s*</.test(S)?"default-markup":"default-code"}return t[T]}c(K,["default-code"]);c(g([],[[F,/^[^<?]+/],[E,/^<!\w[^>]*(?:>|$)/],[j,/^<\!--[\s\S]*?(?:-\->|$)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],[L,/^(?:<[%?]|[%?]>)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i]]),["default-markup","htm","html","mxml","xhtml","xml","xsl"]);c(g([[F,/^[\s]+/,null," \t\r\n"],[n,/^(?:\"[^\"]*\"?|\'[^\']*\'?)/,null,"\"'"]],[[m,/^^<\/?[a-z](?:[\w.:-]*\w)?|\/?>$/i],[P,/^(?!style[\s=]|on)[a-z](?:[\w:-]*\w)?/i],["lang-uq.val",/^=\s*([^>\'\"\s]*(?:[^>\'\"\s\/]|\/(?=\s)))/],[L,/^[=<>\/]+/],["lang-js",/^on\w+\s*=\s*\"([^\"]+)\"/i],["lang-js",/^on\w+\s*=\s*\'([^\']+)\'/i],["lang-js",/^on\w+\s*=\s*([^\"\'>\s]+)/i],["lang-css",/^style\s*=\s*\"([^\"]+)\"/i],["lang-css",/^style\s*=\s*\'([^\']+)\'/i],["lang-css",/^style\s*=\s*([^\"\'>\s]+)/i]]),["in.tag"]);c(g([],[[n,/^[\s\S]+/]]),["uq.val"]);c(i({keywords:l,hashComments:true,cStyleComments:true,types:e}),["c","cc","cpp","cxx","cyc","m"]);c(i({keywords:"null,true,false"}),["json"]);c(i({keywords:R,hashComments:true,cStyleComments:true,verbatimStrings:true,types:e}),["cs"]);c(i({keywords:x,cStyleComments:true}),["java"]);c(i({keywords:H,hashComments:true,multiLineStrings:true}),["bsh","csh","sh"]);c(i({keywords:I,hashComments:true,multiLineStrings:true,tripleQuotedStrings:true}),["cv","py"]);c(i({keywords:s,hashComments:true,multiLineStrings:true,regexLiterals:true}),["perl","pl","pm"]);c(i({keywords:f,hashComments:true,multiLineStrings:true,regexLiterals:true}),["rb"]);c(i({keywords:w,cStyleComments:true,regexLiterals:true}),["js"]);c(i({keywords:r,hashComments:3,cStyleComments:true,multilineStrings:true,tripleQuotedStrings:true,regexLiterals:true}),["coffee"]);c(g([],[[C,/^[\s\S]+/]]),["regex"]);function d(V){var U=V.langExtension;try{var S=a(V.sourceNode);var T=S.sourceCode;V.sourceCode=T;V.spans=S.spans;V.basePos=0;q(U,T)(V);D(V)}catch(W){if("console" in window){console.log(W&&W.stack?W.stack:W)}}}function y(W,V,U){var S=document.createElement("PRE");S.innerHTML=W;if(U){Q(S,U)}var T={langExtension:V,numberLines:U,sourceNode:S};d(T);return S.innerHTML}function b(ad){function Y(af){return document.getElementsByTagName(af)}var ac=[Y("pre"),Y("code"),Y("xmp")];var T=[];for(var aa=0;aa<ac.length;++aa){for(var Z=0,V=ac[aa].length;Z<V;++Z){T.push(ac[aa][Z])}}ac=null;var W=Date;if(!W.now){W={now:function(){return +(new Date)}}}var X=0;var S;var ab=/\blang(?:uage)?-([\w.]+)(?!\S)/;var ae=/\bprettyprint\b/;function U(){var ag=(window.PR_SHOULD_USE_CONTINUATION?W.now()+250:Infinity);for(;X<T.length&&W.now()<ag;X++){var aj=T[X];var ai=aj.className;if(ai.indexOf("prettyprint")>=0){var ah=ai.match(ab);var am;if(!ah&&(am=o(aj))&&"CODE"===am.tagName){ah=am.className.match(ab)}if(ah){ah=ah[1]}var al=false;for(var ak=aj.parentNode;ak;ak=ak.parentNode){if((ak.tagName==="pre"||ak.tagName==="code"||ak.tagName==="xmp")&&ak.className&&ak.className.indexOf("prettyprint")>=0){al=true;break}}if(!al){var af=aj.className.match(/\blinenums\b(?::(\d+))?/);af=af?af[1]&&af[1].length?+af[1]:true:false;if(af){Q(aj,af)}S={langExtension:ah,sourceNode:aj,numberLines:af};d(S)}}}if(X<T.length){setTimeout(U,250)}else{if(ad){ad()}}}U()}window.prettyPrintOne=y;window.prettyPrint=b;window.PR={createSimpleLexer:g,registerLangHandler:c,sourceDecorator:i,PR_ATTRIB_NAME:P,PR_ATTRIB_VALUE:n,PR_COMMENT:j,PR_DECLARATION:E,PR_KEYWORD:z,PR_LITERAL:G,PR_NOCODE:N,PR_PLAIN:F,PR_PUNCTUATION:L,PR_SOURCE:J,PR_STRING:C,PR_TAG:m,PR_TYPE:O}})();PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_DECLARATION,/^<!\w[^>]*(?:>|$)/],[PR.PR_COMMENT,/^<\!--[\s\S]*?(?:-\->|$)/],[PR.PR_PUNCTUATION,/^(?:<[%?]|[%?]>)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-handlebars",/^<script\b[^>]*type\s*=\s*['"]?text\/x-handlebars-template['"]?\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i],[PR.PR_DECLARATION,/^{{[#^>/]?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{&?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{{>?\s*[\w.][^}]*}}}/],[PR.PR_COMMENT,/^{{![^}]*}}/]]),["handlebars","hbs"]);PR.registerLangHandler(PR.createSimpleLexer([[PR.PR_PLAIN,/^[ \t\r\n\f]+/,null," \t\r\n\f"]],[[PR.PR_STRING,/^\"(?:[^\n\r\f\\\"]|\\(?:\r\n?|\n|\f)|\\[\s\S])*\"/,null],[PR.PR_STRING,/^\'(?:[^\n\r\f\\\']|\\(?:\r\n?|\n|\f)|\\[\s\S])*\'/,null],["lang-css-str",/^url\(([^\)\"\']*)\)/i],[PR.PR_KEYWORD,/^(?:url|rgb|\!important|@import|@page|@media|@charset|inherit)(?=[^\-\w]|$)/i,null],["lang-css-kw",/^(-?(?:[_a-z]|(?:\\[0-9a-f]+ ?))(?:[_a-z0-9\-]|\\(?:\\[0-9a-f]+ ?))*)\s*:/i],[PR.PR_COMMENT,/^\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\//],[PR.PR_COMMENT,/^(?:<!--|-->)/],[PR.PR_LITERAL,/^(?:\d+|\d*\.\d+)(?:%|[a-z]+)?/i],[PR.PR_LITERAL,/^#(?:[0-9a-f]{3}){1,2}/i],[PR.PR_PLAIN,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i],[PR.PR_PUNCTUATION,/^[^\s\w\'\"]+/]]),["css"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_KEYWORD,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i]]),["css-kw"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_STRING,/^[^\)\"\']+/]]),["css-str"]);
+</file>
 
-// i18next 모킹
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
-      if (key === 'scene.hotspot.click_action') {
-        return `Click: ${options?.label}`;
-      }
-      return key;
-    },
-    i18n: {
-      changeLanguage: () => Promise.resolve(),
-      resolvedLanguage: 'ko-KR',
-    },
-  }),
-  initReactI18next: {
-    type: '3rdParty',
-    init: () => {},
-  },
-}));
+<file path="frontend/coverage/sorter.js">
+/* eslint-disable */
+var addSorting = (function() {
+    'use strict';
+    var cols,
+        currentSort = {
+            index: 0,
+            desc: false
+        };
 
-// ResizeObserver 모킹
-class MockResizeObserver {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-}
-global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    // returns the summary table element
+    function getTable() {
+        return document.querySelector('.coverage-summary');
+    }
+    // returns the thead element of the summary table
+    function getTableHeader() {
+        return getTable().querySelector('thead tr');
+    }
+    // returns the tbody element of the summary table
+    function getTableBody() {
+        return getTable().querySelector('tbody');
+    }
+    // returns the th element for nth column
+    function getNthColumn(n) {
+        return getTableHeader().querySelectorAll('th')[n];
+    }
 
-// getBoundingClientRect 모킹
-Element.prototype.getBoundingClientRect = vi.fn(() => ({
-  width: 800,
-  height: 600,
-  top: 0,
-  left: 0,
-  bottom: 600,
-  right: 800,
-  x: 0,
-  y: 0,
-  toJSON: () => {},
-})) as unknown as () => DOMRect;
+    function onFilterInput() {
+        const searchValue = document.getElementById('fileSearch').value;
+        const rows = document.getElementsByTagName('tbody')[0].children;
 
-// api 모킹
-vi.mock('./api/turnStream', () => ({
-  startTurnStream: vi.fn(),
-}));
+        // Try to create a RegExp from the searchValue. If it fails (invalid regex),
+        // it will be treated as a plain text search
+        let searchRegex;
+        try {
+            searchRegex = new RegExp(searchValue, 'i'); // 'i' for case-insensitive
+        } catch (error) {
+            searchRegex = null;
+        }
 
-describe('App Integration - Hotspot Click', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            let isMatch = false;
 
-  it('should trigger startTurnStream when a hotspot is clicked', async () => {
-    render(<App />);
-    
-    // 데모용으로 App.tsx에 하드코딩된 '터미널' 핫스팟 찾기
-    const terminalHotspot = screen.getByLabelText('터미널');
-    expect(terminalHotspot).toBeInTheDocument();
+            if (searchRegex) {
+                // If a valid regex was created, use it for matching
+                isMatch = searchRegex.test(row.textContent);
+            } else {
+                // Otherwise, fall back to the original plain text search
+                isMatch = row.textContent
+                    .toLowerCase()
+                    .includes(searchValue.toLowerCase());
+            }
 
-    // 클릭 시뮬레이션
-    fireEvent.click(terminalHotspot);
+            row.style.display = isMatch ? '' : 'none';
+        }
+    }
 
-    // startTurnStream 호출 확인
-    expect(turnStream.startTurnStream).toHaveBeenCalled();
-    
-    const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
-    
-    // TurnInput 검증
-    expect(input.text).toBe('Click: 터미널');
-    expect(input.click).toEqual({
-      object_id: 'demo-terminal',
-      box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
-    });
-  });
-});
+    // loads the search box
+    function addSearchBox() {
+        var template = document.getElementById('filterTemplate');
+        var templateClone = template.content.cloneNode(true);
+        templateClone.getElementById('fileSearch').oninput = onFilterInput;
+        template.parentElement.appendChild(templateClone);
+    }
+
+    // loads all columns
+    function loadColumns() {
+        var colNodes = getTableHeader().querySelectorAll('th'),
+            colNode,
+            cols = [],
+            col,
+            i;
+
+        for (i = 0; i < colNodes.length; i += 1) {
+            colNode = colNodes[i];
+            col = {
+                key: colNode.getAttribute('data-col'),
+                sortable: !colNode.getAttribute('data-nosort'),
+                type: colNode.getAttribute('data-type') || 'string'
+            };
+            cols.push(col);
+            if (col.sortable) {
+                col.defaultDescSort = col.type === 'number';
+                colNode.innerHTML =
+                    colNode.innerHTML + '<span class="sorter"></span>';
+            }
+        }
+        return cols;
+    }
+    // attaches a data attribute to every tr element with an object
+    // of data values keyed by column name
+    function loadRowData(tableRow) {
+        var tableCols = tableRow.querySelectorAll('td'),
+            colNode,
+            col,
+            data = {},
+            i,
+            val;
+        for (i = 0; i < tableCols.length; i += 1) {
+            colNode = tableCols[i];
+            col = cols[i];
+            val = colNode.getAttribute('data-value');
+            if (col.type === 'number') {
+                val = Number(val);
+            }
+            data[col.key] = val;
+        }
+        return data;
+    }
+    // loads all row data
+    function loadData() {
+        var rows = getTableBody().querySelectorAll('tr'),
+            i;
+
+        for (i = 0; i < rows.length; i += 1) {
+            rows[i].data = loadRowData(rows[i]);
+        }
+    }
+    // sorts the table using the data for the ith column
+    function sortByIndex(index, desc) {
+        var key = cols[index].key,
+            sorter = function(a, b) {
+                a = a.data[key];
+                b = b.data[key];
+                return a < b ? -1 : a > b ? 1 : 0;
+            },
+            finalSorter = sorter,
+            tableBody = document.querySelector('.coverage-summary tbody'),
+            rowNodes = tableBody.querySelectorAll('tr'),
+            rows = [],
+            i;
+
+        if (desc) {
+            finalSorter = function(a, b) {
+                return -1 * sorter(a, b);
+            };
+        }
+
+        for (i = 0; i < rowNodes.length; i += 1) {
+            rows.push(rowNodes[i]);
+            tableBody.removeChild(rowNodes[i]);
+        }
+
+        rows.sort(finalSorter);
+
+        for (i = 0; i < rows.length; i += 1) {
+            tableBody.appendChild(rows[i]);
+        }
+    }
+    // removes sort indicators for current column being sorted
+    function removeSortIndicators() {
+        var col = getNthColumn(currentSort.index),
+            cls = col.className;
+
+        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');
+        col.className = cls;
+    }
+    // adds sort indicators for current column being sorted
+    function addSortIndicators() {
+        getNthColumn(currentSort.index).className += currentSort.desc
+            ? ' sorted-desc'
+            : ' sorted';
+    }
+    // adds event listeners for all sorter widgets
+    function enableUI() {
+        var i,
+            el,
+            ithSorter = function ithSorter(i) {
+                var col = cols[i];
+
+                return function() {
+                    var desc = col.defaultDescSort;
+
+                    if (currentSort.index === i) {
+                        desc = !currentSort.desc;
+                    }
+                    sortByIndex(i, desc);
+                    removeSortIndicators();
+                    currentSort.index = i;
+                    currentSort.desc = desc;
+                    addSortIndicators();
+                };
+            };
+        for (i = 0; i < cols.length; i += 1) {
+            if (cols[i].sortable) {
+                // add the click event handler on the th so users
+                // dont have to click on those tiny arrows
+                el = getNthColumn(i).querySelector('.sorter').parentElement;
+                if (el.addEventListener) {
+                    el.addEventListener('click', ithSorter(i));
+                } else {
+                    el.attachEvent('onclick', ithSorter(i));
+                }
+            }
+        }
+    }
+    // adds sorting functionality to the UI
+    return function() {
+        if (!getTable()) {
+            return;
+        }
+        cols = loadColumns();
+        loadData();
+        addSearchBox();
+        addSortIndicators();
+        enableUI();
+    };
+})();
+
+window.addEventListener('load', addSorting);
 </file>
 
 <file path="frontend/src/components/ActionDeck.test.tsx">
@@ -1151,182 +1384,309 @@ export function ActionDeck({
 export default ActionDeck;
 </file>
 
-<file path="frontend/src/components/SceneCanvas.hotspot.test.tsx">
+<file path="frontend/src/components/InventoryPanel.test.tsx">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { SceneCanvas } from './SceneCanvas';
-import type { SceneObject } from '../schemas/turn';
-import type { SceneCanvasState } from '../types/scene';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { InventoryPanel } from './InventoryPanel';
+import { useInventoryStore } from '../stores/inventoryStore';
 
 // i18next 모킹
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => {
+      if (key === 'inventory.empty') return 'Inventory is empty';
+      if (key === 'inventory.grid_label') return 'Inventory Grid';
+      return key;
+    },
   }),
 }));
 
-// ResizeObserver 모킹
-let resizeCallback: (entries: ResizeObserverEntry[]) => void;
-class MockResizeObserver {
-  constructor(callback: (entries: ResizeObserverEntry[]) => void) {
-    resizeCallback = callback;
-  }
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-}
+// dnd-kit 모킹 (필요시)
+// dnd-kit hooks often return attributes/listeners/setNodeRef
+// For basic rendering test, we might not need to mock them if they don't crash jsdom
 
-global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
-
-/**
- * 리사이즈 이벤트를 수동으로 트리거합니다.
- */
-function triggerResize(width: number, height: number) {
-  if (resizeCallback) {
-    act(() => {
-      resizeCallback([
-        {
-          contentRect: { width, height } as DOMRectReadOnly,
-          target: document.querySelector('.scene-canvas') as Element,
-        } as ResizeObserverEntry,
-      ]);
-    });
-  }
-}
-
-// getBoundingClientRect 모킹
-Element.prototype.getBoundingClientRect = vi.fn(() => ({
-  width: 800,
-  height: 600,
-  top: 0,
-  left: 0,
-  bottom: 600,
-  right: 800,
-  x: 0,
-  y: 0,
-  toJSON: () => {},
-})) as unknown as () => DOMRect;
-
-describe('SceneCanvas Hotspots', () => {
-  const defaultState: SceneCanvasState = {
-    status: 'scene',
-    imageUrl: 'https://example.com/scene.png',
-  };
-
-  const mockObjects: SceneObject[] = [
-    {
-      id: 'obj-1',
-      label: 'Object 1',
-      box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
-      interaction_hint: 'Click me',
-    },
-    {
-      id: 'obj-2',
-      label: 'Object 2',
-      box_2d: { ymin: 500, xmin: 500, ymax: 700, xmax: 700 },
-      interaction_hint: null,
-    },
-  ];
-
+describe('InventoryPanel Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    useInventoryStore.getState().reset();
   });
 
-  it('should render hotspots when objects are provided and status is scene', () => {
-    render(<SceneCanvas state={defaultState} objects={mockObjects} />);
-    
-    // 핫스팟 레이어 확인
-    const layer = screen.getByLabelText('scene.hotspot.layer_label');
-    expect(layer).toBeInTheDocument();
-
-    // 개별 핫스팟 확인 (role="button")
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(mockObjects.length);
-    expect(buttons[0]).toHaveAttribute('aria-label', 'Object 1');
-    expect(buttons[1]).toHaveAttribute('aria-label', 'Object 2');
+  it('아이템이 없을 때 빈 상태 메시지를 표시해야 한다', () => {
+    render(<InventoryPanel />);
+    expect(screen.getByText('Inventory is empty')).toBeInTheDocument();
   });
 
-  it('should not render hotspots when status is loading', () => {
-    const loadingState: SceneCanvasState = { status: 'loading' };
-    render(<SceneCanvas state={loadingState} objects={mockObjects} />);
-    
-    const layer = screen.queryByLabelText('scene.hotspot.layer_label');
-    expect(layer).not.toBeInTheDocument();
+  it('아이템이 있을 때 목록을 렌더링해야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([
+      { id: 'item1', name: 'Item 1', quantity: 1, icon: '🍎' },
+      { id: 'item2', name: 'Item 2', quantity: 3, icon: '🗡️' },
+    ]);
+
+    render(<InventoryPanel />);
+
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('🍎')).toBeInTheDocument();
+    expect(screen.getByText('Item 2')).toBeInTheDocument();
+    expect(screen.getByText('🗡️')).toBeInTheDocument();
+    expect(screen.getByText('x3')).toBeInTheDocument();
   });
 
-  it('should call onHotspotClick when a hotspot is clicked', () => {
-    const onHotspotClick = vi.fn();
-    render(<SceneCanvas state={defaultState} objects={mockObjects} onHotspotClick={onHotspotClick} />);
-    
-    const firstHotspot = screen.getByLabelText('Object 1');
-    fireEvent.click(firstHotspot);
+  it('아이템 클릭 시 선택되어야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
 
-    expect(onHotspotClick).toHaveBeenCalledWith({
-      object_id: 'obj-1',
-      box_2d: mockObjects[0].box_2d,
-    });
+    render(<InventoryPanel />);
+
+    const item = screen.getByText('Item 1').closest('.inventory-item');
+    expect(item).not.toHaveClass('selected');
+
+    fireEvent.click(screen.getByText('Item 1'));
+
+    expect(item).toHaveClass('selected');
+    expect(useInventoryStore.getState().selectedItemId).toBe('item1');
   });
 
-  it('should show tooltip on hover', async () => {
-    render(<SceneCanvas state={defaultState} objects={mockObjects} />);
-    
-    const firstHotspot = screen.getByLabelText('Object 1');
-    
-    // Hover 시작
-    fireEvent.mouseEnter(firstHotspot);
-    
-    // 툴팁 라벨 확인
-    expect(screen.getByText('Object 1')).toBeInTheDocument();
-    expect(screen.getByText(/scene.hotspot.hint_prefix/)).toBeInTheDocument();
-    expect(screen.getByText(/Click me/)).toBeInTheDocument();
+  it('disabled 프로프가 true일 때 아이템 클릭이 무시되어야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
 
-    // Hover 종료
-    fireEvent.mouseLeave(firstHotspot);
-    expect(screen.queryByText('Object 1')).not.toBeInTheDocument();
-  });
+    render(<InventoryPanel disabled={true} />);
 
-  it('should be disabled when disabled prop is true', () => {
-    const onHotspotClick = vi.fn();
-    render(<SceneCanvas state={defaultState} objects={mockObjects} onHotspotClick={onHotspotClick} disabled={true} />);
-    
-    const firstHotspot = screen.getByLabelText('Object 1');
-    expect(firstHotspot).toHaveAttribute('aria-disabled', 'true');
-    expect(firstHotspot).toHaveAttribute('tabindex', '-1');
+    fireEvent.click(screen.getByText('Item 1'));
 
-    fireEvent.click(firstHotspot);
-    expect(onHotspotClick).not.toHaveBeenCalled();
-  });
-
-  it('should reposition hotspots when canvas size changes (reactive resize)', () => {
-    render(<SceneCanvas state={defaultState} objects={mockObjects} />);
-    
-    const firstHotspot = screen.getByLabelText('Object 1');
-    
-    // 초기 크기 (800x600) 기반 위치 확인
-    // ymin: 100, xmin: 100, ymax: 200, xmax: 200
-    // top: 100 * (600/1000) = 60px
-    // left: 100 * (800/1000) = 80px
-    expect(firstHotspot).toHaveStyle({
-      top: '60px',
-      left: '80px',
-      width: '80px',
-      height: '60px',
-    });
-
-    // 크기 변경 트리거 (400x300)
-    triggerResize(400, 300);
-    
-    // 변경된 크기 기반 위치 확인
-    // top: 100 * (300/1000) = 30px
-    // left: 100 * (400/1000) = 40px
-    expect(firstHotspot).toHaveStyle({
-      top: '30px',
-      left: '40px',
-      width: '40px',
-      height: '30px',
-    });
+    const item = screen.getByText('Item 1').closest('.inventory-item');
+    expect(item).not.toHaveClass('selected');
+    expect(useInventoryStore.getState().selectedItemId).toBeNull();
   });
 });
+</file>
+
+<file path="frontend/src/components/InventoryPanel.tsx">
+/**
+ * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp]).
+ *
+ * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
+ *   - tech-stack: dnd-kit 기반 draggable 구현
+ *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
+ *
+ * @module components/InventoryPanel
+ */
+
+import { useCallback, useMemo } from 'react';
+import { useDraggable, DragOverlay } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from 'react-i18next';
+import {
+  useInventoryStore,
+  type InventoryItem,
+  selectItems,
+  selectDraggingItem,
+  selectSelectedItemId,
+} from '../stores/inventoryStore';
+
+// =============================================================================
+// 드래그 가능한 아이템 컴포넌트
+// =============================================================================
+
+interface DraggableItemProps {
+  item: InventoryItem;
+  isSelected: boolean;
+  onSelect: (itemId: string) => void;
+  disabled?: boolean;
+}
+
+/**
+ * 드래그 가능한 인벤토리 아이템.
+ * dnd-kit의 useDraggable 훅을 사용합니다.
+ */
+function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
+  const { t } = useTranslation();
+
+  // dnd-kit 드래그 설정
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+    data: {
+      type: 'inventory-item',
+      item_id: item.id, // U-012 연결용
+      item,
+    },
+    disabled,
+  });
+
+  // 변환 스타일 계산
+  const style = useMemo(
+    () => ({
+      transform: CSS.Translate.toString(transform),
+      opacity: isDragging ? 0.5 : 1,
+    }),
+    [transform, isDragging],
+  );
+
+  // 클릭 핸들러 (선택)
+  const handleClick = useCallback(() => {
+    if (!disabled) {
+      onSelect(item.id);
+    }
+  }, [disabled, item.id, onSelect]);
+
+  // 아이콘 렌더링 (이모지 또는 이미지)
+  const renderIcon = () => {
+    if (item.icon) {
+      // URL 형태면 이미지, 아니면 이모지
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return (
+          <img
+            src={item.icon}
+            alt={item.name}
+            className="inventory-item-icon-img"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        );
+      }
+      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+    }
+    // 기본 아이콘 (📦)
+    return <span className="inventory-item-icon-emoji">📦</span>;
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''}`}
+      onClick={handleClick}
+      aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
+      aria-selected={isSelected}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="inventory-item-icon">{renderIcon()}</div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 드래그 오버레이 (드래그 중 표시되는 아이템)
+// =============================================================================
+
+interface ItemOverlayProps {
+  item: InventoryItem;
+}
+
+/**
+ * 드래그 오버레이 아이템.
+ * 드래그 중일 때 커서를 따라다니는 아이템 표시입니다.
+ */
+function ItemOverlay({ item }: ItemOverlayProps) {
+  // 아이콘 렌더링
+  const renderIcon = () => {
+    if (item.icon) {
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return <img src={item.icon} alt={item.name} className="inventory-item-icon-img" />;
+      }
+      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+    }
+    return <span className="inventory-item-icon-emoji">📦</span>;
+  };
+
+  return (
+    <div className="inventory-item overlay">
+      <div className="inventory-item-icon">{renderIcon()}</div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 Inventory Panel 컴포넌트
+// =============================================================================
+
+interface InventoryPanelProps {
+  /** 상호작용 비활성화 (스트리밍 중 등) */
+  disabled?: boolean;
+}
+
+/**
+ * Inventory Panel 컴포넌트.
+ *
+ * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
+ * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
+ *
+ * @example
+ * ```tsx
+ * <InventoryPanel disabled={isStreaming} />
+ * ```
+ */
+export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
+  const { t } = useTranslation();
+
+  // Store 상태
+  const items = useInventoryStore(selectItems);
+  const draggingItem = useInventoryStore(selectDraggingItem);
+  const selectedItemId = useInventoryStore(selectSelectedItemId);
+  const selectItem = useInventoryStore((state) => state.selectItem);
+
+  // 아이템 선택 핸들러
+  const handleSelect = useCallback(
+    (itemId: string) => {
+      // 이미 선택된 아이템 클릭 시 선택 해제
+      selectItem(selectedItemId === itemId ? null : itemId);
+    },
+    [selectedItemId, selectItem],
+  );
+
+  // 빈 인벤토리
+  if (items.length === 0) {
+    return (
+      <div className="inventory-panel-content">
+        <div className="inventory-empty">
+          <span className="inventory-empty-icon">📦</span>
+          <span className="inventory-empty-text">{t('inventory.empty')}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inventory-panel-content" data-ui-importance="critical">
+      <div
+        className="inventory-grid"
+        role="listbox"
+        aria-label={t('inventory.grid_label')}
+        aria-multiselectable={false}
+      >
+        {items.map((item) => (
+          <DraggableItem
+            key={item.id}
+            item={item}
+            isSelected={selectedItemId === item.id}
+            onSelect={handleSelect}
+            disabled={disabled}
+          />
+        ))}
+      </div>
+
+      {/* 드래그 오버레이 */}
+      <DragOverlay dropAnimation={null}>
+        {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
+      </DragOverlay>
+    </div>
+  );
+}
+
+export default InventoryPanel;
 </file>
 
 <file path="frontend/src/components/SceneCanvas.test.tsx">
@@ -2289,6 +2649,316 @@ describe('agentStore', () => {
     expect(state.narrativeBuffer).toBe('');
   });
 });
+</file>
+
+<file path="frontend/src/stores/inventoryStore.test.ts">
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
+
+describe('inventoryStore', () => {
+  beforeEach(() => {
+    useInventoryStore.getState().reset();
+  });
+
+  it('초기 상태는 비어 있어야 한다', () => {
+    const state = useInventoryStore.getState();
+    expect(state.items).toEqual([]);
+    expect(state.draggingItemId).toBeNull();
+    expect(state.selectedItemId).toBeNull();
+  });
+
+  it('addItems: 새 아이템을 추가할 수 있어야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    const newItem = { id: 'item1', name: 'Item 1', quantity: 1 };
+
+    addItems([newItem]);
+
+    const state = useInventoryStore.getState();
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toEqual(newItem);
+  });
+
+  it('addItems: 중복된 ID의 아이템 추가 시 수량이 증가해야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    const item1 = { id: 'item1', name: 'Item 1', quantity: 1 };
+
+    addItems([item1]);
+    addItems([{ id: 'item1', name: 'Item 1', quantity: 2 }]);
+
+    const state = useInventoryStore.getState();
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0].quantity).toBe(3);
+  });
+
+  it('removeItems: 아이템을 제거할 수 있어야 한다', () => {
+    const { addItems, removeItems } = useInventoryStore.getState();
+    addItems([
+      { id: 'item1', name: 'Item 1', quantity: 1 },
+      { id: 'item2', name: 'Item 2', quantity: 1 },
+    ]);
+
+    removeItems(['item1']);
+
+    const state = useInventoryStore.getState();
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0].id).toBe('item2');
+  });
+
+  it('removeItems: 제거된 아이템이 선택/드래그 중이면 초기화해야 한다', () => {
+    const { addItems, removeItems, selectItem, startDrag } = useInventoryStore.getState();
+    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
+
+    selectItem('item1');
+    startDrag('item1');
+
+    removeItems(['item1']);
+
+    const state = useInventoryStore.getState();
+    expect(state.selectedItemId).toBeNull();
+    expect(state.draggingItemId).toBeNull();
+  });
+
+  it('startDrag/endDrag: 드래그 상태를 관리해야 한다', () => {
+    const { startDrag, endDrag } = useInventoryStore.getState();
+
+    startDrag('item1');
+    expect(useInventoryStore.getState().draggingItemId).toBe('item1');
+
+    endDrag();
+    expect(useInventoryStore.getState().draggingItemId).toBeNull();
+  });
+
+  it('parseInventoryAdded: 문자열 ID 목록을 InventoryItem 배열로 변환해야 한다', () => {
+    const addedIds = ['item-a', 'item-b'];
+    const parsed = parseInventoryAdded(addedIds);
+
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]).toEqual({ id: 'item-a', name: 'item-a', quantity: 1 });
+    expect(parsed[1]).toEqual({ id: 'item-b', name: 'item-b', quantity: 1 });
+  });
+});
+</file>
+
+<file path="frontend/src/stores/inventoryStore.ts">
+/**
+ * Unknown World - Inventory 상태 관리 (Zustand) (U-011[Mvp]).
+ *
+ * Inventory의 아이템 목록, 드래그 상태, 선택 상태를 관리합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: Inventory는 게임 UI로 상시 노출
+ *   - U-006 의존: WorldDelta.inventory_added / inventory_removed 필드 연동
+ *   - U-012 연결: 드래그 데이터에 item_id를 실어 드롭 타겟(핫스팟)에 전달
+ *
+ * @module stores/inventoryStore
+ */
+
+import { create } from 'zustand';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 인벤토리 아이템.
+ * MVP에서는 최소 필드만 정의합니다.
+ */
+export interface InventoryItem {
+  /** 아이템 고유 ID */
+  id: string;
+  /** 아이템 이름 (표시용) */
+  name: string;
+  /** 아이템 설명 (선택) */
+  description?: string;
+  /** 아이템 아이콘 URL 또는 이모지 (선택) */
+  icon?: string;
+  /** 아이템 수량 (기본값: 1) */
+  quantity: number;
+}
+
+/** Inventory 상태 */
+export interface InventoryState {
+  /** 현재 아이템 목록 */
+  items: InventoryItem[];
+  /** 현재 드래그 중인 아이템 ID (null이면 드래그 중 아님) */
+  draggingItemId: string | null;
+  /** 선택된 아이템 ID (클릭 선택, 드래그와 별개) */
+  selectedItemId: string | null;
+}
+
+/** Inventory 액션 */
+export interface InventoryActions {
+  /** 아이템 목록 설정 (전체 교체) */
+  setItems: (items: InventoryItem[]) => void;
+  /** 아이템 추가 (중복 ID면 수량 증가) */
+  addItems: (items: InventoryItem[]) => void;
+  /** 아이템 제거 (ID 목록) */
+  removeItems: (itemIds: string[]) => void;
+  /** 드래그 시작 */
+  startDrag: (itemId: string) => void;
+  /** 드래그 종료 */
+  endDrag: () => void;
+  /** 아이템 선택 */
+  selectItem: (itemId: string | null) => void;
+  /** 상태 초기화 */
+  reset: () => void;
+}
+
+export type InventoryStore = InventoryState & InventoryActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+function createInitialState(): InventoryState {
+  return {
+    items: [],
+    draggingItemId: null,
+    selectedItemId: null,
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Inventory 상태 스토어.
+ *
+ * @example
+ * ```tsx
+ * const { items, addItems, removeItems, startDrag, endDrag } = useInventoryStore();
+ *
+ * // TurnOutput.world.inventory_added 수신 시
+ * addItems(inventoryAddedItems);
+ *
+ * // TurnOutput.world.inventory_removed 수신 시
+ * removeItems(inventoryRemovedIds);
+ *
+ * // dnd-kit onDragStart
+ * startDrag(itemId);
+ *
+ * // dnd-kit onDragEnd
+ * endDrag();
+ * ```
+ */
+export const useInventoryStore = create<InventoryStore>((set) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+  setItems: (items) => {
+    set({
+      items,
+      draggingItemId: null,
+      selectedItemId: null,
+    });
+  },
+
+  addItems: (newItems) => {
+    set((state) => {
+      const itemsMap = new Map(state.items.map((item) => [item.id, item]));
+
+      for (const newItem of newItems) {
+        const existing = itemsMap.get(newItem.id);
+        if (existing) {
+          // 기존 아이템이면 수량 증가
+          itemsMap.set(newItem.id, {
+            ...existing,
+            quantity: existing.quantity + newItem.quantity,
+          });
+        } else {
+          // 새 아이템 추가
+          itemsMap.set(newItem.id, newItem);
+        }
+      }
+
+      return { items: Array.from(itemsMap.values()) };
+    });
+  },
+
+  removeItems: (itemIds) => {
+    set((state) => {
+      const removeSet = new Set(itemIds);
+      return {
+        items: state.items.filter((item) => !removeSet.has(item.id)),
+        // 제거된 아이템이 선택/드래그 중이었다면 초기화
+        selectedItemId: removeSet.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
+        draggingItemId: removeSet.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
+      };
+    });
+  },
+
+  startDrag: (itemId) => {
+    set({ draggingItemId: itemId });
+  },
+
+  endDrag: () => {
+    set({ draggingItemId: null });
+  },
+
+  selectItem: (itemId) => {
+    set({ selectedItemId: itemId });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 아이템 목록 셀렉터 */
+export const selectItems = (state: InventoryStore) => state.items;
+
+/** 드래그 중인 아이템 ID 셀렉터 */
+export const selectDraggingItemId = (state: InventoryStore) => state.draggingItemId;
+
+/** 드래그 중인 아이템 객체 셀렉터 */
+export const selectDraggingItem = (state: InventoryStore) =>
+  state.items.find((item) => item.id === state.draggingItemId) ?? null;
+
+/** 선택된 아이템 ID 셀렉터 */
+export const selectSelectedItemId = (state: InventoryStore) => state.selectedItemId;
+
+/** 선택된 아이템 객체 셀렉터 */
+export const selectSelectedItem = (state: InventoryStore) =>
+  state.items.find((item) => item.id === state.selectedItemId) ?? null;
+
+/** 아이템 개수 셀렉터 */
+export const selectItemCount = (state: InventoryStore) => state.items.length;
+
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
+
+/**
+ * 서버 응답(inventory_added 문자열 배열)을 InventoryItem 배열로 변환합니다.
+ * MVP에서는 문자열 ID를 기본 아이템으로 변환합니다.
+ *
+ * @param addedIds - 추가된 아이템 ID 목록 (서버 응답)
+ * @returns InventoryItem 배열
+ */
+export function parseInventoryAdded(addedIds: string[]): InventoryItem[] {
+  return addedIds.map((id) => ({
+    id,
+    name: id, // MVP: ID를 이름으로 사용
+    quantity: 1,
+  }));
+}
+
+/**
+ * 아이템 ID로 아이템을 찾습니다.
+ *
+ * @param items - 아이템 목록
+ * @param itemId - 찾을 아이템 ID
+ * @returns 아이템 또는 undefined
+ */
+export function findItemById(items: InventoryItem[], itemId: string): InventoryItem | undefined {
+  return items.find((item) => item.id === itemId);
+}
 </file>
 
 <file path="frontend/src/types/scene.ts">
@@ -3811,6 +4481,88 @@ def test_schema_rembg_rules():
 }
 </file>
 
+<file path="frontend/src/App.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import App from './App';
+import * as turnStream from './api/turnStream';
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key === 'scene.hotspot.click_action') {
+        return `Click: ${options?.label}`;
+      }
+      return key;
+    },
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+      resolvedLanguage: 'ko-KR',
+    },
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
+}));
+
+// ResizeObserver 모킹
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+// getBoundingClientRect 모킹
+Element.prototype.getBoundingClientRect = vi.fn(() => ({
+  width: 800,
+  height: 600,
+  top: 0,
+  left: 0,
+  bottom: 600,
+  right: 800,
+  x: 0,
+  y: 0,
+  toJSON: () => {},
+})) as unknown as () => DOMRect;
+
+// api 모킹
+vi.mock('./api/turnStream', () => ({
+  startTurnStream: vi.fn(),
+}));
+
+describe('App Integration - Hotspot Click', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should trigger startTurnStream when a hotspot is clicked', async () => {
+    render(<App />);
+
+    // 데모용으로 App.tsx에 하드코딩된 '터미널' 핫스팟 찾기
+    const terminalHotspot = screen.getByLabelText('터미널');
+    expect(terminalHotspot).toBeInTheDocument();
+
+    // 클릭 시뮬레이션
+    fireEvent.click(terminalHotspot);
+
+    // startTurnStream 호출 확인
+    expect(turnStream.startTurnStream).toHaveBeenCalled();
+
+    const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
+
+    // TurnInput 검증
+    expect(input.text).toBe('Click: 터미널');
+    expect(input.click).toEqual({
+      object_id: 'demo-terminal',
+      box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+    });
+  });
+});
+</file>
+
 <file path="frontend/src/components/AgentConsole.test.tsx">
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -3856,6 +4608,193 @@ describe('AgentConsole (U-037)', () => {
     render(<AgentConsole />);
     // Verify that the correct i18n key is used
     expect(screen.getByText('agent.console.status.idle')).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/SceneCanvas.hotspot.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { SceneCanvas } from './SceneCanvas';
+import type { SceneObject } from '../schemas/turn';
+import type { SceneCanvasState } from '../types/scene';
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// ResizeObserver 모킹
+let resizeCallback: (entries: ResizeObserverEntry[]) => void;
+class MockResizeObserver {
+  constructor(callback: (entries: ResizeObserverEntry[]) => void) {
+    resizeCallback = callback;
+  }
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+/**
+ * 리사이즈 이벤트를 수동으로 트리거합니다.
+ */
+function triggerResize(width: number, height: number) {
+  if (resizeCallback) {
+    act(() => {
+      resizeCallback([
+        {
+          contentRect: { width, height } as DOMRectReadOnly,
+          target: document.querySelector('.scene-canvas') as Element,
+        } as ResizeObserverEntry,
+      ]);
+    });
+  }
+}
+
+// getBoundingClientRect 모킹
+Element.prototype.getBoundingClientRect = vi.fn(() => ({
+  width: 800,
+  height: 600,
+  top: 0,
+  left: 0,
+  bottom: 600,
+  right: 800,
+  x: 0,
+  y: 0,
+  toJSON: () => {},
+})) as unknown as () => DOMRect;
+
+describe('SceneCanvas Hotspots', () => {
+  const defaultState: SceneCanvasState = {
+    status: 'scene',
+    imageUrl: 'https://example.com/scene.png',
+  };
+
+  const mockObjects: SceneObject[] = [
+    {
+      id: 'obj-1',
+      label: 'Object 1',
+      box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
+      interaction_hint: 'Click me',
+    },
+    {
+      id: 'obj-2',
+      label: 'Object 2',
+      box_2d: { ymin: 500, xmin: 500, ymax: 700, xmax: 700 },
+      interaction_hint: null,
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render hotspots when objects are provided and status is scene', () => {
+    render(<SceneCanvas state={defaultState} objects={mockObjects} />);
+
+    // 핫스팟 레이어 확인
+    const layer = screen.getByLabelText('scene.hotspot.layer_label');
+    expect(layer).toBeInTheDocument();
+
+    // 개별 핫스팟 확인 (role="button")
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(mockObjects.length);
+    expect(buttons[0]).toHaveAttribute('aria-label', 'Object 1');
+    expect(buttons[1]).toHaveAttribute('aria-label', 'Object 2');
+  });
+
+  it('should not render hotspots when status is loading', () => {
+    const loadingState: SceneCanvasState = { status: 'loading' };
+    render(<SceneCanvas state={loadingState} objects={mockObjects} />);
+
+    const layer = screen.queryByLabelText('scene.hotspot.layer_label');
+    expect(layer).not.toBeInTheDocument();
+  });
+
+  it('should call onHotspotClick when a hotspot is clicked', () => {
+    const onHotspotClick = vi.fn();
+    render(
+      <SceneCanvas state={defaultState} objects={mockObjects} onHotspotClick={onHotspotClick} />,
+    );
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+    fireEvent.click(firstHotspot);
+
+    expect(onHotspotClick).toHaveBeenCalledWith({
+      object_id: 'obj-1',
+      box_2d: mockObjects[0].box_2d,
+    });
+  });
+
+  it('should show tooltip on hover', async () => {
+    render(<SceneCanvas state={defaultState} objects={mockObjects} />);
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+
+    // Hover 시작
+    fireEvent.mouseEnter(firstHotspot);
+
+    // 툴팁 라벨 확인
+    expect(screen.getByText('Object 1')).toBeInTheDocument();
+    expect(screen.getByText(/scene.hotspot.hint_prefix/)).toBeInTheDocument();
+    expect(screen.getByText(/Click me/)).toBeInTheDocument();
+
+    // Hover 종료
+    fireEvent.mouseLeave(firstHotspot);
+    expect(screen.queryByText('Object 1')).not.toBeInTheDocument();
+  });
+
+  it('should be disabled when disabled prop is true', () => {
+    const onHotspotClick = vi.fn();
+    render(
+      <SceneCanvas
+        state={defaultState}
+        objects={mockObjects}
+        onHotspotClick={onHotspotClick}
+        disabled={true}
+      />,
+    );
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+    expect(firstHotspot).toHaveAttribute('aria-disabled', 'true');
+    expect(firstHotspot).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.click(firstHotspot);
+    expect(onHotspotClick).not.toHaveBeenCalled();
+  });
+
+  it('should reposition hotspots when canvas size changes (reactive resize)', () => {
+    render(<SceneCanvas state={defaultState} objects={mockObjects} />);
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+
+    // 초기 크기 (800x600) 기반 위치 확인
+    // ymin: 100, xmin: 100, ymax: 200, xmax: 200
+    // top: 100 * (600/1000) = 60px
+    // left: 100 * (800/1000) = 80px
+    expect(firstHotspot).toHaveStyle({
+      top: '60px',
+      left: '80px',
+      width: '80px',
+      height: '60px',
+    });
+
+    // 크기 변경 트리거 (400x300)
+    triggerResize(400, 300);
+
+    // 변경된 크기 기반 위치 확인
+    // top: 100 * (300/1000) = 30px
+    // left: 100 * (400/1000) = 40px
+    expect(firstHotspot).toHaveStyle({
+      top: '30px',
+      left: '40px',
+      width: '40px',
+      height: '30px',
+    });
   });
 });
 </file>
@@ -5625,138 +6564,6 @@ describe('executeTurnStream', () => {
 });
 </file>
 
-<file path="frontend/src/locales/ko-KR/translation.json">
-{
-  "scene": {
-    "status": {
-      "default": "데이터 대기 중",
-      "loading": "동기화 중...",
-      "offline": "연결 끊김",
-      "blocked": "접근 제한됨",
-      "low_signal": "신호 약함",
-      "image_error": "장면 이미지를 불러올 수 없습니다.",
-      "initial_sync": "전역 데이터 동기화 대기 중...",
-      "syncing": "데이터 동기화 중...",
-      "alt": "장면 이미지"
-    },
-    "hotspot": {
-      "layer_label": "클릭 가능한 오브젝트 영역",
-      "hint_prefix": "힌트",
-      "click_action": "{{label}} 클릭"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "대기열",
-      "badges": "검증 배지",
-      "repair": "자동 복구",
-      "status": {
-        "idle": "대기 중",
-        "processing": "처리 중"
-      },
-      "badges_empty": "[ 검증 대기 중 ]",
-      "repaired": "(복구됨)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "명령을 입력하세요...",
-    "processing": "처리 중...",
-    "execute": "실행",
-    "wait": "대기",
-    "panel_placeholder": "[ 준비 중 ]",
-    "scale_decrease": "글자 크기 줄이기",
-    "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal 소모",
-    "shard_cost": "Shard 소모",
-    "risk_level": "위험도"
-  },
-  "connection": {
-    "online": "온라인",
-    "offline": "오프라인"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ 드래그 앤 드롭 영역 ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ 목표/퀘스트 목록 ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ 고정된 기억/단서 ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ 이미지 업로드 슬롯 ]"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "탐색하기",
-        "description": "주변을 살펴본다"
-      },
-      "investigate": {
-        "label": "조사하기",
-        "description": "자세히 살펴본다"
-      },
-      "talk": {
-        "label": "대화하기",
-        "description": "말을 걸어본다"
-      }
-    },
-    "card_select": "카드 선택: {{cardId}}",
-    "deck_label": "행동 선택 카드",
-    "alternative": "대안",
-    "insufficient_balance": "잔액 부족",
-    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
-    "risk": {
-      "low": "낮음",
-      "medium": "보통",
-      "high": "높음"
-    },
-    "cost_range": "{{min}}~{{max}}"
-  },
-  "narrative": {
-    "welcome": "미지의 세계에 오신 것을 환영합니다...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
-  }
-}
-</file>
-
 <file path="frontend/src/stores/agentStore.ts">
 /**
  * Unknown World - Agent Console 상태 관리 (Zustand).
@@ -6984,6 +7791,144 @@ export function SceneCanvas({
 }
 </file>
 
+<file path="frontend/src/locales/ko-KR/translation.json">
+{
+  "scene": {
+    "status": {
+      "default": "데이터 대기 중",
+      "loading": "동기화 중...",
+      "offline": "연결 끊김",
+      "blocked": "접근 제한됨",
+      "low_signal": "신호 약함",
+      "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "initial_sync": "전역 데이터 동기화 대기 중...",
+      "syncing": "데이터 동기화 중...",
+      "alt": "장면 이미지"
+    },
+    "hotspot": {
+      "layer_label": "클릭 가능한 오브젝트 영역",
+      "hint_prefix": "힌트",
+      "click_action": "{{label}} 클릭"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "대기열",
+      "badges": "검증 배지",
+      "repair": "자동 복구",
+      "status": {
+        "idle": "대기 중",
+        "processing": "처리 중"
+      },
+      "badges_empty": "[ 검증 대기 중 ]",
+      "repaired": "(복구됨)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "명령을 입력하세요...",
+    "processing": "처리 중...",
+    "execute": "실행",
+    "wait": "대기",
+    "panel_placeholder": "[ 준비 중 ]",
+    "scale_decrease": "글자 크기 줄이기",
+    "scale_increase": "글자 크기 늘리기",
+    "scale_label": "UI 스케일 설정"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal 소모",
+    "shard_cost": "Shard 소모",
+    "risk_level": "위험도"
+  },
+  "connection": {
+    "online": "온라인",
+    "offline": "오프라인"
+  },
+  "inventory": {
+    "empty": "[ 아이템 없음 ]",
+    "grid_label": "인벤토리 아이템 목록",
+    "item_label": "{{name}} (수량: {{quantity}})",
+    "drag_hint": "드래그하여 사용"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ 드래그 앤 드롭 영역 ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ 목표/퀘스트 목록 ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ 고정된 기억/단서 ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ 이미지 업로드 슬롯 ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "탐색하기",
+        "description": "주변을 살펴본다"
+      },
+      "investigate": {
+        "label": "조사하기",
+        "description": "자세히 살펴본다"
+      },
+      "talk": {
+        "label": "대화하기",
+        "description": "말을 걸어본다"
+      }
+    },
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "미지의 세계에 오신 것을 환영합니다...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
+}
+</file>
+
 <file path="frontend/src/types/turn_stream.ts">
 /**
  * Unknown World - Turn Stream 이벤트 계약(Contract).
@@ -8065,66 +9010,6 @@ include = ["src"]
 }
 </file>
 
-<file path="frontend/package.json">
-{
-  "name": "unknown-world-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "packageManager": "pnpm@10.27.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "6.3.1",
-    "@dnd-kit/sortable": "10.0.0",
-    "i18next": "25.7.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-i18next": "16.5.1",
-    "zod": "4.3.4",
-    "zustand": "5.0.9"
-  },
-  "devDependencies": {
-    "@eslint/js": "9.39.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@types/node": "25.0.3",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "9.39.2",
-    "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-unused-imports": "4.3.0",
-    "globals": "16.5.0",
-    "jsdom": "^27.4.0",
-    "prettier": "3.7.4",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.51.0",
-    "vite": "7.3.0",
-    "vitest": "^4.0.16"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  }
-}
-</file>
-
 <file path="frontend/public/ui/manifest.json">
 {
   "$schema": "./manifest.schema.json",
@@ -8822,6 +9707,67 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
 }
 </file>
 
+<file path="frontend/package.json">
+{
+  "name": "unknown-world-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "i18next": "25.7.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-i18next": "16.5.1",
+    "zod": "4.3.4",
+    "zustand": "5.0.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "globals": "16.5.0",
+    "jsdom": "^27.4.0",
+    "prettier": "3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.51.0",
+    "vite": "7.3.0",
+    "vitest": "^4.0.16"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
+</file>
+
 <file path="frontend/src/App.tsx">
 /**
  * Unknown World - 메인 게임 UI 레이아웃
@@ -8839,13 +9785,24 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
 import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
+import { InventoryPanel } from './components/InventoryPanel';
 import type { SceneCanvasState } from './types/scene';
 import type { SceneObject } from './schemas/turn';
 import { useAgentStore } from './stores/agentStore';
 import { useActionDeckStore } from './stores/actionDeckStore';
+import { useInventoryStore, parseInventoryAdded } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
 import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
@@ -9076,6 +10033,38 @@ function App() {
   // Action Deck Store (U-009)
   const { cards: actionCards, setCards: setActionCards } = useActionDeckStore();
 
+  // Inventory Store (U-011)
+  const {
+    addItems: addInventoryItems,
+    removeItems: removeInventoryItems,
+    startDrag,
+    endDrag,
+    items: inventoryItems,
+  } = useInventoryStore();
+
+  // DEV: 데모용 mock 인벤토리 초기화 (U-011)
+  useEffect(() => {
+    if (inventoryItems.length === 0) {
+      addInventoryItems([
+        { id: 'keycard-alpha', name: '키카드 A', icon: '🔑', quantity: 1 },
+        { id: 'medkit', name: '응급 키트', icon: '🩹', quantity: 2 },
+        { id: 'flashlight', name: '손전등', icon: '🔦', quantity: 1 },
+        { id: 'data-chip', name: '데이터칩', icon: '💾', quantity: 3 },
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // dnd-kit 센서 설정 (U-011: Q1 Option A - App 최상단에 DndContext)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이상 움직여야 드래그 시작
+      },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
   // Scene Canvas 상태 (U-031: Placeholder Pack)
   const [sceneState, setSceneState] = useState<SceneCanvasState>({
     status: 'default',
@@ -9144,8 +10133,16 @@ function App() {
 
       // Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
       setSceneObjects(output.ui.objects);
+
+      // Inventory 업데이트 (U-011)
+      if (output.world.inventory_added.length > 0) {
+        addInventoryItems(parseInventoryAdded(output.world.inventory_added));
+      }
+      if (output.world.inventory_removed.length > 0) {
+        removeInventoryItems(output.world.inventory_removed);
+      }
     },
-    [setActionCards],
+    [setActionCards, addInventoryItems, removeInventoryItems],
   );
 
   /**
@@ -9288,91 +10285,122 @@ function App() {
     };
   }, []);
 
+  /**
+   * 드래그 시작 핸들러 (U-011)
+   */
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      if (active.data.current?.type === 'inventory-item') {
+        startDrag(active.id as string);
+      }
+    },
+    [startDrag],
+  );
+
+  /**
+   * 드래그 종료 핸들러 (U-011)
+   * 실제 드롭 처리는 U-012에서 구현합니다.
+   */
+  const handleDragEnd = useCallback(
+    (_event: DragEndEvent) => {
+      endDrag();
+      // TODO: U-012에서 드롭 타겟(핫스팟) 처리 구현
+      // if (event.over) {
+      //   const droppedItemId = event.active.data.current?.item_id;
+      //   const targetId = event.over.id;
+      //   // executeTurn with drop action...
+      // }
+    },
+    [endDrag],
+  );
+
   return (
     <>
       {/* CRT 스캔라인 오버레이 */}
       <div className="crt-overlay" aria-hidden="true" />
 
-      {/* 게임 레이아웃 */}
-      <div className="game-container">
-        {/* Header: 타이틀/상태/재화/UI컨트롤 */}
-        <GameHeader
-          signal={economy.signal}
-          memoryShard={economy.memory_shard}
-          isConnected={isConnected}
-          uiScale={uiScale}
-          onIncreaseScale={increaseUIScale}
-          onDecreaseScale={decreaseUIScale}
-        />
+      {/* DndContext: App 최상단 (U-011 Q1: Option A) */}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        {/* 게임 레이아웃 */}
+        <div className="game-container">
+          {/* Header: 타이틀/상태/재화/UI컨트롤 */}
+          <GameHeader
+            signal={economy.signal}
+            memoryShard={economy.memory_shard}
+            isConnected={isConnected}
+            uiScale={uiScale}
+            onIncreaseScale={increaseUIScale}
+            onDecreaseScale={decreaseUIScale}
+          />
 
-        {/* Sidebar Left: Inventory / Quest / Rule Board */}
-        <aside className="sidebar-left">
-          <Panel
-            title={t('panel.inventory.title')}
-            className="flex-1"
-            placeholderKey="panel.inventory.placeholder"
-          />
-          <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
-          <Panel
-            title={t('panel.rule_board.title')}
-            placeholderKey="panel.rule_board.placeholder"
-          />
-        </aside>
+          {/* Sidebar Left: Inventory / Quest / Rule Board */}
+          <aside className="sidebar-left">
+            <Panel title={t('panel.inventory.title')} className="flex-1">
+              <InventoryPanel disabled={isStreaming} />
+            </Panel>
+            <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
+            <Panel
+              title={t('panel.rule_board.title')}
+              placeholderKey="panel.rule_board.placeholder"
+            />
+          </aside>
 
-        {/* Center: Scene Canvas + Narrative Feed */}
-        <main className="game-center">
-          <SceneCanvas
-            state={sceneState}
-            objects={sceneObjects}
-            onHotspotClick={handleHotspotClick}
-            disabled={isStreaming}
-          />
-          <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
-        </main>
-
-        {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
-        <aside className="sidebar-right">
-          <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
-            <AgentConsole />
-          </Panel>
-          <Panel
-            title={t('panel.memory_pin.title')}
-            hasChrome
-            placeholderKey="panel.memory_pin.placeholder"
-          />
-          <Panel title={t('panel.scanner.title')} hasChrome>
-            <div className="scanner-slot has-chrome">
-              <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
-            </div>
-          </Panel>
-        </aside>
-
-        {/* Footer: Action Deck + Command Input (U-009) */}
-        <footer className="game-footer">
-          <ActionDeck
-            cards={actionCards}
-            onCardClick={handleCardClick}
-            disabled={isStreaming}
-            currentBalance={economy}
-          />
-          <div className="command-input-area">
-            <span className="command-prompt">&gt;</span>
-            <input
-              type="text"
-              className="command-input"
-              placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
-              aria-label={t('ui.command_placeholder')}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
+          {/* Center: Scene Canvas + Narrative Feed */}
+          <main className="game-center">
+            <SceneCanvas
+              state={sceneState}
+              objects={sceneObjects}
+              onHotspotClick={handleHotspotClick}
               disabled={isStreaming}
             />
-            <button type="button" onClick={handleSubmit} disabled={isStreaming}>
-              {isStreaming ? t('ui.wait') : t('ui.execute')}
-            </button>
-          </div>
-        </footer>
-      </div>
+            <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
+          </main>
+
+          {/* Sidebar Right: Agent Console / Memory Pin / Scanner */}
+          <aside className="sidebar-right">
+            <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
+              <AgentConsole />
+            </Panel>
+            <Panel
+              title={t('panel.memory_pin.title')}
+              hasChrome
+              placeholderKey="panel.memory_pin.placeholder"
+            />
+            <Panel title={t('panel.scanner.title')} hasChrome>
+              <div className="scanner-slot has-chrome">
+                <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
+              </div>
+            </Panel>
+          </aside>
+
+          {/* Footer: Action Deck + Command Input (U-009) */}
+          <footer className="game-footer">
+            <ActionDeck
+              cards={actionCards}
+              onCardClick={handleCardClick}
+              disabled={isStreaming}
+              currentBalance={economy}
+            />
+            <div className="command-input-area">
+              <span className="command-prompt">&gt;</span>
+              <input
+                type="text"
+                className="command-input"
+                placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
+                aria-label={t('ui.command_placeholder')}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isStreaming}
+              />
+              <button type="button" onClick={handleSubmit} disabled={isStreaming}>
+                {isStreaming ? t('ui.wait') : t('ui.execute')}
+              </button>
+            </div>
+          </footer>
+        </div>
+      </DndContext>
     </>
   );
 }
