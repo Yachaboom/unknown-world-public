@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, coverage/**, .venv/**, __pycache__/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml,md}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, backend/.venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -57,6 +57,7 @@ backend/tests/integration/test_turn_streaming.py
 backend/tests/qa/test_asset_manifest.py
 backend/tests/unit/models/test_turn.py
 backend/tests/unit/test_u034_verification.py
+CLAUDE.md
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -64,9 +65,13 @@ frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
+frontend/public/ui/QA_CHECKLIST.md
+frontend/public/ui/README.md
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
 frontend/src/App.tsx
+frontend/src/components/ActionDeck.test.tsx
+frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.test.tsx
 frontend/src/components/AgentConsole.tsx
 frontend/src/components/SceneCanvas.test.tsx
@@ -75,12 +80,15 @@ frontend/src/i18n-scenario.test.ts
 frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
 frontend/src/locales/ko-KR/translation.json
+frontend/src/locales/README.md
 frontend/src/main.tsx
 frontend/src/schemas/index.ts
 frontend/src/schemas/turn.test.ts
 frontend/src/schemas/turn.ts
 frontend/src/schemas/verify_runbook.ts
 frontend/src/setupTests.ts
+frontend/src/stores/actionDeckStore.test.ts
+frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/agentStore.test.ts
 frontend/src/stores/agentStore.ts
 frontend/src/stores/uiPrefsStore.test.ts
@@ -92,6 +100,7 @@ frontend/tsconfig.json
 frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
+shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
@@ -194,595 +203,6 @@ __all__ = [
     "SafetyOutput",
     "AgentConsole",
 ]
-</file>
-
-<file path="backend/src/unknown_world/models/turn.py">
-"""Unknown World - TurnInput/TurnOutput Pydantic 스키마.
-
-이 모듈은 Unknown World의 핵심 데이터 모델을 정의합니다.
-Gemini Structured Outputs에 투입 가능한 JSON Schema(부분집합)를 생성할 수 있습니다.
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
-    - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
-    - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
-    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
-
-사용 예시:
-    # Gemini Structured Outputs용 JSON Schema 생성
-    schema = TurnOutput.model_json_schema()
-
-    # 응답 검증
-    output = TurnOutput.model_validate_json(gemini_response_text)
-
-참조:
-    - vibe/prd.md 8.7 (데이터 모델 설계)
-    - vibe/ref/structured-outputs-guide.md
-    - .cursor/rules/00-core-critical.mdc
-"""
-
-from enum import Enum
-from typing import Annotated
-
-from pydantic import BaseModel, ConfigDict, Field
-
-# =============================================================================
-# 공통 Enum 타입
-# =============================================================================
-
-
-class Language(str, Enum):
-    """지원 언어 (RULE-006).
-
-    ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
-    모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
-    """
-
-    KO = "ko-KR"
-    EN = "en-US"
-
-
-class Theme(str, Enum):
-    """테마 설정."""
-
-    DARK = "dark"
-    LIGHT = "light"
-
-
-class AgentPhase(str, Enum):
-    """에이전트 실행 단계 (RULE-008).
-
-    에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
-    """
-
-    PARSE = "parse"
-    VALIDATE = "validate"
-    PLAN = "plan"
-    RESOLVE = "resolve"
-    RENDER = "render"
-    VERIFY = "verify"
-    COMMIT = "commit"
-
-
-class ValidationBadge(str, Enum):
-    """검증 배지 (RULE-008).
-
-    턴 결과에 대한 검증 상태를 표시합니다.
-    """
-
-    SCHEMA_OK = "schema_ok"
-    SCHEMA_FAIL = "schema_fail"
-    ECONOMY_OK = "economy_ok"
-    ECONOMY_FAIL = "economy_fail"
-    SAFETY_OK = "safety_ok"
-    SAFETY_BLOCKED = "safety_blocked"
-    CONSISTENCY_OK = "consistency_ok"
-    CONSISTENCY_FAIL = "consistency_fail"
-
-
-class ModelLabel(str, Enum):
-    """모델/품질 선택 라벨 (RULE-008).
-
-    프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
-    """
-
-    FAST = "FAST"
-    QUALITY = "QUALITY"
-    CHEAP = "CHEAP"
-    REF = "REF"
-
-
-class RiskLevel(str, Enum):
-    """행동 위험도 수준."""
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
-# =============================================================================
-# 공통 하위 타입
-# =============================================================================
-
-# RULE-009: 좌표는 0~1000 정규화 좌표계 (이미지 이해 bbox 포맷과 호환)
-Coordinate = Annotated[int, Field(ge=0, le=1000, description="정규화 좌표 (0~1000)")]
-
-
-class Box2D(BaseModel):
-    """2D 바운딩 박스 (RULE-009).
-
-    좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
-    이미지 이해 bbox 포맷과 호환됩니다.
-
-    Attributes:
-        ymin: Y 최소값 (상단)
-        xmin: X 최소값 (좌측)
-        ymax: Y 최대값 (하단)
-        xmax: X 최대값 (우측)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    ymin: Coordinate
-    xmin: Coordinate
-    ymax: Coordinate
-    xmax: Coordinate
-
-
-class CurrencyAmount(BaseModel):
-    """재화 수량.
-
-    Attributes:
-        signal: 기본 재화 (텍스트 턴/이미지 생성/고급 기능에 소비)
-        memory_shard: 희귀 재화 (중요 설정 고정, 고해상도 이미지 등에 소비)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    signal: Annotated[int, Field(ge=0, description="시그널 (기본 재화, 0 이상)")]
-    memory_shard: Annotated[int, Field(ge=0, description="기억 파편 (희귀 재화, 0 이상)")]
-
-
-# =============================================================================
-# TurnInput 관련 타입
-# =============================================================================
-
-
-class ClickInput(BaseModel):
-    """클릭 입력 정보.
-
-    화면 오브젝트 클릭 시 전달되는 정보입니다.
-
-    Attributes:
-        object_id: 클릭한 오브젝트 ID
-        box_2d: 클릭 위치의 바운딩 박스 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    object_id: str = Field(description="클릭한 오브젝트 ID")
-    box_2d: Box2D | None = Field(default=None, description="클릭 위치 바운딩 박스 (선택)")
-
-
-class ClientInfo(BaseModel):
-    """클라이언트 정보.
-
-    Attributes:
-        viewport_w: 뷰포트 너비 (픽셀)
-        viewport_h: 뷰포트 높이 (픽셀)
-        theme: 현재 테마 (dark/light)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    viewport_w: Annotated[int, Field(gt=0, description="뷰포트 너비 (픽셀)")]
-    viewport_h: Annotated[int, Field(gt=0, description="뷰포트 높이 (픽셀)")]
-    theme: Theme = Field(default=Theme.DARK, description="현재 테마")
-
-
-class EconomySnapshot(BaseModel):
-    """재화 스냅샷 (클라이언트 → 서버).
-
-    클라이언트가 보유한 현재 재화 상태입니다.
-    서버는 이를 검증하고 비용 계산에 사용합니다.
-
-    Attributes:
-        signal: 현재 시그널 잔액
-        memory_shard: 현재 기억 파편 잔액
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    signal: Annotated[int, Field(ge=0, description="현재 시그널 잔액 (0 이상)")]
-    memory_shard: Annotated[int, Field(ge=0, description="현재 기억 파편 잔액 (0 이상)")]
-
-
-class TurnInput(BaseModel):
-    """턴 입력 (클라이언트 → 서버).
-
-    사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
-
-    Attributes:
-        language: 요청 언어 (응답도 동일 언어로 고정)
-        text: 사용자 자연어 입력
-        click: 오브젝트 클릭 정보 (선택)
-        client: 클라이언트 환경 정보
-        economy_snapshot: 현재 재화 상태
-
-    Example:
-        >>> input_data = TurnInput(
-        ...     language=Language.KO,
-        ...     text="문을 열어본다",
-        ...     economy_snapshot=EconomySnapshot(signal=100, memory_shard=5),
-        ...     client=ClientInfo(viewport_w=1920, viewport_h=1080),
-        ... )
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    language: Language = Field(description="요청 언어 (응답도 동일 언어로 고정)")
-    text: str = Field(default="", description="사용자 자연어 입력")
-    click: ClickInput | None = Field(default=None, description="오브젝트 클릭 정보 (선택)")
-    client: ClientInfo = Field(description="클라이언트 환경 정보")
-    economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - UI
-# =============================================================================
-
-
-class ActionCard(BaseModel):
-    """액션 카드 (Action Deck).
-
-    매 턴 AI가 추천하는 행동 카드입니다.
-    각 카드에 비용/위험/보상 힌트가 포함됩니다.
-
-    Attributes:
-        id: 카드 고유 ID
-        label: 카드 라벨 (표시용)
-        description: 카드 설명 (선택)
-        cost: 예상 비용
-        risk: 위험도
-        hint: 예상 결과 힌트 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="카드 고유 ID")
-    label: str = Field(description="카드 라벨 (표시용)")
-    description: str | None = Field(default=None, description="카드 설명 (선택)")
-    cost: CurrencyAmount = Field(description="예상 비용")
-    risk: RiskLevel = Field(default=RiskLevel.LOW, description="위험도")
-    hint: str | None = Field(default=None, description="예상 결과 힌트 (선택)")
-
-
-class SceneObject(BaseModel):
-    """장면 오브젝트 (클릭 가능한 핫스팟).
-
-    화면에서 클릭 가능한 오브젝트입니다.
-    좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
-
-    Attributes:
-        id: 오브젝트 고유 ID
-        label: 오브젝트 라벨 (표시용)
-        box_2d: 바운딩 박스 [ymin, xmin, ymax, xmax]
-        interaction_hint: 상호작용 힌트 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="오브젝트 고유 ID")
-    label: str = Field(description="오브젝트 라벨 (표시용)")
-    box_2d: Box2D = Field(description="바운딩 박스")
-    interaction_hint: str | None = Field(default=None, description="상호작용 힌트 (선택)")
-
-
-class ActionDeck(BaseModel):
-    """액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
-
-    매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
-
-    Attributes:
-        cards: 액션 카드 목록 (3~6장 권장)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    cards: list[ActionCard] = Field(
-        default=[],
-        min_length=0,
-        max_length=10,
-        description="액션 카드 목록 (3~6장 권장)",
-    )
-
-
-class UIOutput(BaseModel):
-    """UI 출력 데이터.
-
-    AI가 생성한 UI 요소들입니다.
-    채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
-
-    Attributes:
-        action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)
-        objects: 클릭 가능한 장면 오브젝트 목록
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    action_deck: ActionDeck = Field(default_factory=ActionDeck, description="액션 카드 덱")
-    objects: list[SceneObject] = Field(default=[], description="클릭 가능한 장면 오브젝트 목록")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - World
-# =============================================================================
-
-
-class MemoryPin(BaseModel):
-    """중요 설정 고정 후보.
-
-    사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
-
-    Attributes:
-        id: 핀 고유 ID
-        content: 고정할 내용
-        cost: 고정에 필요한 비용
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="핀 고유 ID")
-    content: str = Field(description="고정할 내용")
-    cost: CurrencyAmount = Field(description="고정에 필요한 비용")
-
-
-class WorldRule(BaseModel):
-    """세계 규칙 (Rule Board).
-
-    현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
-
-    Attributes:
-        id: 규칙 고유 ID
-        label: 규칙 이름
-        description: 규칙 상세 설명 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="규칙 고유 ID")
-    label: str = Field(description="규칙 이름")
-    description: str | None = Field(default=None, description="규칙 상세 설명 (선택)")
-
-
-class Quest(BaseModel):
-    """퀘스트/목표 (Quest Panel).
-
-    플레이어가 달성해야 하는 현재 목표입니다.
-
-    Attributes:
-        id: 퀘스트 고유 ID
-        label: 퀘스트 이름
-        is_completed: 달성 여부
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="퀘스트 고유 ID")
-    label: str = Field(description="퀘스트 이름")
-    is_completed: bool = Field(default=False, description="달성 여부")
-
-
-class WorldDelta(BaseModel):
-    """세계 상태 변화 (Q2 결정: Option A - delta 중심).
-
-    이번 턴에서 변경된 세계 상태를 나타냅니다.
-    snapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.
-
-    Attributes:
-        rules_changed: 변경되거나 추가된 규칙 목록
-        inventory_added: 추가된 인벤토리 아이템
-        inventory_removed: 제거된 인벤토리 아이템
-        quests_updated: 업데이트된 퀘스트(목표) 목록
-        relationships_changed: 변경된 관계
-        memory_pins: 중요 설정 고정 후보
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    rules_changed: list[WorldRule] = Field(default=[], description="변경된 규칙 목록")
-    inventory_added: list[str] = Field(default=[], description="추가된 인벤토리 아이템")
-    inventory_removed: list[str] = Field(default=[], description="제거된 인벤토리 아이템")
-    quests_updated: list[Quest] = Field(default=[], description="업데이트된 퀘스트/목표 목록")
-    relationships_changed: list[str] = Field(default=[], description="변경된 관계")
-    memory_pins: list[MemoryPin] = Field(default=[], description="중요 설정 고정 후보")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Render
-# =============================================================================
-
-
-class ImageJob(BaseModel):
-    """이미지 생성 작업.
-
-    조건부 이미지 생성/편집 요청입니다.
-    이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.
-
-    Attributes:
-        should_generate: 이미지를 생성해야 하는지
-        prompt: 이미지 생성 프롬프트
-        model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)
-        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
-        image_size: 이미지 크기 (예: "1024x1024")
-        reference_image_ids: 참조 이미지 ID 목록 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    should_generate: bool = Field(description="이미지를 생성해야 하는지")
-    prompt: str = Field(default="", description="이미지 생성 프롬프트")
-    model_label: ModelLabel = Field(default=ModelLabel.FAST, description="모델 선택 라벨")
-    aspect_ratio: str = Field(default="16:9", description="가로세로 비율")
-    image_size: str = Field(default="1024x1024", description="이미지 크기")
-    reference_image_ids: list[str] = Field(default=[], description="참조 이미지 ID 목록 (선택)")
-
-
-class RenderOutput(BaseModel):
-    """렌더링 출력 데이터.
-
-    이미지 생성/편집 관련 정보입니다.
-
-    Attributes:
-        image_job: 이미지 생성 작업 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    image_job: ImageJob | None = Field(default=None, description="이미지 생성 작업 (선택)")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Economy
-# =============================================================================
-
-
-class EconomyOutput(BaseModel):
-    """경제 출력 데이터 (RULE-005).
-
-    이번 턴의 비용과 잔액 정보입니다.
-    잔액 음수는 절대 불가 (서버 Hard gate).
-
-    Attributes:
-        cost: 이번 턴에 소비된 비용
-        balance_after: 소비 후 잔액
-
-    Important:
-        - cost와 balance_after는 항상 포함되어야 합니다.
-        - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    cost: CurrencyAmount = Field(description="이번 턴에 소비된 비용")
-    balance_after: CurrencyAmount = Field(description="소비 후 잔액")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Safety
-# =============================================================================
-
-
-class SafetyOutput(BaseModel):
-    """안전 출력 데이터.
-
-    안전 정책 관련 정보입니다.
-    차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
-
-    Attributes:
-        blocked: 안전 정책에 의해 차단되었는지
-        message: 차단 시 사용자에게 표시할 메시지 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    blocked: bool = Field(default=False, description="안전 정책에 의해 차단되었는지")
-    message: str | None = Field(default=None, description="차단 시 사용자에게 표시할 메시지 (선택)")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Agent Console
-# =============================================================================
-
-
-class AgentConsole(BaseModel):
-    """에이전트 콘솔 데이터 (RULE-008).
-
-    에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
-    계획/실행/검증/복구의 흔적을 표시합니다.
-
-    Attributes:
-        current_phase: 현재 실행 단계
-        badges: 검증 배지 목록
-        repair_count: 자동 복구 시도 횟수
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    current_phase: AgentPhase = Field(default=AgentPhase.COMMIT, description="현재 실행 단계")
-    badges: list[ValidationBadge] = Field(default=[], description="검증 배지 목록")
-    repair_count: Annotated[int, Field(ge=0, description="자동 복구 시도 횟수")] = 0
-
-
-# =============================================================================
-# TurnOutput (메인 응답 스키마)
-# =============================================================================
-
-
-class TurnOutput(BaseModel):
-    """턴 출력 (서버 → 클라이언트).
-
-    서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
-    Gemini Structured Outputs(JSON Schema)로 강제됩니다.
-
-    Hard Gate 필드 (RULE-003/004/005):
-        - economy: cost와 balance_after 필수, 잔액 음수 금지
-        - safety: blocked 시 안전한 대체 결과 제공
-        - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
-
-    Attributes:
-        language: 응답 언어 (요청과 동일)
-        narrative: 내러티브 텍스트 (표시용)
-        ui: UI 요소 (액션 덱, 오브젝트)
-        world: 세계 상태 변화 (delta 중심)
-        render: 렌더링 정보 (이미지 생성 작업)
-        economy: 경제 정보 (비용, 잔액)
-        safety: 안전 정책 정보
-        agent_console: 에이전트 실행 정보 (단계, 배지, 복구 횟수)
-
-    Example:
-        >>> output = TurnOutput(
-        ...     language=Language.KO,
-        ...     narrative="문이 삐걱거리며 열립니다...",
-        ...     economy=EconomyOutput(
-        ...         cost=CurrencyAmount(signal=5, memory_shard=0),
-        ...         balance_after=CurrencyAmount(signal=95, memory_shard=5),
-        ...     ),
-        ...     safety=SafetyOutput(blocked=False),
-        ... )
-        >>> schema = TurnOutput.model_json_schema()
-
-    Schema Generation:
-        >>> # Gemini Structured Outputs용 JSON Schema 생성
-        >>> json_schema = TurnOutput.model_json_schema()
-        >>> # response_json_schema 파라미터에 전달
-        >>> config = {
-        ...     "response_mime_type": "application/json",
-        ...     "response_json_schema": json_schema,
-        ... }
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    # 필수 필드 (Hard Gate)
-    language: Language = Field(description="응답 언어 (요청과 동일)")
-    narrative: str = Field(description="내러티브 텍스트 (표시용)")
-    economy: EconomyOutput = Field(description="경제 정보 (비용, 잔액)")
-    safety: SafetyOutput = Field(description="안전 정책 정보")
-
-    # UI 관련 필드
-    ui: UIOutput = Field(default_factory=UIOutput, description="UI 요소")
-
-    # 세계 상태 필드
-    world: WorldDelta = Field(default_factory=WorldDelta, description="세계 상태 변화 (delta)")
-
-    # 렌더링 필드
-    render: RenderOutput = Field(default_factory=RenderOutput, description="렌더링 정보")
-
-    # 에이전트 콘솔 필드
-    agent_console: AgentConsole = Field(
-        default_factory=AgentConsole, description="에이전트 실행 정보"
-    )
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/__init__.py">
@@ -1502,6 +922,755 @@ var addSorting = (function() {
 window.addEventListener('load', addSorting);
 </file>
 
+<file path="frontend/public/ui/QA_CHECKLIST.md">
+# UI 에셋 QA 체크리스트
+
+> **참조**: `frontend/public/ui/README.md` (SSOT 규칙), `vibe/ref/rembg-guide.md` (배경 제거)  
+> **목적**: nanobanana mcp로 생성한 에셋의 품질/일관성 보장  
+> **적용 시점**: 에셋 추가/수정 시 반드시 체크
+
+---
+
+## 1. 용량 예산 (Performance Budget)
+
+### 1.1 개별 에셋 상한
+
+| 유형            | 상한  | 권장       | 체크 항목         |
+| --------------- | ----- | ---------- | ----------------- |
+| **아이콘**      | 30KB  | 20KB 이하  | `bytes` 필드 확인 |
+| **placeholder** | 300KB | 200KB 이하 | `bytes` 필드 확인 |
+| **chrome**      | 120KB | 30KB 이하  | `bytes` 필드 확인 |
+
+### 1.2 총합 예산
+
+| 항목     | 값                                  |
+| -------- | ----------------------------------- |
+| **상한** | 1.5MB (1,572,864 bytes)             |
+| **권장** | 1MB (1,048,576 bytes) 이하          |
+| **현재** | `manifest.json`의 `totalBytes` 확인 |
+
+### 1.3 용량 초과 시 대응
+
+1. **압축/최적화**: TinyPNG, ImageMagick, WebP 변환
+2. **해상도/색상 축소**: 필요 사이즈만 유지
+3. **불필요 에셋 제거**: 사용처 없는 에셋 정리
+4. **예산 상향**: 근거 문서화 후 `budgetBytes` 조정
+
+---
+
+## 2. 사이즈/규격 (Size)
+
+### 2.1 아이콘 사이즈 체크
+
+| 항목            | 요구                 | 체크 |
+| --------------- | -------------------- | ---- |
+| **필수 사이즈** | 16px, 24px 최소 2종  | ☐    |
+| **선택 사이즈** | 32px, 64px (필요 시) | ☐    |
+| **정방형**      | 가로 = 세로          | ☐    |
+
+### 2.2 16px 실루엣 테스트 ⚠️
+
+> **중요**: 16px에서도 형태가 구분되어야 합니다.
+
+**테스트 방법**:
+
+1. 16px 아이콘을 100% 배율로 표시
+2. 2m 거리에서 형태 구분 가능 여부 확인
+3. 다른 아이콘과 혼동되지 않는지 확인
+
+**실패 시 대응**:
+
+- 디테일 단순화
+- 외곽선/실루엣 강화
+- 16px/24px 별도 디자인 (사용처 분리)
+
+### 2.3 placeholder/chrome 사이즈
+
+| 항목            | 권장                     | 비고               |
+| --------------- | ------------------------ | ------------------ |
+| **placeholder** | 512x384 또는 용도별 적정 | 가로세로 비율 유지 |
+| **chrome**      | 타일링 가능 사이즈       | 48px, 64px 등      |
+
+---
+
+## 3. 대비/가독성 (Contrast)
+
+### 3.1 기본 대비 테스트
+
+| 모드         | 배경                    | 요구 대비               | 체크 |
+| ------------ | ----------------------- | ----------------------- | ---- |
+| **기본**     | `#0d0d0d` (어두운 배경) | 인광 녹색(#33ff00) 대비 | ☐    |
+| **Readable** | 대비 강화 모드          | 4.5:1 이상              | ☐    |
+
+### 3.2 대비 검증 방법
+
+```
+도구: WebAIM Contrast Checker
+URL: https://webaim.org/resources/contrastchecker/
+
+전경색: 아이콘 주요 색상
+배경색: #0d0d0d (CRT 배경)
+목표: 4.5:1 이상 (AA 기준)
+```
+
+### 3.3 Readable 모드 호환
+
+- [ ] CRT 글로우/스캔라인 OFF 시에도 식별 가능
+- [ ] 텍스트 라벨이 이미지를 방해하지 않음
+- [ ] 색약/색맹 접근성 고려 (색상만으로 의미 전달 금지)
+
+---
+
+## 4. 투명 배경 (Alpha Channel)
+
+### 4.1 투명 배경 필요 여부
+
+| 유형            | 투명 필수 | 배경 색상        |
+| --------------- | --------- | ---------------- |
+| **아이콘**      | ✅ 필수   | 투명 (알파 채널) |
+| **placeholder** | ❌ 선택   | 불투명 허용      |
+| **chrome**      | ✅ 필수   | 투명 (알파 채널) |
+
+### 4.2 배경 제거 체크 (rembg)
+
+> **참조**: `vibe/ref/rembg-guide.md`
+
+**생성 단계 요구 (조건부)**:
+
+- [ ] 배경 제거 예정인 에셋은 **순백(#FFFFFF) 단색 배경**으로 생성
+- [ ] 그라데이션/텍스처/그림자 배경 금지
+
+**배경 제거 실행**:
+
+- [ ] `rembg i -m birefnet-general <input> <output>` 실행
+- [ ] 알파 채널 존재 확인 (GIMP/Photoshop/Preview)
+- [ ] 경계 부분 잔여 배경 없음 확인
+
+### 4.3 투명도 검증 명령어
+
+```bash
+# ImageMagick으로 알파 채널 확인
+magick identify -verbose <image.png> | grep -i alpha
+
+# 또는 파일 정보 확인 (PNG 포맷)
+file <image.png>  # PNG image data, ... RGBA
+```
+
+---
+
+## 5. 폴백 (Fallback)
+
+### 5.1 폴백 텍스트/이모지 체크
+
+| 체크 항목         | 요구  | 설명                               |
+| ----------------- | ----- | ---------------------------------- |
+| **fallback 필드** | 필수  | manifest.json에 `fallback` 값 존재 |
+| **이모지/텍스트** | 1~2자 | 예: `📡`, `⚠`, `✓`, `OK`           |
+| **의미 전달**     | 명확  | 원본 아이콘과 동일한 의미          |
+
+### 5.2 폴백 동작 테스트
+
+**테스트 시나리오**:
+
+1. 에셋 파일을 임시로 삭제/이름 변경
+2. 브라우저에서 UI 로드
+3. 폴백 텍스트/이모지가 표시되는지 확인
+4. UI가 깨지지 않는지 확인
+
+**코드 구현 확인**:
+
+```tsx
+// 예상 패턴
+<img
+  src="/ui/icons/signal-24.png"
+  alt=""
+  aria-hidden="true"
+  onError={(e) => (e.currentTarget.style.display = 'none')}
+/>
+<span className="icon-fallback">📡</span>
+```
+
+---
+
+## 6. 매니페스트 동기화 (manifest.json)
+
+### 6.1 필수 필드 체크
+
+| 필드       | 필수 | 체크                              |
+| ---------- | ---- | --------------------------------- |
+| `id`       | ✅   | kebab-case, 고유값                |
+| `path`     | ✅   | `ui/` 기준 상대 경로              |
+| `type`     | ✅   | `icon` / `placeholder` / `chrome` |
+| `fallback` | 권장 | 이모지/텍스트                     |
+| `bytes`    | 권장 | 파일 크기                         |
+| `usedIn`   | 권장 | 사용처 컴포넌트 목록              |
+| `notes`    | 선택 | QA/생성 관련 메모                 |
+
+### 6.2 실제 파일과 매니페스트 정합성
+
+- [ ] manifest.json의 모든 에셋이 실제 파일로 존재
+- [ ] 실제 디렉토리의 모든 에셋이 manifest.json에 등록됨
+- [ ] `path` 경로가 실제 파일 위치와 일치
+- [ ] `bytes` 값이 실제 파일 크기와 일치
+
+### 6.3 정합성 검증 스크립트 (참고)
+
+```bash
+# manifest.json에 있는 path들이 실제로 존재하는지 확인
+cd frontend/public/ui
+cat manifest.json | jq -r '.assets[].path' | while read p; do
+  [ -f "$p" ] || echo "MISSING: $p"
+done
+
+# 실제 파일이 manifest에 있는지 확인
+find icons placeholders chrome -type f \( -name "*.png" -o -name "*.webp" \) | while read f; do
+  grep -q "\"$f\"" manifest.json || echo "NOT IN MANIFEST: $f"
+done
+```
+
+---
+
+## 7. 스타일 일관성 (CRT Theme)
+
+### 7.1 색상 팔레트 준수
+
+| 색상        | Hex       | 용도        | 체크 |
+| ----------- | --------- | ----------- | ---- |
+| 인광 녹색   | `#33ff00` | 주요 색상   | ☐    |
+| 어두운 녹색 | `#1a8000` | 보조 색상   | ☐    |
+| 마젠타      | `#ff00ff` | 포인트/경고 | ☐    |
+| 주황색      | `#ffaa00` | 경고        | ☐    |
+| 붉은색      | `#ff3333` | 에러        | ☐    |
+| 배경        | `#0d0d0d` | 배경        | ☐    |
+
+### 7.2 스타일 금지 사항
+
+- [ ] 외부 로고/상표 복제 금지
+- [ ] CRT 테마와 충돌하는 색상 금지 (밝은 파스텔, 난색 남용)
+- [ ] 복잡한 그라데이션/사진 스타일 금지
+
+---
+
+## 8. Retina 대응 (선택)
+
+### 8.1 Retina 필요 여부 판단
+
+| 상황             | Retina 필요 | 비고                  |
+| ---------------- | ----------- | --------------------- |
+| **16px 아이콘**  | 선택        | HiDPI에서 선명도 향상 |
+| **24px+ 아이콘** | 낮음        | 기본 해상도로 충분    |
+| **placeholder**  | 낮음        | 이미 충분한 해상도    |
+
+### 8.2 Retina 파일 규칙
+
+- 파일명: `{name}-24.png` → `{name}-24@2x.png`
+- CSS: `image-set()`으로 1x/2x 제공
+- manifest.json: `retina: true` 표기
+
+---
+
+## 9. 종합 체크리스트 (Quick Reference)
+
+에셋 추가/수정 시 아래 항목을 순서대로 체크하세요:
+
+### 📦 추가 전
+
+- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
+- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
+- [ ] CRT 테마 색상과 조화
+
+### 🎨 생성 시
+
+- [ ] (조건부) 배경 제거 필요 시 순백(#FFFFFF) 배경으로 생성
+- [ ] 필요 사이즈로 리사이즈
+- [ ] (조건부) `rembg`로 배경 제거
+
+### ✅ 추가 후
+
+- [ ] 개별 용량 예산 준수 확인
+- [ ] 총합 예산 준수 확인 (`totalBytes` < `budgetBytes`)
+- [ ] 16px 실루엣 구분 가능 여부 (아이콘)
+- [ ] 기본/Readable 모드 대비 확인
+- [ ] (조건부) 알파 채널 존재 확인 (투명 필요 에셋)
+- [ ] 폴백 텍스트/이모지 지정
+- [ ] manifest.json 업데이트
+- [ ] 실제 파일과 매니페스트 정합성 확인
+
+---
+
+## 10. 참고 자료
+
+- **SSOT 규칙**: `frontend/public/ui/README.md`
+- **배경 제거 가이드**: `vibe/ref/rembg-guide.md`
+- **매니페스트 스키마**: `frontend/public/ui/manifest.schema.json`
+- **스타일 가이드**: `vibe/ref/frontend-style-guide.md`
+- **가독성 패스**: U-028[Mvp] (Readable 모드)
+
+---
+
+_마지막 업데이트: 2026-01-12_  
+_문서 버전: 1.0.0_
+</file>
+
+<file path="frontend/src/components/ActionDeck.test.tsx">
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ActionDeck } from './ActionDeck';
+import type { ActionCard } from '../schemas/turn';
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (params?.turn !== undefined) return `Turn ${params.turn}`;
+      if (key === 'action.risk.low') return 'Low';
+      if (key === 'action.risk.medium') return 'Medium';
+      if (key === 'action.risk.high') return 'High';
+      if (key === 'action.insufficient_balance') return 'Insufficient Balance';
+      if (key === 'action.alternative') return 'Alt';
+      return key;
+    },
+  }),
+}));
+
+describe('ActionDeck Component', () => {
+  const mockCards: ActionCard[] = [
+    {
+      id: 'card-1',
+      label: 'Regular Action',
+      description: 'Test Description',
+      cost: { signal: 10, memory_shard: 0 },
+      cost_estimate: {
+        min: { signal: 8, memory_shard: 0 },
+        max: { signal: 12, memory_shard: 0 },
+      },
+      risk: 'low',
+      hint: 'Positive hint',
+      reward_hint: 'Bonus item',
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: false,
+    },
+    {
+      id: 'card-2',
+      label: 'Expensive Action',
+      description: null,
+      cost: { signal: 50, memory_shard: 1 },
+      cost_estimate: null,
+      risk: 'high',
+      hint: 'Risky hint',
+      reward_hint: null,
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: false,
+    },
+    {
+      id: 'card-alt',
+      label: 'Alternative Action',
+      description: null,
+      cost: { signal: 2, memory_shard: 0 },
+      cost_estimate: null,
+      risk: 'low',
+      hint: null,
+      reward_hint: null,
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: true,
+    },
+  ];
+
+  it('renders provided cards', () => {
+    render(<ActionDeck cards={mockCards} />);
+    expect(screen.getByText('Regular Action')).toBeInTheDocument();
+    expect(screen.getByText('Expensive Action')).toBeInTheDocument();
+    expect(screen.getByText('Alternative Action')).toBeInTheDocument();
+  });
+
+  it('displays cost estimates as ranges when available', () => {
+    render(<ActionDeck cards={mockCards} />);
+    // card-1 has cost_estimate: 8~12
+    expect(screen.getByText('8~12')).toBeInTheDocument();
+    // card-2 has cost: 50
+    expect(screen.getByText('50')).toBeInTheDocument();
+  });
+
+  it('disables cards when balance is insufficient', () => {
+    const lowBalance = { signal: 5, memory_shard: 0 };
+    render(<ActionDeck cards={mockCards} currentBalance={lowBalance} />);
+
+    // Regular Action (cost 10/estimate max 12) -> disabled
+    const card1 = screen.getByRole('button', { name: /Regular Action/i });
+    expect(card1).toBeDisabled();
+    expect(screen.getAllByText('Insufficient Balance').length).toBeGreaterThan(0);
+
+    // Alternative Action (cost 2) -> enabled
+    const cardAlt = screen.getByRole('button', { name: /Alternative Action/i });
+    expect(cardAlt).not.toBeDisabled();
+  });
+
+  it('renders alternative badge for alternative cards', () => {
+    render(<ActionDeck cards={mockCards} />);
+    expect(screen.getByText('Alt')).toBeInTheDocument();
+  });
+
+  it('calls onCardClick when an enabled card is clicked', () => {
+    const onCardClick = vi.fn();
+    render(<ActionDeck cards={mockCards} onCardClick={onCardClick} />);
+
+    fireEvent.click(screen.getByText('Regular Action'));
+    expect(onCardClick).toHaveBeenCalledWith(expect.objectContaining({ id: 'card-1' }));
+  });
+
+  it('displays server-provided disabled reason', () => {
+    const disabledCard: ActionCard[] = [
+      {
+        ...mockCards[0],
+        enabled: false,
+        disabled_reason: 'Locked by story',
+      },
+    ];
+    render(<ActionDeck cards={disabledCard} />);
+    expect(screen.getByText('Locked by story')).toBeInTheDocument();
+  });
+
+  it('renders default cards when cards prop is empty', () => {
+    render(<ActionDeck cards={[]} />);
+    // useDefaultCards should provide some default labels
+    expect(screen.getByText('action.default.explore.label')).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/ActionDeck.tsx">
+/**
+ * Unknown World - Action Deck 컴포넌트 (U-009[Mvp]).
+ *
+ * PRD 요구사항:
+ *   - Action Deck(3~6장 카드)을 Footer 영역에 상시 노출
+ *   - 각 카드에 예상 비용(최소/최대), 위험도, 보상 힌트 표기 (RULE-005)
+ *   - 카드 클릭 시 TurnInput으로 선택된 행동 전송 (RULE-008)
+ *   - 잔액 부족 시 실행 불가 표시 + 저비용 대안 노출 (RULE-005)
+ *
+ * RULE-002 준수: 채팅 버블/메시지 버튼이 아닌 "게임 카드" UI
+ *
+ * @see vibe/prd.md 6.7 - Action Deck 요구사항
+ * @see .cursor/rules/10-frontend-game-ui.mdc
+ * @module components/ActionDeck
+ */
+
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ActionCard } from '../schemas/turn';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+export interface ActionDeckProps {
+  /** 서버에서 받은 액션 카드 목록 */
+  cards: ActionCard[];
+  /** 카드 클릭 콜백 */
+  onCardClick?: (card: ActionCard) => void;
+  /** 전체 비활성화 (스트리밍 중 등) */
+  disabled?: boolean;
+  /** 현재 잔액 (클라이언트 측 실행 가능 여부 판단용) */
+  currentBalance?: { signal: number; memory_shard: number };
+}
+
+interface CardDisplayInfo extends ActionCard {
+  /** 클라이언트 측 실행 가능 여부 (서버 enabled가 없을 때 폴백) */
+  isAffordable: boolean;
+  /** 최종 비활성화 여부 */
+  isDisabled: boolean;
+  /** 최종 비활성화 사유 */
+  finalDisabledReason: string | null;
+}
+
+// =============================================================================
+// 기본 카드 생성 (i18n 기반)
+// =============================================================================
+
+function useDefaultCards(): ActionCard[] {
+  const { t } = useTranslation();
+
+  return useMemo(
+    () => [
+      {
+        id: 'default-explore',
+        label: t('action.default.explore.label'),
+        description: t('action.default.explore.description'),
+        cost: { signal: 1, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'low' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+      {
+        id: 'default-investigate',
+        label: t('action.default.investigate.label'),
+        description: t('action.default.investigate.description'),
+        cost: { signal: 2, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'medium' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+      {
+        id: 'default-talk',
+        label: t('action.default.talk.label'),
+        description: t('action.default.talk.description'),
+        cost: { signal: 1, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'low' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+    ],
+    [t],
+  );
+}
+
+// =============================================================================
+// 카드 비용 표시 컴포넌트
+// =============================================================================
+
+interface CardCostDisplayProps {
+  card: CardDisplayInfo;
+}
+
+function CardCostDisplay({ card }: CardCostDisplayProps) {
+  const { t } = useTranslation();
+
+  // 비용 추정 범위가 있으면 min~max 표시, 없으면 기본 cost 표시
+  const costDisplay = card.cost_estimate
+    ? `${card.cost_estimate.min.signal}~${card.cost_estimate.max.signal}`
+    : `${card.cost.signal}`;
+
+  const shardCost = card.cost_estimate
+    ? card.cost_estimate.max.memory_shard
+    : card.cost.memory_shard;
+
+  return (
+    <div className="action-card-cost" data-ui-importance="critical">
+      {/* Signal 비용 */}
+      <span className="cost-item">
+        <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
+          <img
+            src="/ui/icons/signal-16.png"
+            alt=""
+            aria-hidden="true"
+            className="icon-img"
+            style={{ width: 14, height: 14 }}
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback">⚡</span>
+        </span>
+        <span className="cost-value">{costDisplay}</span>
+      </span>
+
+      {/* Shard 비용 (0보다 클 때만 표시) */}
+      {shardCost > 0 && (
+        <span className="cost-item">
+          <span className="cost-separator">|</span>
+          <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
+            <img
+              src="/ui/icons/shard-16.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              style={{ width: 14, height: 14 }}
+              onError={(e) => e.currentTarget.classList.add('hidden')}
+            />
+            <span className="icon-fallback">💎</span>
+          </span>
+          <span className="cost-value">
+            {card.cost_estimate
+              ? `${card.cost_estimate.min.memory_shard}~${card.cost_estimate.max.memory_shard}`
+              : card.cost.memory_shard}
+          </span>
+        </span>
+      )}
+
+      {/* 위험도 */}
+      <span className="cost-item">
+        <span className="cost-separator">|</span>
+        <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
+          <img
+            src={`/ui/icons/risk-${card.risk}-16.png`}
+            alt=""
+            aria-hidden="true"
+            className={`icon-img risk-${card.risk}`}
+            style={{ width: 14, height: 14 }}
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback">⚠</span>
+        </span>
+        <span className={`risk-label risk-${card.risk}`}>{t(`action.risk.${card.risk}`)}</span>
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 단일 카드 컴포넌트
+// =============================================================================
+
+interface ActionCardItemProps {
+  card: CardDisplayInfo;
+  onClick: () => void;
+  disabled: boolean;
+}
+
+function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
+  const { t } = useTranslation();
+
+  const cardClasses = [
+    'action-card',
+    'has-chrome',
+    card.isDisabled ? 'card-disabled' : '',
+    card.is_alternative ? 'card-alternative' : '',
+    `risk-border-${card.risk}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <button
+      type="button"
+      className={cardClasses}
+      onClick={onClick}
+      disabled={disabled || card.isDisabled}
+      aria-disabled={disabled || card.isDisabled}
+      title={card.finalDisabledReason ?? card.description ?? undefined}
+    >
+      {/* 대안 카드 표시 */}
+      {card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
+
+      {/* 카드 타이틀 */}
+      <div className="action-card-title">{card.label}</div>
+
+      {/* 카드 설명 (있을 때만) */}
+      {card.description && <div className="action-card-description">{card.description}</div>}
+
+      {/* 비용/위험도 정보 */}
+      <CardCostDisplay card={card} />
+
+      {/* 힌트 영역 */}
+      {(card.hint || card.reward_hint) && (
+        <div className="action-card-hints">
+          {card.hint && (
+            <div className="hint-item hint-risk">
+              <span className="hint-icon">⚠</span>
+              <span className="hint-text">{card.hint}</span>
+            </div>
+          )}
+          {card.reward_hint && (
+            <div className="hint-item hint-reward">
+              <span className="hint-icon">★</span>
+              <span className="hint-text">{card.reward_hint}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 비활성화 오버레이 */}
+      {card.isDisabled && (
+        <div className="card-disabled-overlay">
+          <span className="disabled-reason">
+            {card.finalDisabledReason ?? t('action.insufficient_balance')}
+          </span>
+        </div>
+      )}
+    </button>
+  );
+}
+
+// =============================================================================
+// 메인 Action Deck 컴포넌트
+// =============================================================================
+
+export function ActionDeck({
+  cards,
+  onCardClick,
+  disabled = false,
+  currentBalance = { signal: 100, memory_shard: 5 },
+}: ActionDeckProps) {
+  const { t } = useTranslation();
+  const defaultCards = useDefaultCards();
+
+  // 카드가 없으면 기본 카드 사용
+  const displayCards = cards.length > 0 ? cards : defaultCards;
+
+  // 카드별 실행 가능 여부 계산 (Q1: Option A - 서버 우선, 클라이언트 폴백)
+  const processedCards: CardDisplayInfo[] = useMemo(() => {
+    return displayCards.map((card) => {
+      // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
+      const serverEnabled = card.enabled;
+
+      // 클라이언트 측 잔액 체크 (서버가 판단하지 않았을 때 폴백)
+      const costToCheck = card.cost_estimate?.max ?? card.cost;
+      const isAffordable =
+        currentBalance.signal >= costToCheck.signal &&
+        currentBalance.memory_shard >= costToCheck.memory_shard;
+
+      // 최종 비활성화 여부: 서버 판단 우선, 없으면 클라이언트 판단
+      const isDisabled = !serverEnabled || !isAffordable;
+
+      // 비활성화 사유 결정
+      let finalDisabledReason: string | null = null;
+      if (!serverEnabled && card.disabled_reason) {
+        finalDisabledReason = card.disabled_reason;
+      } else if (!isAffordable) {
+        finalDisabledReason = t('action.insufficient_balance');
+      }
+
+      return {
+        ...card,
+        isAffordable,
+        isDisabled,
+        finalDisabledReason,
+      };
+    });
+  }, [displayCards, currentBalance, t]);
+
+  // 일반 카드와 대안 카드 분리 (대안 카드는 뒤에 배치)
+  const sortedCards = useMemo(() => {
+    const regular = processedCards.filter((c) => !c.is_alternative);
+    const alternatives = processedCards.filter((c) => c.is_alternative);
+    return [...regular, ...alternatives];
+  }, [processedCards]);
+
+  return (
+    <div className="action-deck" role="group" aria-label={t('action.deck_label')}>
+      {sortedCards.map((card) => (
+        <ActionCardItem
+          key={card.id}
+          card={card}
+          onClick={() => onCardClick?.(card)}
+          disabled={disabled}
+        />
+      ))}
+
+      {/* 모든 카드가 비활성화되었을 때 안내 */}
+      {sortedCards.every((c) => c.isDisabled) && !disabled && (
+        <div className="deck-empty-notice">{t('action.all_disabled_notice')}</div>
+      )}
+    </div>
+  );
+}
+
+export default ActionDeck;
+</file>
+
 <file path="frontend/src/components/SceneCanvas.test.tsx">
 import { describe, it, expect } from 'vitest';
 import { SCENE_PLACEHOLDERS } from './SceneCanvas';
@@ -1588,238 +1757,171 @@ describe('i18n Integration Scenarios (U-039)', () => {
 });
 </file>
 
-<file path="frontend/src/locales/en-US/translation.json">
-{
-  "scene": {
-    "status": {
-      "default": "NO SIGNAL DATA",
-      "loading": "SYNCHRONIZING...",
-      "offline": "CONNECTION LOST",
-      "blocked": "ACCESS RESTRICTED",
-      "low_signal": "LOW SIGNAL",
-      "image_error": "Unable to load scene image.",
-      "initial_sync": "Awaiting global data synchronization...",
-      "syncing": "Synchronizing data...",
-      "alt": "Scene Image"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "Queue",
-      "badges": "Badges",
-      "repair": "Auto-repair",
-      "status": {
-        "idle": "IDLE",
-        "processing": "PROCESSING"
-      },
-      "badges_empty": "[ Awaiting Validation ]",
-      "repaired": "(Repaired)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "Enter command...",
-    "processing": "Processing...",
-    "execute": "EXECUTE",
-    "wait": "WAIT",
-    "panel_placeholder": "[ Ready ]",
-    "scale_decrease": "Decrease text size",
-    "scale_increase": "Increase text size",
-    "scale_label": "UI Scale Settings"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal cost",
-    "shard_cost": "Shard cost",
-    "risk_level": "Risk level"
-  },
-  "connection": {
-    "online": "ONLINE",
-    "offline": "OFFLINE"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ Drag & Drop Area ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ Objectives / Quest List ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ World Rules / Mutation Timeline ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ Pinned Memories / Clues ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ Image Upload Slot ]"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "Explore",
-        "description": "Look around"
-      },
-      "investigate": {
-        "label": "Investigate",
-        "description": "Examine closely"
-      },
-      "talk": {
-        "label": "Talk",
-        "description": "Start a conversation"
-      }
-    },
-    "card_select": "Card selected: {{cardId}}"
-  },
-  "narrative": {
-    "welcome": "Welcome to the Unknown World...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
-  }
-}
-</file>
+<file path="frontend/src/locales/README.md">
+# i18n 언어 리소스 가이드 (Unknown World)
 
-<file path="frontend/src/locales/ko-KR/translation.json">
+이 디렉토리는 Unknown World의 **프론트엔드 UI 문자열 리소스**를 관리하는 SSOT(Single Source of Truth)입니다.
+
+## 디렉토리 구조
+
+```
+locales/
+├── ko-KR/
+│   └── translation.json    # 한국어 리소스
+├── en-US/
+│   └── translation.json    # 영어 리소스
+└── README.md               # 이 문서
+```
+
+## 지원 언어
+
+| 코드    | 언어   | 상태 | 비고           |
+| ------- | ------ | ---- | -------------- |
+| `ko-KR` | 한국어 | 기본 | 데모 기준 언어 |
+| `en-US` | 영어   | 폴백 | fallbackLng    |
+
+> **언어 코드 규칙**: BCP-47 형식을 사용합니다 (`ko-KR`, `en-US`).  
+> TurnInput/SaveGame의 `language` 필드와 동일한 축입니다.
+
+## 키 네이밍 규칙
+
+키는 **도메인.섹션.항목** 형태의 계층 구조를 따릅니다.
+
+### 도메인 목록
+
+| 도메인       | 용도                                    |
+| ------------ | --------------------------------------- |
+| `scene`      | Scene Canvas 관련 메시지                |
+| `agent`      | Agent Console 관련 라벨/상태            |
+| `ui`         | 공통 UI 요소 (버튼, 입력, 플레이스홀더) |
+| `economy`    | 재화 관련 라벨                          |
+| `connection` | 연결 상태                               |
+| `panel`      | 패널별 타이틀/플레이스홀더              |
+| `action`     | 액션 카드/선택지                        |
+| `narrative`  | 내러티브/게임 로그                      |
+
+### 예시
+
+```json
 {
-  "scene": {
-    "status": {
-      "default": "데이터 대기 중",
-      "loading": "동기화 중...",
-      "offline": "연결 끊김",
-      "blocked": "접근 제한됨",
-      "low_signal": "신호 약함",
-      "image_error": "장면 이미지를 불러올 수 없습니다.",
-      "initial_sync": "전역 데이터 동기화 대기 중...",
-      "syncing": "데이터 동기화 중...",
-      "alt": "장면 이미지"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "대기열",
-      "badges": "검증 배지",
-      "repair": "자동 복구",
-      "status": {
-        "idle": "대기 중",
-        "processing": "처리 중"
-      },
-      "badges_empty": "[ 검증 대기 중 ]",
-      "repaired": "(복구됨)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "명령을 입력하세요...",
-    "processing": "처리 중...",
-    "execute": "실행",
-    "wait": "대기",
-    "panel_placeholder": "[ 준비 중 ]",
-    "scale_decrease": "글자 크기 줄이기",
-    "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal 소모",
-    "shard_cost": "Shard 소모",
-    "risk_level": "위험도"
-  },
-  "connection": {
-    "online": "온라인",
-    "offline": "오프라인"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ 드래그 앤 드롭 영역 ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ 목표/퀘스트 목록 ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ 고정된 기억/단서 ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ 이미지 업로드 슬롯 ]"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "탐색하기",
-        "description": "주변을 살펴본다"
-      },
-      "investigate": {
-        "label": "조사하기",
-        "description": "자세히 살펴본다"
-      },
-      "talk": {
-        "label": "대화하기",
-        "description": "말을 걸어본다"
-      }
-    },
-    "card_select": "카드 선택: {{cardId}}"
-  },
-  "narrative": {
-    "welcome": "미지의 세계에 오신 것을 환영합니다...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
-  }
+  "scene.status.loading": "동기화 중...",
+  "agent.console.badges": "검증 배지",
+  "ui.execute": "실행",
+  "panel.inventory.placeholder": "[ 드래그 앤 드롭 영역 ]"
 }
+```
+
+## 새 언어 추가 절차
+
+1. **디렉토리 생성**: `locales/{언어코드}/` 생성 (예: `ja-JP`)
+2. **translation.json 복사**: `ko-KR/translation.json`을 복사하여 시작점으로 사용
+3. **번역 작업**: 모든 값을 해당 언어로 번역
+4. **i18n.ts 등록**: `frontend/src/i18n.ts`에 새 언어 리소스 import 및 등록
+5. **검증**: 누락된 키가 없는지 확인 (i18next의 `missingKeyHandler` 활용)
+
+```typescript
+// frontend/src/i18n.ts
+import jaJP from './locales/ja-JP/translation.json';
+
+const resources = {
+  'ko-KR': { translation: koKR },
+  'en-US': { translation: enUS },
+  'ja-JP': { translation: jaJP }, // 새 언어 추가
+};
+```
+
+## 사용 방법
+
+### 기본 사용
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+
+  return <button>{t('ui.execute')}</button>;
+}
+```
+
+### 보간 (Interpolation)
+
+```tsx
+// JSON
+{ "narrative.turn_label": "[TURN {{turn}}]" }
+
+// 컴포넌트
+<span>{t('narrative.turn_label', { turn: 5 })}</span>
+// 결과: "[TURN 5]"
+```
+
+### 언어 변경 (향후)
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function LanguageToggle() {
+  const { i18n } = useTranslation();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.resolvedLanguage === 'ko-KR' ? 'en-US' : 'ko-KR';
+    i18n.changeLanguage(newLang);
+  };
+
+  return <button onClick={toggleLanguage}>🌐</button>;
+}
+```
+
+## 금지사항
+
+### ❌ 텍스트를 이미지에 포함하지 마세요
+
+이미지에 텍스트를 박으면:
+
+- 언어 변경 시 이미지를 교체해야 함
+- 리사이즈 시 가독성 저하
+- 접근성 문제 (스크린 리더)
+
+**대신**: 이미지와 텍스트를 분리하고, 텍스트는 i18n 키로 관리
+
+### ❌ 하드코딩 문자열 금지
+
+```tsx
+// ❌ Bad
+<button>실행</button>
+
+// ✅ Good
+<button>{t('ui.execute')}</button>
+```
+
+### ❌ ko/en 혼합 출력 금지 (RULE-006)
+
+동일 화면에서 한국어와 영어가 섞여 나오면 안 됩니다.
+모든 UI 문자열은 현재 선택된 언어로 일관되게 표시되어야 합니다.
+
+### ❌ 키 임의 삭제/변경 금지
+
+키를 삭제하거나 이름을 변경하면 기존 코드에서 참조 오류가 발생합니다.
+
+- 삭제: deprecated 마킹 후 충분한 기간을 두고 제거
+- 변경: 새 키 추가 → 마이그레이션 → 구 키 제거
+
+## 검증 체크리스트
+
+새 리소스 추가/수정 시:
+
+- [ ] 모든 지원 언어에 동일한 키가 존재하는지 확인
+- [ ] 보간 변수명이 일치하는지 확인 (`{{variable}}`)
+- [ ] 빌드 및 린트 통과
+- [ ] 실제 UI에서 문자열이 올바르게 표시되는지 확인
+
+## 참고 문서
+
+- `vibe/prd.md` - 3.1(지원 언어), 8.7(TurnInput.language)
+- `vibe/tech-stack.md` - i18next/react-i18next 버전
+- `.cursor/rules/00-core-critical.mdc` - RULE-006(i18n/언어 혼합 금지)
+- [i18next 공식 문서](https://www.i18next.com/)
+- [react-i18next 공식 문서](https://react.i18next.com/)
 </file>
 
 <file path="frontend/src/schemas/index.ts">
@@ -2201,567 +2303,6 @@ describe('Turn schemas', () => {
 });
 </file>
 
-<file path="frontend/src/schemas/turn.ts">
-/**
- * Unknown World - TurnInput/TurnOutput Zod 스키마.
- *
- * 이 모듈은 백엔드 Pydantic 모델(U-005)과 1:1 대응하는 Zod 스키마를 정의합니다.
- * 클라이언트 측 검증 및 타입 안전성을 제공합니다.
- *
- * 설계 원칙:
- *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증 (서버 Pydantic + 클라 Zod)
- *   - RULE-004: 검증 실패 시 안전 폴백 제공 (UI 멈춤 방지)
- *   - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
- *   - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
- *   - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
- *
- * Q1 결정 사항:
- *   - schema_version 포함 (Option A): SaveGame/마이그레이션/검증에 유리
- *
- * @module schemas/turn
- */
-
-import { z } from 'zod';
-
-// =============================================================================
-// 스키마 버전 (Q1 결정: Option A - 포함)
-// =============================================================================
-
-/**
- * 현재 스키마 버전.
- * SaveGame/마이그레이션/검증에 사용됩니다.
- */
-export const SCHEMA_VERSION = '1.0.0' as const;
-
-// =============================================================================
-// 공통 Enum 타입
-// =============================================================================
-
-/**
- * 지원 언어 (RULE-006).
- * ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
- * 모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
- */
-export const LanguageSchema = z.enum(['ko-KR', 'en-US']);
-export type Language = z.infer<typeof LanguageSchema>;
-
-/**
- * 테마 설정.
- */
-export const ThemeSchema = z.enum(['dark', 'light']);
-export type Theme = z.infer<typeof ThemeSchema>;
-
-/**
- * 에이전트 실행 단계 (RULE-008).
- * 에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
- */
-export const AgentPhaseSchema = z.enum([
-  'parse',
-  'validate',
-  'plan',
-  'resolve',
-  'render',
-  'verify',
-  'commit',
-]);
-export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
-
-/**
- * 검증 배지 (RULE-008).
- * 턴 결과에 대한 검증 상태를 표시합니다.
- */
-export const ValidationBadgeSchema = z.enum([
-  'schema_ok',
-  'schema_fail',
-  'economy_ok',
-  'economy_fail',
-  'safety_ok',
-  'safety_blocked',
-  'consistency_ok',
-  'consistency_fail',
-]);
-export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
-
-/**
- * 모델/품질 선택 라벨 (RULE-008).
- * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
- */
-export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
-export type ModelLabel = z.infer<typeof ModelLabelSchema>;
-
-/**
- * 행동 위험도 수준.
- */
-export const RiskLevelSchema = z.enum(['low', 'medium', 'high']);
-export type RiskLevel = z.infer<typeof RiskLevelSchema>;
-
-// =============================================================================
-// 공통 하위 타입
-// =============================================================================
-
-/**
- * 정규화 좌표 (RULE-009).
- * 0~1000 범위의 정수입니다.
- */
-export const CoordinateSchema = z.number().int().min(0).max(1000).describe('정규화 좌표 (0~1000)');
-export type Coordinate = z.infer<typeof CoordinateSchema>;
-
-/**
- * 2D 바운딩 박스 (RULE-009).
- * 좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
- * 이미지 이해 bbox 포맷과 호환됩니다.
- */
-export const Box2DSchema = z
-  .object({
-    ymin: CoordinateSchema.describe('Y 최소값 (상단)'),
-    xmin: CoordinateSchema.describe('X 최소값 (좌측)'),
-    ymax: CoordinateSchema.describe('Y 최대값 (하단)'),
-    xmax: CoordinateSchema.describe('X 최대값 (우측)'),
-  })
-  .strict();
-export type Box2D = z.infer<typeof Box2DSchema>;
-
-/**
- * 재화 수량.
- * signal과 memory_shard는 0 이상이어야 합니다 (RULE-005).
- */
-export const CurrencyAmountSchema = z
-  .object({
-    signal: z.number().int().min(0).describe('시그널 (기본 재화, 0 이상)'),
-    memory_shard: z.number().int().min(0).describe('기억 파편 (희귀 재화, 0 이상)'),
-  })
-  .strict();
-export type CurrencyAmount = z.infer<typeof CurrencyAmountSchema>;
-
-// =============================================================================
-// TurnInput 관련 타입
-// =============================================================================
-
-/**
- * 클릭 입력 정보.
- * 화면 오브젝트 클릭 시 전달되는 정보입니다.
- */
-export const ClickInputSchema = z
-  .object({
-    object_id: z.string().describe('클릭한 오브젝트 ID'),
-    box_2d: Box2DSchema.nullable().default(null).describe('클릭 위치 바운딩 박스 (선택)'),
-  })
-  .strict();
-export type ClickInput = z.infer<typeof ClickInputSchema>;
-
-/**
- * 클라이언트 정보.
- */
-export const ClientInfoSchema = z
-  .object({
-    viewport_w: z.number().int().positive().describe('뷰포트 너비 (픽셀, 양수)'),
-    viewport_h: z.number().int().positive().describe('뷰포트 높이 (픽셀, 양수)'),
-    theme: ThemeSchema.default('dark').describe('현재 테마'),
-  })
-  .strict();
-export type ClientInfo = z.infer<typeof ClientInfoSchema>;
-
-/**
- * 재화 스냅샷 (클라이언트 → 서버).
- * 클라이언트가 보유한 현재 재화 상태입니다.
- */
-export const EconomySnapshotSchema = z
-  .object({
-    signal: z.number().int().min(0).describe('현재 시그널 잔액 (0 이상)'),
-    memory_shard: z.number().int().min(0).describe('현재 기억 파편 잔액 (0 이상)'),
-  })
-  .strict();
-export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
-
-/**
- * 턴 입력 (클라이언트 → 서버).
- * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
- */
-export const TurnInputSchema = z
-  .object({
-    language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
-    text: z.string().default('').describe('사용자 자연어 입력'),
-    click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
-    client: ClientInfoSchema.describe('클라이언트 환경 정보'),
-    economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
-  })
-  .strict();
-export type TurnInput = z.infer<typeof TurnInputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - UI
-// =============================================================================
-
-/**
- * 액션 카드 (Action Deck).
- * 매 턴 AI가 추천하는 행동 카드입니다.
- */
-export const ActionCardSchema = z
-  .object({
-    id: z.string().describe('카드 고유 ID'),
-    label: z.string().describe('카드 라벨 (표시용)'),
-    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
-    cost: CurrencyAmountSchema.describe('예상 비용'),
-    risk: RiskLevelSchema.default('low').describe('위험도'),
-    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
-  })
-  .strict();
-export type ActionCard = z.infer<typeof ActionCardSchema>;
-
-/**
- * 장면 오브젝트 (클릭 가능한 핫스팟).
- * 좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
- */
-export const SceneObjectSchema = z
-  .object({
-    id: z.string().describe('오브젝트 고유 ID'),
-    label: z.string().describe('오브젝트 라벨 (표시용)'),
-    box_2d: Box2DSchema.describe('바운딩 박스'),
-    interaction_hint: z.string().nullable().default(null).describe('상호작용 힌트 (선택)'),
-  })
-  .strict();
-export type SceneObject = z.infer<typeof SceneObjectSchema>;
-
-/**
- * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
- * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
- */
-export const ActionDeckSchema = z
-  .object({
-    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
-  })
-  .strict();
-export type ActionDeck = z.infer<typeof ActionDeckSchema>;
-
-/**
- * UI 출력 데이터.
- * AI가 생성한 UI 요소들입니다.
- * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
- */
-export const UIOutputSchema = z
-  .object({
-    action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
-    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
-  })
-  .strict();
-export type UIOutput = z.infer<typeof UIOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - World
-// =============================================================================
-
-/**
- * 중요 설정 고정 후보.
- * 사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
- */
-export const MemoryPinSchema = z
-  .object({
-    id: z.string().describe('핀 고유 ID'),
-    content: z.string().describe('고정할 내용'),
-    cost: CurrencyAmountSchema.describe('고정에 필요한 비용'),
-  })
-  .strict();
-export type MemoryPin = z.infer<typeof MemoryPinSchema>;
-
-/**
- * 세계 규칙 (Rule Board).
- * 현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
- */
-export const WorldRuleSchema = z
-  .object({
-    id: z.string().describe('규칙 고유 ID'),
-    label: z.string().describe('규칙 이름'),
-    description: z.string().nullable().default(null).describe('규칙 상세 설명 (선택)'),
-  })
-  .strict();
-export type WorldRule = z.infer<typeof WorldRuleSchema>;
-
-/**
- * 퀘스트/목표 (Quest Panel).
- * 플레이어가 달성해야 하는 현재 목표입니다.
- */
-export const QuestSchema = z
-  .object({
-    id: z.string().describe('퀘스트 고유 ID'),
-    label: z.string().describe('퀘스트 이름'),
-    is_completed: z.boolean().default(false).describe('달성 여부'),
-  })
-  .strict();
-export type Quest = z.infer<typeof QuestSchema>;
-
-/**
- * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
- * 이번 턴에서 변경된 세계 상태를 나타냅니다.
- */
-export const WorldDeltaSchema = z
-  .object({
-    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
-    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
-    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
-    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
-    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
-    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
-  })
-  .strict();
-export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Render
-// =============================================================================
-
-/**
- * 이미지 생성 작업.
- * 조건부 이미지 생성/편집 요청입니다.
- */
-export const ImageJobSchema = z
-  .object({
-    should_generate: z.boolean().describe('이미지를 생성해야 하는지'),
-    prompt: z.string().default('').describe('이미지 생성 프롬프트'),
-    model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
-    aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
-    image_size: z.string().default('1024x1024').describe('이미지 크기'),
-    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
-  })
-  .strict();
-export type ImageJob = z.infer<typeof ImageJobSchema>;
-
-/**
- * 렌더링 출력 데이터.
- * 이미지 생성/편집 관련 정보입니다.
- */
-export const RenderOutputSchema = z
-  .object({
-    image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
-  })
-  .strict();
-export type RenderOutput = z.infer<typeof RenderOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Economy
-// =============================================================================
-
-/**
- * 경제 출력 데이터 (RULE-005).
- * 이번 턴의 비용과 잔액 정보입니다.
- * 잔액 음수는 절대 불가 (서버 Hard gate).
- */
-export const EconomyOutputSchema = z
-  .object({
-    cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
-    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
-  })
-  .strict();
-export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Safety
-// =============================================================================
-
-/**
- * 안전 출력 데이터.
- * 안전 정책 관련 정보입니다.
- * 차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
- */
-export const SafetyOutputSchema = z
-  .object({
-    blocked: z.boolean().default(false).describe('안전 정책에 의해 차단되었는지'),
-    message: z
-      .string()
-      .nullable()
-      .default(null)
-      .describe('차단 시 사용자에게 표시할 메시지 (선택)'),
-  })
-  .strict();
-export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
-
-// =============================================================================
-// TurnOutput 관련 타입 - Agent Console
-// =============================================================================
-
-/**
- * 에이전트 콘솔 데이터 (RULE-008).
- * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
- */
-export const AgentConsoleSchema = z
-  .object({
-    current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
-    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
-    repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
-  })
-  .strict();
-export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
-
-// =============================================================================
-// TurnOutput (메인 응답 스키마)
-// =============================================================================
-
-/**
- * 턴 출력 (서버 → 클라이언트).
- * 서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
- *
- * Hard Gate 필드 (RULE-003/004/005):
- *   - economy: cost와 balance_after 필수, 잔액 음수 금지
- *   - safety: blocked 시 안전한 대체 결과 제공
- *   - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
- */
-export const TurnOutputSchema = z
-  .object({
-    // 필수 필드 (Hard Gate)
-    language: LanguageSchema.describe('응답 언어 (요청과 동일)'),
-    narrative: z.string().describe('내러티브 텍스트 (표시용)'),
-    economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
-    safety: SafetyOutputSchema.describe('안전 정책 정보'),
-
-    // UI 관련 필드
-    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
-
-    // 세계 상태 필드
-    world: WorldDeltaSchema.default({
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    }).describe('세계 상태 변화 (delta)'),
-
-    // 렌더링 필드
-    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
-
-    // 에이전트 콘솔 필드
-    agent_console: AgentConsoleSchema.default({
-      current_phase: 'commit',
-      badges: [],
-      repair_count: 0,
-    }).describe('에이전트 실행 정보'),
-  })
-  .strict();
-export type TurnOutput = z.infer<typeof TurnOutputSchema>;
-
-// =============================================================================
-// 안전 폴백 (RULE-004)
-// =============================================================================
-
-/**
- * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
- * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
- *
- * @param language - 요청 언어
- * @param repairCount - 복구 시도 횟수
- * @param errorMessage - 오류 메시지 (선택)
- */
-export function createFallbackTurnOutput(
-  language: Language,
-  repairCount: number = 0,
-  errorMessage?: string,
-): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 응답을 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요.'
-      : '[System] An error occurred while processing the response. Please try again.';
-
-  const safetyMessage =
-    language === 'ko-KR'
-      ? '스키마 검증 실패로 인한 폴백 응답입니다.'
-      : 'This is a fallback response due to schema validation failure.';
-
-  return {
-    language,
-    narrative: errorMessage ?? fallbackNarrative,
-    economy: {
-      cost: { signal: 0, memory_shard: 0 },
-      balance_after: { signal: 0, memory_shard: 0 },
-    },
-    safety: {
-      blocked: false,
-      message: safetyMessage,
-    },
-    ui: {
-      action_deck: { cards: [] },
-      objects: [],
-    },
-    world: {
-      rules_changed: [],
-      inventory_added: [],
-      inventory_removed: [],
-      quests_updated: [],
-      relationships_changed: [],
-      memory_pins: [],
-    },
-    render: {
-      image_job: null,
-    },
-    agent_console: {
-      current_phase: 'commit',
-      badges: ['schema_fail'],
-      repair_count: repairCount,
-    },
-  };
-}
-
-// =============================================================================
-// 검증 헬퍼 함수
-// =============================================================================
-
-/**
- * TurnOutput 검증 결과 타입.
- */
-export type TurnOutputParseResult =
-  | { success: true; data: TurnOutput }
-  | { success: false; error: z.ZodError; fallback: TurnOutput };
-
-/**
- * TurnOutput을 안전하게 파싱합니다.
- * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
- *
- * @param data - 파싱할 데이터
- * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
- * @param repairCount - 현재 복구 시도 횟수
- */
-export function safeParseTurnOutput(
-  data: unknown,
-  language: Language = 'ko-KR',
-  repairCount: number = 0,
-): TurnOutputParseResult {
-  const result = TurnOutputSchema.safeParse(data);
-
-  if (result.success) {
-    return { success: true, data: result.data };
-  }
-
-  return {
-    success: false,
-    error: result.error,
-    fallback: createFallbackTurnOutput(language, repairCount),
-  };
-}
-
-/**
- * TurnInput을 검증합니다.
- * 입력 데이터의 유효성을 엄격하게 검사합니다.
- *
- * @param data - 검증할 데이터
- * @throws {z.ZodError} 검증 실패 시
- */
-export function parseTurnInput(data: unknown): TurnInput {
-  return TurnInputSchema.parse(data);
-}
-
-/**
- * TurnInput 안전 파싱 결과 타입.
- */
-export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safeParse>;
-
-/**
- * TurnInput을 안전하게 파싱합니다.
- *
- * @param data - 파싱할 데이터
- */
-export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
-  return TurnInputSchema.safeParse(data);
-}
-</file>
-
 <file path="frontend/src/schemas/verify_runbook.ts">
 import {
   TurnOutputSchema,
@@ -2867,6 +2408,253 @@ if (!resultG.success) {
 
 <file path="frontend/src/setupTests.ts">
 import '@testing-library/jest-dom';
+</file>
+
+<file path="frontend/src/stores/actionDeckStore.test.ts">
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useActionDeckStore, filterAffordableCards } from './actionDeckStore';
+import type { ActionCard } from '../schemas/turn';
+
+describe('actionDeckStore', () => {
+  beforeEach(() => {
+    useActionDeckStore.getState().reset();
+  });
+
+  const mockCards: ActionCard[] = [
+    {
+      id: 'card-1',
+      label: 'Card 1',
+      description: null,
+      cost: { signal: 10, memory_shard: 0 },
+      cost_estimate: null,
+      risk: 'low',
+      hint: null,
+      reward_hint: null,
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: false,
+    },
+    {
+      id: 'card-2',
+      label: 'Card 2',
+      description: null,
+      cost: { signal: 50, memory_shard: 1 },
+      cost_estimate: null,
+      risk: 'high',
+      hint: null,
+      reward_hint: null,
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: false,
+    },
+  ];
+
+  it('sets cards and resets selected card', () => {
+    const store = useActionDeckStore.getState();
+    store.selectCard('some-id');
+    expect(useActionDeckStore.getState().selectedCardId).toBe('some-id');
+
+    store.setCards(mockCards);
+    expect(useActionDeckStore.getState().cards).toEqual(mockCards);
+    expect(useActionDeckStore.getState().selectedCardId).toBeNull();
+  });
+
+  it('marks a card as executed', () => {
+    const store = useActionDeckStore.getState();
+    store.selectCard('card-1');
+    store.markExecuted('card-1');
+
+    expect(useActionDeckStore.getState().lastExecutedCardId).toBe('card-1');
+    expect(useActionDeckStore.getState().selectedCardId).toBeNull();
+  });
+
+  it('filters affordable cards correctly', () => {
+    const balance = { signal: 20, memory_shard: 0 };
+    const affordable = filterAffordableCards(mockCards, balance);
+
+    expect(affordable).toHaveLength(1);
+    expect(affordable[0].id).toBe('card-1');
+  });
+
+  it('respects server enabled flag in filterAffordableCards', () => {
+    const disabledCards: ActionCard[] = [
+      {
+        ...mockCards[0],
+        enabled: false,
+      },
+    ];
+    const balance = { signal: 100, memory_shard: 100 };
+    const affordable = filterAffordableCards(disabledCards, balance);
+
+    expect(affordable).toHaveLength(0);
+  });
+});
+</file>
+
+<file path="frontend/src/stores/actionDeckStore.ts">
+/**
+ * Unknown World - Action Deck 상태 관리 (Zustand) (U-009[Mvp]).
+ *
+ * Action Deck의 카드 목록, 선택 상태, 잔액 기반 필터링을 관리합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-005: 잔액 부족 시 실행 불가 표시 + 대안 제공
+ *   - RULE-008: 카드 클릭 → TurnInput 연결
+ *
+ * @module stores/actionDeckStore
+ */
+
+import { create } from 'zustand';
+import type { ActionCard } from '../schemas/turn';
+
+// =============================================================================
+// 상태 타입 정의
+// =============================================================================
+
+/** Action Deck 상태 */
+export interface ActionDeckState {
+  /** 현재 카드 목록 (서버에서 받은 원본) */
+  cards: ActionCard[];
+  /** 선택된 카드 ID (클릭 후 실행 전까지) */
+  selectedCardId: string | null;
+  /** 마지막으로 실행된 카드 ID */
+  lastExecutedCardId: string | null;
+}
+
+/** Action Deck 액션 */
+export interface ActionDeckActions {
+  /** 카드 목록 설정 (TurnOutput 수신 시) */
+  setCards: (cards: ActionCard[]) => void;
+  /** 카드 선택 */
+  selectCard: (cardId: string | null) => void;
+  /** 카드 실행 완료 기록 */
+  markExecuted: (cardId: string) => void;
+  /** 상태 초기화 */
+  reset: () => void;
+}
+
+export type ActionDeckStore = ActionDeckState & ActionDeckActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+function createInitialState(): ActionDeckState {
+  return {
+    cards: [],
+    selectedCardId: null,
+    lastExecutedCardId: null,
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Action Deck 상태 스토어.
+ *
+ * @example
+ * ```tsx
+ * const { cards, setCards, selectCard } = useActionDeckStore();
+ *
+ * // TurnOutput 수신 시
+ * setCards(turnOutput.ui.action_deck.cards);
+ *
+ * // 카드 클릭 시
+ * selectCard(card.id);
+ * ```
+ */
+export const useActionDeckStore = create<ActionDeckStore>((set) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+  setCards: (cards) => {
+    set({
+      cards,
+      selectedCardId: null, // 새 카드 목록 수신 시 선택 초기화
+    });
+  },
+
+  selectCard: (cardId) => {
+    set({ selectedCardId: cardId });
+  },
+
+  markExecuted: (cardId) => {
+    set({
+      lastExecutedCardId: cardId,
+      selectedCardId: null,
+    });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 카드 목록 셀렉터 */
+export const selectCards = (state: ActionDeckStore) => state.cards;
+
+/** 선택된 카드 ID 셀렉터 */
+export const selectSelectedCardId = (state: ActionDeckStore) => state.selectedCardId;
+
+/** 선택된 카드 객체 셀렉터 */
+export const selectSelectedCard = (state: ActionDeckStore) =>
+  state.cards.find((c) => c.id === state.selectedCardId) ?? null;
+
+/** 마지막 실행 카드 ID 셀렉터 */
+export const selectLastExecutedCardId = (state: ActionDeckStore) => state.lastExecutedCardId;
+
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
+
+/**
+ * 잔액 기반으로 실행 가능한 카드만 필터링합니다.
+ * (컴포넌트에서 사용하거나, 서버 응답이 enabled를 제공하지 않을 때 폴백으로 사용)
+ *
+ * @param cards - 원본 카드 목록
+ * @param balance - 현재 잔액
+ * @returns 실행 가능한 카드 목록
+ */
+export function filterAffordableCards(
+  cards: ActionCard[],
+  balance: { signal: number; memory_shard: number },
+): ActionCard[] {
+  return cards.filter((card) => {
+    // 서버에서 이미 enabled=false로 판단했으면 제외
+    if (!card.enabled) return false;
+
+    // 비용 추정치가 있으면 최대 비용으로 판단
+    const cost = card.cost_estimate?.max ?? card.cost;
+    return balance.signal >= cost.signal && balance.memory_shard >= cost.memory_shard;
+  });
+}
+
+/**
+ * 대안 카드(is_alternative=true)만 필터링합니다.
+ *
+ * @param cards - 원본 카드 목록
+ * @returns 대안 카드 목록
+ */
+export function filterAlternativeCards(cards: ActionCard[]): ActionCard[] {
+  return cards.filter((card) => card.is_alternative);
+}
+
+/**
+ * 일반 카드(is_alternative=false)만 필터링합니다.
+ *
+ * @param cards - 원본 카드 목록
+ * @returns 일반 카드 목록
+ */
+export function filterRegularCards(cards: ActionCard[]): ActionCard[] {
+  return cards.filter((card) => !card.is_alternative);
+}
 </file>
 
 <file path="frontend/src/stores/agentStore.test.ts">
@@ -3260,6 +3048,616 @@ __all__ = [
 ]
 </file>
 
+<file path="backend/src/unknown_world/models/turn.py">
+"""Unknown World - TurnInput/TurnOutput Pydantic 스키마.
+
+이 모듈은 Unknown World의 핵심 데이터 모델을 정의합니다.
+Gemini Structured Outputs에 투입 가능한 JSON Schema(부분집합)를 생성할 수 있습니다.
+
+설계 원칙:
+    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+    - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
+    - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
+    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+
+사용 예시:
+    # Gemini Structured Outputs용 JSON Schema 생성
+    schema = TurnOutput.model_json_schema()
+
+    # 응답 검증
+    output = TurnOutput.model_validate_json(gemini_response_text)
+
+참조:
+    - vibe/prd.md 8.7 (데이터 모델 설계)
+    - vibe/ref/structured-outputs-guide.md
+    - .cursor/rules/00-core-critical.mdc
+"""
+
+from enum import Enum
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
+
+# =============================================================================
+# 공통 Enum 타입
+# =============================================================================
+
+
+class Language(str, Enum):
+    """지원 언어 (RULE-006).
+
+    ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
+    모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
+    """
+
+    KO = "ko-KR"
+    EN = "en-US"
+
+
+class Theme(str, Enum):
+    """테마 설정."""
+
+    DARK = "dark"
+    LIGHT = "light"
+
+
+class AgentPhase(str, Enum):
+    """에이전트 실행 단계 (RULE-008).
+
+    에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
+    """
+
+    PARSE = "parse"
+    VALIDATE = "validate"
+    PLAN = "plan"
+    RESOLVE = "resolve"
+    RENDER = "render"
+    VERIFY = "verify"
+    COMMIT = "commit"
+
+
+class ValidationBadge(str, Enum):
+    """검증 배지 (RULE-008).
+
+    턴 결과에 대한 검증 상태를 표시합니다.
+    """
+
+    SCHEMA_OK = "schema_ok"
+    SCHEMA_FAIL = "schema_fail"
+    ECONOMY_OK = "economy_ok"
+    ECONOMY_FAIL = "economy_fail"
+    SAFETY_OK = "safety_ok"
+    SAFETY_BLOCKED = "safety_blocked"
+    CONSISTENCY_OK = "consistency_ok"
+    CONSISTENCY_FAIL = "consistency_fail"
+
+
+class ModelLabel(str, Enum):
+    """모델/품질 선택 라벨 (RULE-008).
+
+    프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
+    """
+
+    FAST = "FAST"
+    QUALITY = "QUALITY"
+    CHEAP = "CHEAP"
+    REF = "REF"
+
+
+class RiskLevel(str, Enum):
+    """행동 위험도 수준."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+# =============================================================================
+# 공통 하위 타입
+# =============================================================================
+
+# RULE-009: 좌표는 0~1000 정규화 좌표계 (이미지 이해 bbox 포맷과 호환)
+Coordinate = Annotated[int, Field(ge=0, le=1000, description="정규화 좌표 (0~1000)")]
+
+
+class Box2D(BaseModel):
+    """2D 바운딩 박스 (RULE-009).
+
+    좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
+    이미지 이해 bbox 포맷과 호환됩니다.
+
+    Attributes:
+        ymin: Y 최소값 (상단)
+        xmin: X 최소값 (좌측)
+        ymax: Y 최대값 (하단)
+        xmax: X 최대값 (우측)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ymin: Coordinate
+    xmin: Coordinate
+    ymax: Coordinate
+    xmax: Coordinate
+
+
+class CurrencyAmount(BaseModel):
+    """재화 수량.
+
+    Attributes:
+        signal: 기본 재화 (텍스트 턴/이미지 생성/고급 기능에 소비)
+        memory_shard: 희귀 재화 (중요 설정 고정, 고해상도 이미지 등에 소비)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    signal: Annotated[int, Field(ge=0, description="시그널 (기본 재화, 0 이상)")]
+    memory_shard: Annotated[int, Field(ge=0, description="기억 파편 (희귀 재화, 0 이상)")]
+
+
+# =============================================================================
+# TurnInput 관련 타입
+# =============================================================================
+
+
+class ClickInput(BaseModel):
+    """클릭 입력 정보.
+
+    화면 오브젝트 클릭 시 전달되는 정보입니다.
+
+    Attributes:
+        object_id: 클릭한 오브젝트 ID
+        box_2d: 클릭 위치의 바운딩 박스 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    object_id: str = Field(description="클릭한 오브젝트 ID")
+    box_2d: Box2D | None = Field(default=None, description="클릭 위치 바운딩 박스 (선택)")
+
+
+class ClientInfo(BaseModel):
+    """클라이언트 정보.
+
+    Attributes:
+        viewport_w: 뷰포트 너비 (픽셀)
+        viewport_h: 뷰포트 높이 (픽셀)
+        theme: 현재 테마 (dark/light)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    viewport_w: Annotated[int, Field(gt=0, description="뷰포트 너비 (픽셀)")]
+    viewport_h: Annotated[int, Field(gt=0, description="뷰포트 높이 (픽셀)")]
+    theme: Theme = Field(default=Theme.DARK, description="현재 테마")
+
+
+class EconomySnapshot(BaseModel):
+    """재화 스냅샷 (클라이언트 → 서버).
+
+    클라이언트가 보유한 현재 재화 상태입니다.
+    서버는 이를 검증하고 비용 계산에 사용합니다.
+
+    Attributes:
+        signal: 현재 시그널 잔액
+        memory_shard: 현재 기억 파편 잔액
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    signal: Annotated[int, Field(ge=0, description="현재 시그널 잔액 (0 이상)")]
+    memory_shard: Annotated[int, Field(ge=0, description="현재 기억 파편 잔액 (0 이상)")]
+
+
+class TurnInput(BaseModel):
+    """턴 입력 (클라이언트 → 서버).
+
+    사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+
+    Attributes:
+        language: 요청 언어 (응답도 동일 언어로 고정)
+        text: 사용자 자연어 입력
+        action_id: 선택한 액션 카드 ID (선택)
+        click: 오브젝트 클릭 정보 (선택)
+        client: 클라이언트 환경 정보
+        economy_snapshot: 현재 재화 상태
+
+    Example:
+        >>> input_data = TurnInput(
+        ...     language=Language.KO,
+        ...     text="문을 열어본다",
+        ...     economy_snapshot=EconomySnapshot(signal=100, memory_shard=5),
+        ...     client=ClientInfo(viewport_w=1920, viewport_h=1080),
+        ... )
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    language: Language = Field(description="요청 언어 (응답도 동일 언어로 고정)")
+    text: str = Field(default="", description="사용자 자연어 입력")
+    action_id: str | None = Field(default=None, description="선택한 액션 카드 ID (선택)")
+    click: ClickInput | None = Field(default=None, description="오브젝트 클릭 정보 (선택)")
+    client: ClientInfo = Field(description="클라이언트 환경 정보")
+    economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - UI
+# =============================================================================
+
+
+class CostEstimate(BaseModel):
+    """비용 추정치 (최소/최대 범위)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    min: CurrencyAmount = Field(description="최소 예상 비용")
+    max: CurrencyAmount = Field(description="최대 예상 비용")
+
+
+class ActionCard(BaseModel):
+    """액션 카드 (Action Deck).
+
+    매 턴 AI가 추천하는 행동 카드입니다.
+    각 카드에 비용/위험/보상 힌트가 포함됩니다.
+
+    Attributes:
+        id: 카드 고유 ID
+        label: 카드 라벨 (표시용)
+        description: 카드 설명 (선택)
+        cost: 예상 비용 (기본)
+        cost_estimate: 비용 추정 범위 (선택)
+        risk: 위험도
+        hint: 예상 결과 힌트 (선택)
+        reward_hint: 보상 힌트 (선택)
+        enabled: 실행 가능 여부 (서버 판단)
+        disabled_reason: 비활성화 사유 (선택)
+        is_alternative: 저비용 대안 카드 여부
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="카드 고유 ID")
+    label: str = Field(description="카드 라벨 (표시용)")
+    description: str | None = Field(default=None, description="카드 설명 (선택)")
+    cost: CurrencyAmount = Field(description="예상 비용 (기본)")
+    cost_estimate: CostEstimate | None = Field(default=None, description="비용 추정 범위 (선택)")
+    risk: RiskLevel = Field(default=RiskLevel.LOW, description="위험도")
+    hint: str | None = Field(default=None, description="예상 결과 힌트 (선택)")
+    reward_hint: str | None = Field(default=None, description="보상 힌트 (선택)")
+    enabled: bool = Field(default=True, description="실행 가능 여부 (서버 판단)")
+    disabled_reason: str | None = Field(default=None, description="비활성화 사유 (선택)")
+    is_alternative: bool = Field(default=False, description="저비용 대안 카드 여부")
+
+
+class SceneObject(BaseModel):
+    """장면 오브젝트 (클릭 가능한 핫스팟).
+
+    화면에서 클릭 가능한 오브젝트입니다.
+    좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
+
+    Attributes:
+        id: 오브젝트 고유 ID
+        label: 오브젝트 라벨 (표시용)
+        box_2d: 바운딩 박스 [ymin, xmin, ymax, xmax]
+        interaction_hint: 상호작용 힌트 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="오브젝트 고유 ID")
+    label: str = Field(description="오브젝트 라벨 (표시용)")
+    box_2d: Box2D = Field(description="바운딩 박스")
+    interaction_hint: str | None = Field(default=None, description="상호작용 힌트 (선택)")
+
+
+class ActionDeck(BaseModel):
+    """액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+
+    매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+
+    Attributes:
+        cards: 액션 카드 목록 (3~6장 권장)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    cards: list[ActionCard] = Field(
+        default=[],
+        min_length=0,
+        max_length=10,
+        description="액션 카드 목록 (3~6장 권장)",
+    )
+
+
+class UIOutput(BaseModel):
+    """UI 출력 데이터.
+
+    AI가 생성한 UI 요소들입니다.
+    채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
+
+    Attributes:
+        action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)
+        objects: 클릭 가능한 장면 오브젝트 목록
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    action_deck: ActionDeck = Field(default_factory=ActionDeck, description="액션 카드 덱")
+    objects: list[SceneObject] = Field(default=[], description="클릭 가능한 장면 오브젝트 목록")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - World
+# =============================================================================
+
+
+class MemoryPin(BaseModel):
+    """중요 설정 고정 후보.
+
+    사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
+
+    Attributes:
+        id: 핀 고유 ID
+        content: 고정할 내용
+        cost: 고정에 필요한 비용
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="핀 고유 ID")
+    content: str = Field(description="고정할 내용")
+    cost: CurrencyAmount = Field(description="고정에 필요한 비용")
+
+
+class WorldRule(BaseModel):
+    """세계 규칙 (Rule Board).
+
+    현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
+
+    Attributes:
+        id: 규칙 고유 ID
+        label: 규칙 이름
+        description: 규칙 상세 설명 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="규칙 고유 ID")
+    label: str = Field(description="규칙 이름")
+    description: str | None = Field(default=None, description="규칙 상세 설명 (선택)")
+
+
+class Quest(BaseModel):
+    """퀘스트/목표 (Quest Panel).
+
+    플레이어가 달성해야 하는 현재 목표입니다.
+
+    Attributes:
+        id: 퀘스트 고유 ID
+        label: 퀘스트 이름
+        is_completed: 달성 여부
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="퀘스트 고유 ID")
+    label: str = Field(description="퀘스트 이름")
+    is_completed: bool = Field(default=False, description="달성 여부")
+
+
+class WorldDelta(BaseModel):
+    """세계 상태 변화 (Q2 결정: Option A - delta 중심).
+
+    이번 턴에서 변경된 세계 상태를 나타냅니다.
+    snapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.
+
+    Attributes:
+        rules_changed: 변경되거나 추가된 규칙 목록
+        inventory_added: 추가된 인벤토리 아이템
+        inventory_removed: 제거된 인벤토리 아이템
+        quests_updated: 업데이트된 퀘스트(목표) 목록
+        relationships_changed: 변경된 관계
+        memory_pins: 중요 설정 고정 후보
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rules_changed: list[WorldRule] = Field(default=[], description="변경된 규칙 목록")
+    inventory_added: list[str] = Field(default=[], description="추가된 인벤토리 아이템")
+    inventory_removed: list[str] = Field(default=[], description="제거된 인벤토리 아이템")
+    quests_updated: list[Quest] = Field(default=[], description="업데이트된 퀘스트/목표 목록")
+    relationships_changed: list[str] = Field(default=[], description="변경된 관계")
+    memory_pins: list[MemoryPin] = Field(default=[], description="중요 설정 고정 후보")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Render
+# =============================================================================
+
+
+class ImageJob(BaseModel):
+    """이미지 생성 작업.
+
+    조건부 이미지 생성/편집 요청입니다.
+    이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.
+
+    Attributes:
+        should_generate: 이미지를 생성해야 하는지
+        prompt: 이미지 생성 프롬프트
+        model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)
+        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
+        image_size: 이미지 크기 (예: "1024x1024")
+        reference_image_ids: 참조 이미지 ID 목록 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    should_generate: bool = Field(description="이미지를 생성해야 하는지")
+    prompt: str = Field(default="", description="이미지 생성 프롬프트")
+    model_label: ModelLabel = Field(default=ModelLabel.FAST, description="모델 선택 라벨")
+    aspect_ratio: str = Field(default="16:9", description="가로세로 비율")
+    image_size: str = Field(default="1024x1024", description="이미지 크기")
+    reference_image_ids: list[str] = Field(default=[], description="참조 이미지 ID 목록 (선택)")
+
+
+class RenderOutput(BaseModel):
+    """렌더링 출력 데이터.
+
+    이미지 생성/편집 관련 정보입니다.
+
+    Attributes:
+        image_job: 이미지 생성 작업 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_job: ImageJob | None = Field(default=None, description="이미지 생성 작업 (선택)")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Economy
+# =============================================================================
+
+
+class EconomyOutput(BaseModel):
+    """경제 출력 데이터 (RULE-005).
+
+    이번 턴의 비용과 잔액 정보입니다.
+    잔액 음수는 절대 불가 (서버 Hard gate).
+
+    Attributes:
+        cost: 이번 턴에 소비된 비용
+        balance_after: 소비 후 잔액
+
+    Important:
+        - cost와 balance_after는 항상 포함되어야 합니다.
+        - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    cost: CurrencyAmount = Field(description="이번 턴에 소비된 비용")
+    balance_after: CurrencyAmount = Field(description="소비 후 잔액")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Safety
+# =============================================================================
+
+
+class SafetyOutput(BaseModel):
+    """안전 출력 데이터.
+
+    안전 정책 관련 정보입니다.
+    차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
+
+    Attributes:
+        blocked: 안전 정책에 의해 차단되었는지
+        message: 차단 시 사용자에게 표시할 메시지 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    blocked: bool = Field(default=False, description="안전 정책에 의해 차단되었는지")
+    message: str | None = Field(default=None, description="차단 시 사용자에게 표시할 메시지 (선택)")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Agent Console
+# =============================================================================
+
+
+class AgentConsole(BaseModel):
+    """에이전트 콘솔 데이터 (RULE-008).
+
+    에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+    계획/실행/검증/복구의 흔적을 표시합니다.
+
+    Attributes:
+        current_phase: 현재 실행 단계
+        badges: 검증 배지 목록
+        repair_count: 자동 복구 시도 횟수
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    current_phase: AgentPhase = Field(default=AgentPhase.COMMIT, description="현재 실행 단계")
+    badges: list[ValidationBadge] = Field(default=[], description="검증 배지 목록")
+    repair_count: Annotated[int, Field(ge=0, description="자동 복구 시도 횟수")] = 0
+
+
+# =============================================================================
+# TurnOutput (메인 응답 스키마)
+# =============================================================================
+
+
+class TurnOutput(BaseModel):
+    """턴 출력 (서버 → 클라이언트).
+
+    서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
+    Gemini Structured Outputs(JSON Schema)로 강제됩니다.
+
+    Hard Gate 필드 (RULE-003/004/005):
+        - economy: cost와 balance_after 필수, 잔액 음수 금지
+        - safety: blocked 시 안전한 대체 결과 제공
+        - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
+
+    Attributes:
+        language: 응답 언어 (요청과 동일)
+        narrative: 내러티브 텍스트 (표시용)
+        ui: UI 요소 (액션 덱, 오브젝트)
+        world: 세계 상태 변화 (delta 중심)
+        render: 렌더링 정보 (이미지 생성 작업)
+        economy: 경제 정보 (비용, 잔액)
+        safety: 안전 정책 정보
+        agent_console: 에이전트 실행 정보 (단계, 배지, 복구 횟수)
+
+    Example:
+        >>> output = TurnOutput(
+        ...     language=Language.KO,
+        ...     narrative="문이 삐걱거리며 열립니다...",
+        ...     economy=EconomyOutput(
+        ...         cost=CurrencyAmount(signal=5, memory_shard=0),
+        ...         balance_after=CurrencyAmount(signal=95, memory_shard=5),
+        ...     ),
+        ...     safety=SafetyOutput(blocked=False),
+        ... )
+        >>> schema = TurnOutput.model_json_schema()
+
+    Schema Generation:
+        >>> # Gemini Structured Outputs용 JSON Schema 생성
+        >>> json_schema = TurnOutput.model_json_schema()
+        >>> # response_json_schema 파라미터에 전달
+        >>> config = {
+        ...     "response_mime_type": "application/json",
+        ...     "response_json_schema": json_schema,
+        ... }
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # 필수 필드 (Hard Gate)
+    language: Language = Field(description="응답 언어 (요청과 동일)")
+    narrative: str = Field(description="내러티브 텍스트 (표시용)")
+    economy: EconomyOutput = Field(description="경제 정보 (비용, 잔액)")
+    safety: SafetyOutput = Field(description="안전 정책 정보")
+
+    # UI 관련 필드
+    ui: UIOutput = Field(default_factory=UIOutput, description="UI 요소")
+
+    # 세계 상태 필드
+    world: WorldDelta = Field(default_factory=WorldDelta, description="세계 상태 변화 (delta)")
+
+    # 렌더링 필드
+    render: RenderOutput = Field(default_factory=RenderOutput, description="렌더링 정보")
+
+    # 에이전트 콘솔 필드
+    agent_console: AgentConsole = Field(
+        default_factory=AgentConsole, description="에이전트 실행 정보"
+    )
+</file>
+
 <file path="backend/tests/integration/test_turn_streaming.py">
 """Unknown World - /api/turn HTTP Streaming 통합 테스트.
 
@@ -3510,6 +3908,183 @@ def test_schema_rembg_rules():
     )
 </file>
 
+<file path="CLAUDE.md">
+# AI 에이전트 전역 지침 (Unknown World)
+
+이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
+
+---
+
+## 프로젝트 개요
+
+**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
+
+- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
+- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
+- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
+
+---
+
+## SSOT(단일 출처) 및 충돌 해결 우선순위
+
+문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
+
+1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
+2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
+3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
+4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
+5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
+
+불확실하면 **추측하지 말고 질문**합니다.
+
+---
+
+## 핵심 원칙 (Non‑Negotiable)
+
+### 1) Prompt-only wrapper / Generic chatbot 회피
+
+- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
+- 반드시 다음이 존재해야 합니다:
+  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
+  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
+  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
+
+### 2) 채팅 버블 UI 금지, 게임 UI 고정
+
+- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
+- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
+  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
+    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
+
+### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
+
+- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
+- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
+
+### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
+
+- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
+- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
+
+### 5) 비용/지연은 UX/게임 메커닉으로 제어
+
+- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
+- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
+
+### 6) ko/en i18n: 혼합 출력 금지
+
+- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
+- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
+- 프롬프트는 언어별 `.md` 파일로 관리합니다.
+
+### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
+
+- BYOK(사용자 API 키 입력) 요구 금지(MVP).
+- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
+- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
+
+### 8) 관측 가능성(Observability) = UX의 일부
+
+- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
+- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
+
+---
+
+## 작업 표준 (Workflow)
+
+### 작업 시작 전 필수
+
+- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
+- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
+
+### 유닛(단계) 기반 개발
+
+- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
+- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
+- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
+
+### 문서 동기화
+
+- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
+- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
+
+### 리팩토링
+
+- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
+
+### 테스트
+
+- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
+- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
+
+### 커밋 메시지
+
+- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
+- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
+
+---
+
+## 품질 기준 (출시/데모 관점)
+
+### Hard Gate (필수 통과)
+
+- **Schema OK**: TurnOutput JSON이 스키마를 통과
+- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
+- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
+- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
+
+### Soft Gate (관측/튜닝)
+
+- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
+- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
+
+---
+
+## 금지사항 (절대 금지)
+
+- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
+- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
+- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
+- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
+- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
+- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
+- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
+
+---
+
+## 지침 운영/사용 가이드
+
+### Cursor 규칙 적용 방식
+
+- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
+- 규칙이 부족/충돌하면:
+  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
+  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
+
+### 온보딩(신규 합류자/에이전트) 10분 루프
+
+- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
+- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
+- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
+- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
+
+### 지침 업데이트 프로세스(권장)
+
+- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
+- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
+
+---
+
+## 참조 문서
+
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+- `vibe/ref/frontend-style-guide.md`
+- `vibe/ref/structured-outputs-guide.md`
+- `vibe/commands/*.md` / `.cursor/commands/*.md`
+- `.gemini/rules/commit-rules.md`
+</file>
+
 <file path="frontend/public/ui/manifest.schema.json">
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -3647,186 +4222,6 @@ def test_schema_rembg_rules():
 }
 </file>
 
-<file path="frontend/src/api/turnStream.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NDJSONParser } from './turnStream';
-
-describe('NDJSONParser', () => {
-  let parser: NDJSONParser;
-
-  beforeEach(() => {
-    parser = new NDJSONParser();
-  });
-
-  it('should parse a single complete line', () => {
-    const chunk = JSON.stringify({ type: 'test', value: 1 }) + '\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ type: 'test', value: 1 });
-  });
-
-  it('should parse multiple complete lines in one chunk', () => {
-    const chunk = JSON.stringify({ id: 1 }) + '\n' + JSON.stringify({ id: 2 }) + '\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(2);
-    expect(results[0]).toEqual({ id: 1 });
-    expect(results[1]).toEqual({ id: 2 });
-  });
-
-  it('should buffer partial lines and parse them when completed', () => {
-    const chunk1 = '{"id": 1';
-    const chunk2 = ', "val": "ok"}\n';
-
-    const results1 = parser.parse(chunk1);
-    expect(results1).toHaveLength(0);
-
-    const results2 = parser.parse(chunk2);
-    expect(results2).toHaveLength(1);
-    expect(results2[0]).toEqual({ id: 1, val: 'ok' });
-  });
-
-  it('should ignore empty lines', () => {
-    const chunk = '\n\n{"a":1}\n\n';
-    const results = parser.parse(chunk);
-    expect(results).toHaveLength(1);
-  });
-
-  it('should not crash on invalid JSON and continue', () => {
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const chunk = 'invalid json\n{"valid": true}\n';
-    const results = parser.parse(chunk);
-
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ valid: true });
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
-  });
-
-  it('should flush remaining buffer', () => {
-    parser.parse('{"id": 1}'); // No newline
-    const result = parser.flush();
-    expect(result).toEqual({ id: 1 });
-  });
-
-  it('should return null on flush with empty buffer', () => {
-    const result = parser.flush();
-    expect(result).toBeNull();
-  });
-});
-
-describe('executeTurnStream', () => {
-  const mockInput = {
-    language: 'ko-KR' as const,
-    text: 'Hello',
-    click: null,
-    client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-    economy_snapshot: { signal: 100, memory_shard: 0 },
-  };
-
-  const mockCallbacks = {
-    onStage: vi.fn(),
-    onRepair: vi.fn(),
-    onBadges: vi.fn(),
-    onNarrativeDelta: vi.fn(),
-    onFinal: vi.fn(),
-    onError: vi.fn(),
-    onComplete: vi.fn(),
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.fetch = vi.fn();
-  });
-
-  it('should process stream events correctly (including repair)', async () => {
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
-        );
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({ type: 'repair', attempt: 1, message: 'Schema fail, retrying' }) + '\n',
-          ),
-        );
-        controller.enqueue(
-          encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
-        );
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              type: 'final',
-              data: {
-                language: 'ko-KR',
-                narrative: 'Hello',
-                economy: {
-                  cost: { signal: 0, memory_shard: 0 },
-                  balance_after: { signal: 100, memory_shard: 0 },
-                },
-                safety: { blocked: false },
-              },
-            }) + '\n',
-          ),
-        );
-        controller.close();
-      },
-    });
-
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      body: stream,
-    });
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
-    expect(mockCallbacks.onRepair).toHaveBeenCalledWith(
-      expect.objectContaining({ attempt: 1, message: 'Schema fail, retrying' }),
-    );
-    expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'Hello' }),
-    );
-    expect(mockCallbacks.onFinal).toHaveBeenCalled();
-    expect(mockCallbacks.onComplete).toHaveBeenCalled();
-  });
-
-  it('should handle HTTP errors', async () => {
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-    });
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        code: 'STREAM_ERROR',
-        message: expect.stringContaining('500'),
-      }),
-    );
-  });
-
-  it('should handle fetch rejection', async () => {
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('Network failure'),
-    );
-
-    const { executeTurnStream } = await import('./turnStream');
-    await executeTurnStream(mockInput, mockCallbacks);
-
-    expect(mockCallbacks.onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'Network failure',
-      }),
-    );
-  });
-});
-</file>
-
 <file path="frontend/src/components/AgentConsole.test.tsx">
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -3955,6 +4350,133 @@ export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
 export default i18n;
 </file>
 
+<file path="frontend/src/locales/ko-KR/translation.json">
+{
+  "scene": {
+    "status": {
+      "default": "데이터 대기 중",
+      "loading": "동기화 중...",
+      "offline": "연결 끊김",
+      "blocked": "접근 제한됨",
+      "low_signal": "신호 약함",
+      "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "initial_sync": "전역 데이터 동기화 대기 중...",
+      "syncing": "데이터 동기화 중...",
+      "alt": "장면 이미지"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "대기열",
+      "badges": "검증 배지",
+      "repair": "자동 복구",
+      "status": {
+        "idle": "대기 중",
+        "processing": "처리 중"
+      },
+      "badges_empty": "[ 검증 대기 중 ]",
+      "repaired": "(복구됨)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "명령을 입력하세요...",
+    "processing": "처리 중...",
+    "execute": "실행",
+    "wait": "대기",
+    "panel_placeholder": "[ 준비 중 ]",
+    "scale_decrease": "글자 크기 줄이기",
+    "scale_increase": "글자 크기 늘리기",
+    "scale_label": "UI 스케일 설정"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal 소모",
+    "shard_cost": "Shard 소모",
+    "risk_level": "위험도"
+  },
+  "connection": {
+    "online": "온라인",
+    "offline": "오프라인"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ 드래그 앤 드롭 영역 ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ 목표/퀘스트 목록 ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ 고정된 기억/단서 ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ 이미지 업로드 슬롯 ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "탐색하기",
+        "description": "주변을 살펴본다"
+      },
+      "investigate": {
+        "label": "조사하기",
+        "description": "자세히 살펴본다"
+      },
+      "talk": {
+        "label": "대화하기",
+        "description": "말을 걸어본다"
+      }
+    },
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "미지의 세계에 오신 것을 환영합니다...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
+}
+</file>
+
 <file path="frontend/src/main.tsx">
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -3967,6 +4489,591 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+</file>
+
+<file path="frontend/src/schemas/turn.ts">
+/**
+ * Unknown World - TurnInput/TurnOutput Zod 스키마.
+ *
+ * 이 모듈은 백엔드 Pydantic 모델(U-005)과 1:1 대응하는 Zod 스키마를 정의합니다.
+ * 클라이언트 측 검증 및 타입 안전성을 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증 (서버 Pydantic + 클라 Zod)
+ *   - RULE-004: 검증 실패 시 안전 폴백 제공 (UI 멈춤 방지)
+ *   - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
+ *   - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
+ *   - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+ *
+ * Q1 결정 사항:
+ *   - schema_version 포함 (Option A): SaveGame/마이그레이션/검증에 유리
+ *
+ * @module schemas/turn
+ */
+
+import { z } from 'zod';
+
+// =============================================================================
+// 스키마 버전 (Q1 결정: Option A - 포함)
+// =============================================================================
+
+/**
+ * 현재 스키마 버전.
+ * SaveGame/마이그레이션/검증에 사용됩니다.
+ */
+export const SCHEMA_VERSION = '1.0.0' as const;
+
+// =============================================================================
+// 공통 Enum 타입
+// =============================================================================
+
+/**
+ * 지원 언어 (RULE-006).
+ * ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
+ * 모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
+ */
+export const LanguageSchema = z.enum(['ko-KR', 'en-US']);
+export type Language = z.infer<typeof LanguageSchema>;
+
+/**
+ * 테마 설정.
+ */
+export const ThemeSchema = z.enum(['dark', 'light']);
+export type Theme = z.infer<typeof ThemeSchema>;
+
+/**
+ * 에이전트 실행 단계 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
+ */
+export const AgentPhaseSchema = z.enum([
+  'parse',
+  'validate',
+  'plan',
+  'resolve',
+  'render',
+  'verify',
+  'commit',
+]);
+export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
+
+/**
+ * 검증 배지 (RULE-008).
+ * 턴 결과에 대한 검증 상태를 표시합니다.
+ */
+export const ValidationBadgeSchema = z.enum([
+  'schema_ok',
+  'schema_fail',
+  'economy_ok',
+  'economy_fail',
+  'safety_ok',
+  'safety_blocked',
+  'consistency_ok',
+  'consistency_fail',
+]);
+export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
+
+/**
+ * 모델/품질 선택 라벨 (RULE-008).
+ * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
+ */
+export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
+export type ModelLabel = z.infer<typeof ModelLabelSchema>;
+
+/**
+ * 행동 위험도 수준.
+ */
+export const RiskLevelSchema = z.enum(['low', 'medium', 'high']);
+export type RiskLevel = z.infer<typeof RiskLevelSchema>;
+
+// =============================================================================
+// 공통 하위 타입
+// =============================================================================
+
+/**
+ * 정규화 좌표 (RULE-009).
+ * 0~1000 범위의 정수입니다.
+ */
+export const CoordinateSchema = z.number().int().min(0).max(1000).describe('정규화 좌표 (0~1000)');
+export type Coordinate = z.infer<typeof CoordinateSchema>;
+
+/**
+ * 2D 바운딩 박스 (RULE-009).
+ * 좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
+ * 이미지 이해 bbox 포맷과 호환됩니다.
+ */
+export const Box2DSchema = z
+  .object({
+    ymin: CoordinateSchema.describe('Y 최소값 (상단)'),
+    xmin: CoordinateSchema.describe('X 최소값 (좌측)'),
+    ymax: CoordinateSchema.describe('Y 최대값 (하단)'),
+    xmax: CoordinateSchema.describe('X 최대값 (우측)'),
+  })
+  .strict();
+export type Box2D = z.infer<typeof Box2DSchema>;
+
+/**
+ * 재화 수량.
+ * signal과 memory_shard는 0 이상이어야 합니다 (RULE-005).
+ */
+export const CurrencyAmountSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('시그널 (기본 재화, 0 이상)'),
+    memory_shard: z.number().int().min(0).describe('기억 파편 (희귀 재화, 0 이상)'),
+  })
+  .strict();
+export type CurrencyAmount = z.infer<typeof CurrencyAmountSchema>;
+
+// =============================================================================
+// TurnInput 관련 타입
+// =============================================================================
+
+/**
+ * 클릭 입력 정보.
+ * 화면 오브젝트 클릭 시 전달되는 정보입니다.
+ */
+export const ClickInputSchema = z
+  .object({
+    object_id: z.string().describe('클릭한 오브젝트 ID'),
+    box_2d: Box2DSchema.nullable().default(null).describe('클릭 위치 바운딩 박스 (선택)'),
+  })
+  .strict();
+export type ClickInput = z.infer<typeof ClickInputSchema>;
+
+/**
+ * 클라이언트 정보.
+ */
+export const ClientInfoSchema = z
+  .object({
+    viewport_w: z.number().int().positive().describe('뷰포트 너비 (픽셀, 양수)'),
+    viewport_h: z.number().int().positive().describe('뷰포트 높이 (픽셀, 양수)'),
+    theme: ThemeSchema.default('dark').describe('현재 테마'),
+  })
+  .strict();
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+/**
+ * 재화 스냅샷 (클라이언트 → 서버).
+ * 클라이언트가 보유한 현재 재화 상태입니다.
+ */
+export const EconomySnapshotSchema = z
+  .object({
+    signal: z.number().int().min(0).describe('현재 시그널 잔액 (0 이상)'),
+    memory_shard: z.number().int().min(0).describe('현재 기억 파편 잔액 (0 이상)'),
+  })
+  .strict();
+export type EconomySnapshot = z.infer<typeof EconomySnapshotSchema>;
+
+/**
+ * 턴 입력 (클라이언트 → 서버).
+ * 사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+ */
+export const TurnInputSchema = z
+  .object({
+    language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
+    text: z.string().default('').describe('사용자 자연어 입력'),
+    action_id: z.string().nullable().default(null).describe('선택한 액션 카드 ID (선택)'),
+    click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
+    client: ClientInfoSchema.describe('클라이언트 환경 정보'),
+    economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
+  })
+  .strict();
+export type TurnInput = z.infer<typeof TurnInputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - UI
+// =============================================================================
+
+/**
+ * 비용 추정치 (U-009: 최소/최대 범위).
+ * 행동의 예상 비용 범위를 표시합니다.
+ */
+export const CostEstimateSchema = z
+  .object({
+    min: CurrencyAmountSchema.describe('최소 예상 비용'),
+    max: CurrencyAmountSchema.describe('최대 예상 비용'),
+  })
+  .strict();
+export type CostEstimate = z.infer<typeof CostEstimateSchema>;
+
+/**
+ * 액션 카드 (Action Deck).
+ * 매 턴 AI가 추천하는 행동 카드입니다.
+ *
+ * U-009 확장:
+ *   - cost_estimate: 최소/최대 비용 범위 (RULE-005)
+ *   - enabled: 서버 측 실행 가능 여부 판단 (Q1: Option A)
+ *   - disabled_reason: 비활성화 사유 (잔액 부족 등)
+ *   - is_alternative: 저비용/텍스트-only 대안 카드 여부
+ */
+export const ActionCardSchema = z
+  .object({
+    id: z.string().describe('카드 고유 ID'),
+    label: z.string().describe('카드 라벨 (표시용)'),
+    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
+    cost: CurrencyAmountSchema.describe('예상 비용 (기본)'),
+    cost_estimate: CostEstimateSchema.nullable().default(null).describe('비용 추정 범위 (선택)'),
+    risk: RiskLevelSchema.default('low').describe('위험도'),
+    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
+    reward_hint: z.string().nullable().default(null).describe('보상 힌트 (선택)'),
+    enabled: z.boolean().default(true).describe('실행 가능 여부 (서버 판단)'),
+    disabled_reason: z.string().nullable().default(null).describe('비활성화 사유 (선택)'),
+    is_alternative: z.boolean().default(false).describe('저비용 대안 카드 여부'),
+  })
+  .strict();
+export type ActionCard = z.infer<typeof ActionCardSchema>;
+
+/**
+ * 장면 오브젝트 (클릭 가능한 핫스팟).
+ * 좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
+ */
+export const SceneObjectSchema = z
+  .object({
+    id: z.string().describe('오브젝트 고유 ID'),
+    label: z.string().describe('오브젝트 라벨 (표시용)'),
+    box_2d: Box2DSchema.describe('바운딩 박스'),
+    interaction_hint: z.string().nullable().default(null).describe('상호작용 힌트 (선택)'),
+  })
+  .strict();
+export type SceneObject = z.infer<typeof SceneObjectSchema>;
+
+/**
+ * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+ * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+ */
+export const ActionDeckSchema = z
+  .object({
+    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
+  })
+  .strict();
+export type ActionDeck = z.infer<typeof ActionDeckSchema>;
+
+/**
+ * UI 출력 데이터.
+ * AI가 생성한 UI 요소들입니다.
+ * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
+ */
+export const UIOutputSchema = z
+  .object({
+    action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
+    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
+  })
+  .strict();
+export type UIOutput = z.infer<typeof UIOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - World
+// =============================================================================
+
+/**
+ * 중요 설정 고정 후보.
+ * 사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
+ */
+export const MemoryPinSchema = z
+  .object({
+    id: z.string().describe('핀 고유 ID'),
+    content: z.string().describe('고정할 내용'),
+    cost: CurrencyAmountSchema.describe('고정에 필요한 비용'),
+  })
+  .strict();
+export type MemoryPin = z.infer<typeof MemoryPinSchema>;
+
+/**
+ * 세계 규칙 (Rule Board).
+ * 현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
+ */
+export const WorldRuleSchema = z
+  .object({
+    id: z.string().describe('규칙 고유 ID'),
+    label: z.string().describe('규칙 이름'),
+    description: z.string().nullable().default(null).describe('규칙 상세 설명 (선택)'),
+  })
+  .strict();
+export type WorldRule = z.infer<typeof WorldRuleSchema>;
+
+/**
+ * 퀘스트/목표 (Quest Panel).
+ * 플레이어가 달성해야 하는 현재 목표입니다.
+ */
+export const QuestSchema = z
+  .object({
+    id: z.string().describe('퀘스트 고유 ID'),
+    label: z.string().describe('퀘스트 이름'),
+    is_completed: z.boolean().default(false).describe('달성 여부'),
+  })
+  .strict();
+export type Quest = z.infer<typeof QuestSchema>;
+
+/**
+ * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
+ * 이번 턴에서 변경된 세계 상태를 나타냅니다.
+ */
+export const WorldDeltaSchema = z
+  .object({
+    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
+    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
+    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
+    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
+    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
+    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
+  })
+  .strict();
+export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Render
+// =============================================================================
+
+/**
+ * 이미지 생성 작업.
+ * 조건부 이미지 생성/편집 요청입니다.
+ */
+export const ImageJobSchema = z
+  .object({
+    should_generate: z.boolean().describe('이미지를 생성해야 하는지'),
+    prompt: z.string().default('').describe('이미지 생성 프롬프트'),
+    model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
+    aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
+    image_size: z.string().default('1024x1024').describe('이미지 크기'),
+    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
+  })
+  .strict();
+export type ImageJob = z.infer<typeof ImageJobSchema>;
+
+/**
+ * 렌더링 출력 데이터.
+ * 이미지 생성/편집 관련 정보입니다.
+ */
+export const RenderOutputSchema = z
+  .object({
+    image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
+  })
+  .strict();
+export type RenderOutput = z.infer<typeof RenderOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Economy
+// =============================================================================
+
+/**
+ * 경제 출력 데이터 (RULE-005).
+ * 이번 턴의 비용과 잔액 정보입니다.
+ * 잔액 음수는 절대 불가 (서버 Hard gate).
+ */
+export const EconomyOutputSchema = z
+  .object({
+    cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
+    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
+  })
+  .strict();
+export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Safety
+// =============================================================================
+
+/**
+ * 안전 출력 데이터.
+ * 안전 정책 관련 정보입니다.
+ * 차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
+ */
+export const SafetyOutputSchema = z
+  .object({
+    blocked: z.boolean().default(false).describe('안전 정책에 의해 차단되었는지'),
+    message: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('차단 시 사용자에게 표시할 메시지 (선택)'),
+  })
+  .strict();
+export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
+
+// =============================================================================
+// TurnOutput 관련 타입 - Agent Console
+// =============================================================================
+
+/**
+ * 에이전트 콘솔 데이터 (RULE-008).
+ * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+ */
+export const AgentConsoleSchema = z
+  .object({
+    current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
+    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
+    repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
+  })
+  .strict();
+export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
+
+// =============================================================================
+// TurnOutput (메인 응답 스키마)
+// =============================================================================
+
+/**
+ * 턴 출력 (서버 → 클라이언트).
+ * 서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
+ *
+ * Hard Gate 필드 (RULE-003/004/005):
+ *   - economy: cost와 balance_after 필수, 잔액 음수 금지
+ *   - safety: blocked 시 안전한 대체 결과 제공
+ *   - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
+ */
+export const TurnOutputSchema = z
+  .object({
+    // 필수 필드 (Hard Gate)
+    language: LanguageSchema.describe('응답 언어 (요청과 동일)'),
+    narrative: z.string().describe('내러티브 텍스트 (표시용)'),
+    economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
+    safety: SafetyOutputSchema.describe('안전 정책 정보'),
+
+    // UI 관련 필드
+    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
+
+    // 세계 상태 필드
+    world: WorldDeltaSchema.default({
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    }).describe('세계 상태 변화 (delta)'),
+
+    // 렌더링 필드
+    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
+
+    // 에이전트 콘솔 필드
+    agent_console: AgentConsoleSchema.default({
+      current_phase: 'commit',
+      badges: [],
+      repair_count: 0,
+    }).describe('에이전트 실행 정보'),
+  })
+  .strict();
+export type TurnOutput = z.infer<typeof TurnOutputSchema>;
+
+// =============================================================================
+// 안전 폴백 (RULE-004)
+// =============================================================================
+
+/**
+ * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
+ * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
+ *
+ * @param language - 요청 언어
+ * @param repairCount - 복구 시도 횟수
+ * @param errorMessage - 오류 메시지 (선택)
+ */
+export function createFallbackTurnOutput(
+  language: Language,
+  repairCount: number = 0,
+  errorMessage?: string,
+): TurnOutput {
+  const fallbackNarrative =
+    language === 'ko-KR'
+      ? '[시스템] 응답을 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요.'
+      : '[System] An error occurred while processing the response. Please try again.';
+
+  const safetyMessage =
+    language === 'ko-KR'
+      ? '스키마 검증 실패로 인한 폴백 응답입니다.'
+      : 'This is a fallback response due to schema validation failure.';
+
+  return {
+    language,
+    narrative: errorMessage ?? fallbackNarrative,
+    economy: {
+      cost: { signal: 0, memory_shard: 0 },
+      balance_after: { signal: 0, memory_shard: 0 },
+    },
+    safety: {
+      blocked: false,
+      message: safetyMessage,
+    },
+    ui: {
+      action_deck: { cards: [] },
+      objects: [],
+    },
+    world: {
+      rules_changed: [],
+      inventory_added: [],
+      inventory_removed: [],
+      quests_updated: [],
+      relationships_changed: [],
+      memory_pins: [],
+    },
+    render: {
+      image_job: null,
+    },
+    agent_console: {
+      current_phase: 'commit',
+      badges: ['schema_fail'],
+      repair_count: repairCount,
+    },
+  };
+}
+
+// =============================================================================
+// 검증 헬퍼 함수
+// =============================================================================
+
+/**
+ * TurnOutput 검증 결과 타입.
+ */
+export type TurnOutputParseResult =
+  | { success: true; data: TurnOutput }
+  | { success: false; error: z.ZodError; fallback: TurnOutput };
+
+/**
+ * TurnOutput을 안전하게 파싱합니다.
+ * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
+ *
+ * @param data - 파싱할 데이터
+ * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
+ * @param repairCount - 현재 복구 시도 횟수
+ */
+export function safeParseTurnOutput(
+  data: unknown,
+  language: Language = 'ko-KR',
+  repairCount: number = 0,
+): TurnOutputParseResult {
+  const result = TurnOutputSchema.safeParse(data);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  return {
+    success: false,
+    error: result.error,
+    fallback: createFallbackTurnOutput(language, repairCount),
+  };
+}
+
+/**
+ * TurnInput을 검증합니다.
+ * 입력 데이터의 유효성을 엄격하게 검사합니다.
+ *
+ * @param data - 검증할 데이터
+ * @throws {z.ZodError} 검증 실패 시
+ */
+export function parseTurnInput(data: unknown): TurnInput {
+  return TurnInputSchema.parse(data);
+}
+
+/**
+ * TurnInput 안전 파싱 결과 타입.
+ */
+export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safeParse>;
+
+/**
+ * TurnInput을 안전하게 파싱합니다.
+ *
+ * @param data - 파싱할 데이터
+ */
+export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
+  return TurnInputSchema.safeParse(data);
+}
 </file>
 
 <file path="frontend/src/stores/uiPrefsStore.test.ts">
@@ -4338,6 +5445,69 @@ export function applyUIPrefsToDOM(state: UIPrefsState): void {
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
+</file>
+
+<file path="shared/README.md">
+# shared/
+
+이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
+
+## 📁 구조
+
+```
+shared/
+├── schemas/
+│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
+│       ├── turn_input.schema.json    # Client → Server 요청 스키마
+│       └── turn_output.schema.json   # Server → Client 응답 스키마
+└── README.md
+```
+
+## 🔄 SSOT 원칙 (RU-001-Q4)
+
+- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
+- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
+- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
+
+### 소비 전략 (Option B: 생성물 기반 동기화)
+
+| 소비자 | 도구/방식 | 생성물 경로 (권장) |
+|--------|-----------|-------------------|
+| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
+| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
+
+> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
+
+## 📋 스키마 파일 목록
+
+### Turn 계약 (MVP)
+
+| 파일 | 용도 | PRD 참조 |
+|------|------|----------|
+| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
+| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
+
+## ✅ 스키마 작성 가이드라인
+
+- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
+- **권장 속성**: `required`, `enum`, `description`을 적극 사용
+- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
+- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
+- **참조**: `vibe/ref/structured-outputs-guide.md`
+
+## ⚠️ 보안 주의사항 (RULE-007)
+
+- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
+- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
+- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
+
+## 📚 관련 문서
+
+- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
+- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
+- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
+- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
+- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
 </file>
 
 <file path="backend/src/unknown_world/__init__.py">
@@ -4873,6 +6043,187 @@ class MockOrchestrator:
                 repair_count=1,  # 복구 시도 횟수
             ),
         )
+</file>
+
+<file path="frontend/src/api/turnStream.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NDJSONParser } from './turnStream';
+
+describe('NDJSONParser', () => {
+  let parser: NDJSONParser;
+
+  beforeEach(() => {
+    parser = new NDJSONParser();
+  });
+
+  it('should parse a single complete line', () => {
+    const chunk = JSON.stringify({ type: 'test', value: 1 }) + '\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ type: 'test', value: 1 });
+  });
+
+  it('should parse multiple complete lines in one chunk', () => {
+    const chunk = JSON.stringify({ id: 1 }) + '\n' + JSON.stringify({ id: 2 }) + '\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(2);
+    expect(results[0]).toEqual({ id: 1 });
+    expect(results[1]).toEqual({ id: 2 });
+  });
+
+  it('should buffer partial lines and parse them when completed', () => {
+    const chunk1 = '{"id": 1';
+    const chunk2 = ', "val": "ok"}\n';
+
+    const results1 = parser.parse(chunk1);
+    expect(results1).toHaveLength(0);
+
+    const results2 = parser.parse(chunk2);
+    expect(results2).toHaveLength(1);
+    expect(results2[0]).toEqual({ id: 1, val: 'ok' });
+  });
+
+  it('should ignore empty lines', () => {
+    const chunk = '\n\n{"a":1}\n\n';
+    const results = parser.parse(chunk);
+    expect(results).toHaveLength(1);
+  });
+
+  it('should not crash on invalid JSON and continue', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chunk = 'invalid json\n{"valid": true}\n';
+    const results = parser.parse(chunk);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ valid: true });
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('should flush remaining buffer', () => {
+    parser.parse('{"id": 1}'); // No newline
+    const result = parser.flush();
+    expect(result).toEqual({ id: 1 });
+  });
+
+  it('should return null on flush with empty buffer', () => {
+    const result = parser.flush();
+    expect(result).toBeNull();
+  });
+});
+
+describe('executeTurnStream', () => {
+  const mockInput = {
+    language: 'ko-KR' as const,
+    text: 'Hello',
+    action_id: null,
+    click: null,
+    client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+    economy_snapshot: { signal: 100, memory_shard: 0 },
+  };
+
+  const mockCallbacks = {
+    onStage: vi.fn(),
+    onRepair: vi.fn(),
+    onBadges: vi.fn(),
+    onNarrativeDelta: vi.fn(),
+    onFinal: vi.fn(),
+    onError: vi.fn(),
+    onComplete: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+  });
+
+  it('should process stream events correctly (including repair)', async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ type: 'stage', name: 'parse', status: 'start' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({ type: 'repair', attempt: 1, message: 'Schema fail, retrying' }) + '\n',
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ type: 'narrative_delta', text: 'Hello' }) + '\n'),
+        );
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({
+              type: 'final',
+              data: {
+                language: 'ko-KR',
+                narrative: 'Hello',
+                economy: {
+                  cost: { signal: 0, memory_shard: 0 },
+                  balance_after: { signal: 100, memory_shard: 0 },
+                },
+                safety: { blocked: false },
+              },
+            }) + '\n',
+          ),
+        );
+        controller.close();
+      },
+    });
+
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      body: stream,
+    });
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onStage).toHaveBeenCalledWith(expect.objectContaining({ name: 'parse' }));
+    expect(mockCallbacks.onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ attempt: 1, message: 'Schema fail, retrying' }),
+    );
+    expect(mockCallbacks.onNarrativeDelta).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Hello' }),
+    );
+    expect(mockCallbacks.onFinal).toHaveBeenCalled();
+    expect(mockCallbacks.onComplete).toHaveBeenCalled();
+  });
+
+  it('should handle HTTP errors', async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'STREAM_ERROR',
+        message: expect.stringContaining('500'),
+      }),
+    );
+  });
+
+  it('should handle fetch rejection', async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Network failure'),
+    );
+
+    const { executeTurnStream } = await import('./turnStream');
+    await executeTurnStream(mockInput, mockCallbacks);
+
+    expect(mockCallbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Network failure',
+      }),
+    );
+  });
+});
 </file>
 
 <file path="frontend/src/components/SceneCanvas.tsx">
@@ -5676,6 +7027,341 @@ async def turn_stream(request: Request) -> StreamingResponse:
             "X-Request-Time": str(int(time.time() * 1000)),
         },
     )
+</file>
+
+<file path="frontend/public/ui/README.md">
+# UI 에셋 가이드 (nanobanana mcp SSOT)
+
+> **SSOT 경로**: `frontend/public/ui/`  
+> **도구**: `nanobanana mcp` (개발 전용, 런타임 의존 금지)  
+> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7, `vibe/ref/rembg-guide.md`
+
+---
+
+## 1. 핵심 원칙
+
+### 1.1 Dev-only 원칙 (RULE-007)
+
+- `nanobanana mcp`는 **개발 과정에서 정적 에셋을 제작**하는 도구입니다.
+- 제품 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 **금지**합니다.
+- 생성된 에셋은 이 디렉토리(`frontend/public/ui/`)에 커밋하여 정적 배포합니다.
+
+### 1.2 용어 SSOT (RULE-006)
+
+- 이 도구는 반드시 **`nanobanana mcp`** 로 표기합니다.
+- "나노바나나 MCP", "Nano Banana MCP", "banana mcp" 등 혼용 금지.
+- 모델 별칭("Nano Banana / Nano Banana Pro")은 문서 인용 시에만 제한적 사용.
+
+### 1.3 보안 (RULE-005)
+
+- 키/토큰 등 비밀정보를 레포/로그/문서에 남기지 않습니다.
+- 생성 과정에서 사용한 API 키나 인증 정보는 절대 커밋하지 않습니다.
+
+---
+
+## 2. 디렉토리 구조
+
+```
+frontend/public/ui/
+├── README.md              # 이 파일 (SSOT 규칙)
+├── manifest.schema.json   # 에셋 매니페스트 스키마
+├── manifest.json          # (생성 시) 실제 에셋 목록
+├── icons/                 # 아이콘 에셋
+│   ├── signal-16.png
+│   ├── signal-24.png
+│   ├── badge-ok-16.png
+│   └── ...
+├── placeholders/          # 상태/장면 placeholder
+│   ├── scene-loading.webp
+│   ├── scene-error.webp
+│   └── ...
+└── chrome/                # UI 프레임/장식
+    ├── panel-corner-tl.png
+    ├── panel-border-h.png
+    └── ...
+```
+
+---
+
+## 3. 네이밍 규칙
+
+### 3.1 기본 포맷
+
+```
+{용도}-{크기}.{확장자}
+{용도}-{상태}-{크기}.{확장자}
+```
+
+**예시**:
+
+- `signal-24.png` — Signal 아이콘, 24px
+- `badge-ok-16.png` — OK 배지, 16px
+- `scene-loading.webp` — 로딩 상태 placeholder
+
+### 3.2 규칙
+
+| 항목       | 규칙                                              |
+| ---------- | ------------------------------------------------- |
+| **케이스** | `kebab-case` (소문자 + 하이픈)                    |
+| **용도**   | 명확한 역할 표현 (signal, badge, scene, panel 등) |
+| **상태**   | 필요 시 상태 포함 (ok, fail, loading, error 등)   |
+| **크기**   | 픽셀 단위 숫자 (16, 24, 32, 64 등)                |
+| **확장자** | 용도에 맞게 선택 (아래 참조)                      |
+
+---
+
+## 4. 포맷 및 사이즈 규칙
+
+### 4.1 포맷 선택
+
+| 용도            | 기본 포맷  | 대안 | 비고                               |
+| --------------- | ---------- | ---- | ---------------------------------- |
+| **아이콘**      | PNG (투명) | -    | 작은 크기, 투명도 필수             |
+| **placeholder** | WebP       | PNG  | 용량 절감 우선 (Q1 결정: Option B) |
+| **chrome**      | PNG (투명) | -    | 프레임/장식, 투명도 필수           |
+
+> **배경 제거(필수 조건부)**: 아이콘/chrome 등 투명 배경이 필요한 에셋은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리합니다. (가이드: `vibe/ref/rembg-guide.md`)
+
+### 4.2 사이즈 규격
+
+| 용도            | 필수 사이즈 | 선택 사이즈 | 비고             |
+| --------------- | ----------- | ----------- | ---------------- |
+| **아이콘**      | 16, 24      | 32, 64      | 최소 2종 필수    |
+| **placeholder** | 가변        | -           | 용도별 적정 크기 |
+| **chrome**      | 가변        | -           | 타일링/반복 고려 |
+
+### 4.3 Retina 대응 (선택)
+
+- 필요 시 `image-set()`으로 1x/2x 제공
+- 파일명: `{name}-24.png`, `{name}-24@2x.png`
+
+---
+
+## 5. 성능 예산
+
+| 항목                | 상한  | 권장       |
+| ------------------- | ----- | ---------- |
+| **아이콘 1개**      | 30KB  | 20KB 이하  |
+| **placeholder 1개** | 300KB | 200KB 이하 |
+| **chrome 1개**      | 50KB  | 30KB 이하  |
+| **`ui/` 폴더 총합** | 1.5MB | 1MB 이하   |
+
+**초과 시 대응**:
+
+1. 압축/최적화 (TinyPNG, ImageOptim 등)
+2. 해상도/색상 축소
+3. 불필요 에셋 제거
+4. 예산 상향 시 근거 문서화 필요
+
+---
+
+## 6. 스타일 가이드
+
+### 6.1 CRT 테마 연동
+
+에셋은 `frontend/src/style.css`의 CSS 변수/테마와 조화를 이뤄야 합니다.
+
+```css
+/* 참조: CRT 테마 색상 */
+--bg-color: #0d0d0d; /* 배경 */
+--text-color: #33ff00; /* 인광 녹색 */
+--text-dim: #1a8000; /* 어두운 녹색 */
+--accent-color: #ff00ff; /* 마젠타 */
+--warning-color: #ffaa00; /* 주황색 */
+--error-color: #ff3333; /* 붉은색 */
+```
+
+### 6.2 스타일 원칙
+
+| 원칙                  | 설명                          |
+| --------------------- | ----------------------------- |
+| **레트로 퓨처리즘**   | CRT/터미널 미학과 조화        |
+| **기능적 미니멀리즘** | 불필요한 장식 배제            |
+| **톤 일관성**         | 인광 녹색 기반, 마젠타 포인트 |
+| **고대비**            | Readable 모드에서도 식별 가능 |
+
+### 6.3 금지 사항
+
+- ❌ 프로젝트 외부 로고/상표 복제
+- ❌ CRT 테마와 충돌하는 색상 (밝은 파스텔, 난색 계열 남용)
+- ❌ 복잡한 그라데이션/사진 스타일
+
+---
+
+## 7. 폴백 원칙 (필수)
+
+### 7.1 텍스트/이모지 폴백 유지
+
+에셋 로딩 실패/미지원 시에도 **UI가 깨지지 않도록** 텍스트/이모지 라벨을 유지해야 합니다.
+
+**예시** (React):
+
+```tsx
+<span className="icon-wrapper" aria-label="Signal">
+  <img
+    src="/ui/icons/signal-24.png"
+    alt=""
+    aria-hidden="true"
+    onError={(e) => (e.currentTarget.style.display = 'none')}
+  />
+  <span className="icon-fallback">📡</span>
+</span>
+```
+
+**CSS**:
+
+```css
+.icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+.icon-wrapper img + .icon-fallback {
+  display: none;
+}
+.icon-wrapper img[style*='display: none'] + .icon-fallback {
+  display: inline;
+}
+```
+
+### 7.2 폴백 요구사항
+
+| 에셋 유형       | 폴백 방식                |
+| --------------- | ------------------------ |
+| **아이콘**      | 이모지 또는 텍스트 라벨  |
+| **placeholder** | CSS 배경색 + 텍스트      |
+| **chrome**      | CSS border/shadow로 대체 |
+
+---
+
+## 8. 접근성 가이드
+
+### 8.1 필수 사항
+
+| 항목                          | 요구사항                            |
+| ----------------------------- | ----------------------------------- |
+| **색상만으로 의미 전달 금지** | 텍스트/라벨 병행                    |
+| **장식성 이미지**             | `aria-hidden="true"` 적용           |
+| **기능성 이미지**             | `alt` 텍스트 제공 또는 `aria-label` |
+| **대비**                      | Readable 모드에서도 4.5:1 이상      |
+
+### 8.2 예시
+
+```html
+<!-- 장식용 아이콘 (의미 없음) -->
+<img src="/ui/chrome/corner.png" alt="" aria-hidden="true" />
+
+<!-- 기능용 아이콘 (의미 있음) -->
+<button aria-label="신호 전송">
+  <img src="/ui/icons/signal-24.png" alt="Signal" />
+</button>
+```
+
+---
+
+## 9. 에셋 제작 워크플로우
+
+### 9.1 요청 → 제작 → 적용
+
+```
+1. 요청 정의
+   └── 용도, 사이즈, 스타일 명세 작성
+
+2. nanobanana mcp로 제작
+   └── 프롬프트에 CRT 스타일 키워드 포함
+   └── 색상 팔레트 준수
+   └── (필수 조건부) 배경 제거(rembg) 예정이면 **배경은 순백(#FFFFFF) 단색**으로 생성(그라데이션/텍스처/그림자 금지)
+
+3. (필수 조건부) rembg로 배경 제거
+   └── 아이콘/chrome 등 투명 배경이 필요한 에셋에서 배경이 남아 있으면 rembg로 제거
+   └── 모델 선택/옵션은 `vibe/ref/rembg-guide.md` 준수
+
+4. 리사이즈/압축
+   └── 성능 예산 확인
+   └── 필요 사이즈로 리사이즈
+
+5. 디렉토리 반영
+   └── 네이밍 규칙 준수
+   └── manifest.json 업데이트
+
+6. UI 적용 + 폴백 확인
+   └── 컴포넌트에 적용
+   └── 폴백 동작 테스트
+
+7. QA
+   └── 크기/대비/폴백/Readable 모드 확인
+```
+
+### 9.2 프롬프트 가이드 (예시)
+
+```
+CRT 터미널 스타일 아이콘,
+인광 녹색(#33ff00) 기반,
+검은 배경(#0d0d0d)에 어울리는 톤,
+심플한 라인 아트,
+픽셀 아트 또는 레트로 스타일,
+24x24 픽셀, 투명 배경
+(배경 제거 필요 시) solid white background (#FFFFFF), no gradient/texture/shadow
+```
+
+---
+
+## 10. 매니페스트 관리
+
+### 10.1 manifest.json
+
+모든 에셋은 `manifest.json`에 등록하여 추적합니다.
+
+```json
+{
+  "$schema": "./manifest.schema.json",
+  "version": "1.0.0",
+  "assets": [
+    {
+      "id": "signal-24",
+      "path": "icons/signal-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "📡",
+      "usedIn": ["EconomyHUD"],
+      "bytes": 1234
+    }
+  ]
+}
+```
+
+### 10.2 업데이트 시점
+
+- 에셋 추가/제거 시 manifest.json 동기화
+- U-033에서 QA 자동화 예정
+
+---
+
+## 11. 라이선스
+
+- 모든 에셋은 **프로젝트 내부 용도**로 제작됩니다.
+- 외부 로고/상표를 복제하지 않습니다.
+- `nanobanana mcp`로 생성된 에셋은 도구의 라이선스 정책을 따릅니다.
+- 에셋에 **SynthID 워터마크**가 포함될 수 있습니다 (AI 생성 표기).
+
+---
+
+## 12. 체크리스트 (에셋 추가 시)
+
+- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
+- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
+- [ ] 성능 예산 준수 (개별/총합)
+- [ ] (조건부) 투명 배경이 필요한 에셋은 `rembg`로 배경 제거 완료(알파 채널 확인)
+- [ ] (조건부) 배경 제거(rembg) 예정이면 원본 생성 단계에서 배경이 순백(#FFFFFF) 단색인지 확인(그라데이션/텍스처/그림자 금지)
+- [ ] CRT 테마 색상과 조화
+- [ ] 폴백 구현 확인
+- [ ] 접근성 속성 적용 (`aria-hidden` 또는 `alt`)
+- [ ] manifest.json 업데이트
+- [ ] Readable 모드에서 대비 확인
+
+---
+
+_마지막 업데이트: 2026-01-11_
+_문서 버전: 1.1.0_
 </file>
 
 <file path="frontend/src/components/AgentConsole.tsx">
@@ -7777,8 +9463,10 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas } from './components/SceneCanvas';
+import { ActionDeck } from './components/ActionDeck';
 import type { SceneCanvasState } from './types/scene';
 import { useAgentStore } from './stores/agentStore';
+import { useActionDeckStore } from './stores/actionDeckStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
 import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
@@ -7865,111 +9553,6 @@ function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
           <span className="cursor-blink">▌</span>
         </div>
       )}
-    </div>
-  );
-}
-
-// =============================================================================
-// 액션 덱 컴포넌트
-// =============================================================================
-
-interface ActionDeckProps {
-  cards: ActionCard[];
-  onCardClick?: (card: ActionCard) => void;
-  disabled?: boolean;
-}
-
-function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
-  const { t } = useTranslation();
-
-  // 카드가 없으면 기본 카드 표시 (i18n 키 기반)
-  const displayCards: ActionCard[] =
-    cards.length > 0
-      ? cards
-      : [
-          {
-            id: 'default-1',
-            label: t('action.default.explore.label'),
-            description: t('action.default.explore.description'),
-            cost: { signal: 1, memory_shard: 0 },
-            risk: 'low',
-            hint: null,
-          },
-          {
-            id: 'default-2',
-            label: t('action.default.investigate.label'),
-            description: t('action.default.investigate.description'),
-            cost: { signal: 2, memory_shard: 0 },
-            risk: 'medium',
-            hint: null,
-          },
-          {
-            id: 'default-3',
-            label: t('action.default.talk.label'),
-            description: t('action.default.talk.description'),
-            cost: { signal: 1, memory_shard: 0 },
-            risk: 'low',
-            hint: null,
-          },
-        ];
-
-  return (
-    <div className="action-deck">
-      {displayCards.map((card) => (
-        <button
-          key={card.id}
-          type="button"
-          className="action-card has-chrome"
-          onClick={() => onCardClick?.(card)}
-          disabled={disabled}
-        >
-          <div className="action-card-title">{card.label}</div>
-          <div className="action-card-cost">
-            <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
-              <img
-                src="/ui/icons/signal-16.png"
-                alt=""
-                aria-hidden="true"
-                className="icon-img"
-                style={{ width: 14, height: 14 }}
-                onError={(e) => e.currentTarget.classList.add('hidden')}
-              />
-              <span className="icon-fallback">⚡</span>
-            </span>{' '}
-            {card.cost.signal}
-            {card.cost.memory_shard > 0 && (
-              <>
-                {' | '}
-                <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
-                  <img
-                    src="/ui/icons/shard-16.png"
-                    alt=""
-                    aria-hidden="true"
-                    className="icon-img"
-                    style={{ width: 14, height: 14 }}
-                    onError={(e) => e.currentTarget.classList.add('hidden')}
-                  />
-                  <span className="icon-fallback">💎</span>
-                </span>{' '}
-                {card.cost.memory_shard}
-              </>
-            )}
-            {' | '}
-            <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
-              <img
-                src={`/ui/icons/risk-${card.risk}-16.png`}
-                alt=""
-                aria-hidden="true"
-                className={`icon-img risk-${card.risk}`}
-                style={{ width: 14, height: 14 }}
-                onError={(e) => e.currentTarget.classList.add('hidden')}
-              />
-              <span className="icon-fallback">⚠</span>
-            </span>{' '}
-            {card.risk}
-          </div>
-        </button>
-      ))}
     </div>
   );
 }
@@ -8108,9 +9691,11 @@ function App() {
   const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>(() => [
     { turn: 0, text: t('narrative.welcome') },
   ]);
-  const [actionCards, setActionCards] = useState<ActionCard[]>([]);
   const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
   const [isConnected, setIsConnected] = useState(true);
+
+  // Action Deck Store (U-009)
+  const { cards: actionCards, setCards: setActionCards } = useActionDeckStore();
 
   // Scene Canvas 상태 (U-031: Placeholder Pack)
   const [sceneState, setSceneState] = useState<SceneCanvasState>({
@@ -8145,35 +9730,37 @@ function App() {
   /**
    * TurnOutput을 받아 UI 상태를 업데이트합니다.
    */
-  const applyTurnOutput = useCallback((output: TurnOutput) => {
-    // 내러티브 추가
-    turnCountRef.current += 1;
-    const newTurn = turnCountRef.current;
-    setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
+  const applyTurnOutput = useCallback(
+    (output: TurnOutput) => {
+      // 내러티브 추가
+      turnCountRef.current += 1;
+      const newTurn = turnCountRef.current;
+      setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
 
-    // 액션 카드 업데이트
-    if (output.ui.action_deck.cards.length > 0) {
+      // 액션 카드 업데이트 (U-009: Action Deck Store 사용)
       setActionCards(output.ui.action_deck.cards);
-    }
 
-    // 경제 상태 업데이트 (RULE-005: 잔액 반영)
-    setEconomy({
-      signal: output.economy.balance_after.signal,
-      memory_shard: output.economy.balance_after.memory_shard,
-    });
-  }, []);
+      // 경제 상태 업데이트 (RULE-005: 잔액 반영)
+      setEconomy({
+        signal: output.economy.balance_after.signal,
+        memory_shard: output.economy.balance_after.memory_shard,
+      });
+    },
+    [setActionCards],
+  );
 
   /**
    * 턴을 실행합니다.
    */
   const executeTurn = useCallback(
-    (text: string, cardId?: string) => {
+    (text: string, actionId?: string) => {
       if (isStreaming) return;
 
       // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
       const turnInput: TurnInput = {
         language: getResolvedLanguage(),
-        text: text || (cardId ? t('action.card_select', { cardId }) : ''),
+        text: text || (actionId ? t('action.card_select', { cardId: actionId }) : ''),
+        action_id: actionId ?? null,
         click: null,
         client: {
           viewport_w: window.innerWidth,
@@ -8331,9 +9918,14 @@ function App() {
           </Panel>
         </aside>
 
-        {/* Footer: Action Deck + Command Input */}
+        {/* Footer: Action Deck + Command Input (U-009) */}
         <footer className="game-footer">
-          <ActionDeck cards={actionCards} onCardClick={handleCardClick} disabled={isStreaming} />
+          <ActionDeck
+            cards={actionCards}
+            onCardClick={handleCardClick}
+            disabled={isStreaming}
+            currentBalance={economy}
+          />
           <div className="command-input-area">
             <span className="command-prompt">&gt;</span>
             <input

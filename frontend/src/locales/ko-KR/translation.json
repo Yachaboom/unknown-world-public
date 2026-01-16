@@ -104,7 +104,17 @@
         "description": "말을 걸어본다"
       }
     },
-    "card_select": "카드 선택: {{cardId}}"
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
   },
   "narrative": {
     "welcome": "미지의 세계에 오신 것을 환영합니다...",

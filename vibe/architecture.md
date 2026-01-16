@@ -61,6 +61,8 @@ D:\Dev\unknown-world\
 │       ├── api/            # HTTP Streaming 클라이언트 (U-008)
 │       │   └── turnStream.ts
 │       ├── components/     # 게임 UI 컴포넌트 (U-008)
+│       │   ├── ActionDeck.tsx  # 액션 카드 덱 UI (U-009)
+│       │   ├── ActionDeck.test.tsx
 │       │   ├── AgentConsole.tsx
 │       │   ├── AgentConsole.test.tsx # 중요도 속성 검증 (U-037)
 │       │   ├── SceneCanvas.tsx # 씬 캔버스 및 상태별 렌더링 (U-031)
@@ -74,6 +76,8 @@ D:\Dev\unknown-world\
 │       ├── schemas/        # 클라이언트 측 스키마 및 검증 (U-006)
 │       │   └── turn.ts
 │       ├── stores/         # 상태 관리 (Zustand) (U-008, U-028)
+│       │   ├── actionDeckStore.ts # 액션 카드 상태 관리 (U-009)
+│       │   ├── actionDeckStore.test.ts
 │       │   ├── agentStore.ts
 │       │   ├── uiPrefsStore.ts # UI 설정 (스케일/마이그레이션 정책)
 │       │   └── uiPrefsStore.test.ts
@@ -129,8 +133,8 @@ D:\Dev\unknown-world\
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
-    - `stores/`: Agent Console 상태 및 UI 설정을 관리하는 Zustand 스토어. **U-037에 따라 Readable 모드가 제거되고 마이그레이션 로직이 포함됨.**
-    - `components/`: 게임 전용 UI 컴포넌트 모음. **중요도 기반 레이어링을 위해 `data-ui-importance` 속성을 활용함.**
+    - `stores/`: Agent Console 상태 및 UI 설정을 관리하는 Zustand 스토어. **U-009에 따라 Action Deck 상태 관리가 추가되었으며**, **U-037에 따라 Readable 모드가 제거되고 마이그레이션 로직이 포함됨.**
+    - `components/`: 게임 전용 UI 컴포넌트 모음. **U-009 Action Deck이 구현되었으며**, **중요도 기반 레이어링을 위해 `data-ui-importance` 속성을 활용함.**
     - `schemas/`: Zod를 활용한 턴 계약 검증 및 폴백 로직 정의.
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.

@@ -68,6 +68,7 @@ describe('executeTurnStream', () => {
   const mockInput = {
     language: 'ko-KR' as const,
     text: 'Hello',
+    action_id: null,
     click: null,
     client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
     economy_snapshot: { signal: 100, memory_shard: 0 },

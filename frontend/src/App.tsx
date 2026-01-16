@@ -16,8 +16,10 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas } from './components/SceneCanvas';
+import { ActionDeck } from './components/ActionDeck';
 import type { SceneCanvasState } from './types/scene';
 import { useAgentStore } from './stores/agentStore';
+import { useActionDeckStore } from './stores/actionDeckStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
 import type { TurnInput, TurnOutput, ActionCard } from './schemas/turn';
@@ -104,111 +106,6 @@ function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
           <span className="cursor-blink">▌</span>
         </div>
       )}
-    </div>
-  );
-}
-
-// =============================================================================
-// 액션 덱 컴포넌트
-// =============================================================================
-
-interface ActionDeckProps {
-  cards: ActionCard[];
-  onCardClick?: (card: ActionCard) => void;
-  disabled?: boolean;
-}
-
-function ActionDeck({ cards, onCardClick, disabled }: ActionDeckProps) {
-  const { t } = useTranslation();
-
-  // 카드가 없으면 기본 카드 표시 (i18n 키 기반)
-  const displayCards: ActionCard[] =
-    cards.length > 0
-      ? cards
-      : [
-          {
-            id: 'default-1',
-            label: t('action.default.explore.label'),
-            description: t('action.default.explore.description'),
-            cost: { signal: 1, memory_shard: 0 },
-            risk: 'low',
-            hint: null,
-          },
-          {
-            id: 'default-2',
-            label: t('action.default.investigate.label'),
-            description: t('action.default.investigate.description'),
-            cost: { signal: 2, memory_shard: 0 },
-            risk: 'medium',
-            hint: null,
-          },
-          {
-            id: 'default-3',
-            label: t('action.default.talk.label'),
-            description: t('action.default.talk.description'),
-            cost: { signal: 1, memory_shard: 0 },
-            risk: 'low',
-            hint: null,
-          },
-        ];
-
-  return (
-    <div className="action-deck">
-      {displayCards.map((card) => (
-        <button
-          key={card.id}
-          type="button"
-          className="action-card has-chrome"
-          onClick={() => onCardClick?.(card)}
-          disabled={disabled}
-        >
-          <div className="action-card-title">{card.label}</div>
-          <div className="action-card-cost">
-            <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
-              <img
-                src="/ui/icons/signal-16.png"
-                alt=""
-                aria-hidden="true"
-                className="icon-img"
-                style={{ width: 14, height: 14 }}
-                onError={(e) => e.currentTarget.classList.add('hidden')}
-              />
-              <span className="icon-fallback">⚡</span>
-            </span>{' '}
-            {card.cost.signal}
-            {card.cost.memory_shard > 0 && (
-              <>
-                {' | '}
-                <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
-                  <img
-                    src="/ui/icons/shard-16.png"
-                    alt=""
-                    aria-hidden="true"
-                    className="icon-img"
-                    style={{ width: 14, height: 14 }}
-                    onError={(e) => e.currentTarget.classList.add('hidden')}
-                  />
-                  <span className="icon-fallback">💎</span>
-                </span>{' '}
-                {card.cost.memory_shard}
-              </>
-            )}
-            {' | '}
-            <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
-              <img
-                src={`/ui/icons/risk-${card.risk}-16.png`}
-                alt=""
-                aria-hidden="true"
-                className={`icon-img risk-${card.risk}`}
-                style={{ width: 14, height: 14 }}
-                onError={(e) => e.currentTarget.classList.add('hidden')}
-              />
-              <span className="icon-fallback">⚠</span>
-            </span>{' '}
-            {card.risk}
-          </div>
-        </button>
-      ))}
     </div>
   );
 }
@@ -347,9 +244,11 @@ function App() {
   const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>(() => [
     { turn: 0, text: t('narrative.welcome') },
   ]);
-  const [actionCards, setActionCards] = useState<ActionCard[]>([]);
   const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
   const [isConnected, setIsConnected] = useState(true);
+
+  // Action Deck Store (U-009)
+  const { cards: actionCards, setCards: setActionCards } = useActionDeckStore();
 
   // Scene Canvas 상태 (U-031: Placeholder Pack)
   const [sceneState, setSceneState] = useState<SceneCanvasState>({
@@ -384,35 +283,37 @@ function App() {
   /**
    * TurnOutput을 받아 UI 상태를 업데이트합니다.
    */
-  const applyTurnOutput = useCallback((output: TurnOutput) => {
-    // 내러티브 추가
-    turnCountRef.current += 1;
-    const newTurn = turnCountRef.current;
-    setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
+  const applyTurnOutput = useCallback(
+    (output: TurnOutput) => {
+      // 내러티브 추가
+      turnCountRef.current += 1;
+      const newTurn = turnCountRef.current;
+      setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
 
-    // 액션 카드 업데이트
-    if (output.ui.action_deck.cards.length > 0) {
+      // 액션 카드 업데이트 (U-009: Action Deck Store 사용)
       setActionCards(output.ui.action_deck.cards);
-    }
 
-    // 경제 상태 업데이트 (RULE-005: 잔액 반영)
-    setEconomy({
-      signal: output.economy.balance_after.signal,
-      memory_shard: output.economy.balance_after.memory_shard,
-    });
-  }, []);
+      // 경제 상태 업데이트 (RULE-005: 잔액 반영)
+      setEconomy({
+        signal: output.economy.balance_after.signal,
+        memory_shard: output.economy.balance_after.memory_shard,
+      });
+    },
+    [setActionCards],
+  );
 
   /**
    * 턴을 실행합니다.
    */
   const executeTurn = useCallback(
-    (text: string, cardId?: string) => {
+    (text: string, actionId?: string) => {
       if (isStreaming) return;
 
       // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
       const turnInput: TurnInput = {
         language: getResolvedLanguage(),
-        text: text || (cardId ? t('action.card_select', { cardId }) : ''),
+        text: text || (actionId ? t('action.card_select', { cardId: actionId }) : ''),
+        action_id: actionId ?? null,
         click: null,
         client: {
           viewport_w: window.innerWidth,
@@ -570,9 +471,14 @@ function App() {
           </Panel>
         </aside>
 
-        {/* Footer: Action Deck + Command Input */}
+        {/* Footer: Action Deck + Command Input (U-009) */}
         <footer className="game-footer">
-          <ActionDeck cards={actionCards} onCardClick={handleCardClick} disabled={isStreaming} />
+          <ActionDeck
+            cards={actionCards}
+            onCardClick={handleCardClick}
+            disabled={isStreaming}
+            currentBalance={economy}
+          />
           <div className="command-input-area">
             <span className="command-prompt">&gt;</span>
             <input

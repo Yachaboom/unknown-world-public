@@ -1,5 +1,80 @@
 # 프로젝트 진행 상황
 
+## [2026-01-17 14:45] U-009[Mvp]: Action Deck(카드+비용/대안) UI 및 연동 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Footer 영역 Action Deck(3~6장) 구현, 카드별 비용/위험도/보상 힌트 표시 및 턴 실행 연동
+- **추가 컴포넌트**: `ActionDeck.tsx`, `actionDeckStore.ts`, `ActionDeck.test.tsx`, `vibe/unit-results/U-009[Mvp].md`
+- **달성 요구사항**: [PRD 6.7] Action Deck 상시 노출, [RULE-002] 게임 UI 레이아웃, [RULE-005] 비용 추정 및 대안 행동 노출
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **Zustand 5.x**: Action Deck의 카드 목록 및 선택 상태 관리
+- **React 19**: 카드 렌더링 및 `App.tsx` 통합
+- **Vitest**: 컴포넌트 및 스토어 로직 검증 (100% 통과)
+
+**설계 패턴 및 아키텍처 선택**:
+- **Server-First with Client Fallback**: 서버의 `enabled` 판단을 우선하되 클라이언트 측 잔액 기반 비활성화 로직을 폴백으로 구현
+- **Alternative Badge**: `is_alternative` 플래그가 설정된 카드를 시각적으로 분리하여 저비용 대안 선택 유도
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/ActionDeck.tsx (UI)
+    ├── stores/actionDeckStore.ts (상태)
+    └── App.tsx (통합 및 턴 실행 연동)
+
+### 성능 및 품질 지표
+- **정확성**: 서버 제공 비용 및 위험도 정보를 아이콘과 함께 정확히 렌더링
+- **견고성**: 잔액 부족 시 카드 비활성화 및 사유(Insufficient Balance) 표시 로직 확인
+
+### 의존성 변경
+- 없음
+
+### 다음 단계
+- [U-010[Mvp]] Scene Canvas + Hotspot Overlay(0~1000 bbox)
+
+---
+
+## [2026-01-15 11:30] U-039[Mvp]: i18n 언어 리소스 JSON 구조 도입(ko-KR/en-US) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 하드코딩된 UI 문자열을 BCP-47 표준(ko-KR, en-US) 기반 JSON 리소스로 분리 및 SSOT 체계 구축
+- **추가 컴포넌트**: `frontend/src/locales/` (JSON 리소스), `frontend/src/i18n.ts` (설정), `locales/README.md`
+- **달성 요구사항**: [RULE-006] ko/en 혼합 출력 금지 및 i18n 정책 준수, [PRD 3.1] 다국어 지원 기초 확보
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+- **i18next / react-i18next**: 전역 다국어 상태 관리 및 `t()` 훅 기반 번역 적용
+- **BCP-47**: `ko-KR`, `en-US` 표준 코드를 디렉토리 및 TurnInput.language와 동기화
+
+**설계 패턴 및 아키텍처 선택**:
+- **Namespace-based Structure**: `economy`, `agent`, `ui`, `panel` 등 도메인별 키 계층화로 유지보수성 향상
+- **Language Synchronization**: `getResolvedLanguage()` 유틸리티를 통해 턴 실행 시 현재 UI 언어를 서버로 자동 전송
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── locales/ (언어별 JSON 리소스)
+    ├── i18n.ts (초기화 및 설정)
+    └── i18n-scenario.test.ts (통합 시나리오 테스트)
+
+### 성능 및 품질 지표
+- **일관성**: 모든 UI 컴포넌트(Header, Panel, Console, Deck)에 i18n 키 적용 완료
+- **테스트**: 언어 전환 및 폴백 동작을 검증하는 통합 테스트 통과
+
+### 의존성 변경
+- `i18next`, `react-i18next` 활성화 및 버전 고정
+
+### 다음 단계
+- [U-009[Mvp]] Action Deck(카드+비용/대안) UI 고도화
+
+---
+
 ## [2026-01-14 23:58] U-038[Mvp]: 핵심 UI 아이콘 12종 재생성(v2, 퀄리티/용량/사이즈/식별성) 완료
 
 ### 구현 완료 항목

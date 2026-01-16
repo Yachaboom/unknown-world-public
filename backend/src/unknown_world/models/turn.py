@@ -206,6 +206,7 @@ class TurnInput(BaseModel):
     Attributes:
         language: 요청 언어 (응답도 동일 언어로 고정)
         text: 사용자 자연어 입력
+        action_id: 선택한 액션 카드 ID (선택)
         click: 오브젝트 클릭 정보 (선택)
         client: 클라이언트 환경 정보
         economy_snapshot: 현재 재화 상태
@@ -223,6 +224,7 @@ class TurnInput(BaseModel):
 
     language: Language = Field(description="요청 언어 (응답도 동일 언어로 고정)")
     text: str = Field(default="", description="사용자 자연어 입력")
+    action_id: str | None = Field(default=None, description="선택한 액션 카드 ID (선택)")
     click: ClickInput | None = Field(default=None, description="오브젝트 클릭 정보 (선택)")
     client: ClientInfo = Field(description="클라이언트 환경 정보")
     economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
@@ -231,6 +233,15 @@ class TurnInput(BaseModel):
 # =============================================================================
 # TurnOutput 관련 타입 - UI
 # =============================================================================
+
+
+class CostEstimate(BaseModel):
+    """비용 추정치 (최소/최대 범위)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    min: CurrencyAmount = Field(description="최소 예상 비용")
+    max: CurrencyAmount = Field(description="최대 예상 비용")
 
 
 class ActionCard(BaseModel):
@@ -243,9 +254,14 @@ class ActionCard(BaseModel):
         id: 카드 고유 ID
         label: 카드 라벨 (표시용)
         description: 카드 설명 (선택)
-        cost: 예상 비용
+        cost: 예상 비용 (기본)
+        cost_estimate: 비용 추정 범위 (선택)
         risk: 위험도
         hint: 예상 결과 힌트 (선택)
+        reward_hint: 보상 힌트 (선택)
+        enabled: 실행 가능 여부 (서버 판단)
+        disabled_reason: 비활성화 사유 (선택)
+        is_alternative: 저비용 대안 카드 여부
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -253,9 +269,14 @@ class ActionCard(BaseModel):
     id: str = Field(description="카드 고유 ID")
     label: str = Field(description="카드 라벨 (표시용)")
     description: str | None = Field(default=None, description="카드 설명 (선택)")
-    cost: CurrencyAmount = Field(description="예상 비용")
+    cost: CurrencyAmount = Field(description="예상 비용 (기본)")
+    cost_estimate: CostEstimate | None = Field(default=None, description="비용 추정 범위 (선택)")
     risk: RiskLevel = Field(default=RiskLevel.LOW, description="위험도")
     hint: str | None = Field(default=None, description="예상 결과 힌트 (선택)")
+    reward_hint: str | None = Field(default=None, description="보상 힌트 (선택)")
+    enabled: bool = Field(default=True, description="실행 가능 여부 (서버 판단)")
+    disabled_reason: str | None = Field(default=None, description="비활성화 사유 (선택)")
+    is_alternative: bool = Field(default=False, description="저비용 대안 카드 여부")
 
 
 class SceneObject(BaseModel):

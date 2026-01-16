@@ -177,6 +177,7 @@ export const TurnInputSchema = z
   .object({
     language: LanguageSchema.describe('요청 언어 (응답도 동일 언어로 고정)'),
     text: z.string().default('').describe('사용자 자연어 입력'),
+    action_id: z.string().nullable().default(null).describe('선택한 액션 카드 ID (선택)'),
     click: ClickInputSchema.nullable().default(null).describe('오브젝트 클릭 정보 (선택)'),
     client: ClientInfoSchema.describe('클라이언트 환경 정보'),
     economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
@@ -189,17 +190,40 @@ export type TurnInput = z.infer<typeof TurnInputSchema>;
 // =============================================================================
 
 /**
+ * 비용 추정치 (U-009: 최소/최대 범위).
+ * 행동의 예상 비용 범위를 표시합니다.
+ */
+export const CostEstimateSchema = z
+  .object({
+    min: CurrencyAmountSchema.describe('최소 예상 비용'),
+    max: CurrencyAmountSchema.describe('최대 예상 비용'),
+  })
+  .strict();
+export type CostEstimate = z.infer<typeof CostEstimateSchema>;
+
+/**
  * 액션 카드 (Action Deck).
  * 매 턴 AI가 추천하는 행동 카드입니다.
+ *
+ * U-009 확장:
+ *   - cost_estimate: 최소/최대 비용 범위 (RULE-005)
+ *   - enabled: 서버 측 실행 가능 여부 판단 (Q1: Option A)
+ *   - disabled_reason: 비활성화 사유 (잔액 부족 등)
+ *   - is_alternative: 저비용/텍스트-only 대안 카드 여부
  */
 export const ActionCardSchema = z
   .object({
     id: z.string().describe('카드 고유 ID'),
     label: z.string().describe('카드 라벨 (표시용)'),
     description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
-    cost: CurrencyAmountSchema.describe('예상 비용'),
+    cost: CurrencyAmountSchema.describe('예상 비용 (기본)'),
+    cost_estimate: CostEstimateSchema.nullable().default(null).describe('비용 추정 범위 (선택)'),
     risk: RiskLevelSchema.default('low').describe('위험도'),
     hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
+    reward_hint: z.string().nullable().default(null).describe('보상 힌트 (선택)'),
+    enabled: z.boolean().default(true).describe('실행 가능 여부 (서버 판단)'),
+    disabled_reason: z.string().nullable().default(null).describe('비활성화 사유 (선택)'),
+    is_alternative: z.boolean().default(false).describe('저비용 대안 카드 여부'),
   })
   .strict();
 export type ActionCard = z.infer<typeof ActionCardSchema>;

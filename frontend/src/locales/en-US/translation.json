@@ -104,7 +104,17 @@
         "description": "Start a conversation"
       }
     },
-    "card_select": "Card selected: {{cardId}}"
+    "card_select": "Card selected: {{cardId}}",
+    "deck_label": "Action Cards",
+    "alternative": "ALT",
+    "insufficient_balance": "Insufficient balance",
+    "all_disabled_notice": "No actions available. Check alternatives.",
+    "risk": {
+      "low": "Low",
+      "medium": "Med",
+      "high": "High"
+    },
+    "cost_range": "{{min}}~{{max}}"
   },
   "narrative": {
     "welcome": "Welcome to the Unknown World...",
