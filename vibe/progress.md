@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-18 01:15] RU-003-T1: SceneCanvas `scene(imageUrl)` 전이 SSOT 확정 및 TODO 정리 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-T1] 회기 기술 부채(TODO) 정리: SceneCanvas의 `scene(imageUrl)` 전이 SSOT 확정
+- **개선 사항**:
+    - **Scene 이미지 SSOT 확정**: `TurnOutput` 계약(스키마)에 `ui.scene.image_url` 필드를 추가하여 씬 이미지의 단일 출처 확보
+    - **상태 전이 로직 중앙화**: `worldStore.applyTurnOutput`에서 이미지 URL 존재 여부와 안전 정책(`safety.blocked`)을 결합하여 `sceneState`를 자동으로 결정하도록 구현
+    - **App.tsx 기술 부채 제거**: `App.tsx`에 남아있던 "scene 상태 전이 미정" TODO를 제거하고 명시적인 계약 기반 분기로 대체
+    - **스트리밍 일관성 강화**: `turnRunner`의 종료 콜백에서 수동으로 상태를 리셋하던 로직을 제거하고 `worldStore`의 SSOT 결정을 따르도록 정제
+- **영향 범위**: `shared/schemas/turn/`, `frontend/src/schemas/turn.ts`, `frontend/src/stores/worldStore.ts`, `frontend/src/turn/turnRunner.ts`, `frontend/src/App.tsx`
+
+### 기술적 세부사항
+
+- **Schema-driven Transition**: `ui.scene.image_url`이 존재하면 `status: 'scene'`, 없으면 `status: 'default'`, 차단 시 `status: 'blocked'`로 전이되는 결정 행렬을 `applyTurnOutput`에 내장
+- **Redundant Logic Removal**: `onComplete`에서 `sceneState`를 `default`로 강제하던 중복 코드를 제거하여 턴 결과(이미지 존재 시)가 UI에 유지되도록 보장
+
+### 검증
+
+- **수동 검증 완료**: `TurnOutput`에 이미지 URL이 포함될 경우 SceneCanvas가 `scene` 상태로 정상 전환됨을 확인. 에러 및 차단 시에도 의도한 플레이스홀더 상태가 유지됨을 확인.
+
+---
+
 ## [2026-01-18 00:40] RU-003-S2: 엣지 케이스(Hotspot 겹침/Resize/스트리밍) 일관성 강화 완료
 
 ### 작업 내용

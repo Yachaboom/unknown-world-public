@@ -186,9 +186,11 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 - **연결 상태 복구 (RU-003-S1)**:
     - 스트림 시작 시 또는 성공(`onFinal`) 수신 시 `connected=true`로 낙관적 복구.
     - 에러 발생 시 `connected=false`로 즉시 전환.
-- **Scene 상태 전이 (RU-003-S1)**:
-    - **성공 종료**: 스트림 중 에러가 없었다면 `default` 또는 `scene` 상태로 복구.
-    - **에러 종료**: `offline`, `blocked`, `low_signal` 등 에러 화면을 스트림이 끝난 후에도 유지 (다음 성공 시에만 해제).
+- **Scene 상태 전이 (RU-003-S1/T1)**:
+    - **SSOT 확정**: `worldStore.applyTurnOutput`이 `ui.scene.image_url` 존재 여부를 기준으로 `sceneState`를 결정함.
+    - **성공 종료**: 스트림 중 에러가 없었다면 `image_url` 유무에 따라 `scene` 또는 `default` 상태로 자동 전이.
+    - **에러/차단 종료**: `onError` 또는 `safety.blocked` 발생 시 `offline`, `blocked`, `low_signal` 등 에러 화면을 유지.
+    - **로직 단일화**: `turnRunner` 등 외부 모듈에서의 수동 리셋을 금지하고 `TurnOutput` 계약에 의존함.
 - **Abort(취소) 정책 (RU-003-S1)**:
     - 취소(Abort) 시에는 `onComplete`를 호출하지 않음 (Option B).
     - 호출자(Turn Runner/App)가 취소 의도를 파악하고 직접 UI를 스트리밍 종료 상태로 복구해야 함.

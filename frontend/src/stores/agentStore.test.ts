@@ -84,7 +84,7 @@ describe('agentStore', () => {
         balance_after: { signal: 100, memory_shard: 0 },
       },
       safety: { blocked: false, message: null },
-      ui: { action_deck: { cards: [] }, objects: [] },
+      ui: { action_deck: { cards: [] }, objects: [], scene: { image_url: null, alt_text: null } },
       world: {
         rules_changed: [],
         inventory_added: [],

@@ -172,10 +172,8 @@ export function createTurnRunner(deps: {
     // Scene Canvas를 로딩 상태로 전환 (U-031)
     worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
-    // RU-003-S1: 에러 발생 여부 추적 (onComplete에서 sceneState 복구 정책 분기용)
-    let hasError = false;
-
     // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
+    // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
     const callbacks: StreamCallbacks = {
       // Stage/Badges/NarrativeDelta → agentStore로만 전달
       onStage: (event) => {
@@ -197,8 +195,6 @@ export function createTurnRunner(deps: {
       },
       // Error → agentStore.handleError + worldStore 상태 복구
       onError: (event) => {
-        // RU-003-S1: 에러 발생 플래그 설정 (onComplete에서 sceneState 유지 결정)
-        hasError = true;
         useAgentStore.getState().handleError(event);
         useWorldStore.getState().setConnected(false);
         // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
@@ -211,16 +207,14 @@ export function createTurnRunner(deps: {
           useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
         }
       },
-      // Complete → agentStore.completeStream + worldStore 씬 상태 복구
+      // Complete → agentStore.completeStream
+      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
+      // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
+      // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
       onComplete: () => {
         useAgentStore.getState().completeStream();
-        // RU-003-S1: 에러가 발생한 경우 sceneState를 유지 (offline/blocked/low_signal)
-        // 에러가 없었던 성공 케이스에서만 default로 복원
-        if (!hasError) {
-          // TODO: TurnOutput에 scene.imageUrl이 있으면 'scene' 상태로 전환
-          useWorldStore.getState().setSceneState({ status: 'default', message: '' });
-        }
-        // 에러 상태인 경우 sceneState 유지 → 다음 성공 턴에서 복구됨
+        // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
+        // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
       },
     };
 
@@ -303,10 +297,8 @@ export function useTurnRunner(deps: {
       // Scene Canvas를 로딩 상태로 전환 (U-031)
       worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
-      // RU-003-S1: 에러 발생 여부 추적 (onComplete에서 sceneState 복구 정책 분기용)
-      let hasError = false;
-
       // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
+      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
       const callbacks: StreamCallbacks = {
         onStage: (event) => {
           useAgentStore.getState().handleStage(event);
@@ -324,10 +316,9 @@ export function useTurnRunner(deps: {
           useWorldStore.getState().setConnected(true);
         },
         onError: (event) => {
-          // RU-003-S1: 에러 발생 플래그 설정 (onComplete에서 sceneState 유지 결정)
-          hasError = true;
           useAgentStore.getState().handleError(event);
           useWorldStore.getState().setConnected(false);
+          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
           const errorCode = event.code;
           if (errorCode === 'SAFETY_BLOCKED') {
             useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
@@ -337,15 +328,14 @@ export function useTurnRunner(deps: {
             useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
           }
         },
+        // Complete → agentStore.completeStream
+        // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
+        // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
+        // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
         onComplete: () => {
           useAgentStore.getState().completeStream();
-          // RU-003-S1: 에러가 발생한 경우 sceneState를 유지 (offline/blocked/low_signal)
-          // 에러가 없었던 성공 케이스에서만 default로 복원
-          if (!hasError) {
-            // TODO: TurnOutput에 scene.imageUrl이 있으면 'scene' 상태로 전환
-            useWorldStore.getState().setSceneState({ status: 'default', message: '' });
-          }
-          // 에러 상태인 경우 sceneState 유지 → 다음 성공 턴에서 복구됨
+          // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
+          // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
         },
       };
 

@@ -154,7 +154,30 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
     const newSceneObjects = output.ui.objects;
 
-    // 5. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
+    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
+    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
+    // - 없으면 'default' 상태 유지
+    // - safety.blocked인 경우 'blocked' 상태로 전환
+    let newSceneState: SceneCanvasState;
+    if (output.safety.blocked) {
+      newSceneState = {
+        status: 'blocked',
+        message: output.safety.message ?? undefined,
+      };
+    } else if (output.ui.scene?.image_url) {
+      newSceneState = {
+        status: 'scene',
+        imageUrl: output.ui.scene.image_url,
+        message: output.ui.scene.alt_text ?? undefined,
+      };
+    } else {
+      newSceneState = {
+        status: 'default',
+        message: '',
+      };
+    }
+
+    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
     // Action Deck 카드 업데이트 (U-009)
     useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
 
@@ -166,12 +189,13 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       useInventoryStore.getState().removeItems(output.world.inventory_removed);
     }
 
-    // 6. 상태 업데이트
+    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함)
     set({
       turnCount: newTurnCount,
       narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
       economy: newEconomy,
       sceneObjects: newSceneObjects,
+      sceneState: newSceneState,
     });
 
     // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===

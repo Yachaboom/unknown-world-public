@@ -271,14 +271,42 @@ export const ActionDeckSchema = z
 export type ActionDeck = z.infer<typeof ActionDeckSchema>;
 
 /**
+ * Scene 표시 정보 (RU-003-T1: Scene 이미지 SSOT).
+ *
+ * TurnOutput에서 Scene Canvas에 표시할 이미지 정보를 제공합니다.
+ * image_url이 존재하면 SceneCanvas는 'scene' 상태로 전환됩니다.
+ * image_url이 없으면 'default' 상태를 유지합니다.
+ */
+export const SceneOutputSchema = z
+  .object({
+    image_url: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('Scene 이미지 URL (존재 시 scene 상태로 전환)'),
+    alt_text: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('이미지 대체 텍스트 (접근성용, 선택)'),
+  })
+  .strict();
+export type SceneOutput = z.infer<typeof SceneOutputSchema>;
+
+/**
  * UI 출력 데이터.
  * AI가 생성한 UI 요소들입니다.
  * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
+ *
+ * RU-003-T1: scene 필드 추가 - Scene Canvas의 이미지 표시 정보 SSOT.
  */
 export const UIOutputSchema = z
   .object({
     action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
     objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
+    scene: SceneOutputSchema.default({ image_url: null, alt_text: null }).describe(
+      'Scene 표시 정보 (RU-003-T1)',
+    ),
   })
   .strict();
 export type UIOutput = z.infer<typeof UIOutputSchema>;
@@ -449,8 +477,12 @@ export const TurnOutputSchema = z
     economy: EconomyOutputSchema.describe('경제 정보 (비용, 잔액)'),
     safety: SafetyOutputSchema.describe('안전 정책 정보'),
 
-    // UI 관련 필드
-    ui: UIOutputSchema.default({ action_deck: { cards: [] }, objects: [] }).describe('UI 요소'),
+    // UI 관련 필드 (RU-003-T1: scene 필드 추가)
+    ui: UIOutputSchema.default({
+      action_deck: { cards: [] },
+      objects: [],
+      scene: { image_url: null, alt_text: null },
+    }).describe('UI 요소'),
 
     // 세계 상태 필드
     world: WorldDeltaSchema.default({
@@ -516,6 +548,7 @@ export function createFallbackTurnOutput(
     ui: {
       action_deck: { cards: [] },
       objects: [],
+      scene: { image_url: null, alt_text: null },
     },
     world: {
       rules_changed: [],

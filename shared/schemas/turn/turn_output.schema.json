@@ -426,9 +426,43 @@
       "title": "SceneObject",
       "type": "object"
     },
+    "SceneOutput": {
+      "additionalProperties": false,
+      "description": "Scene 표시 정보 (RU-003-T1: Scene 이미지 SSOT).\n\nTurnOutput에서 Scene Canvas에 표시할 이미지 정보를 제공합니다.\nimage_url이 존재하면 SceneCanvas는 'scene' 상태로 전환됩니다.\nimage_url이 없으면 'default' 상태를 유지합니다.\n\nAttributes:\n    image_url: Scene 이미지 URL (존재 시 scene 상태로 전환)\n    alt_text: 이미지 대체 텍스트 (접근성용, 선택)",
+      "properties": {
+        "image_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Scene 이미지 URL (존재 시 scene 상태로 전환)",
+          "title": "Image Url"
+        },
+        "alt_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이미지 대체 텍스트 (접근성용, 선택)",
+          "title": "Alt Text"
+        }
+      },
+      "title": "SceneOutput",
+      "type": "object"
+    },
     "UIOutput": {
       "additionalProperties": false,
-      "description": "UI 출력 데이터.\n\nAI가 생성한 UI 요소들입니다.\n채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).\n\nAttributes:\n    action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)\n    objects: 클릭 가능한 장면 오브젝트 목록",
+      "description": "UI 출력 데이터.\n\nAI가 생성한 UI 요소들입니다.\n채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).\n\nRU-003-T1: scene 필드 추가 - Scene Canvas의 이미지 표시 정보 SSOT.\n\nAttributes:\n    action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)\n    objects: 클릭 가능한 장면 오브젝트 목록\n    scene: Scene 표시 정보 (RU-003-T1)",
       "properties": {
         "action_deck": {
           "$ref": "#/$defs/ActionDeck",
@@ -442,6 +476,14 @@
           },
           "title": "Objects",
           "type": "array"
+        },
+        "scene": {
+          "$ref": "#/$defs/SceneOutput",
+          "default": {
+            "image_url": null,
+            "alt_text": null
+          },
+          "description": "Scene 표시 정보 (RU-003-T1)"
         }
       },
       "title": "UIOutput",

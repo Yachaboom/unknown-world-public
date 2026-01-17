@@ -268,6 +268,7 @@ function createFallbackTurnOutput(language: Language): TurnOutput {
     ui: {
       action_deck: { cards: [] },
       objects: [],
+      scene: { image_url: null, alt_text: null },
     },
     world: {
       rules_changed: [],
@@ -446,6 +447,7 @@ function createClientFallbackTurnOutput(
     ui: {
       action_deck: { cards: [] },
       objects: [],
+      scene: { image_url: null, alt_text: null },
     },
     world: {
       rules_changed: [],
