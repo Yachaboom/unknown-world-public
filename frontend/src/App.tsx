@@ -8,6 +8,10 @@
  *
  * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
  *
+ * RU-003-Q4: App.tsx는 "레이아웃 + 이벤트 라우팅"에 집중
+ * - 세션/월드 상태는 worldStore로 이동
+ * - TurnOutput 반영은 worldStore.applyTurnOutput으로 단일화
+ *
  * @see vibe/ref/frontend-style-guide.md
  * @see vibe/prd.md 6.7/6.8/9장
  */
@@ -27,24 +31,17 @@ import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
 import { InventoryPanel } from './components/InventoryPanel';
-import type { SceneCanvasState } from './types/scene';
-import type { SceneObject } from './schemas/turn';
 import { useAgentStore } from './stores/agentStore';
 import { useActionDeckStore } from './stores/actionDeckStore';
-import { useInventoryStore, parseInventoryAdded } from './stores/inventoryStore';
+import { useInventoryStore } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM, UI_SCALES, type UIScale } from './stores/uiPrefsStore';
+import {
+  useWorldStore,
+  type NarrativeEntry,
+} from './stores/worldStore';
 import { startTurnStream, type StreamCallbacks } from './api/turnStream';
-import type { TurnInput, TurnOutput, ActionCard, DropInput, Box2D } from './schemas/turn';
+import type { TurnInput, ActionCard, DropInput, Box2D } from './schemas/turn';
 import { getResolvedLanguage } from './i18n';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-interface NarrativeEntry {
-  turn: number;
-  text: string;
-}
 
 // =============================================================================
 // 패널 컴포넌트
@@ -250,35 +247,67 @@ function GameHeader({
 function App() {
   const { t } = useTranslation();
 
-  // 상태
+  // 로컬 UI 상태 (App 내에서만 관리하는 상태)
   const [inputText, setInputText] = useState('');
-  const turnCountRef = useRef(0);
-  const [narrativeEntries, setNarrativeEntries] = useState<NarrativeEntry[]>(() => [
-    { turn: 0, text: t('narrative.welcome') },
-  ]);
-  const [economy, setEconomy] = useState({ signal: 100, memory_shard: 5 });
-  const [isConnected, setIsConnected] = useState(true);
+
+  // World Store (RU-003-Q4: 세션/월드 상태 SSOT)
+  const {
+    economy,
+    isConnected,
+    sceneState,
+    sceneObjects,
+    narrativeEntries,
+    applyTurnOutput,
+    appendSystemNarrative,
+    setSceneState,
+    setConnected,
+    setSceneObjects,
+    initialize: initializeWorld,
+  } = useWorldStore();
 
   // Action Deck Store (U-009)
-  const { cards: actionCards, setCards: setActionCards } = useActionDeckStore();
+  const { cards: actionCards } = useActionDeckStore();
 
   // Inventory Store (U-011)
   const {
     addItems: addInventoryItems,
-    removeItems: removeInventoryItems,
     startDrag,
     endDrag,
     items: inventoryItems,
   } = useInventoryStore();
 
-  // DEV: 데모용 mock 인벤토리 초기화 (U-011)
+  // 초기화: 월드 상태 및 데모용 mock 데이터 (RU-003-Q4)
   useEffect(() => {
+    // 월드 초기화 (환영 메시지)
+    if (narrativeEntries.length === 0) {
+      initializeWorld(t('narrative.welcome'));
+    }
+
+    // DEV: 데모용 mock 인벤토리 초기화 (U-011)
     if (inventoryItems.length === 0) {
       addInventoryItems([
         { id: 'keycard-alpha', name: '키카드 A', icon: '🔑', quantity: 1 },
         { id: 'medkit', name: '응급 키트', icon: '🩹', quantity: 2 },
         { id: 'flashlight', name: '손전등', icon: '🔦', quantity: 1 },
         { id: 'data-chip', name: '데이터칩', icon: '💾', quantity: 3 },
+      ]);
+    }
+
+    // DEV: 데모용 mock Scene Objects 초기화 (U-010)
+    if (sceneObjects.length === 0) {
+      setSceneObjects([
+        {
+          id: 'demo-terminal',
+          label: '터미널',
+          box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+          interaction_hint: '활성화된 터미널이다',
+        },
+        {
+          id: 'demo-door',
+          label: '문',
+          box_2d: { ymin: 200, xmin: 600, ymax: 800, xmax: 900 },
+          interaction_hint: '잠겨있는 것 같다',
+        },
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -293,29 +322,6 @@ function App() {
     }),
     useSensor(KeyboardSensor),
   );
-
-  // Scene Canvas 상태 (U-031: Placeholder Pack)
-  const [sceneState, setSceneState] = useState<SceneCanvasState>({
-    status: 'default',
-    message: t('scene.status.initial_sync'),
-  });
-
-  // Scene Objects 상태 (U-010: 핫스팟 오버레이)
-  // DEV: 데모용 mock 오브젝트 - 실제 서버 연동 시 빈 배열로 시작
-  const [sceneObjects, setSceneObjects] = useState<SceneObject[]>([
-    {
-      id: 'demo-terminal',
-      label: '터미널',
-      box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
-      interaction_hint: '활성화된 터미널이다',
-    },
-    {
-      id: 'demo-door',
-      label: '문',
-      box_2d: { ymin: 200, xmin: 600, ymax: 800, xmax: 900 },
-      interaction_hint: '잠겨있는 것 같다',
-    },
-  ]);
 
   // Agent Store 액션
   const {
@@ -342,43 +348,11 @@ function App() {
   const cancelStreamRef = useRef<(() => void) | null>(null);
 
   /**
-   * TurnOutput을 받아 UI 상태를 업데이트합니다.
-   */
-  const applyTurnOutput = useCallback(
-    (output: TurnOutput) => {
-      // 내러티브 추가
-      turnCountRef.current += 1;
-      const newTurn = turnCountRef.current;
-      setNarrativeEntries((entries) => [...entries, { turn: newTurn, text: output.narrative }]);
-
-      // 액션 카드 업데이트 (U-009: Action Deck Store 사용)
-      setActionCards(output.ui.action_deck.cards);
-
-      // 경제 상태 업데이트 (RULE-005: 잔액 반영)
-      setEconomy({
-        signal: output.economy.balance_after.signal,
-        memory_shard: output.economy.balance_after.memory_shard,
-      });
-
-      // Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
-      setSceneObjects(output.ui.objects);
-
-      // Inventory 업데이트 (U-011)
-      if (output.world.inventory_added.length > 0) {
-        addInventoryItems(parseInventoryAdded(output.world.inventory_added));
-      }
-      if (output.world.inventory_removed.length > 0) {
-        removeInventoryItems(output.world.inventory_removed);
-      }
-    },
-    [setActionCards, addInventoryItems, removeInventoryItems],
-  );
-
-  /**
    * 턴을 실행합니다.
    *
    * U-010: click 파라미터 추가 (Q1 결정: Option B - object_id + box_2d 전송)
    * U-012: drop 파라미터 추가 (인벤토리 아이템 → 핫스팟 드롭)
+   * RU-003-Q4: TurnOutput 반영은 worldStore.applyTurnOutput으로 단일화
    */
   const executeTurn = useCallback(
     (text: string, actionId?: string, clickData?: HotspotClickData, dropData?: DropInput) => {
@@ -412,18 +386,19 @@ function App() {
       // Scene Canvas를 로딩 상태로 전환 (U-031)
       setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
-      // 스트림 콜백 설정
+      // 스트림 콜백 설정 (RU-003-Q4: worldStore.applyTurnOutput으로 단일화)
       const callbacks: StreamCallbacks = {
         onStage: handleStage,
         onBadges: handleBadges,
         onNarrativeDelta: handleNarrativeDelta,
         onFinal: (event) => {
           handleFinal(event);
+          // RU-003-Q4: TurnOutput 반영 SSOT
           applyTurnOutput(event.data);
         },
         onError: (event) => {
           handleError(event);
-          setIsConnected(false);
+          setConnected(false);
           // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
           const errorCode = event.code;
           if (errorCode === 'SAFETY_BLOCKED') {
@@ -457,6 +432,8 @@ function App() {
       handleError,
       completeStream,
       applyTurnOutput,
+      setSceneState,
+      setConnected,
       t,
     ],
   );
@@ -536,6 +513,7 @@ function App() {
    * U-012: 핫스팟에 드롭 시 TurnInput(drop)을 생성하여 턴 실행.
    * - 드롭 성공: item_id + target_object_id + target_box_2d로 TurnInput 생성
    * - 드롭 실패: 즉시 피드백 (무반응 금지)
+   * RU-003-Q4: 시스템 내러티브는 worldStore.appendSystemNarrative 사용
    */
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -553,14 +531,11 @@ function App() {
       const itemName = draggedItem?.name ?? itemId;
 
       // 드롭 대상이 없거나 핫스팟이 아니면 실패 피드백 제공 (U-012)
+      // RU-003-Q4: appendSystemNarrative로 단일화
       if (!over || over.data.current?.type !== 'hotspot') {
-        setNarrativeEntries((prev) => [
-          ...prev,
-          {
-            turn: turnCountRef.current,
-            text: `[${t('connection.online')}] ${t('scene.hotspot.drop_invalid', { item: itemName })}`,
-          },
-        ]);
+        appendSystemNarrative(
+          `[${t('connection.online')}] ${t('scene.hotspot.drop_invalid', { item: itemName })}`,
+        );
         return;
       }
 
@@ -586,7 +561,7 @@ function App() {
       // 턴 실행
       executeTurn(dropText, undefined, undefined, dropInput);
     },
-    [endDrag, executeTurn, inventoryItems, t],
+    [endDrag, executeTurn, inventoryItems, appendSystemNarrative, t],
   );
 
   return (

@@ -1,5 +1,33 @@
 # 프로젝트 진행 상황
 
+## [2026-01-17 21:50] RU-003-Q4: UI 상태 슬라이스/경계 재정의 및 worldStore 도입 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-Q4] UI 상태 슬라이스/경계 재정의: App.tsx 로컬 상태 축소 + TurnOutput 반영 파이프라인 SSOT화
+- **개선 사항**:
+    - **worldStore 신설**: `App.tsx`가 관리하던 월드/세션 상태(경제, 씬, 오브젝트, 내러티브 히스토리 등)를 전담하는 `worldStore` 구축
+    - **TurnOutput 반영 SSOT화**: 여러 곳에 흩어져 있던 상태 업데이트 로직을 `worldStore.applyTurnOutput`으로 단일화하여 데이터 일관성 확보
+    - **App.tsx 책임 축소**: `App.tsx`를 레이아웃 구성 및 이벤트 라우팅 중심으로 단순화하여 모듈 경계 명확화
+    - **하위 스토어 연동**: `actionDeckStore`, `inventoryStore` 업데이트 트리거를 `worldStore` 내부로 캡슐화
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/stores/worldStore.ts` (신설), `frontend/src/stores/actionDeckStore.ts`, `frontend/src/stores/inventoryStore.ts`
+
+### 기술적 세부사항
+
+- **Zustand Store**: `useWorldStore`를 통해 전역 월드 상태 관리 및 `applyTurnOutput` 액션 구현
+- **Domain-driven Slice**: RU-003 계획서의 도메인별 스토어 분리(Option A) 결정 실현
+- **System Narrative**: 턴이 발생하지 않는 시스템 피드백을 위한 `appendSystemNarrative` 액션 분리
+
+### 검증
+
+- **수동 검증 완료**: 카드 클릭, 핫스팟 클릭, 아이템 드롭 시 UI 및 상태 업데이트가 리팩토링 전과 동일하게 작동함을 확인
+- **구조 검증**: `App.tsx` 코드 라인 수 감소 및 스토어 간 단방향 의존성(`worldStore` -> 하위 store) 확인
+
+### 다음 단계
+- [RU-003-SUMMARY] RU-003 리팩토링 시리즈 종합 검토 및 다음 마일스톤 준비
+
+---
+
 ## [2026-01-17 18:00] U-012[Mvp]: DnD 드롭(아이템→핫스팟) TurnInput 이벤트 완료
 
 ### 구현 완료 항목

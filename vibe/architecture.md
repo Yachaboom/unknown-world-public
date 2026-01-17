@@ -79,15 +79,17 @@ D:\Dev\unknown-world\
 │   │   │       └── translation.json
 │   │   ├── schemas/        # 클라이언트 측 스키마 및 검증
 │   │   │   └── turn.ts
-│   │   ├── stores/         # 상태 관리 (Zustand)
-│   │   │   ├── actionDeckStore.ts
-│   │   │   ├── actionDeckStore.test.ts
-│   │   │   ├── agentStore.ts
-│   │   │   ├── inventoryStore.ts # 인벤토리 아이템 및 DnD 상태 관리 (U-011)
-│   │   │   ├── inventoryStore.test.ts
-│   │   │   ├── uiPrefsStore.ts
-│   │   │   └── uiPrefsStore.test.ts
-│   │   ├── types/          # 스트림 이벤트 계약 타입
+    ├── stores/         # 상태 관리 (Zustand)
+    │   ├── actionDeckStore.ts
+    │   ├── actionDeckStore.test.ts
+    │   ├── agentStore.ts
+    │   ├── inventoryStore.ts # 인벤토리 아이템 및 DnD 상태 관리 (U-011)
+    │   ├── inventoryStore.test.ts
+    │   ├── uiPrefsStore.ts
+    │   ├── uiPrefsStore.test.ts
+    │   ├── worldStore.ts    # 월드/세션 상태 SSOT (경제, 씬, 오브젝트, 내러티브) (RU-003-Q4)
+    │   └── worldStore.test.ts
+    ├── types/          # 스트림 이벤트 계약 타입
 │   │   │   ├── turn_stream.ts
 │   │   │   └── scene.ts
 │   │   └── utils/          # 공통 유틸리티
@@ -141,8 +143,8 @@ D:\Dev\unknown-world\
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
-    - `stores/`: Agent Console 상태 및 UI 설정을 관리하는 Zustand 스토어. **U-011에 따라 인벤토리 아이템 및 드래그 상태 관리 스토어가 추가됨.**
-    - `components/`: 게임 전용 UI 컴포넌트 모음. **U-011/U-012에 따라 인벤토리 패널과 씬 캔버스 간의 DnD 인터랙션 및 턴 실행 연동이 구현됨.**
+    - `stores/`: Agent Console 상태, UI 설정 및 월드 세션 상태를 관리하는 Zustand 스토어. **RU-003-Q4에 따라 worldStore가 세션 상태의 SSOT 역할을 수행하며 하위 스토어 업데이트를 조정함.**
+    - `components/`: 게임 전용 UI 컴포넌트 모음. U-011/U-012에 따라 인벤토리 패널과 씬 캔버스 간의 DnD 인터랙션 및 턴 실행 연동이 구현됨.
     - `schemas/`: Zod를 활용한 턴 계약 검증 및 폴백 로직 정의.
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
