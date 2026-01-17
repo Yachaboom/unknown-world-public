@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-17 23:55] RU-003-Q5: 하드코딩/DEV 목 데이터 격리 및 i18n 혼합 출력 방지 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-Q5] 하드코딩/DEV 목 데이터 격리: i18n 혼합 출력 방지 + 데모 프로필 경계 확보
+- **개선 사항**:
+    - **데모 데이터 격리**: `frontend/src/App.tsx`에 내장되었던 데모 인벤토리 및 씬 오브젝트 데이터를 `frontend/src/demo/demoFixtures.ts`로 완전히 분리
+    - **i18n 기반 렌더링**: 데모 데이터의 표시 이름/라벨을 i18n 키 기반으로 변경하여 ko/en 혼합 출력(RULE-006) 원천 차단
+    - **테마 하드코딩 제거**: `TurnInput` 생성 시 `'dark'`로 고정되었던 테마를 DOM(`data-theme`)에서 직접 읽어오도록 개선
+    - **DEV 가드 적용**: `import.meta.env.DEV`를 활용하여 프로덕션 환경에서 데모 데이터가 주입되지 않도록 보호
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/demo/demoFixtures.ts` (신설), `frontend/src/locales/ko-KR/translation.json`, `frontend/src/locales/en-US/translation.json`
+
+### 기술적 세부사항
+
+- **Demo Fixtures**: ID, 아이콘, 좌표 등 언어 중립적인 메타데이터만 정의하고, 텍스트는 `t('demo.items.{id}.name')` 형태로 동적 생성
+- **getCurrentThemeFromDOM**: `document.documentElement`에서 테마 속성을 읽어 게임 상태와 UI 테마의 동기화 보장
+
+### 검증
+
+- **수동 검증 완료**: 언어 전환 시 데모 인벤토리와 핫스팟 라벨이 실시간으로 해당 언어로 변경됨을 확인. 테마 변경 시 서버로 전달되는 `theme` 값이 연동됨을 확인.
+
+---
+
 ## [2026-01-17 23:45] RU-003-S1: 연결 상태/Scene 상태 전이 및 취소(Abort) 정책 정리 완료
 
 ### 작업 내용

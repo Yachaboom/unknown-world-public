@@ -60,6 +60,8 @@ D:\Dev\unknown-world\
 │   │   ├── vite-env.d.ts
 │   │   ├── api/            # HTTP Streaming 클라이언트
 │   │   │   └── turnStream.ts
+│   │   ├── demo/           # 데모용 Mock 데이터 및 피처 (RU-003-Q5)
+│   │   │   └── demoFixtures.ts # 데모 인벤토리/오브젝트 및 테마 감지 유틸
 │   │   ├── turn/           # Turn Runner 모듈 (RU-003-Q3)
 │   │   │   └── turnRunner.ts # TurnInput 생성, 스트림 시작/취소, 콜백 라우팅
 │   ├── components/     # 게임 UI 컴포넌트

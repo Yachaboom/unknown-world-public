@@ -68,6 +68,7 @@ frontend/public/ui/QA_CHECKLIST.md
 frontend/public/ui/README.md
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
+frontend/src/demo/demoFixtures.ts
 frontend/src/i18n-scenario.test.ts
 frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
@@ -1207,6 +1208,148 @@ done
 
 _마지막 업데이트: 2026-01-12_  
 _문서 버전: 1.0.0_
+</file>
+
+<file path="frontend/src/demo/demoFixtures.ts">
+/**
+ * Unknown World - 데모용 Fixtures (RU-003-Q5)
+ *
+ * DEV 환경에서 사용하는 데모 초기 데이터입니다.
+ * 언어 중립적인 값(ID/아이콘/수량/좌표)만 포함하며,
+ * 표시 문자열(name/label/hint)은 i18n 키를 통해 렌더링합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-006: ko/en 혼합 출력 금지 (i18n 키 기반)
+ *   - PRD 6.9: 데모 프로필 경계 확보
+ *   - 서버 TurnOutput 대체 시 이 모듈 비활성화 가능
+ *
+ * @module demo/demoFixtures
+ */
+
+import type { Box2D } from '../schemas/turn';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 데모 인벤토리 아이템 정의 (언어 중립)
+ *
+ * name은 i18n 키(`demo.items.{id}.name`)로 렌더링합니다.
+ */
+export interface DemoInventoryItemDef {
+  /** 아이템 고유 ID */
+  id: string;
+  /** 아이템 아이콘 (이모지 또는 URL) */
+  icon: string;
+  /** 초기 수량 */
+  quantity: number;
+}
+
+/**
+ * 데모 씬 오브젝트 정의 (언어 중립)
+ *
+ * label/hint는 i18n 키로 렌더링합니다:
+ * - labelKey: `demo.scene.{id}.label`
+ * - hintKey: `demo.scene.{id}.hint`
+ */
+export interface DemoSceneObjectDef {
+  /** 오브젝트 고유 ID */
+  id: string;
+  /** 바운딩 박스 (0~1000 정규화) */
+  box_2d: Box2D;
+  /** i18n 라벨 키 */
+  labelKey: string;
+  /** i18n 힌트 키 */
+  hintKey: string;
+}
+
+// =============================================================================
+// 데모 인벤토리 아이템
+// =============================================================================
+
+/**
+ * 데모용 인벤토리 아이템 목록.
+ *
+ * @remarks
+ * - ID/아이콘/수량만 정의 (언어 중립)
+ * - 표시 이름은 `demo.items.{id}.name` 키로 i18n 처리
+ */
+export const DEMO_INVENTORY_ITEMS: readonly DemoInventoryItemDef[] = [
+  { id: 'keycard-alpha', icon: '🔑', quantity: 1 },
+  { id: 'medkit', icon: '🩹', quantity: 2 },
+  { id: 'flashlight', icon: '🔦', quantity: 1 },
+  { id: 'data-chip', icon: '💾', quantity: 3 },
+] as const;
+
+// =============================================================================
+// 데모 씬 오브젝트
+// =============================================================================
+
+/**
+ * 데모용 씬 오브젝트 목록.
+ *
+ * @remarks
+ * - ID/좌표만 정의 (언어 중립)
+ * - 표시 라벨/힌트는 i18n 키로 처리
+ */
+export const DEMO_SCENE_OBJECTS: readonly DemoSceneObjectDef[] = [
+  {
+    id: 'demo-terminal',
+    box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+    labelKey: 'demo.scene.terminal.label',
+    hintKey: 'demo.scene.terminal.hint',
+  },
+  {
+    id: 'demo-door',
+    box_2d: { ymin: 200, xmin: 600, ymax: 800, xmax: 900 },
+    labelKey: 'demo.scene.door.label',
+    hintKey: 'demo.scene.door.hint',
+  },
+] as const;
+
+// =============================================================================
+// 헬퍼 함수
+// =============================================================================
+
+/**
+ * 데모 인벤토리 아이템의 i18n 이름 키를 생성합니다.
+ *
+ * @param itemId - 아이템 ID
+ * @returns i18n 키 (예: `demo.items.keycard-alpha.name`)
+ */
+export function getDemoItemNameKey(itemId: string): string {
+  return `demo.items.${itemId}.name`;
+}
+
+/**
+ * 데모 환경인지 확인합니다 (DEV 가드).
+ *
+ * @returns DEV 환경 여부
+ */
+export function isDemoEnvironment(): boolean {
+  return import.meta.env.DEV;
+}
+
+/**
+ * DOM에서 현재 테마를 읽습니다.
+ *
+ * RU-003-Q5: 'dark' 하드코딩 제거
+ * - data-theme 속성을 확인하여 테마 결정
+ * - 'crt', 'dark' 또는 미지정 → 'dark'
+ * - 'light' → 'light'
+ *
+ * @returns 현재 테마 ('dark' | 'light')
+ */
+export function getCurrentThemeFromDOM(): 'dark' | 'light' {
+  const dataTheme = document.documentElement.getAttribute('data-theme');
+
+  // 'crt' 테마는 dark 계열로 취급
+  if (dataTheme === 'light') {
+    return 'light';
+  }
+  return 'dark';
+}
 </file>
 
 <file path="frontend/src/i18n-scenario.test.ts">
@@ -8801,147 +8944,6 @@ export default defineConfig({
 }
 </file>
 
-<file path="frontend/src/locales/ko-KR/translation.json">
-{
-  "scene": {
-    "status": {
-      "default": "데이터 대기 중",
-      "loading": "동기화 중...",
-      "offline": "연결 끊김",
-      "blocked": "접근 제한됨",
-      "low_signal": "신호 약함",
-      "image_error": "장면 이미지를 불러올 수 없습니다.",
-      "initial_sync": "전역 데이터 동기화 대기 중...",
-      "syncing": "데이터 동기화 중...",
-      "alt": "장면 이미지"
-    },
-    "hotspot": {
-      "layer_label": "클릭 가능한 오브젝트 영역",
-      "hint_prefix": "힌트",
-      "click_action": "{{label}} 클릭",
-      "drop_hint": "여기에 드롭하여 사용",
-      "drop_action": "{{item}}을(를) {{target}}에 사용",
-      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다."
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "대기열",
-      "badges": "검증 배지",
-      "repair": "자동 복구",
-      "status": {
-        "idle": "대기 중",
-        "processing": "처리 중"
-      },
-      "badges_empty": "[ 검증 대기 중 ]",
-      "repaired": "(복구됨)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "명령을 입력하세요...",
-    "processing": "처리 중...",
-    "execute": "실행",
-    "wait": "대기",
-    "panel_placeholder": "[ 준비 중 ]",
-    "scale_decrease": "글자 크기 줄이기",
-    "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal 소모",
-    "shard_cost": "Shard 소모",
-    "risk_level": "위험도"
-  },
-  "connection": {
-    "online": "온라인",
-    "offline": "오프라인"
-  },
-  "inventory": {
-    "empty": "[ 아이템 없음 ]",
-    "grid_label": "인벤토리 아이템 목록",
-    "item_label": "{{name}} (수량: {{quantity}})",
-    "drag_hint": "드래그하여 사용"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ 드래그 앤 드롭 영역 ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ 목표/퀘스트 목록 ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ 고정된 기억/단서 ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ 이미지 업로드 슬롯 ]"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "탐색하기",
-        "description": "주변을 살펴본다"
-      },
-      "investigate": {
-        "label": "조사하기",
-        "description": "자세히 살펴본다"
-      },
-      "talk": {
-        "label": "대화하기",
-        "description": "말을 걸어본다"
-      }
-    },
-    "card_select": "카드 선택: {{cardId}}",
-    "deck_label": "행동 선택 카드",
-    "alternative": "대안",
-    "insufficient_balance": "잔액 부족",
-    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
-    "risk": {
-      "low": "낮음",
-      "medium": "보통",
-      "high": "높음"
-    },
-    "cost_range": "{{min}}~{{max}}"
-  },
-  "narrative": {
-    "welcome": "미지의 세계에 오신 것을 환영합니다...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
-  }
-}
-</file>
-
 <file path="package.json">
 {
   "name": "unknown-world",
@@ -9184,6 +9186,173 @@ export default defineConfig({
       "notes": "U-032: 스캐너 슬롯 프레임, nanobanana mcp 생성, rembg(birefnet-general) 배경 제거, ImageMagick 최적화(346x200) 완료"
     }
   ]
+}
+</file>
+
+<file path="frontend/src/locales/ko-KR/translation.json">
+{
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "키카드 A"
+      },
+      "medkit": {
+        "name": "응급 키트"
+      },
+      "flashlight": {
+        "name": "손전등"
+      },
+      "data-chip": {
+        "name": "데이터칩"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "터미널",
+        "hint": "활성화된 터미널이다"
+      },
+      "door": {
+        "label": "문",
+        "hint": "잠겨있는 것 같다"
+      }
+    }
+  },
+  "scene": {
+    "status": {
+      "default": "데이터 대기 중",
+      "loading": "동기화 중...",
+      "offline": "연결 끊김",
+      "blocked": "접근 제한됨",
+      "low_signal": "신호 약함",
+      "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "initial_sync": "전역 데이터 동기화 대기 중...",
+      "syncing": "데이터 동기화 중...",
+      "alt": "장면 이미지"
+    },
+    "hotspot": {
+      "layer_label": "클릭 가능한 오브젝트 영역",
+      "hint_prefix": "힌트",
+      "click_action": "{{label}} 클릭",
+      "drop_hint": "여기에 드롭하여 사용",
+      "drop_action": "{{item}}을(를) {{target}}에 사용",
+      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다."
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "대기열",
+      "badges": "검증 배지",
+      "repair": "자동 복구",
+      "status": {
+        "idle": "대기 중",
+        "processing": "처리 중"
+      },
+      "badges_empty": "[ 검증 대기 중 ]",
+      "repaired": "(복구됨)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "명령을 입력하세요...",
+    "processing": "처리 중...",
+    "execute": "실행",
+    "wait": "대기",
+    "panel_placeholder": "[ 준비 중 ]",
+    "scale_decrease": "글자 크기 줄이기",
+    "scale_increase": "글자 크기 늘리기",
+    "scale_label": "UI 스케일 설정"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal 소모",
+    "shard_cost": "Shard 소모",
+    "risk_level": "위험도"
+  },
+  "connection": {
+    "online": "온라인",
+    "offline": "오프라인"
+  },
+  "inventory": {
+    "empty": "[ 아이템 없음 ]",
+    "grid_label": "인벤토리 아이템 목록",
+    "item_label": "{{name}} (수량: {{quantity}})",
+    "drag_hint": "드래그하여 사용"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ 드래그 앤 드롭 영역 ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ 목표/퀘스트 목록 ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ 고정된 기억/단서 ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ 이미지 업로드 슬롯 ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "탐색하기",
+        "description": "주변을 살펴본다"
+      },
+      "investigate": {
+        "label": "조사하기",
+        "description": "자세히 살펴본다"
+      },
+      "talk": {
+        "label": "대화하기",
+        "description": "말을 걸어본다"
+      }
+    },
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "미지의 세계에 오신 것을 환영합니다...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
 }
 </file>
 

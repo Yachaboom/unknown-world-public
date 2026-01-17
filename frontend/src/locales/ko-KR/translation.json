@@ -1,4 +1,30 @@
 {
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "키카드 A"
+      },
+      "medkit": {
+        "name": "응급 키트"
+      },
+      "flashlight": {
+        "name": "손전등"
+      },
+      "data-chip": {
+        "name": "데이터칩"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "터미널",
+        "hint": "활성화된 터미널이다"
+      },
+      "door": {
+        "label": "문",
+        "hint": "잠겨있는 것 같다"
+      }
+    }
+  },
   "scene": {
     "status": {
       "default": "데이터 대기 중",

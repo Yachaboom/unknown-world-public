@@ -25,10 +25,21 @@ vi.mock('@dnd-kit/core', async () => {
   };
 });
 
-// i18next 모킹
+// i18next 모킹 (RU-003-Q5: 데모 i18n 키 지원)
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      // 데모 아이템 이름
+      if (key === 'demo.items.keycard-alpha.name') return '키카드 A';
+      if (key === 'demo.items.medkit.name') return '응급 키트';
+      if (key === 'demo.items.flashlight.name') return '손전등';
+      if (key === 'demo.items.data-chip.name') return '데이터칩';
+      // 데모 씬 오브젝트
+      if (key === 'demo.scene.terminal.label') return '터미널';
+      if (key === 'demo.scene.terminal.hint') return '활성화된 터미널이다';
+      if (key === 'demo.scene.door.label') return '문';
+      if (key === 'demo.scene.door.hint') return '잠겨있는 것 같다';
+      // 액션 템플릿
       if (key === 'inventory.item_label') return `Item: ${options?.name}`;
       if (key === 'scene.hotspot.drop_action') {
         return `Drop: ${options?.item} on ${options?.target}`;

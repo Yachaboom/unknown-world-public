@@ -41,6 +41,13 @@ import {
 } from './stores/worldStore';
 import { useTurnRunner } from './turn/turnRunner';
 import type { ActionCard, DropInput, Box2D } from './schemas/turn';
+import {
+  DEMO_INVENTORY_ITEMS,
+  DEMO_SCENE_OBJECTS,
+  getDemoItemNameKey,
+  isDemoEnvironment,
+  getCurrentThemeFromDOM,
+} from './demo/demoFixtures';
 
 // =============================================================================
 // 패널 컴포넌트
@@ -273,39 +280,36 @@ function App() {
     items: inventoryItems,
   } = useInventoryStore();
 
-  // 초기화: 월드 상태 및 데모용 mock 데이터 (RU-003-Q4)
+  // 초기화: 월드 상태 및 데모용 mock 데이터 (RU-003-Q4, RU-003-Q5)
   useEffect(() => {
     // 월드 초기화 (환영 메시지)
     if (narrativeEntries.length === 0) {
       initializeWorld(t('narrative.welcome'));
     }
 
-    // DEV: 데모용 mock 인벤토리 초기화 (U-011)
-    if (inventoryItems.length === 0) {
-      addInventoryItems([
-        { id: 'keycard-alpha', name: '키카드 A', icon: '🔑', quantity: 1 },
-        { id: 'medkit', name: '응급 키트', icon: '🩹', quantity: 2 },
-        { id: 'flashlight', name: '손전등', icon: '🔦', quantity: 1 },
-        { id: 'data-chip', name: '데이터칩', icon: '💾', quantity: 3 },
-      ]);
-    }
+    // DEV: 데모용 mock 데이터 초기화 (RU-003-Q5: DEV 가드 + i18n 키 기반)
+    if (isDemoEnvironment()) {
+      // 데모용 mock 인벤토리 초기화 (U-011)
+      if (inventoryItems.length === 0) {
+        const demoInventory = DEMO_INVENTORY_ITEMS.map((item) => ({
+          id: item.id,
+          name: t(getDemoItemNameKey(item.id)),
+          icon: item.icon,
+          quantity: item.quantity,
+        }));
+        addInventoryItems(demoInventory);
+      }
 
-    // DEV: 데모용 mock Scene Objects 초기화 (U-010)
-    if (sceneObjects.length === 0) {
-      setSceneObjects([
-        {
-          id: 'demo-terminal',
-          label: '터미널',
-          box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
-          interaction_hint: '활성화된 터미널이다',
-        },
-        {
-          id: 'demo-door',
-          label: '문',
-          box_2d: { ymin: 200, xmin: 600, ymax: 800, xmax: 900 },
-          interaction_hint: '잠겨있는 것 같다',
-        },
-      ]);
+      // 데모용 mock Scene Objects 초기화 (U-010)
+      if (sceneObjects.length === 0) {
+        const demoSceneObjects = DEMO_SCENE_OBJECTS.map((obj) => ({
+          id: obj.id,
+          label: t(obj.labelKey),
+          box_2d: obj.box_2d,
+          interaction_hint: t(obj.hintKey),
+        }));
+        setSceneObjects(demoSceneObjects);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -332,10 +336,11 @@ function App() {
   }, [uiScale]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
+  // RU-003-Q5: theme 하드코딩 제거 → DOM에서 현재 테마를 읽어 전달
   const turnRunnerDeps = useMemo(
     () => ({
       t,
-      theme: 'dark' as const,
+      theme: getCurrentThemeFromDOM(),
     }),
     [t],
   );

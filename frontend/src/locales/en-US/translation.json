@@ -1,4 +1,30 @@
 {
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "Keycard A"
+      },
+      "medkit": {
+        "name": "Medkit"
+      },
+      "flashlight": {
+        "name": "Flashlight"
+      },
+      "data-chip": {
+        "name": "Data Chip"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "Terminal",
+        "hint": "An active terminal"
+      },
+      "door": {
+        "label": "Door",
+        "hint": "It appears to be locked"
+      }
+    }
+  },
   "scene": {
     "status": {
       "default": "NO SIGNAL DATA",
