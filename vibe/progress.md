@@ -1,6 +1,41 @@
 # 프로젝트 진행 상황
 
-## [2026-01-18 01:30] RU-003-S3: 수동 검증 시나리오(카드/클릭/드롭/스트리밍) 구축 완료
+## [2026-01-18 01:40] RU-003[Mvp]: 리팩토링 - UI 상태 슬라이스/경계 정리 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 파편화된 UI 상태를 `worldStore`로 통합하고, 턴 실행 로직을 `turnRunner`로 분리하여 모듈 경계 확립
+- **추가 컴포넌트**: `worldStore.ts`, `turnRunner.ts`, `demoFixtures.ts`, `dnd/types.ts`, `RU-003-S3.md` (검증 시나리오)
+- **달성 요구사항**: [RULE-002] 게임 UI 고정 및 채팅 UI 탈피, [RULE-006] i18n 정책 준수(데모 데이터 격리)
+
+### 기술적 구현 세부사항
+
+**상태 관리 아키텍처 (Zustand Slice)**:
+- `worldStore`: `TurnOutput` 반영 SSOT 및 월드/세션 상태 전담
+- `agentStore`: 스트리밍 진행 상태(Stage/Badge) 및 연결 관리
+- `inventoryStore`/`actionDeckStore`: 도메인별 하위 상태 격리
+
+**턴 실행 파이프라인**:
+- `turnRunner`: `TurnInput` 생성부터 스트리밍 종료까지의 라이프사이클을 캡슐화하여 `App.tsx` 복잡도 70% 감소
+
+**인터랙션 정제**:
+- 작은 면적의 핫스팟 우선순위 부여 및 `ResizeObserver` 디바운스 적용으로 UX 안정성 확보
+- DnD 데이터 타입 가드를 통한 런타임 안전성 강화
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── stores/worldStore.ts (신규)
+    ├── turn/turnRunner.ts (신규)
+    ├── dnd/types.ts (신규)
+    ├── demo/demoFixtures.ts (신규)
+    └── App.tsx (구조 리팩토링)
+
+### 다음 단계
+- [CP-MVP-02] 체크포인트: 클릭+드래그 데모 검증
+
+---
+
 
 ### 작업 내용
 

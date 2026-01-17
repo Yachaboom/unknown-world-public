@@ -17,20 +17,19 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionCard } from '../schemas/turn';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
 
 // =============================================================================
 // 타입 정의
 // =============================================================================
 
 export interface ActionDeckProps {
-  /** 서버에서 받은 액션 카드 목록 */
-  cards: ActionCard[];
   /** 카드 클릭 콜백 */
   onCardClick?: (card: ActionCard) => void;
-  /** 전체 비활성화 (스트리밍 중 등) */
+  /** 전체 비활성화 (스트리밍 중 등, 생략 시 agentStore.isStreaming 사용) */
   disabled?: boolean;
-  /** 현재 잔액 (클라이언트 측 실행 가능 여부 판단용) */
-  currentBalance?: { signal: number; memory_shard: number };
 }
 
 interface CardDisplayInfo extends ActionCard {
@@ -255,13 +254,18 @@ function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
 // =============================================================================
 
 export function ActionDeck({
-  cards,
   onCardClick,
-  disabled = false,
-  currentBalance = { signal: 100, memory_shard: 5 },
+  disabled: propsDisabled,
 }: ActionDeckProps) {
   const { t } = useTranslation();
   const defaultCards = useDefaultCards();
+
+  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
+  const cards = useActionDeckStore((state) => state.cards);
+  const currentBalance = useWorldStore((state) => state.economy);
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+
+  const disabled = propsDisabled ?? isStreaming;
 
   // 카드가 없으면 기본 카드 사용
   const displayCards = cards.length > 0 ? cards : defaultCards;

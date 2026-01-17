@@ -1,7 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActionDeck } from './ActionDeck';
 import type { ActionCard } from '../schemas/turn';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
 
 // i18next 모킹
 vi.mock('react-i18next', () => ({
@@ -64,24 +67,35 @@ describe('ActionDeck Component', () => {
     },
   ];
 
-  it('renders provided cards', () => {
-    render(<ActionDeck cards={mockCards} />);
+  beforeEach(() => {
+    // 스토어 초기화
+    useActionDeckStore.setState({ cards: [] });
+    useWorldStore.setState({ economy: { signal: 100, memory_shard: 5 } });
+    useAgentStore.setState({ isStreaming: false });
+  });
+
+  it('renders provided cards from store', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck />);
     expect(screen.getByText('Regular Action')).toBeInTheDocument();
     expect(screen.getByText('Expensive Action')).toBeInTheDocument();
     expect(screen.getByText('Alternative Action')).toBeInTheDocument();
   });
 
   it('displays cost estimates as ranges when available', () => {
-    render(<ActionDeck cards={mockCards} />);
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck />);
     // card-1 has cost_estimate: 8~12
     expect(screen.getByText('8~12')).toBeInTheDocument();
     // card-2 has cost: 50
     expect(screen.getByText('50')).toBeInTheDocument();
   });
 
-  it('disables cards when balance is insufficient', () => {
-    const lowBalance = { signal: 5, memory_shard: 0 };
-    render(<ActionDeck cards={mockCards} currentBalance={lowBalance} />);
+  it('disables cards when balance is insufficient in worldStore', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    useWorldStore.setState({ economy: { signal: 5, memory_shard: 0 } });
+    
+    render(<ActionDeck />);
 
     // Regular Action (cost 10/estimate max 12) -> disabled
     const card1 = screen.getByRole('button', { name: /Regular Action/i });
@@ -94,13 +108,15 @@ describe('ActionDeck Component', () => {
   });
 
   it('renders alternative badge for alternative cards', () => {
-    render(<ActionDeck cards={mockCards} />);
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck />);
     expect(screen.getByText('Alt')).toBeInTheDocument();
   });
 
   it('calls onCardClick when an enabled card is clicked', () => {
     const onCardClick = vi.fn();
-    render(<ActionDeck cards={mockCards} onCardClick={onCardClick} />);
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck onCardClick={onCardClick} />);
 
     fireEvent.click(screen.getByText('Regular Action'));
     expect(onCardClick).toHaveBeenCalledWith(expect.objectContaining({ id: 'card-1' }));
@@ -114,13 +130,28 @@ describe('ActionDeck Component', () => {
         disabled_reason: 'Locked by story',
       },
     ];
-    render(<ActionDeck cards={disabledCard} />);
+    useActionDeckStore.setState({ cards: disabledCard });
+    render(<ActionDeck />);
     expect(screen.getByText('Locked by story')).toBeInTheDocument();
   });
 
-  it('renders default cards when cards prop is empty', () => {
-    render(<ActionDeck cards={[]} />);
+  it('renders default cards when store cards are empty', () => {
+    useActionDeckStore.setState({ cards: [] });
+    render(<ActionDeck />);
     // useDefaultCards should provide some default labels
     expect(screen.getByText('action.default.explore.label')).toBeInTheDocument();
+  });
+
+  it('disables all cards when isStreaming is true in agentStore', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    useAgentStore.setState({ isStreaming: true });
+    
+    render(<ActionDeck />);
+
+    const card1 = screen.getByRole('button', { name: /Regular Action/i });
+    const cardAlt = screen.getByRole('button', { name: /Alternative Action/i });
+    
+    expect(card1).toBeDisabled();
+    expect(cardAlt).toBeDisabled();
   });
 });

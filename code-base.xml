@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,py,js,json,md}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, backend/.venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,6 +42,7 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/__init__.py
 backend/src/unknown_world/api/turn_stream_events.py
@@ -56,7 +57,6 @@ backend/tests/integration/test_turn_streaming.py
 backend/tests/qa/test_asset_manifest.py
 backend/tests/unit/models/test_turn.py
 backend/tests/unit/test_u034_verification.py
-CLAUDE.md
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -64,17 +64,32 @@ frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
-frontend/public/ui/QA_CHECKLIST.md
-frontend/public/ui/README.md
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
+frontend/src/App.test.tsx
+frontend/src/App.tsx
+frontend/src/components/ActionDeck.test.tsx
+frontend/src/components/ActionDeck.tsx
+frontend/src/components/AgentConsole.test.tsx
+frontend/src/components/AgentConsole.tsx
+frontend/src/components/DndInteraction.test.tsx
+frontend/src/components/GameHeader.tsx
+frontend/src/components/InventoryPanel.test.tsx
+frontend/src/components/InventoryPanel.tsx
+frontend/src/components/NarrativeFeed.tsx
+frontend/src/components/Panel.tsx
+frontend/src/components/SceneCanvas.hotspot.test.tsx
+frontend/src/components/SceneCanvas.test.tsx
+frontend/src/components/SceneCanvas.tsx
+frontend/src/components/UIControls.tsx
 frontend/src/demo/demoFixtures.ts
+frontend/src/demo/useDemoInitializer.ts
 frontend/src/dnd/types.ts
 frontend/src/i18n-scenario.test.ts
 frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
 frontend/src/locales/ko-KR/translation.json
-frontend/src/locales/README.md
+frontend/src/main.tsx
 frontend/src/schemas/index.ts
 frontend/src/schemas/turn.test.ts
 frontend/src/schemas/turn.ts
@@ -99,7 +114,6 @@ frontend/tsconfig.json
 frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
-shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
@@ -921,294 +935,315 @@ var addSorting = (function() {
 window.addEventListener('load', addSorting);
 </file>
 
-<file path="frontend/public/ui/QA_CHECKLIST.md">
-# UI 에셋 QA 체크리스트
-
-> **참조**: `frontend/public/ui/README.md` (SSOT 규칙), `vibe/ref/rembg-guide.md` (배경 제거)  
-> **목적**: nanobanana mcp로 생성한 에셋의 품질/일관성 보장  
-> **적용 시점**: 에셋 추가/수정 시 반드시 체크
-
----
-
-## 1. 용량 예산 (Performance Budget)
-
-### 1.1 개별 에셋 상한
-
-| 유형            | 상한  | 권장       | 체크 항목         |
-| --------------- | ----- | ---------- | ----------------- |
-| **아이콘**      | 30KB  | 20KB 이하  | `bytes` 필드 확인 |
-| **placeholder** | 300KB | 200KB 이하 | `bytes` 필드 확인 |
-| **chrome**      | 120KB | 30KB 이하  | `bytes` 필드 확인 |
-
-### 1.2 총합 예산
-
-| 항목     | 값                                  |
-| -------- | ----------------------------------- |
-| **상한** | 1.5MB (1,572,864 bytes)             |
-| **권장** | 1MB (1,048,576 bytes) 이하          |
-| **현재** | `manifest.json`의 `totalBytes` 확인 |
-
-### 1.3 용량 초과 시 대응
-
-1. **압축/최적화**: TinyPNG, ImageMagick, WebP 변환
-2. **해상도/색상 축소**: 필요 사이즈만 유지
-3. **불필요 에셋 제거**: 사용처 없는 에셋 정리
-4. **예산 상향**: 근거 문서화 후 `budgetBytes` 조정
-
----
-
-## 2. 사이즈/규격 (Size)
-
-### 2.1 아이콘 사이즈 체크
-
-| 항목            | 요구                 | 체크 |
-| --------------- | -------------------- | ---- |
-| **필수 사이즈** | 16px, 24px 최소 2종  | ☐    |
-| **선택 사이즈** | 32px, 64px (필요 시) | ☐    |
-| **정방형**      | 가로 = 세로          | ☐    |
-
-### 2.2 16px 실루엣 테스트 ⚠️
-
-> **중요**: 16px에서도 형태가 구분되어야 합니다.
-
-**테스트 방법**:
-
-1. 16px 아이콘을 100% 배율로 표시
-2. 2m 거리에서 형태 구분 가능 여부 확인
-3. 다른 아이콘과 혼동되지 않는지 확인
-
-**실패 시 대응**:
-
-- 디테일 단순화
-- 외곽선/실루엣 강화
-- 16px/24px 별도 디자인 (사용처 분리)
-
-### 2.3 placeholder/chrome 사이즈
-
-| 항목            | 권장                     | 비고               |
-| --------------- | ------------------------ | ------------------ |
-| **placeholder** | 512x384 또는 용도별 적정 | 가로세로 비율 유지 |
-| **chrome**      | 타일링 가능 사이즈       | 48px, 64px 등      |
-
----
-
-## 3. 대비/가독성 (Contrast)
-
-### 3.1 기본 대비 테스트
-
-| 모드         | 배경                    | 요구 대비               | 체크 |
-| ------------ | ----------------------- | ----------------------- | ---- |
-| **기본**     | `#0d0d0d` (어두운 배경) | 인광 녹색(#33ff00) 대비 | ☐    |
-| **Readable** | 대비 강화 모드          | 4.5:1 이상              | ☐    |
-
-### 3.2 대비 검증 방법
-
-```
-도구: WebAIM Contrast Checker
-URL: https://webaim.org/resources/contrastchecker/
-
-전경색: 아이콘 주요 색상
-배경색: #0d0d0d (CRT 배경)
-목표: 4.5:1 이상 (AA 기준)
-```
-
-### 3.3 Readable 모드 호환
-
-- [ ] CRT 글로우/스캔라인 OFF 시에도 식별 가능
-- [ ] 텍스트 라벨이 이미지를 방해하지 않음
-- [ ] 색약/색맹 접근성 고려 (색상만으로 의미 전달 금지)
-
----
-
-## 4. 투명 배경 (Alpha Channel)
-
-### 4.1 투명 배경 필요 여부
-
-| 유형            | 투명 필수 | 배경 색상        |
-| --------------- | --------- | ---------------- |
-| **아이콘**      | ✅ 필수   | 투명 (알파 채널) |
-| **placeholder** | ❌ 선택   | 불투명 허용      |
-| **chrome**      | ✅ 필수   | 투명 (알파 채널) |
-
-### 4.2 배경 제거 체크 (rembg)
-
-> **참조**: `vibe/ref/rembg-guide.md`
-
-**생성 단계 요구 (조건부)**:
-
-- [ ] 배경 제거 예정인 에셋은 **순백(#FFFFFF) 단색 배경**으로 생성
-- [ ] 그라데이션/텍스처/그림자 배경 금지
-
-**배경 제거 실행**:
-
-- [ ] `rembg i -m birefnet-general <input> <output>` 실행
-- [ ] 알파 채널 존재 확인 (GIMP/Photoshop/Preview)
-- [ ] 경계 부분 잔여 배경 없음 확인
-
-### 4.3 투명도 검증 명령어
-
-```bash
-# ImageMagick으로 알파 채널 확인
-magick identify -verbose <image.png> | grep -i alpha
-
-# 또는 파일 정보 확인 (PNG 포맷)
-file <image.png>  # PNG image data, ... RGBA
-```
-
----
-
-## 5. 폴백 (Fallback)
-
-### 5.1 폴백 텍스트/이모지 체크
-
-| 체크 항목         | 요구  | 설명                               |
-| ----------------- | ----- | ---------------------------------- |
-| **fallback 필드** | 필수  | manifest.json에 `fallback` 값 존재 |
-| **이모지/텍스트** | 1~2자 | 예: `📡`, `⚠`, `✓`, `OK`           |
-| **의미 전달**     | 명확  | 원본 아이콘과 동일한 의미          |
-
-### 5.2 폴백 동작 테스트
-
-**테스트 시나리오**:
-
-1. 에셋 파일을 임시로 삭제/이름 변경
-2. 브라우저에서 UI 로드
-3. 폴백 텍스트/이모지가 표시되는지 확인
-4. UI가 깨지지 않는지 확인
-
-**코드 구현 확인**:
-
-```tsx
-// 예상 패턴
-<img
-  src="/ui/icons/signal-24.png"
-  alt=""
-  aria-hidden="true"
-  onError={(e) => (e.currentTarget.style.display = 'none')}
-/>
-<span className="icon-fallback">📡</span>
-```
-
----
-
-## 6. 매니페스트 동기화 (manifest.json)
-
-### 6.1 필수 필드 체크
-
-| 필드       | 필수 | 체크                              |
-| ---------- | ---- | --------------------------------- |
-| `id`       | ✅   | kebab-case, 고유값                |
-| `path`     | ✅   | `ui/` 기준 상대 경로              |
-| `type`     | ✅   | `icon` / `placeholder` / `chrome` |
-| `fallback` | 권장 | 이모지/텍스트                     |
-| `bytes`    | 권장 | 파일 크기                         |
-| `usedIn`   | 권장 | 사용처 컴포넌트 목록              |
-| `notes`    | 선택 | QA/생성 관련 메모                 |
-
-### 6.2 실제 파일과 매니페스트 정합성
-
-- [ ] manifest.json의 모든 에셋이 실제 파일로 존재
-- [ ] 실제 디렉토리의 모든 에셋이 manifest.json에 등록됨
-- [ ] `path` 경로가 실제 파일 위치와 일치
-- [ ] `bytes` 값이 실제 파일 크기와 일치
-
-### 6.3 정합성 검증 스크립트 (참고)
-
-```bash
-# manifest.json에 있는 path들이 실제로 존재하는지 확인
-cd frontend/public/ui
-cat manifest.json | jq -r '.assets[].path' | while read p; do
-  [ -f "$p" ] || echo "MISSING: $p"
-done
-
-# 실제 파일이 manifest에 있는지 확인
-find icons placeholders chrome -type f \( -name "*.png" -o -name "*.webp" \) | while read f; do
-  grep -q "\"$f\"" manifest.json || echo "NOT IN MANIFEST: $f"
-done
-```
-
----
-
-## 7. 스타일 일관성 (CRT Theme)
-
-### 7.1 색상 팔레트 준수
-
-| 색상        | Hex       | 용도        | 체크 |
-| ----------- | --------- | ----------- | ---- |
-| 인광 녹색   | `#33ff00` | 주요 색상   | ☐    |
-| 어두운 녹색 | `#1a8000` | 보조 색상   | ☐    |
-| 마젠타      | `#ff00ff` | 포인트/경고 | ☐    |
-| 주황색      | `#ffaa00` | 경고        | ☐    |
-| 붉은색      | `#ff3333` | 에러        | ☐    |
-| 배경        | `#0d0d0d` | 배경        | ☐    |
-
-### 7.2 스타일 금지 사항
-
-- [ ] 외부 로고/상표 복제 금지
-- [ ] CRT 테마와 충돌하는 색상 금지 (밝은 파스텔, 난색 남용)
-- [ ] 복잡한 그라데이션/사진 스타일 금지
-
----
-
-## 8. Retina 대응 (선택)
-
-### 8.1 Retina 필요 여부 판단
-
-| 상황             | Retina 필요 | 비고                  |
-| ---------------- | ----------- | --------------------- |
-| **16px 아이콘**  | 선택        | HiDPI에서 선명도 향상 |
-| **24px+ 아이콘** | 낮음        | 기본 해상도로 충분    |
-| **placeholder**  | 낮음        | 이미 충분한 해상도    |
-
-### 8.2 Retina 파일 규칙
-
-- 파일명: `{name}-24.png` → `{name}-24@2x.png`
-- CSS: `image-set()`으로 1x/2x 제공
-- manifest.json: `retina: true` 표기
-
----
-
-## 9. 종합 체크리스트 (Quick Reference)
-
-에셋 추가/수정 시 아래 항목을 순서대로 체크하세요:
-
-### 📦 추가 전
-
-- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
-- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
-- [ ] CRT 테마 색상과 조화
-
-### 🎨 생성 시
-
-- [ ] (조건부) 배경 제거 필요 시 순백(#FFFFFF) 배경으로 생성
-- [ ] 필요 사이즈로 리사이즈
-- [ ] (조건부) `rembg`로 배경 제거
-
-### ✅ 추가 후
-
-- [ ] 개별 용량 예산 준수 확인
-- [ ] 총합 예산 준수 확인 (`totalBytes` < `budgetBytes`)
-- [ ] 16px 실루엣 구분 가능 여부 (아이콘)
-- [ ] 기본/Readable 모드 대비 확인
-- [ ] (조건부) 알파 채널 존재 확인 (투명 필요 에셋)
-- [ ] 폴백 텍스트/이모지 지정
-- [ ] manifest.json 업데이트
-- [ ] 실제 파일과 매니페스트 정합성 확인
-
----
-
-## 10. 참고 자료
-
-- **SSOT 규칙**: `frontend/public/ui/README.md`
-- **배경 제거 가이드**: `vibe/ref/rembg-guide.md`
-- **매니페스트 스키마**: `frontend/public/ui/manifest.schema.json`
-- **스타일 가이드**: `vibe/ref/frontend-style-guide.md`
-- **가독성 패스**: U-028[Mvp] (Readable 모드)
-
----
-
-_마지막 업데이트: 2026-01-12_  
-_문서 버전: 1.0.0_
+<file path="frontend/src/components/GameHeader.tsx">
+import { useTranslation } from 'react-i18next';
+import { UIControls } from './UIControls';
+import type { UIScale } from '../stores/uiPrefsStore';
+
+interface GameHeaderProps {
+  signal: number;
+  memoryShard: number;
+  isConnected: boolean;
+  uiScale: UIScale;
+  onIncreaseScale: () => void;
+  onDecreaseScale: () => void;
+}
+
+export function GameHeader({
+  signal,
+  memoryShard,
+  isConnected,
+  uiScale,
+  onIncreaseScale,
+  onDecreaseScale,
+}: GameHeaderProps) {
+  const { t } = useTranslation();
+
+  return (
+    <header className="game-header has-chrome">
+      <h1 className="game-title glitch" data-text={t('ui.logo')}>
+        {t('ui.logo')}
+      </h1>
+      <div className="header-controls">
+        {/* UI 스케일 컨트롤 (U-028→U-037: Readable 제거) */}
+        <UIControls
+          uiScale={uiScale}
+          onIncreaseScale={onIncreaseScale}
+          onDecreaseScale={onDecreaseScale}
+        />
+        <div className="economy-hud">
+          <span className="icon-wrapper signal-icon" aria-label={t('economy.signal')}>
+            <img
+              src="/ui/icons/signal-24.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              onError={(e) => {
+                e.currentTarget.classList.add('hidden');
+              }}
+            />
+            <span className="icon-fallback">⚡</span>
+          </span>
+          <span className="currency-value">
+            {t('economy.signal')}: {signal}
+          </span>
+          <span className="icon-wrapper shard-icon" aria-label={t('economy.shard')}>
+            <img
+              src="/ui/icons/shard-24.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              onError={(e) => {
+                e.currentTarget.classList.add('hidden');
+              }}
+            />
+            <span className="icon-fallback">💎</span>
+          </span>
+          <span className="currency-value">
+            {t('economy.shard')}: {memoryShard}
+          </span>
+        </div>
+        <div className="connection-status">
+          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
+          <span>{isConnected ? t('connection.online') : t('connection.offline')}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+</file>
+
+<file path="frontend/src/components/InventoryPanel.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { InventoryPanel } from './InventoryPanel';
+import { useInventoryStore } from '../stores/inventoryStore';
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      if (key === 'inventory.empty') return 'Inventory is empty';
+      if (key === 'inventory.grid_label') return 'Inventory Grid';
+      return key;
+    },
+  }),
+}));
+
+// dnd-kit 모킹 (필요시)
+// dnd-kit hooks often return attributes/listeners/setNodeRef
+// For basic rendering test, we might not need to mock them if they don't crash jsdom
+
+describe('InventoryPanel Component', () => {
+  beforeEach(() => {
+    useInventoryStore.getState().reset();
+  });
+
+  it('아이템이 없을 때 빈 상태 메시지를 표시해야 한다', () => {
+    render(<InventoryPanel />);
+    expect(screen.getByText('Inventory is empty')).toBeInTheDocument();
+  });
+
+  it('아이템이 있을 때 목록을 렌더링해야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([
+      { id: 'item1', name: 'Item 1', quantity: 1, icon: '🍎' },
+      { id: 'item2', name: 'Item 2', quantity: 3, icon: '🗡️' },
+    ]);
+
+    render(<InventoryPanel />);
+
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('🍎')).toBeInTheDocument();
+    expect(screen.getByText('Item 2')).toBeInTheDocument();
+    expect(screen.getByText('🗡️')).toBeInTheDocument();
+    expect(screen.getByText('x3')).toBeInTheDocument();
+  });
+
+  it('아이템 클릭 시 선택되어야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
+
+    render(<InventoryPanel />);
+
+    const item = screen.getByText('Item 1').closest('.inventory-item');
+    expect(item).not.toHaveClass('selected');
+
+    fireEvent.click(screen.getByText('Item 1'));
+
+    expect(item).toHaveClass('selected');
+    expect(useInventoryStore.getState().selectedItemId).toBe('item1');
+  });
+
+  it('disabled 프로프가 true일 때 아이템 클릭이 무시되어야 한다', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
+
+    render(<InventoryPanel disabled={true} />);
+
+    fireEvent.click(screen.getByText('Item 1'));
+
+    const item = screen.getByText('Item 1').closest('.inventory-item');
+    expect(item).not.toHaveClass('selected');
+    expect(useInventoryStore.getState().selectedItemId).toBeNull();
+  });
+});
+</file>
+
+<file path="frontend/src/components/NarrativeFeed.tsx">
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { NarrativeEntry } from '../stores/worldStore';
+
+interface NarrativeFeedProps {
+  entries: NarrativeEntry[];
+  streamingText: string;
+}
+
+export function NarrativeFeed({ entries, streamingText }: NarrativeFeedProps) {
+  const { t } = useTranslation();
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // 새 엔트리 추가 시 스크롤
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [entries, streamingText]);
+
+  return (
+    <div className="narrative-feed" ref={feedRef}>
+      {entries.map((entry, index) => (
+        <div key={`${entry.turn}-${index}`} className="narrative-entry">
+          <span className="narrative-timestamp">
+            {t('narrative.turn_label', { turn: entry.turn })}
+          </span>
+          <span className="narrative-text">{entry.text}</span>
+        </div>
+      ))}
+      {streamingText && (
+        <div className="narrative-entry streaming">
+          <span className="narrative-timestamp">{t('narrative.streaming_label')}</span>
+          <span className="narrative-text">{streamingText}</span>
+          <span className="cursor-blink">▌</span>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/components/Panel.tsx">
+import { useTranslation } from 'react-i18next';
+
+interface PanelProps {
+  title: string;
+  children?: React.ReactNode;
+  className?: string;
+  /** U-032: Chrome 장식 적용 여부 */
+  hasChrome?: boolean;
+  /** 기본 placeholder i18n 키 (children이 없을 때 사용) */
+  placeholderKey?: string;
+}
+
+export function Panel({ title, children, className = '', hasChrome = false, placeholderKey }: PanelProps) {
+  const { t } = useTranslation();
+  const panelClass = `panel ${className} ${hasChrome ? 'has-chrome' : ''}`.trim();
+  const headerClass = `panel-header ${hasChrome ? 'has-chrome' : ''}`.trim();
+
+  return (
+    <div className={panelClass}>
+      <div className={headerClass}>
+        <span className="panel-title">{title}</span>
+      </div>
+      <div className="panel-content">
+        {children || (
+          <p className="panel-placeholder">
+            {placeholderKey ? t(placeholderKey) : t('ui.panel_placeholder')}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/components/SceneCanvas.test.tsx">
+import { describe, it, expect } from 'vitest';
+import { SCENE_PLACEHOLDERS } from './SceneCanvas';
+
+describe('SCENE_PLACEHOLDERS', () => {
+  it('should have all required statuses', () => {
+    const statuses = ['default', 'loading', 'offline', 'blocked', 'low_signal'];
+    statuses.forEach((status) => {
+      expect(SCENE_PLACEHOLDERS).toHaveProperty(status);
+    });
+  });
+
+  it('should have correct image paths', () => {
+    expect(SCENE_PLACEHOLDERS.default.imagePath).toBe(
+      '/ui/placeholders/scene-placeholder-default.png',
+    );
+    expect(SCENE_PLACEHOLDERS.loading.imagePath).toBe('/ui/placeholders/scene-loading.webp');
+    expect(SCENE_PLACEHOLDERS.offline.imagePath).toBe('/ui/placeholders/scene-offline.webp');
+    expect(SCENE_PLACEHOLDERS.blocked.imagePath).toBe('/ui/placeholders/scene-blocked.webp');
+    expect(SCENE_PLACEHOLDERS.low_signal.imagePath).toBe('/ui/placeholders/scene-low-signal.webp');
+  });
+
+  it('should have correct i18n label keys', () => {
+    expect(SCENE_PLACEHOLDERS.default.labelKey).toBe('scene.status.default');
+    expect(SCENE_PLACEHOLDERS.loading.labelKey).toBe('scene.status.loading');
+    expect(SCENE_PLACEHOLDERS.offline.labelKey).toBe('scene.status.offline');
+    expect(SCENE_PLACEHOLDERS.blocked.labelKey).toBe('scene.status.blocked');
+    expect(SCENE_PLACEHOLDERS.low_signal.labelKey).toBe('scene.status.low_signal');
+  });
+});
+</file>
+
+<file path="frontend/src/components/UIControls.tsx">
+import { useTranslation } from 'react-i18next';
+import { UI_SCALES, type UIScale } from '../stores/uiPrefsStore';
+
+interface UIControlsProps {
+  uiScale: UIScale;
+  onIncreaseScale: () => void;
+  onDecreaseScale: () => void;
+}
+
+export function UIControls({ uiScale, onIncreaseScale, onDecreaseScale }: UIControlsProps) {
+  const { t } = useTranslation();
+  const isMinScale = uiScale === UI_SCALES[0];
+  const isMaxScale = uiScale === UI_SCALES[UI_SCALES.length - 1];
+
+  return (
+    <div className="ui-controls" role="group" aria-label={t('ui.scale_label')}>
+      {/* UI 스케일 조절 */}
+      <button
+        type="button"
+        className="ui-scale-btn"
+        onClick={onDecreaseScale}
+        disabled={isMinScale}
+        aria-label={t('ui.scale_decrease')}
+        title={`${t('ui.scale_decrease')} (A-)`}
+      >
+        A-
+      </button>
+      <span className="ui-scale-display" aria-live="polite">
+        {Math.round(uiScale * 100)}%
+      </span>
+      <button
+        type="button"
+        className="ui-scale-btn"
+        onClick={onIncreaseScale}
+        disabled={isMaxScale}
+        aria-label={t('ui.scale_increase')}
+        title={`${t('ui.scale_increase')} (A+)`}
+      >
+        A+
+      </button>
+    </div>
+  );
+}
 </file>
 
 <file path="frontend/src/demo/demoFixtures.ts">
@@ -1353,6 +1388,61 @@ export function getCurrentThemeFromDOM(): 'dark' | 'light' {
 }
 </file>
 
+<file path="frontend/src/demo/useDemoInitializer.ts">
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useInventoryStore } from '../stores/inventoryStore';
+import { useWorldStore } from '../stores/worldStore';
+import {
+  DEMO_INVENTORY_ITEMS,
+  DEMO_SCENE_OBJECTS,
+  getDemoItemNameKey,
+  isDemoEnvironment,
+} from '../demo/demoFixtures';
+
+/**
+ * 데모 환경에서 초기 mock 데이터를 로드하는 훅 (RU-003-Q5).
+ */
+export function useDemoInitializer() {
+  const { t } = useTranslation();
+  const { items: inventoryItems, addItems: addInventoryItems } = useInventoryStore();
+  const { sceneObjects, setSceneObjects, narrativeEntries, initialize: initializeWorld } = useWorldStore();
+
+  useEffect(() => {
+    // 월드 초기화 (환영 메시지)
+    if (narrativeEntries.length === 0) {
+      initializeWorld(t('narrative.welcome'));
+    }
+
+    // DEV: 데모용 mock 데이터 초기화 (RU-003-Q5: DEV 가드 + i18n 키 기반)
+    if (isDemoEnvironment()) {
+      // 데모용 mock 인벤토리 초기화 (U-011)
+      if (inventoryItems.length === 0) {
+        const demoInventory = DEMO_INVENTORY_ITEMS.map((item) => ({
+          id: item.id,
+          name: t(getDemoItemNameKey(item.id)),
+          icon: item.icon,
+          quantity: item.quantity,
+        }));
+        addInventoryItems(demoInventory);
+      }
+
+      // 데모용 mock Scene Objects 초기화 (U-010)
+      if (sceneObjects.length === 0) {
+        const demoSceneObjects = DEMO_SCENE_OBJECTS.map((obj) => ({
+          id: obj.id,
+          label: t(obj.labelKey),
+          box_2d: obj.box_2d,
+          interaction_hint: t(obj.hintKey),
+        }));
+        setSceneObjects(demoSceneObjects);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
+}
+</file>
+
 <file path="frontend/src/i18n-scenario.test.ts">
 import { describe, it, expect } from 'vitest';
 import i18next from './i18n';
@@ -1405,173 +1495,6 @@ describe('i18n Integration Scenarios (U-039)', () => {
     expect(i18next.t('connection.online')).toBe('온라인');
   });
 });
-</file>
-
-<file path="frontend/src/locales/README.md">
-# i18n 언어 리소스 가이드 (Unknown World)
-
-이 디렉토리는 Unknown World의 **프론트엔드 UI 문자열 리소스**를 관리하는 SSOT(Single Source of Truth)입니다.
-
-## 디렉토리 구조
-
-```
-locales/
-├── ko-KR/
-│   └── translation.json    # 한국어 리소스
-├── en-US/
-│   └── translation.json    # 영어 리소스
-└── README.md               # 이 문서
-```
-
-## 지원 언어
-
-| 코드    | 언어   | 상태 | 비고           |
-| ------- | ------ | ---- | -------------- |
-| `ko-KR` | 한국어 | 기본 | 데모 기준 언어 |
-| `en-US` | 영어   | 폴백 | fallbackLng    |
-
-> **언어 코드 규칙**: BCP-47 형식을 사용합니다 (`ko-KR`, `en-US`).  
-> TurnInput/SaveGame의 `language` 필드와 동일한 축입니다.
-
-## 키 네이밍 규칙
-
-키는 **도메인.섹션.항목** 형태의 계층 구조를 따릅니다.
-
-### 도메인 목록
-
-| 도메인       | 용도                                    |
-| ------------ | --------------------------------------- |
-| `scene`      | Scene Canvas 관련 메시지                |
-| `agent`      | Agent Console 관련 라벨/상태            |
-| `ui`         | 공통 UI 요소 (버튼, 입력, 플레이스홀더) |
-| `economy`    | 재화 관련 라벨                          |
-| `connection` | 연결 상태                               |
-| `panel`      | 패널별 타이틀/플레이스홀더              |
-| `action`     | 액션 카드/선택지                        |
-| `narrative`  | 내러티브/게임 로그                      |
-
-### 예시
-
-```json
-{
-  "scene.status.loading": "동기화 중...",
-  "agent.console.badges": "검증 배지",
-  "ui.execute": "실행",
-  "panel.inventory.placeholder": "[ 드래그 앤 드롭 영역 ]"
-}
-```
-
-## 새 언어 추가 절차
-
-1. **디렉토리 생성**: `locales/{언어코드}/` 생성 (예: `ja-JP`)
-2. **translation.json 복사**: `ko-KR/translation.json`을 복사하여 시작점으로 사용
-3. **번역 작업**: 모든 값을 해당 언어로 번역
-4. **i18n.ts 등록**: `frontend/src/i18n.ts`에 새 언어 리소스 import 및 등록
-5. **검증**: 누락된 키가 없는지 확인 (i18next의 `missingKeyHandler` 활용)
-
-```typescript
-// frontend/src/i18n.ts
-import jaJP from './locales/ja-JP/translation.json';
-
-const resources = {
-  'ko-KR': { translation: koKR },
-  'en-US': { translation: enUS },
-  'ja-JP': { translation: jaJP }, // 새 언어 추가
-};
-```
-
-## 사용 방법
-
-### 기본 사용
-
-```tsx
-import { useTranslation } from 'react-i18next';
-
-function MyComponent() {
-  const { t } = useTranslation();
-
-  return <button>{t('ui.execute')}</button>;
-}
-```
-
-### 보간 (Interpolation)
-
-```tsx
-// JSON
-{ "narrative.turn_label": "[TURN {{turn}}]" }
-
-// 컴포넌트
-<span>{t('narrative.turn_label', { turn: 5 })}</span>
-// 결과: "[TURN 5]"
-```
-
-### 언어 변경 (향후)
-
-```tsx
-import { useTranslation } from 'react-i18next';
-
-function LanguageToggle() {
-  const { i18n } = useTranslation();
-
-  const toggleLanguage = () => {
-    const newLang = i18n.resolvedLanguage === 'ko-KR' ? 'en-US' : 'ko-KR';
-    i18n.changeLanguage(newLang);
-  };
-
-  return <button onClick={toggleLanguage}>🌐</button>;
-}
-```
-
-## 금지사항
-
-### ❌ 텍스트를 이미지에 포함하지 마세요
-
-이미지에 텍스트를 박으면:
-
-- 언어 변경 시 이미지를 교체해야 함
-- 리사이즈 시 가독성 저하
-- 접근성 문제 (스크린 리더)
-
-**대신**: 이미지와 텍스트를 분리하고, 텍스트는 i18n 키로 관리
-
-### ❌ 하드코딩 문자열 금지
-
-```tsx
-// ❌ Bad
-<button>실행</button>
-
-// ✅ Good
-<button>{t('ui.execute')}</button>
-```
-
-### ❌ ko/en 혼합 출력 금지 (RULE-006)
-
-동일 화면에서 한국어와 영어가 섞여 나오면 안 됩니다.
-모든 UI 문자열은 현재 선택된 언어로 일관되게 표시되어야 합니다.
-
-### ❌ 키 임의 삭제/변경 금지
-
-키를 삭제하거나 이름을 변경하면 기존 코드에서 참조 오류가 발생합니다.
-
-- 삭제: deprecated 마킹 후 충분한 기간을 두고 제거
-- 변경: 새 키 추가 → 마이그레이션 → 구 키 제거
-
-## 검증 체크리스트
-
-새 리소스 추가/수정 시:
-
-- [ ] 모든 지원 언어에 동일한 키가 존재하는지 확인
-- [ ] 보간 변수명이 일치하는지 확인 (`{{variable}}`)
-- [ ] 빌드 및 린트 통과
-- [ ] 실제 UI에서 문자열이 올바르게 표시되는지 확인
-
-## 참고 문서
-
-- `vibe/prd.md` - 3.1(지원 언어), 8.7(TurnInput.language)
-- `vibe/tech-stack.md` - i18next/react-i18next 버전
-- `.cursor/rules/00-core-critical.mdc` - RULE-006(i18n/언어 혼합 금지)
-- [i18next 공식 문서](https://www.i18next.com/)
-- [react-i18next 공식 문서](https://react.i18next.com/)
 </file>
 
 <file path="frontend/src/schemas/index.ts">
@@ -4000,183 +3923,6 @@ def test_schema_rembg_rules():
     )
 </file>
 
-<file path="CLAUDE.md">
-# AI 에이전트 전역 지침 (Unknown World)
-
-이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
-
----
-
-## 프로젝트 개요
-
-**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
-
-- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
-- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
-- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
-
----
-
-## SSOT(단일 출처) 및 충돌 해결 우선순위
-
-문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
-
-1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
-2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
-3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
-4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
-5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
-
-불확실하면 **추측하지 말고 질문**합니다.
-
----
-
-## 핵심 원칙 (Non‑Negotiable)
-
-### 1) Prompt-only wrapper / Generic chatbot 회피
-
-- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
-- 반드시 다음이 존재해야 합니다:
-  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
-  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
-  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
-
-### 2) 채팅 버블 UI 금지, 게임 UI 고정
-
-- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
-- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
-  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
-    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
-
-### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
-
-- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
-- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
-
-### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
-
-- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
-- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
-
-### 5) 비용/지연은 UX/게임 메커닉으로 제어
-
-- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
-- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
-
-### 6) ko/en i18n: 혼합 출력 금지
-
-- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
-- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
-- 프롬프트는 언어별 `.md` 파일로 관리합니다.
-
-### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
-
-- BYOK(사용자 API 키 입력) 요구 금지(MVP).
-- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
-- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
-
-### 8) 관측 가능성(Observability) = UX의 일부
-
-- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
-- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
-
----
-
-## 작업 표준 (Workflow)
-
-### 작업 시작 전 필수
-
-- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
-- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
-
-### 유닛(단계) 기반 개발
-
-- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
-- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
-- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
-
-### 문서 동기화
-
-- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
-- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
-
-### 리팩토링
-
-- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
-
-### 테스트
-
-- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
-- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
-
-### 커밋 메시지
-
-- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
-- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
-
----
-
-## 품질 기준 (출시/데모 관점)
-
-### Hard Gate (필수 통과)
-
-- **Schema OK**: TurnOutput JSON이 스키마를 통과
-- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
-- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
-- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
-
-### Soft Gate (관측/튜닝)
-
-- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
-- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
-
----
-
-## 금지사항 (절대 금지)
-
-- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
-- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
-- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
-- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
-- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
-- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
-- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
-
----
-
-## 지침 운영/사용 가이드
-
-### Cursor 규칙 적용 방식
-
-- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
-- 규칙이 부족/충돌하면:
-  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
-  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
-
-### 온보딩(신규 합류자/에이전트) 10분 루프
-
-- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
-- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
-- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
-- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
-
-### 지침 업데이트 프로세스(권장)
-
-- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
-- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
-
----
-
-## 참조 문서
-
-- `vibe/prd.md`
-- `vibe/tech-stack.md`
-- `vibe/ref/frontend-style-guide.md`
-- `vibe/ref/structured-outputs-guide.md`
-- `vibe/commands/*.md` / `.cursor/commands/*.md`
-- `.gemini/rules/commit-rules.md`
-</file>
-
 <file path="frontend/public/ui/manifest.schema.json">
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -4312,6 +4058,779 @@ def test_schema_rembg_rules():
     }
   }
 }
+</file>
+
+<file path="frontend/src/components/ActionDeck.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ActionDeck } from './ActionDeck';
+import type { ActionCard } from '../schemas/turn';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (params?.turn !== undefined) return `Turn ${params.turn}`;
+      if (key === 'action.risk.low') return 'Low';
+      if (key === 'action.risk.medium') return 'Medium';
+      if (key === 'action.risk.high') return 'High';
+      if (key === 'action.insufficient_balance') return 'Insufficient Balance';
+      if (key === 'action.alternative') return 'Alt';
+      return key;
+    },
+  }),
+}));
+
+describe('ActionDeck Component', () => {
+  const mockCards: ActionCard[] = [
+    {
+      id: 'card-1',
+      label: 'Regular Action',
+      description: 'Test Description',
+      cost: { signal: 10, memory_shard: 0 },
+      cost_estimate: {
+        min: { signal: 8, memory_shard: 0 },
+        max: { signal: 12, memory_shard: 0 },
+      },
+      risk: 'low',
+      hint: 'Positive hint',
+      reward_hint: 'Bonus item',
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: false,
+    },
+    {
+      id: 'card-2',
+      label: 'Expensive Action',
+      description: null,
+      cost: { signal: 50, memory_shard: 1 },
+      cost_estimate: null,
+      risk: 'high',
+      hint: 'Risky hint',
+      reward_hint: null,
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: false,
+    },
+    {
+      id: 'card-alt',
+      label: 'Alternative Action',
+      description: null,
+      cost: { signal: 2, memory_shard: 0 },
+      cost_estimate: null,
+      risk: 'low',
+      hint: null,
+      reward_hint: null,
+      enabled: true,
+      disabled_reason: null,
+      is_alternative: true,
+    },
+  ];
+
+  beforeEach(() => {
+    // 스토어 초기화
+    useActionDeckStore.setState({ cards: [] });
+    useWorldStore.setState({ economy: { signal: 100, memory_shard: 5 } });
+    useAgentStore.setState({ isStreaming: false });
+  });
+
+  it('renders provided cards from store', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck />);
+    expect(screen.getByText('Regular Action')).toBeInTheDocument();
+    expect(screen.getByText('Expensive Action')).toBeInTheDocument();
+    expect(screen.getByText('Alternative Action')).toBeInTheDocument();
+  });
+
+  it('displays cost estimates as ranges when available', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck />);
+    // card-1 has cost_estimate: 8~12
+    expect(screen.getByText('8~12')).toBeInTheDocument();
+    // card-2 has cost: 50
+    expect(screen.getByText('50')).toBeInTheDocument();
+  });
+
+  it('disables cards when balance is insufficient in worldStore', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    useWorldStore.setState({ economy: { signal: 5, memory_shard: 0 } });
+    
+    render(<ActionDeck />);
+
+    // Regular Action (cost 10/estimate max 12) -> disabled
+    const card1 = screen.getByRole('button', { name: /Regular Action/i });
+    expect(card1).toBeDisabled();
+    expect(screen.getAllByText('Insufficient Balance').length).toBeGreaterThan(0);
+
+    // Alternative Action (cost 2) -> enabled
+    const cardAlt = screen.getByRole('button', { name: /Alternative Action/i });
+    expect(cardAlt).not.toBeDisabled();
+  });
+
+  it('renders alternative badge for alternative cards', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck />);
+    expect(screen.getByText('Alt')).toBeInTheDocument();
+  });
+
+  it('calls onCardClick when an enabled card is clicked', () => {
+    const onCardClick = vi.fn();
+    useActionDeckStore.setState({ cards: mockCards });
+    render(<ActionDeck onCardClick={onCardClick} />);
+
+    fireEvent.click(screen.getByText('Regular Action'));
+    expect(onCardClick).toHaveBeenCalledWith(expect.objectContaining({ id: 'card-1' }));
+  });
+
+  it('displays server-provided disabled reason', () => {
+    const disabledCard: ActionCard[] = [
+      {
+        ...mockCards[0],
+        enabled: false,
+        disabled_reason: 'Locked by story',
+      },
+    ];
+    useActionDeckStore.setState({ cards: disabledCard });
+    render(<ActionDeck />);
+    expect(screen.getByText('Locked by story')).toBeInTheDocument();
+  });
+
+  it('renders default cards when store cards are empty', () => {
+    useActionDeckStore.setState({ cards: [] });
+    render(<ActionDeck />);
+    // useDefaultCards should provide some default labels
+    expect(screen.getByText('action.default.explore.label')).toBeInTheDocument();
+  });
+
+  it('disables all cards when isStreaming is true in agentStore', () => {
+    useActionDeckStore.setState({ cards: mockCards });
+    useAgentStore.setState({ isStreaming: true });
+    
+    render(<ActionDeck />);
+
+    const card1 = screen.getByRole('button', { name: /Regular Action/i });
+    const cardAlt = screen.getByRole('button', { name: /Alternative Action/i });
+    
+    expect(card1).toBeDisabled();
+    expect(cardAlt).toBeDisabled();
+  });
+});
+</file>
+
+<file path="frontend/src/components/ActionDeck.tsx">
+/**
+ * Unknown World - Action Deck 컴포넌트 (U-009[Mvp]).
+ *
+ * PRD 요구사항:
+ *   - Action Deck(3~6장 카드)을 Footer 영역에 상시 노출
+ *   - 각 카드에 예상 비용(최소/최대), 위험도, 보상 힌트 표기 (RULE-005)
+ *   - 카드 클릭 시 TurnInput으로 선택된 행동 전송 (RULE-008)
+ *   - 잔액 부족 시 실행 불가 표시 + 저비용 대안 노출 (RULE-005)
+ *
+ * RULE-002 준수: 채팅 버블/메시지 버튼이 아닌 "게임 카드" UI
+ *
+ * @see vibe/prd.md 6.7 - Action Deck 요구사항
+ * @see .cursor/rules/10-frontend-game-ui.mdc
+ * @module components/ActionDeck
+ */
+
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ActionCard } from '../schemas/turn';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+export interface ActionDeckProps {
+  /** 카드 클릭 콜백 */
+  onCardClick?: (card: ActionCard) => void;
+  /** 전체 비활성화 (스트리밍 중 등, 생략 시 agentStore.isStreaming 사용) */
+  disabled?: boolean;
+}
+
+interface CardDisplayInfo extends ActionCard {
+  /** 클라이언트 측 실행 가능 여부 (서버 enabled가 없을 때 폴백) */
+  isAffordable: boolean;
+  /** 최종 비활성화 여부 */
+  isDisabled: boolean;
+  /** 최종 비활성화 사유 */
+  finalDisabledReason: string | null;
+}
+
+// =============================================================================
+// 기본 카드 생성 (i18n 기반)
+// =============================================================================
+
+function useDefaultCards(): ActionCard[] {
+  const { t } = useTranslation();
+
+  return useMemo(
+    () => [
+      {
+        id: 'default-explore',
+        label: t('action.default.explore.label'),
+        description: t('action.default.explore.description'),
+        cost: { signal: 1, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'low' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+      {
+        id: 'default-investigate',
+        label: t('action.default.investigate.label'),
+        description: t('action.default.investigate.description'),
+        cost: { signal: 2, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'medium' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+      {
+        id: 'default-talk',
+        label: t('action.default.talk.label'),
+        description: t('action.default.talk.description'),
+        cost: { signal: 1, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'low' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+    ],
+    [t],
+  );
+}
+
+// =============================================================================
+// 카드 비용 표시 컴포넌트
+// =============================================================================
+
+interface CardCostDisplayProps {
+  card: CardDisplayInfo;
+}
+
+function CardCostDisplay({ card }: CardCostDisplayProps) {
+  const { t } = useTranslation();
+
+  // 비용 추정 범위가 있으면 min~max 표시, 없으면 기본 cost 표시
+  const costDisplay = card.cost_estimate
+    ? `${card.cost_estimate.min.signal}~${card.cost_estimate.max.signal}`
+    : `${card.cost.signal}`;
+
+  const shardCost = card.cost_estimate
+    ? card.cost_estimate.max.memory_shard
+    : card.cost.memory_shard;
+
+  return (
+    <div className="action-card-cost" data-ui-importance="critical">
+      {/* Signal 비용 */}
+      <span className="cost-item">
+        <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
+          <img
+            src="/ui/icons/signal-16.png"
+            alt=""
+            aria-hidden="true"
+            className="icon-img"
+            style={{ width: 14, height: 14 }}
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback">⚡</span>
+        </span>
+        <span className="cost-value">{costDisplay}</span>
+      </span>
+
+      {/* Shard 비용 (0보다 클 때만 표시) */}
+      {shardCost > 0 && (
+        <span className="cost-item">
+          <span className="cost-separator">|</span>
+          <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
+            <img
+              src="/ui/icons/shard-16.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              style={{ width: 14, height: 14 }}
+              onError={(e) => e.currentTarget.classList.add('hidden')}
+            />
+            <span className="icon-fallback">💎</span>
+          </span>
+          <span className="cost-value">
+            {card.cost_estimate
+              ? `${card.cost_estimate.min.memory_shard}~${card.cost_estimate.max.memory_shard}`
+              : card.cost.memory_shard}
+          </span>
+        </span>
+      )}
+
+      {/* 위험도 */}
+      <span className="cost-item">
+        <span className="cost-separator">|</span>
+        <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
+          <img
+            src={`/ui/icons/risk-${card.risk}-16.png`}
+            alt=""
+            aria-hidden="true"
+            className={`icon-img risk-${card.risk}`}
+            style={{ width: 14, height: 14 }}
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback">⚠</span>
+        </span>
+        <span className={`risk-label risk-${card.risk}`}>{t(`action.risk.${card.risk}`)}</span>
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 단일 카드 컴포넌트
+// =============================================================================
+
+interface ActionCardItemProps {
+  card: CardDisplayInfo;
+  onClick: () => void;
+  disabled: boolean;
+}
+
+function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
+  const { t } = useTranslation();
+
+  const cardClasses = [
+    'action-card',
+    'has-chrome',
+    card.isDisabled ? 'card-disabled' : '',
+    card.is_alternative ? 'card-alternative' : '',
+    `risk-border-${card.risk}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <button
+      type="button"
+      className={cardClasses}
+      onClick={onClick}
+      disabled={disabled || card.isDisabled}
+      aria-disabled={disabled || card.isDisabled}
+      title={card.finalDisabledReason ?? card.description ?? undefined}
+    >
+      {/* 대안 카드 표시 */}
+      {card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
+
+      {/* 카드 타이틀 */}
+      <div className="action-card-title">{card.label}</div>
+
+      {/* 카드 설명 (있을 때만) */}
+      {card.description && <div className="action-card-description">{card.description}</div>}
+
+      {/* 비용/위험도 정보 */}
+      <CardCostDisplay card={card} />
+
+      {/* 힌트 영역 */}
+      {(card.hint || card.reward_hint) && (
+        <div className="action-card-hints">
+          {card.hint && (
+            <div className="hint-item hint-risk">
+              <span className="hint-icon">⚠</span>
+              <span className="hint-text">{card.hint}</span>
+            </div>
+          )}
+          {card.reward_hint && (
+            <div className="hint-item hint-reward">
+              <span className="hint-icon">★</span>
+              <span className="hint-text">{card.reward_hint}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 비활성화 오버레이 */}
+      {card.isDisabled && (
+        <div className="card-disabled-overlay">
+          <span className="disabled-reason">
+            {card.finalDisabledReason ?? t('action.insufficient_balance')}
+          </span>
+        </div>
+      )}
+    </button>
+  );
+}
+
+// =============================================================================
+// 메인 Action Deck 컴포넌트
+// =============================================================================
+
+export function ActionDeck({
+  onCardClick,
+  disabled: propsDisabled,
+}: ActionDeckProps) {
+  const { t } = useTranslation();
+  const defaultCards = useDefaultCards();
+
+  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
+  const cards = useActionDeckStore((state) => state.cards);
+  const currentBalance = useWorldStore((state) => state.economy);
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+
+  const disabled = propsDisabled ?? isStreaming;
+
+  // 카드가 없으면 기본 카드 사용
+  const displayCards = cards.length > 0 ? cards : defaultCards;
+
+  // 카드별 실행 가능 여부 계산 (Q1: Option A - 서버 우선, 클라이언트 폴백)
+  const processedCards: CardDisplayInfo[] = useMemo(() => {
+    return displayCards.map((card) => {
+      // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
+      const serverEnabled = card.enabled;
+
+      // 클라이언트 측 잔액 체크 (서버가 판단하지 않았을 때 폴백)
+      const costToCheck = card.cost_estimate?.max ?? card.cost;
+      const isAffordable =
+        currentBalance.signal >= costToCheck.signal &&
+        currentBalance.memory_shard >= costToCheck.memory_shard;
+
+      // 최종 비활성화 여부: 서버 판단 우선, 없으면 클라이언트 판단
+      const isDisabled = !serverEnabled || !isAffordable;
+
+      // 비활성화 사유 결정
+      let finalDisabledReason: string | null = null;
+      if (!serverEnabled && card.disabled_reason) {
+        finalDisabledReason = card.disabled_reason;
+      } else if (!isAffordable) {
+        finalDisabledReason = t('action.insufficient_balance');
+      }
+
+      return {
+        ...card,
+        isAffordable,
+        isDisabled,
+        finalDisabledReason,
+      };
+    });
+  }, [displayCards, currentBalance, t]);
+
+  // 일반 카드와 대안 카드 분리 (대안 카드는 뒤에 배치)
+  const sortedCards = useMemo(() => {
+    const regular = processedCards.filter((c) => !c.is_alternative);
+    const alternatives = processedCards.filter((c) => c.is_alternative);
+    return [...regular, ...alternatives];
+  }, [processedCards]);
+
+  return (
+    <div className="action-deck" role="group" aria-label={t('action.deck_label')}>
+      {sortedCards.map((card) => (
+        <ActionCardItem
+          key={card.id}
+          card={card}
+          onClick={() => onCardClick?.(card)}
+          disabled={disabled}
+        />
+      ))}
+
+      {/* 모든 카드가 비활성화되었을 때 안내 */}
+      {sortedCards.every((c) => c.isDisabled) && !disabled && (
+        <div className="deck-empty-notice">{t('action.all_disabled_notice')}</div>
+      )}
+    </div>
+  );
+}
+
+export default ActionDeck;
+</file>
+
+<file path="frontend/src/components/AgentConsole.test.tsx">
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { AgentConsole } from './AgentConsole';
+
+// Mock i18n
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// Mock dependencies
+type MockSelector<T> = (state: unknown) => T;
+
+vi.mock('../stores/agentStore', () => ({
+  useAgentStore: <T,>(selector: MockSelector<T>) =>
+    selector({
+      phases: [],
+      badges: [],
+      repairCount: 0,
+      error: null,
+      isStreaming: false,
+    }),
+  selectIsStreaming: (state: { isStreaming: boolean }) => state.isStreaming,
+  selectPhases: (state: { phases: unknown[] }) => state.phases,
+  selectBadges: (state: { badges: unknown[] }) => state.badges,
+  selectRepairCount: (state: { repairCount: number }) => state.repairCount,
+  selectError: (state: { error: unknown }) => state.error,
+}));
+
+describe('AgentConsole (U-037)', () => {
+  it('should render with "critical" importance attribute', () => {
+    const { container } = render(<AgentConsole />);
+
+    // The root element of AgentConsole should have data-ui-importance="critical"
+    const consoleElement = container.firstChild as HTMLElement;
+
+    expect(consoleElement).toHaveAttribute('data-ui-importance', 'critical');
+  });
+
+  it('should render streaming status', () => {
+    render(<AgentConsole />);
+    // Verify that the correct i18n key is used
+    expect(screen.getByText('agent.console.status.idle')).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/InventoryPanel.tsx">
+/**
+ * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp]).
+ *
+ * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
+ *   - tech-stack: dnd-kit 기반 draggable 구현
+ *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
+ *
+ * @module components/InventoryPanel
+ */
+
+import { useCallback, useMemo } from 'react';
+import { useDraggable, DragOverlay } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from 'react-i18next';
+import {
+  useInventoryStore,
+  type InventoryItem,
+  selectItems,
+  selectDraggingItem,
+  selectSelectedItemId,
+} from '../stores/inventoryStore';
+import { DND_TYPE, type InventoryDragData } from '../dnd/types';
+
+// =============================================================================
+// 드래그 가능한 아이템 컴포넌트
+// =============================================================================
+
+interface DraggableItemProps {
+  item: InventoryItem;
+  isSelected: boolean;
+  onSelect: (itemId: string) => void;
+  disabled?: boolean;
+}
+
+/**
+ * 드래그 가능한 인벤토리 아이템.
+ * dnd-kit의 useDraggable 훅을 사용합니다.
+ */
+function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
+  const { t } = useTranslation();
+
+  // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
+  const dragData: InventoryDragData = {
+    type: DND_TYPE.INVENTORY_ITEM,
+    item_id: item.id,
+    item,
+  };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+    data: dragData,
+    disabled,
+  });
+
+  // 변환 스타일 계산
+  const style = useMemo(
+    () => ({
+      transform: CSS.Translate.toString(transform),
+      opacity: isDragging ? 0.5 : 1,
+    }),
+    [transform, isDragging],
+  );
+
+  // 클릭 핸들러 (선택)
+  const handleClick = useCallback(() => {
+    if (!disabled) {
+      onSelect(item.id);
+    }
+  }, [disabled, item.id, onSelect]);
+
+  // 아이콘 렌더링 (이모지 또는 이미지)
+  const renderIcon = () => {
+    if (item.icon) {
+      // URL 형태면 이미지, 아니면 이모지
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return (
+          <img
+            src={item.icon}
+            alt={item.name}
+            className="inventory-item-icon-img"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        );
+      }
+      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+    }
+    // 기본 아이콘 (📦)
+    return <span className="inventory-item-icon-emoji">📦</span>;
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''}`}
+      onClick={handleClick}
+      aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
+      aria-selected={isSelected}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="inventory-item-icon">{renderIcon()}</div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 드래그 오버레이 (드래그 중 표시되는 아이템)
+// =============================================================================
+
+interface ItemOverlayProps {
+  item: InventoryItem;
+}
+
+/**
+ * 드래그 오버레이 아이템.
+ * 드래그 중일 때 커서를 따라다니는 아이템 표시입니다.
+ */
+function ItemOverlay({ item }: ItemOverlayProps) {
+  // 아이콘 렌더링
+  const renderIcon = () => {
+    if (item.icon) {
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return <img src={item.icon} alt={item.name} className="inventory-item-icon-img" />;
+      }
+      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+    }
+    return <span className="inventory-item-icon-emoji">📦</span>;
+  };
+
+  return (
+    <div className="inventory-item overlay">
+      <div className="inventory-item-icon">{renderIcon()}</div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 Inventory Panel 컴포넌트
+// =============================================================================
+
+interface InventoryPanelProps {
+  /** 상호작용 비활성화 (스트리밍 중 등) */
+  disabled?: boolean;
+}
+
+/**
+ * Inventory Panel 컴포넌트.
+ *
+ * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
+ * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
+ *
+ * @example
+ * ```tsx
+ * <InventoryPanel disabled={isStreaming} />
+ * ```
+ */
+export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
+  const { t } = useTranslation();
+
+  // Store 상태
+  const items = useInventoryStore(selectItems);
+  const draggingItem = useInventoryStore(selectDraggingItem);
+  const selectedItemId = useInventoryStore(selectSelectedItemId);
+  const selectItem = useInventoryStore((state) => state.selectItem);
+
+  // 아이템 선택 핸들러
+  const handleSelect = useCallback(
+    (itemId: string) => {
+      // 이미 선택된 아이템 클릭 시 선택 해제
+      selectItem(selectedItemId === itemId ? null : itemId);
+    },
+    [selectedItemId, selectItem],
+  );
+
+  // 빈 인벤토리
+  if (items.length === 0) {
+    return (
+      <div className="inventory-panel-content">
+        <div className="inventory-empty">
+          <span className="inventory-empty-icon">📦</span>
+          <span className="inventory-empty-text">{t('inventory.empty')}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inventory-panel-content" data-ui-importance="critical">
+      <div
+        className="inventory-grid"
+        role="listbox"
+        aria-label={t('inventory.grid_label')}
+        aria-multiselectable={false}
+      >
+        {items.map((item) => (
+          <DraggableItem
+            key={item.id}
+            item={item}
+            isSelected={selectedItemId === item.id}
+            onSelect={handleSelect}
+            disabled={disabled}
+          />
+        ))}
+      </div>
+
+      {/* 드래그 오버레이 */}
+      <DragOverlay dropAnimation={null}>
+        {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
+      </DragOverlay>
+    </div>
+  );
+}
+
+export default InventoryPanel;
 </file>
 
 <file path="frontend/src/dnd/types.ts">
@@ -4594,6 +5113,20 @@ export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
 }
 
 export default i18n;
+</file>
+
+<file path="frontend/src/main.tsx">
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './i18n'; // i18n 초기화
+import './style.css';
+import App from './App.tsx';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
 </file>
 
 <file path="frontend/src/stores/agentStore.test.ts">
@@ -5386,69 +5919,6 @@ export const selectTurnCount = (state: WorldStore) => state.turnCount;
 }
 </file>
 
-<file path="shared/README.md">
-# shared/
-
-이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
-
-## 📁 구조
-
-```
-shared/
-├── schemas/
-│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
-│       ├── turn_input.schema.json    # Client → Server 요청 스키마
-│       └── turn_output.schema.json   # Server → Client 응답 스키마
-└── README.md
-```
-
-## 🔄 SSOT 원칙 (RU-001-Q4)
-
-- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
-- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
-- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
-
-### 소비 전략 (Option B: 생성물 기반 동기화)
-
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
-| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
-
-> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
-
-## 📋 스키마 파일 목록
-
-### Turn 계약 (MVP)
-
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
-| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
-
-## ✅ 스키마 작성 가이드라인
-
-- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
-- **권장 속성**: `required`, `enum`, `description`을 적극 사용
-- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
-- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
-- **참조**: `vibe/ref/structured-outputs-guide.md`
-
-## ⚠️ 보안 주의사항 (RULE-007)
-
-- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
-- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
-- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
-
-## 📚 관련 문서
-
-- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
-- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
-- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
-- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
-- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
-</file>
-
 <file path="backend/src/unknown_world/__init__.py">
 """Unknown World - Backend Package
 
@@ -5982,6 +6452,500 @@ class MockOrchestrator:
                 repair_count=1,  # 복구 시도 횟수
             ),
         )
+</file>
+
+<file path="frontend/src/App.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import App from './App';
+import * as turnStream from './api/turnStream';
+
+// i18next 모킹 (RU-003-Q5: 데모 i18n 키 지원)
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      // 데모 아이템 이름
+      if (key === 'demo.items.keycard-alpha.name') return '키카드 A';
+      if (key === 'demo.items.medkit.name') return '응급 키트';
+      if (key === 'demo.items.flashlight.name') return '손전등';
+      if (key === 'demo.items.data-chip.name') return '데이터칩';
+      // 데모 씬 오브젝트
+      if (key === 'demo.scene.terminal.label') return '터미널';
+      if (key === 'demo.scene.terminal.hint') return '활성화된 터미널이다';
+      if (key === 'demo.scene.door.label') return '문';
+      if (key === 'demo.scene.door.hint') return '잠겨있는 것 같다';
+      // 액션 템플릿
+      if (key === 'scene.hotspot.click_action') {
+        return `Click: ${options?.label}`;
+      }
+      return key;
+    },
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+      resolvedLanguage: 'ko-KR',
+    },
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
+}));
+
+// ResizeObserver 모킹
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+// getBoundingClientRect 모킹
+Element.prototype.getBoundingClientRect = vi.fn(() => ({
+  width: 800,
+  height: 600,
+  top: 0,
+  left: 0,
+  bottom: 600,
+  right: 800,
+  x: 0,
+  y: 0,
+  toJSON: () => {},
+})) as unknown as () => DOMRect;
+
+// api 모킹
+vi.mock('./api/turnStream', () => ({
+  startTurnStream: vi.fn(),
+}));
+
+describe('App Integration - Hotspot Click', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should trigger startTurnStream when a hotspot is clicked', async () => {
+    render(<App />);
+
+    // 데모용으로 App.tsx에 하드코딩된 '터미널' 핫스팟 찾기
+    const terminalHotspot = screen.getByLabelText('터미널');
+    expect(terminalHotspot).toBeInTheDocument();
+
+    // 클릭 시뮬레이션
+    fireEvent.click(terminalHotspot);
+
+    // startTurnStream 호출 확인
+    expect(turnStream.startTurnStream).toHaveBeenCalled();
+
+    const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
+
+    // TurnInput 검증
+    expect(input.text).toBe('Click: 터미널');
+    expect(input.click).toEqual({
+      object_id: 'demo-terminal',
+      box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+    });
+  });
+});
+</file>
+
+<file path="frontend/src/components/DndInteraction.test.tsx">
+import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import App from '../App';
+import * as turnStream from '../api/turnStream';
+
+// dnd-kit 모킹용 타입
+interface MockDndCallbacks {
+  onDragEnd: (event: {
+    active: { id: string; data: { current: unknown } };
+    over: { id: string; data: { current: unknown } } | null;
+  }) => void;
+}
+
+// dnd-kit 모킹 (콜백 가로채기용)
+vi.mock('@dnd-kit/core', async () => {
+  const actual = (await vi.importActual('@dnd-kit/core')) as Record<string, unknown>;
+  return {
+    ...actual,
+    DndContext: (props: MockDndCallbacks & { children: React.ReactNode }) => {
+      // 콜백 저장 (테스트에서 접근 가능하도록 global에 저장)
+      (global as unknown as Record<string, unknown>).dndCallbacks = props;
+      return <div data-testid="mock-dnd-context">{props.children}</div>;
+    },
+  };
+});
+
+// i18next 모킹 (RU-003-Q5: 데모 i18n 키 지원)
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      // 데모 아이템 이름
+      if (key === 'demo.items.keycard-alpha.name') return '키카드 A';
+      if (key === 'demo.items.medkit.name') return '응급 키트';
+      if (key === 'demo.items.flashlight.name') return '손전등';
+      if (key === 'demo.items.data-chip.name') return '데이터칩';
+      // 데모 씬 오브젝트
+      if (key === 'demo.scene.terminal.label') return '터미널';
+      if (key === 'demo.scene.terminal.hint') return '활성화된 터미널이다';
+      if (key === 'demo.scene.door.label') return '문';
+      if (key === 'demo.scene.door.hint') return '잠겨있는 것 같다';
+      // 액션 템플릿
+      if (key === 'inventory.item_label') return `Item: ${options?.name}`;
+      if (key === 'scene.hotspot.drop_action') {
+        return `Drop: ${options?.item} on ${options?.target}`;
+      }
+      if (key === 'scene.hotspot.drop_invalid') {
+        return `Invalid: ${options?.item}`;
+      }
+      if (key === 'connection.online') return 'ONLINE';
+      return key;
+    },
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+      resolvedLanguage: 'ko-KR',
+    },
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
+}));
+
+// ResizeObserver 모킹
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+window.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+// api 모킹
+vi.mock('../api/turnStream', () => ({
+  startTurnStream: vi.fn(),
+}));
+
+describe('DnD Interaction - Logic Test', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should trigger turn execution when handleDragEnd is called with a hotspot target', async () => {
+    render(<App />);
+    const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+
+    // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
+    const mockItem = {
+      id: 'keycard-alpha',
+      name: '키카드 A',
+      icon: '🔑',
+      quantity: 1,
+    };
+
+    // 성공 시나리오 시뮬레이션
+    act(() => {
+      dndCallbacks.onDragEnd({
+        active: {
+          id: 'keycard-alpha',
+          data: {
+            current: {
+              type: 'inventory-item',
+              item_id: 'keycard-alpha',
+              item: mockItem,
+            },
+          },
+        },
+        over: {
+          id: 'hotspot-demo-terminal',
+          data: {
+            current: {
+              type: 'hotspot',
+              object_id: 'demo-terminal',
+              label: '터미널',
+              box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+            },
+          },
+        },
+      });
+    });
+
+    // startTurnStream 호출 확인
+    expect(turnStream.startTurnStream).toHaveBeenCalled();
+    const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
+
+    expect(input.text).toBe('Drop: 키카드 A on 터미널');
+    expect(input.drop).toEqual({
+      item_id: 'keycard-alpha',
+      target_object_id: 'demo-terminal',
+      target_box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+    });
+  });
+
+  it('should show failure feedback when handleDragEnd is called with an invalid target', async () => {
+    render(<App />);
+    const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+
+    // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
+    const mockItem = {
+      id: 'keycard-alpha',
+      name: '키카드 A',
+      icon: '🔑',
+      quantity: 1,
+    };
+
+    // 실패 시나리오 시뮬레이션 (over가 null)
+    act(() => {
+      dndCallbacks.onDragEnd({
+        active: {
+          id: 'keycard-alpha',
+          data: {
+            current: {
+              type: 'inventory-item',
+              item_id: 'keycard-alpha',
+              item: mockItem,
+            },
+          },
+        },
+        over: null,
+      });
+    });
+
+    // turn 실행은 발생하지 않아야 함
+    expect(turnStream.startTurnStream).not.toHaveBeenCalled();
+
+    // 내러티브 피드에 실패 메시지가 나타나야 함
+    const failureMessage = await screen.findByText(/Invalid: 키카드 A/);
+    expect(failureMessage).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/SceneCanvas.hotspot.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { SceneCanvas } from './SceneCanvas';
+import type { SceneObject } from '../schemas/turn';
+import type { SceneCanvasState } from '../types/scene';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
+
+// i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// ResizeObserver 모킹
+let resizeCallback: (entries: ResizeObserverEntry[]) => void;
+class MockResizeObserver {
+  constructor(callback: (entries: ResizeObserverEntry[]) => void) {
+    resizeCallback = callback;
+  }
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+/**
+ * 리사이즈 이벤트를 수동으로 트리거합니다.
+ */
+function triggerResize(width: number, height: number) {
+  if (resizeCallback) {
+    act(() => {
+      resizeCallback([
+        {
+          contentRect: { width, height } as DOMRectReadOnly,
+          target: document.querySelector('.scene-canvas') as Element,
+        } as ResizeObserverEntry,
+      ]);
+    });
+  }
+}
+
+// getBoundingClientRect 모킹
+Element.prototype.getBoundingClientRect = vi.fn(() => ({
+  width: 800,
+  height: 600,
+  top: 0,
+  left: 0,
+  bottom: 600,
+  right: 800,
+  x: 0,
+  y: 0,
+  toJSON: () => {},
+})) as unknown as () => DOMRect;
+
+describe('SceneCanvas Hotspots', () => {
+  const defaultState: SceneCanvasState = {
+    status: 'scene',
+    imageUrl: 'https://example.com/scene.png',
+  };
+
+  const mockObjects: SceneObject[] = [
+    {
+      id: 'obj-1',
+      label: 'Object 1',
+      box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
+      interaction_hint: 'Click me',
+    },
+    {
+      id: 'obj-2',
+      label: 'Object 2',
+      box_2d: { ymin: 500, xmin: 500, ymax: 700, xmax: 700 },
+      interaction_hint: null,
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 스토어 초기화
+    useWorldStore.setState({
+      sceneState: { status: 'default', message: '' },
+      sceneObjects: [],
+    });
+    useAgentStore.setState({ isStreaming: false });
+  });
+
+  it('should render hotspots when objects are provided in worldStore and status is scene (sorted by area)', () => {
+    useWorldStore.setState({
+      sceneState: defaultState,
+      sceneObjects: mockObjects,
+    });
+    
+    render(<SceneCanvas />);
+
+    // 핫스팟 레이어 확인
+    const layer = screen.getByLabelText('scene.hotspot.layer_label');
+    expect(layer).toBeInTheDocument();
+
+    // 개별 핫스팟 확인 (role="button")
+    // RU-003-S2: 면적 기반 정렬 - 큰 것이 먼저 렌더링되어 낮은 z-index를 가짐
+    // Object 1: 100x100 = 10,000
+    // Object 2: 200x200 = 40,000
+    // 따라서 Object 2가 먼저 오고 Object 1이 나중에 옴
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(mockObjects.length);
+    expect(buttons[0]).toHaveAttribute('aria-label', 'Object 2');
+    expect(buttons[1]).toHaveAttribute('aria-label', 'Object 1');
+    
+    // z-index 확인 (RU-003-S2: HotspotOverlay 자체에 style로 적용됨)
+    expect(buttons[0]).toHaveStyle({ zIndex: '1' });
+    expect(buttons[1]).toHaveStyle({ zIndex: '2' });
+  });
+
+  it('should not render hotspots when status is loading', () => {
+    useWorldStore.setState({
+      sceneState: { status: 'loading' },
+      sceneObjects: mockObjects,
+    });
+    
+    render(<SceneCanvas />);
+
+    const layer = screen.queryByLabelText('scene.hotspot.layer_label');
+    expect(layer).not.toBeInTheDocument();
+  });
+
+  it('should call onHotspotClick when a hotspot is clicked', () => {
+    const onHotspotClick = vi.fn();
+    useWorldStore.setState({
+      sceneState: defaultState,
+      sceneObjects: mockObjects,
+    });
+
+    render(<SceneCanvas onHotspotClick={onHotspotClick} />);
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+    fireEvent.click(firstHotspot);
+
+    expect(onHotspotClick).toHaveBeenCalledWith({
+      object_id: 'obj-1',
+      box_2d: mockObjects[0].box_2d,
+    });
+  });
+
+  it('should show tooltip on hover', async () => {
+    useWorldStore.setState({
+      sceneState: defaultState,
+      sceneObjects: mockObjects,
+    });
+
+    render(<SceneCanvas />);
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+
+    // Hover 시작
+    fireEvent.mouseEnter(firstHotspot);
+
+    // 툴팁 라벨 확인
+    expect(screen.getByText('Object 1')).toBeInTheDocument();
+    expect(screen.getByText(/scene.hotspot.hint_prefix/)).toBeInTheDocument();
+    expect(screen.getByText(/Click me/)).toBeInTheDocument();
+
+    // Hover 종료
+    fireEvent.mouseLeave(firstHotspot);
+    expect(screen.queryByText('Object 1')).not.toBeInTheDocument();
+  });
+
+  it('should be disabled when agentStore.isStreaming is true', () => {
+    const onHotspotClick = vi.fn();
+    useWorldStore.setState({
+      sceneState: defaultState,
+      sceneObjects: mockObjects,
+    });
+    useAgentStore.setState({ isStreaming: true });
+
+    render(<SceneCanvas onHotspotClick={onHotspotClick} />);
+
+    const firstHotspot = screen.getByLabelText('Object 1');
+    expect(firstHotspot).toHaveAttribute('aria-disabled', 'true');
+    expect(firstHotspot).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.click(firstHotspot);
+    expect(onHotspotClick).not.toHaveBeenCalled();
+  });
+
+  it('should reposition hotspots when canvas size changes (reactive resize)', async () => {
+    vi.useFakeTimers();
+    useWorldStore.setState({
+      sceneState: defaultState,
+      sceneObjects: mockObjects,
+    });
+    
+    render(<SceneCanvas />);
+
+    // Object 1 찾기 (정렬에 의해 두 번째 버튼일 수 있음)
+    const firstHotspot = screen.getByLabelText('Object 1');
+
+    // 초기 크기 (800x600) 기반 위치 확인
+    expect(firstHotspot).toHaveStyle({
+      top: '60px',
+      left: '80px',
+      width: '80px',
+      height: '60px',
+    });
+
+    // 크기 변경 트리거 (400x300)
+    triggerResize(400, 300);
+    
+    // RU-003-S2: ResizeObserver 디바운스(100ms) 대기
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    // 변경된 크기 기반 위치 확인
+    expect(firstHotspot).toHaveStyle({
+      top: '30px',
+      left: '40px',
+      width: '40px',
+      height: '30px',
+    });
+    
+    vi.useRealTimers();
+  });
+});
 </file>
 
 <file path="frontend/src/stores/agentStore.ts">
@@ -7054,341 +8018,6 @@ async def turn_stream(request: Request) -> StreamingResponse:
     )
 </file>
 
-<file path="frontend/public/ui/README.md">
-# UI 에셋 가이드 (nanobanana mcp SSOT)
-
-> **SSOT 경로**: `frontend/public/ui/`  
-> **도구**: `nanobanana mcp` (개발 전용, 런타임 의존 금지)  
-> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7, `vibe/ref/rembg-guide.md`
-
----
-
-## 1. 핵심 원칙
-
-### 1.1 Dev-only 원칙 (RULE-007)
-
-- `nanobanana mcp`는 **개발 과정에서 정적 에셋을 제작**하는 도구입니다.
-- 제품 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 **금지**합니다.
-- 생성된 에셋은 이 디렉토리(`frontend/public/ui/`)에 커밋하여 정적 배포합니다.
-
-### 1.2 용어 SSOT (RULE-006)
-
-- 이 도구는 반드시 **`nanobanana mcp`** 로 표기합니다.
-- "나노바나나 MCP", "Nano Banana MCP", "banana mcp" 등 혼용 금지.
-- 모델 별칭("Nano Banana / Nano Banana Pro")은 문서 인용 시에만 제한적 사용.
-
-### 1.3 보안 (RULE-005)
-
-- 키/토큰 등 비밀정보를 레포/로그/문서에 남기지 않습니다.
-- 생성 과정에서 사용한 API 키나 인증 정보는 절대 커밋하지 않습니다.
-
----
-
-## 2. 디렉토리 구조
-
-```
-frontend/public/ui/
-├── README.md              # 이 파일 (SSOT 규칙)
-├── manifest.schema.json   # 에셋 매니페스트 스키마
-├── manifest.json          # (생성 시) 실제 에셋 목록
-├── icons/                 # 아이콘 에셋
-│   ├── signal-16.png
-│   ├── signal-24.png
-│   ├── badge-ok-16.png
-│   └── ...
-├── placeholders/          # 상태/장면 placeholder
-│   ├── scene-loading.webp
-│   ├── scene-error.webp
-│   └── ...
-└── chrome/                # UI 프레임/장식
-    ├── panel-corner-tl.png
-    ├── panel-border-h.png
-    └── ...
-```
-
----
-
-## 3. 네이밍 규칙
-
-### 3.1 기본 포맷
-
-```
-{용도}-{크기}.{확장자}
-{용도}-{상태}-{크기}.{확장자}
-```
-
-**예시**:
-
-- `signal-24.png` — Signal 아이콘, 24px
-- `badge-ok-16.png` — OK 배지, 16px
-- `scene-loading.webp` — 로딩 상태 placeholder
-
-### 3.2 규칙
-
-| 항목       | 규칙                                              |
-| ---------- | ------------------------------------------------- |
-| **케이스** | `kebab-case` (소문자 + 하이픈)                    |
-| **용도**   | 명확한 역할 표현 (signal, badge, scene, panel 등) |
-| **상태**   | 필요 시 상태 포함 (ok, fail, loading, error 등)   |
-| **크기**   | 픽셀 단위 숫자 (16, 24, 32, 64 등)                |
-| **확장자** | 용도에 맞게 선택 (아래 참조)                      |
-
----
-
-## 4. 포맷 및 사이즈 규칙
-
-### 4.1 포맷 선택
-
-| 용도            | 기본 포맷  | 대안 | 비고                               |
-| --------------- | ---------- | ---- | ---------------------------------- |
-| **아이콘**      | PNG (투명) | -    | 작은 크기, 투명도 필수             |
-| **placeholder** | WebP       | PNG  | 용량 절감 우선 (Q1 결정: Option B) |
-| **chrome**      | PNG (투명) | -    | 프레임/장식, 투명도 필수           |
-
-> **배경 제거(필수 조건부)**: 아이콘/chrome 등 투명 배경이 필요한 에셋은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리합니다. (가이드: `vibe/ref/rembg-guide.md`)
-
-### 4.2 사이즈 규격
-
-| 용도            | 필수 사이즈 | 선택 사이즈 | 비고             |
-| --------------- | ----------- | ----------- | ---------------- |
-| **아이콘**      | 16, 24      | 32, 64      | 최소 2종 필수    |
-| **placeholder** | 가변        | -           | 용도별 적정 크기 |
-| **chrome**      | 가변        | -           | 타일링/반복 고려 |
-
-### 4.3 Retina 대응 (선택)
-
-- 필요 시 `image-set()`으로 1x/2x 제공
-- 파일명: `{name}-24.png`, `{name}-24@2x.png`
-
----
-
-## 5. 성능 예산
-
-| 항목                | 상한  | 권장       |
-| ------------------- | ----- | ---------- |
-| **아이콘 1개**      | 30KB  | 20KB 이하  |
-| **placeholder 1개** | 300KB | 200KB 이하 |
-| **chrome 1개**      | 50KB  | 30KB 이하  |
-| **`ui/` 폴더 총합** | 1.5MB | 1MB 이하   |
-
-**초과 시 대응**:
-
-1. 압축/최적화 (TinyPNG, ImageOptim 등)
-2. 해상도/색상 축소
-3. 불필요 에셋 제거
-4. 예산 상향 시 근거 문서화 필요
-
----
-
-## 6. 스타일 가이드
-
-### 6.1 CRT 테마 연동
-
-에셋은 `frontend/src/style.css`의 CSS 변수/테마와 조화를 이뤄야 합니다.
-
-```css
-/* 참조: CRT 테마 색상 */
---bg-color: #0d0d0d; /* 배경 */
---text-color: #33ff00; /* 인광 녹색 */
---text-dim: #1a8000; /* 어두운 녹색 */
---accent-color: #ff00ff; /* 마젠타 */
---warning-color: #ffaa00; /* 주황색 */
---error-color: #ff3333; /* 붉은색 */
-```
-
-### 6.2 스타일 원칙
-
-| 원칙                  | 설명                          |
-| --------------------- | ----------------------------- |
-| **레트로 퓨처리즘**   | CRT/터미널 미학과 조화        |
-| **기능적 미니멀리즘** | 불필요한 장식 배제            |
-| **톤 일관성**         | 인광 녹색 기반, 마젠타 포인트 |
-| **고대비**            | Readable 모드에서도 식별 가능 |
-
-### 6.3 금지 사항
-
-- ❌ 프로젝트 외부 로고/상표 복제
-- ❌ CRT 테마와 충돌하는 색상 (밝은 파스텔, 난색 계열 남용)
-- ❌ 복잡한 그라데이션/사진 스타일
-
----
-
-## 7. 폴백 원칙 (필수)
-
-### 7.1 텍스트/이모지 폴백 유지
-
-에셋 로딩 실패/미지원 시에도 **UI가 깨지지 않도록** 텍스트/이모지 라벨을 유지해야 합니다.
-
-**예시** (React):
-
-```tsx
-<span className="icon-wrapper" aria-label="Signal">
-  <img
-    src="/ui/icons/signal-24.png"
-    alt=""
-    aria-hidden="true"
-    onError={(e) => (e.currentTarget.style.display = 'none')}
-  />
-  <span className="icon-fallback">📡</span>
-</span>
-```
-
-**CSS**:
-
-```css
-.icon-wrapper {
-  display: inline-flex;
-  align-items: center;
-}
-.icon-wrapper img + .icon-fallback {
-  display: none;
-}
-.icon-wrapper img[style*='display: none'] + .icon-fallback {
-  display: inline;
-}
-```
-
-### 7.2 폴백 요구사항
-
-| 에셋 유형       | 폴백 방식                |
-| --------------- | ------------------------ |
-| **아이콘**      | 이모지 또는 텍스트 라벨  |
-| **placeholder** | CSS 배경색 + 텍스트      |
-| **chrome**      | CSS border/shadow로 대체 |
-
----
-
-## 8. 접근성 가이드
-
-### 8.1 필수 사항
-
-| 항목                          | 요구사항                            |
-| ----------------------------- | ----------------------------------- |
-| **색상만으로 의미 전달 금지** | 텍스트/라벨 병행                    |
-| **장식성 이미지**             | `aria-hidden="true"` 적용           |
-| **기능성 이미지**             | `alt` 텍스트 제공 또는 `aria-label` |
-| **대비**                      | Readable 모드에서도 4.5:1 이상      |
-
-### 8.2 예시
-
-```html
-<!-- 장식용 아이콘 (의미 없음) -->
-<img src="/ui/chrome/corner.png" alt="" aria-hidden="true" />
-
-<!-- 기능용 아이콘 (의미 있음) -->
-<button aria-label="신호 전송">
-  <img src="/ui/icons/signal-24.png" alt="Signal" />
-</button>
-```
-
----
-
-## 9. 에셋 제작 워크플로우
-
-### 9.1 요청 → 제작 → 적용
-
-```
-1. 요청 정의
-   └── 용도, 사이즈, 스타일 명세 작성
-
-2. nanobanana mcp로 제작
-   └── 프롬프트에 CRT 스타일 키워드 포함
-   └── 색상 팔레트 준수
-   └── (필수 조건부) 배경 제거(rembg) 예정이면 **배경은 순백(#FFFFFF) 단색**으로 생성(그라데이션/텍스처/그림자 금지)
-
-3. (필수 조건부) rembg로 배경 제거
-   └── 아이콘/chrome 등 투명 배경이 필요한 에셋에서 배경이 남아 있으면 rembg로 제거
-   └── 모델 선택/옵션은 `vibe/ref/rembg-guide.md` 준수
-
-4. 리사이즈/압축
-   └── 성능 예산 확인
-   └── 필요 사이즈로 리사이즈
-
-5. 디렉토리 반영
-   └── 네이밍 규칙 준수
-   └── manifest.json 업데이트
-
-6. UI 적용 + 폴백 확인
-   └── 컴포넌트에 적용
-   └── 폴백 동작 테스트
-
-7. QA
-   └── 크기/대비/폴백/Readable 모드 확인
-```
-
-### 9.2 프롬프트 가이드 (예시)
-
-```
-CRT 터미널 스타일 아이콘,
-인광 녹색(#33ff00) 기반,
-검은 배경(#0d0d0d)에 어울리는 톤,
-심플한 라인 아트,
-픽셀 아트 또는 레트로 스타일,
-24x24 픽셀, 투명 배경
-(배경 제거 필요 시) solid white background (#FFFFFF), no gradient/texture/shadow
-```
-
----
-
-## 10. 매니페스트 관리
-
-### 10.1 manifest.json
-
-모든 에셋은 `manifest.json`에 등록하여 추적합니다.
-
-```json
-{
-  "$schema": "./manifest.schema.json",
-  "version": "1.0.0",
-  "assets": [
-    {
-      "id": "signal-24",
-      "path": "icons/signal-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "📡",
-      "usedIn": ["EconomyHUD"],
-      "bytes": 1234
-    }
-  ]
-}
-```
-
-### 10.2 업데이트 시점
-
-- 에셋 추가/제거 시 manifest.json 동기화
-- U-033에서 QA 자동화 예정
-
----
-
-## 11. 라이선스
-
-- 모든 에셋은 **프로젝트 내부 용도**로 제작됩니다.
-- 외부 로고/상표를 복제하지 않습니다.
-- `nanobanana mcp`로 생성된 에셋은 도구의 라이선스 정책을 따릅니다.
-- 에셋에 **SynthID 워터마크**가 포함될 수 있습니다 (AI 생성 표기).
-
----
-
-## 12. 체크리스트 (에셋 추가 시)
-
-- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
-- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
-- [ ] 성능 예산 준수 (개별/총합)
-- [ ] (조건부) 투명 배경이 필요한 에셋은 `rembg`로 배경 제거 완료(알파 채널 확인)
-- [ ] (조건부) 배경 제거(rembg) 예정이면 원본 생성 단계에서 배경이 순백(#FFFFFF) 단색인지 확인(그라데이션/텍스처/그림자 금지)
-- [ ] CRT 테마 색상과 조화
-- [ ] 폴백 구현 확인
-- [ ] 접근성 속성 적용 (`aria-hidden` 또는 `alt`)
-- [ ] manifest.json 업데이트
-- [ ] Readable 모드에서 대비 확인
-
----
-
-_마지막 업데이트: 2026-01-11_
-_문서 버전: 1.1.0_
-</file>
-
 <file path="frontend/src/api/turnStream.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NDJSONParser } from './turnStream';
@@ -7569,6 +8198,248 @@ describe('executeTurnStream', () => {
     );
   });
 });
+</file>
+
+<file path="frontend/src/components/AgentConsole.tsx">
+/**
+ * Unknown World - Agent Console 컴포넌트.
+ *
+ * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
+ * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
+ *
+ * @module components/AgentConsole
+ */
+
+import { useTranslation } from 'react-i18next';
+import {
+  useAgentStore,
+  selectIsStreaming,
+  selectPhases,
+  selectBadges,
+  selectRepairCount,
+  selectError,
+  type PhaseInfo,
+} from '../stores/agentStore';
+import type { ValidationBadge } from '../schemas/turn';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/** 단계 표시 이름 i18n 키 */
+const PHASE_KEYS: Record<string, string> = {
+  parse: 'agent.console.phase.parse',
+  validate: 'agent.console.phase.validate',
+  plan: 'agent.console.phase.plan',
+  resolve: 'agent.console.phase.resolve',
+  render: 'agent.console.phase.render',
+  verify: 'agent.console.phase.verify',
+  commit: 'agent.console.phase.commit',
+};
+
+/** 배지 표시 정보 (i18n 키 기반) */
+const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> = {
+  schema_ok: { labelKey: 'agent.console.badge.schema', isOk: true },
+  schema_fail: { labelKey: 'agent.console.badge.schema', isOk: false },
+  economy_ok: { labelKey: 'agent.console.badge.economy', isOk: true },
+  economy_fail: { labelKey: 'agent.console.badge.economy', isOk: false },
+  safety_ok: { labelKey: 'agent.console.badge.safety', isOk: true },
+  safety_blocked: { labelKey: 'agent.console.badge.safety', isOk: false },
+  consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
+  consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
+};
+
+// =============================================================================
+// 하위 컴포넌트
+// =============================================================================
+
+/** 단계 상태 아이콘 */
+function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
+  switch (status) {
+    case 'pending':
+      return <span className="phase-icon pending">○</span>;
+    case 'in_progress':
+      return <span className="phase-icon in-progress">◎</span>;
+    case 'completed':
+      return <span className="phase-icon completed">●</span>;
+    case 'failed':
+      return <span className="phase-icon failed">✕</span>;
+    default:
+      return <span className="phase-icon">○</span>;
+  }
+}
+
+/** 단계 큐 항목 */
+function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
+  const { t } = useTranslation();
+  const key = PHASE_KEYS[phase.name];
+  const label = key ? t(key) : phase.name;
+  const statusClass = `phase-item ${phase.status}`;
+
+  return (
+    <div className={statusClass}>
+      <PhaseIcon status={phase.status} />
+      <span className="phase-label">{label}</span>
+    </div>
+  );
+}
+
+/** 단계 큐 */
+function PhaseQueue() {
+  const { t } = useTranslation();
+  const phases = useAgentStore(selectPhases);
+
+  return (
+    <div className="phase-queue">
+      <div className="queue-label">{t('agent.console.queue')}</div>
+      <div className="queue-items">
+        {phases.map((phase) => (
+          <PhaseQueueItem key={phase.name} phase={phase} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 배지 아이템 */
+function BadgeItem({ badge }: { badge: ValidationBadge }) {
+  const { t } = useTranslation();
+  const info = BADGE_INFO[badge];
+  if (!info) return null;
+
+  const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
+  const statusText = info.isOk ? t('agent.console.badge.ok') : t('agent.console.badge.fail');
+  const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
+  const fallbackIcon = info.isOk ? '✓' : '✗';
+
+  return (
+    <div className={`badge-item ${statusClass}`}>
+      <span className="badge-label">{t(info.labelKey)}</span>
+      <span className="badge-status">
+        <span className="icon-wrapper">
+          <img
+            src={`/ui/icons/${iconName}`}
+            alt=""
+            aria-hidden="true"
+            className="badge-icon-img"
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback" style={{ fontSize: '0.625rem' }}>
+            {fallbackIcon}
+          </span>
+        </span>
+        {statusText}
+      </span>
+    </div>
+  );
+}
+
+/** 배지 패널 */
+function BadgesPanel() {
+  const { t } = useTranslation();
+  const badges = useAgentStore(selectBadges);
+
+  if (badges.length === 0) {
+    return (
+      <div className="badges-panel">
+        <div className="badges-label">{t('agent.console.badges')}</div>
+        <div className="badges-empty">{t('agent.console.badges_empty')}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="badges-panel">
+      <div className="badges-label">{t('agent.console.badges')}</div>
+      <div className="badges-grid">
+        {badges.map((badge, index) => (
+          <BadgeItem key={`${badge}-${index}`} badge={badge} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Auto-repair 트레이스 */
+function RepairTrace() {
+  const { t } = useTranslation();
+  const repairCount = useAgentStore(selectRepairCount);
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  if (repairCount === 0 && !isStreaming) {
+    return null;
+  }
+
+  return (
+    <div className="repair-trace">
+      <span className="repair-label">{t('agent.console.repair')}</span>
+      <span className="repair-count">#{repairCount}</span>
+      {repairCount > 0 && (
+        <span className="repair-status text-warning"> {t('agent.console.repaired')}</span>
+      )}
+    </div>
+  );
+}
+
+/** 에러 표시 */
+function ErrorDisplay() {
+  const error = useAgentStore(selectError);
+
+  if (!error) return null;
+
+  return (
+    <div className="agent-error">
+      <span className="error-icon">⚠</span>
+      <span className="error-message">{error.message}</span>
+      {error.code && <span className="error-code">[{error.code}]</span>}
+    </div>
+  );
+}
+
+/** 스트리밍 상태 표시 */
+function StreamingStatus() {
+  const { t } = useTranslation();
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  return (
+    <div className="streaming-status">
+      <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
+      <span className="status-text">
+        {isStreaming ? t('agent.console.status.processing') : t('agent.console.status.idle')}
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Agent Console 컴포넌트.
+ *
+ * Plan/Queue/Badges/Auto-repair를 실시간으로 표시합니다.
+ * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
+ *
+ * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
+ */
+export function AgentConsole() {
+  return (
+    <div className="agent-console-content" data-ui-importance="critical">
+      <StreamingStatus />
+      <PhaseQueue />
+      <BadgesPanel />
+      <RepairTrace />
+      <ErrorDisplay />
+    </div>
+  );
+}
+
+export default AgentConsole;
 </file>
 
 <file path="frontend/src/schemas/turn.ts">
@@ -8582,6 +9453,77 @@ export default defineConfig({
     setupFiles: './src/setupTests.ts',
   },
 });
+</file>
+
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+    "google-genai==1.56.0",
+    "google-cloud-aiplatform==1.132.0",
+    "google-cloud-storage==3.7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.407",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
+    "jsonschema>=4.26.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
 </file>
 
 <file path="package.json">
@@ -10196,6 +11138,663 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
 
   return () => controller.abort();
 }
+</file>
+
+<file path="frontend/src/components/SceneCanvas.tsx">
+/**
+ * Unknown World - Scene Canvas 컴포넌트
+ *
+ * RULE-002 준수: 채팅 버블이 아닌 게임 UI
+ * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
+ *
+ * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * - TurnOutput의 objects[]/hotspots[]를 기반으로 오버레이 렌더
+ * - hover 시 하이라이트/툴팁 표시
+ * - click 시 object_id + box_2d를 TurnInput에 포함해 전송
+ *
+ * U-012[Mvp]: DnD 드롭 타겟 확장
+ * - 핫스팟을 droppable 영역으로 만들어 인벤토리 아이템 드롭 처리
+ * - 드래그 오버 시 하이라이트 강화
+ * - 드롭 성공/실패 즉시 시각화
+ *
+ * @module components/SceneCanvas
+ */
+
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDroppable } from '@dnd-kit/core';
+import type { SceneCanvasStatus, PlaceholderInfo } from '../types/scene';
+import type { SceneObject, Box2D } from '../schemas/turn';
+import { box2dToPixel, type CanvasSize } from '../utils/box2d';
+import { DND_TYPE, type HotspotDropData, isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/**
+ * 상태별 placeholder 정보 (U-031: Placeholder Pack)
+ * labelKey는 i18n 번역 키로 사용됩니다.
+ */
+export const SCENE_PLACEHOLDERS: Record<Exclude<SceneCanvasStatus, 'scene'>, PlaceholderInfo> = {
+  default: {
+    imagePath: '/ui/placeholders/scene-placeholder-default.png',
+    fallbackEmoji: '📡',
+    labelKey: 'scene.status.default',
+  },
+  loading: {
+    imagePath: '/ui/placeholders/scene-loading.webp',
+    fallbackEmoji: '⏳',
+    labelKey: 'scene.status.loading',
+  },
+  offline: {
+    imagePath: '/ui/placeholders/scene-offline.webp',
+    fallbackEmoji: '🔌',
+    labelKey: 'scene.status.offline',
+  },
+  blocked: {
+    imagePath: '/ui/placeholders/scene-blocked.webp',
+    fallbackEmoji: '🚫',
+    labelKey: 'scene.status.blocked',
+  },
+  low_signal: {
+    imagePath: '/ui/placeholders/scene-low-signal.webp',
+    fallbackEmoji: '📉',
+    labelKey: 'scene.status.low_signal',
+  },
+};
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 핫스팟 클릭 이벤트 데이터 (Q1 결정: Option B - object_id + box_2d)
+ */
+export interface HotspotClickData {
+  /** 클릭한 오브젝트 ID */
+  object_id: string;
+  /** 클릭한 오브젝트의 바운딩 박스 (0~1000 정규화) */
+  box_2d: Box2D;
+}
+
+interface SceneCanvasProps {
+  /** 핫스팟 클릭 콜백 */
+  onHotspotClick?: (data: HotspotClickData) => void;
+  /** 스트리밍 중 여부 (비활성화용, 생략 시 agentStore.isStreaming 사용) */
+  disabled?: boolean;
+}
+
+// =============================================================================
+// 내부 컴포넌트: 핫스팟 오버레이
+// =============================================================================
+
+interface HotspotOverlayProps {
+  object: SceneObject;
+  canvasSize: CanvasSize;
+  onClick: (data: HotspotClickData) => void;
+  disabled: boolean;
+  /** RU-003-S2: 데모 상태 여부 (시각적 힌트 필요) */
+  isDemoState?: boolean;
+  /** RU-003-S2 Step 2: 우선순위 기반 z-index 스타일 */
+  style?: React.CSSProperties;
+}
+
+/**
+ * 개별 핫스팟 오버레이 컴포넌트 (U-010 + U-012)
+ *
+ * - 클릭 시 object_id + box_2d 전송 (U-010)
+ * - 드롭 타겟으로 동작 - dnd-kit useDroppable 사용 (U-012)
+ */
+function HotspotOverlay({ object, canvasSize, onClick, disabled, isDemoState = false, style }: HotspotOverlayProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const { t } = useTranslation();
+
+  // U-012: useDroppable 훅으로 드롭 타겟 설정 (RU-003-Q1: 상수/타입 기반)
+  const dropData: HotspotDropData = {
+    type: DND_TYPE.HOTSPOT,
+    object_id: object.id,
+    box_2d: object.box_2d,
+    label: object.label,
+  };
+  const { isOver, setNodeRef } = useDroppable({
+    id: `hotspot-${object.id}`,
+    data: dropData,
+    disabled,
+  });
+
+  // box_2d(0~1000) → px 변환
+  const pixelBox = box2dToPixel(object.box_2d, canvasSize);
+
+  const handleClick = useCallback(() => {
+    if (disabled) return;
+    onClick({
+      object_id: object.id,
+      box_2d: object.box_2d,
+    });
+  }, [disabled, onClick, object.id, object.box_2d]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (disabled) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [disabled, handleClick],
+  );
+
+  // 드래그 오버 상태 또는 마우스 호버 상태
+  const isHighlighted = isHovered || isOver;
+
+  // RU-003-S2: 데모 상태 클래스 추가
+  const demoClass = isDemoState ? 'demo-target' : '';
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`hotspot-overlay ${isHighlighted ? 'hovered' : ''} ${disabled ? 'disabled' : ''} ${isOver ? 'drop-target-active' : ''} ${demoClass}`}
+      style={{
+        position: 'absolute',
+        top: `${pixelBox.top}px`,
+        left: `${pixelBox.left}px`,
+        width: `${pixelBox.width}px`,
+        height: `${pixelBox.height}px`,
+        ...style,
+      }}
+      onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={object.label}
+      aria-disabled={disabled}
+      data-drop-target={!disabled}
+      data-demo-state={isDemoState}
+    >
+      {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
+      {isHighlighted && !disabled && (
+        <div className="hotspot-tooltip">
+          <span className="hotspot-tooltip-label">{object.label}</span>
+          {/* RU-003-S2: 데모 상태 표시 */}
+          {isDemoState && (
+            <span className="hotspot-tooltip-demo">{t('scene.hotspot.demo_hint')}</span>
+          )}
+          {/* U-012: 드래그 오버 시 드롭 힌트 표시 */}
+          {isOver && (
+            <span className="hotspot-tooltip-drop-hint">{t('scene.hotspot.drop_hint')}</span>
+          )}
+          {!isOver && !isDemoState && object.interaction_hint && (
+            <span className="hotspot-tooltip-hint">
+              {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Scene Canvas 컴포넌트
+ *
+ * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * U-031[Mvp]: Placeholder Pack
+ *
+ * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
+ * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
+ * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
+ */
+export function SceneCanvas({
+  onHotspotClick,
+  disabled: propsDisabled,
+}: SceneCanvasProps) {
+  const { t } = useTranslation();
+
+  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
+  const state = useWorldStore((state) => state.sceneState);
+  const objects = useWorldStore((state) => state.sceneObjects);
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+
+  const disabled = propsDisabled ?? isStreaming;
+
+  const { status, imageUrl, message } = state;
+  const [imageError, setImageError] = useState(false);
+  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
+  // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
+  useEffect(() => {
+    const element = canvasRef.current;
+    if (!element) return;
+
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    const RESIZE_DEBOUNCE_MS = 100; // 디바운스 간격
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      // 디바운스: 마지막 리사이즈 이벤트 후 일정 시간 후에만 업데이트
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = setTimeout(() => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          // 의미 있는 크기 변화만 적용 (5px 이상 차이)
+          setCanvasSize((prev) => {
+            if (
+              Math.abs(prev.width - width) > 5 ||
+              Math.abs(prev.height - height) > 5
+            ) {
+              return { width, height };
+            }
+            return prev;
+          });
+        }
+      }, RESIZE_DEBOUNCE_MS);
+    });
+
+    resizeObserver.observe(element);
+
+    // 초기 크기 설정
+    const rect = element.getBoundingClientRect();
+    setCanvasSize({ width: rect.width, height: rect.height });
+
+    return () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // 핫스팟 클릭 핸들러
+  const handleHotspotClick = useCallback(
+    (data: HotspotClickData) => {
+      if (onHotspotClick) {
+        onHotspotClick(data);
+      }
+    },
+    [onHotspotClick],
+  );
+
+  // 정상 장면 표시 중이거나 이미지 에러가 발생한 경우
+  const isSceneActive = status === 'scene' && imageUrl && !imageError;
+
+  // placeholder 정보 결정 (scene 상태에서 에러 시 default로 폴백)
+  const effectiveStatus = status === 'scene' && imageError ? 'default' : status;
+  const isPlaceholderVisible = effectiveStatus !== 'scene';
+
+  const placeholder = isPlaceholderVisible
+    ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
+    : null;
+
+  // RU-003-S2 Step 1: 핫스팟 렌더링 조건을 SSOT로 고정
+  // - isHotspotInteractionAllowed()로 허용 상태 검사 (scene, default)
+  // - objects 존재 + 캔버스 크기 확보
+  const isInteractionAllowed = isHotspotInteractionAllowed(status);
+  const shouldRenderHotspots = isInteractionAllowed && objects.length > 0 && canvasSize.width > 0;
+
+  // RU-003-S2: 데모 상태 여부 (시각적 힌트 필요)
+  const isDemoState = status === 'default' && !isSceneActive;
+
+  // RU-003-S2 Step 2: 핫스팟을 면적 기준으로 정렬 (작은 것이 뒤에 = 높은 z-index)
+  const sortedObjects = useMemo(() => {
+    if (objects.length <= 1) return objects;
+    return [...objects].sort((a, b) => compareHotspotPriority(a.box_2d, b.box_2d));
+  }, [objects]);
+
+  return (
+    <div
+      ref={canvasRef}
+      className={`scene-canvas ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`} ${shouldRenderHotspots ? 'has-hotspots' : ''}`}
+      style={placeholder ? { backgroundImage: `url('${placeholder.imagePath}')` } : {}}
+    >
+      {isSceneActive && (
+        <img
+          src={imageUrl}
+          alt={t('scene.status.alt')}
+          className="scene-image"
+          onError={() => setImageError(true)}
+        />
+      )}
+
+      {isPlaceholderVisible && placeholder && (
+        <div className="scene-placeholder">
+          {/* 텍스트 폴백 (이미지 로드 실패 시에도 표시) */}
+          <p className="text-glow scene-status-label">
+            <span className="scene-status-emoji" aria-hidden="true">
+              {placeholder.fallbackEmoji}
+            </span>{' '}
+            {t(placeholder.labelKey)}
+          </p>
+          {(message || (status === 'scene' && imageError)) && (
+            <p className="scene-status-message">
+              {message || (imageError ? t('scene.status.image_error') : '')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
+      {shouldRenderHotspots && (
+        <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
+          {sortedObjects.map((obj, index) => (
+            <HotspotOverlay
+              key={obj.id}
+              object={obj}
+              canvasSize={canvasSize}
+              onClick={handleHotspotClick}
+              disabled={disabled}
+              isDemoState={isDemoState}
+              // RU-003-S2 Step 2: 인덱스 기반 z-index로 작은 것이 위에 표시
+              style={{ zIndex: index + 1 }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/App.tsx">
+/**
+ * Unknown World - 메인 게임 UI 레이아웃
+ *
+ * RULE-002 준수: 채팅 버블 UI 금지
+ * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
+ * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
+ *   Rule Board, Economy HUD, Agent Console, Scanner Slot
+ *
+ * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
+ *
+ * RU-003-Q4: App.tsx는 "레이아웃 + 이벤트 라우팅"에 집중
+ * - 세션/월드 상태는 worldStore로 이동
+ * - TurnOutput 반영은 worldStore.applyTurnOutput으로 단일화
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ * @see vibe/prd.md 6.7/6.8/9장
+ */
+
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
+import { Panel } from './components/Panel';
+import { GameHeader } from './components/GameHeader';
+import { NarrativeFeed } from './components/NarrativeFeed';
+import { AgentConsole } from './components/AgentConsole';
+import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
+import { ActionDeck } from './components/ActionDeck';
+import { InventoryPanel } from './components/InventoryPanel';
+import { useAgentStore } from './stores/agentStore';
+import { useInventoryStore } from './stores/inventoryStore';
+import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
+import { useWorldStore } from './stores/worldStore';
+import { useTurnRunner } from './turn/turnRunner';
+import type { ActionCard, DropInput } from './schemas/turn';
+import { getCurrentThemeFromDOM } from './demo/demoFixtures';
+import { isInventoryDragData, isHotspotDropData } from './dnd/types';
+import { useDemoInitializer } from './demo/useDemoInitializer';
+
+// =============================================================================
+// 메인 App 컴포넌트
+// =============================================================================
+
+function App() {
+  const { t } = useTranslation();
+
+  // 데모 초기화 (RU-003: 훅으로 이동)
+  useDemoInitializer();
+
+  // 로컬 UI 상태
+  const [inputText, setInputText] = useState('');
+
+  // Store 상태
+  const {
+    economy,
+    isConnected,
+    sceneObjects,
+    narrativeEntries,
+    appendSystemNarrative,
+  } = useWorldStore();
+
+  const { startDrag, endDrag } = useInventoryStore();
+  const { isStreaming, narrativeBuffer } = useAgentStore();
+  const { uiScale, increaseUIScale, decreaseUIScale } = useUIPrefsStore();
+
+  // DOM에 UI 설정 적용 (U-028→U-037)
+  useEffect(() => {
+    applyUIPrefsToDOM({ uiScale });
+  }, [uiScale]);
+
+  // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
+  const turnRunnerDeps = useMemo(
+    () => ({
+      t,
+      theme: getCurrentThemeFromDOM(),
+    }),
+    [t],
+  );
+  const turnRunner = useTurnRunner(turnRunnerDeps);
+
+  /**
+   * 턴을 실행합니다.
+   */
+  const executeTurn = useCallback(
+    (text: string, actionId?: string, clickData?: HotspotClickData, dropData?: DropInput) => {
+      turnRunner.runTurn({
+        text,
+        actionId,
+        click: clickData,
+        drop: dropData,
+      });
+      setInputText('');
+    },
+    [turnRunner],
+  );
+
+  /**
+   * 입력 제출 핸들러
+   */
+  const handleSubmit = useCallback(() => {
+    if (inputText.trim()) {
+      executeTurn(inputText.trim());
+    }
+  }, [inputText, executeTurn]);
+
+  /**
+   * 카드 클릭 핸들러
+   */
+  const handleCardClick = useCallback(
+    (card: ActionCard) => {
+      executeTurn(card.label, card.id);
+    },
+    [executeTurn],
+  );
+
+  /**
+   * 핫스팟 클릭 핸들러 (U-010)
+   */
+  const handleHotspotClick = useCallback(
+    (data: HotspotClickData) => {
+      const clickedObject = sceneObjects.find((obj) => obj.id === data.object_id);
+      const clickText = clickedObject
+        ? t('scene.hotspot.click_action', { label: clickedObject.label })
+        : data.object_id;
+
+      executeTurn(clickText, undefined, data);
+    },
+    [executeTurn, sceneObjects, t],
+  );
+
+  /**
+   * 키보드 이벤트 핸들러
+   */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit],
+  );
+
+  /**
+   * 드래그 시작 핸들러 (U-011)
+   */
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      if (isInventoryDragData(active.data.current)) {
+        startDrag(active.data.current.item_id);
+      }
+    },
+    [startDrag],
+  );
+
+  /**
+   * 드래그 종료 핸들러 (U-011 + U-012)
+   */
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      endDrag();
+
+      const activeData = active.data.current;
+      if (!isInventoryDragData(activeData)) {
+        return;
+      }
+
+      const itemId = activeData.item_id;
+      const itemName = activeData.item.name;
+
+      const overData = over?.data.current;
+      if (!over || !isHotspotDropData(overData)) {
+        appendSystemNarrative(
+          `[${t('connection.online')}] ${t('scene.hotspot.drop_invalid', { item: itemName })}`,
+        );
+        return;
+      }
+
+      const { object_id: targetObjectId, box_2d: targetBox2d, label: targetLabel } = overData;
+
+      const dropText = t('scene.hotspot.drop_action', {
+        item: itemName,
+        target: targetLabel,
+      });
+
+      const dropInput: DropInput = {
+        item_id: itemId,
+        target_object_id: targetObjectId,
+        target_box_2d: targetBox2d,
+      };
+
+      executeTurn(dropText, undefined, undefined, dropInput);
+    },
+    [endDrag, executeTurn, appendSystemNarrative, t],
+  );
+
+  // dnd-kit 센서 설정
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
+  return (
+    <>
+      <div className="crt-overlay" aria-hidden="true" />
+
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="game-container">
+          <GameHeader
+            signal={economy.signal}
+            memoryShard={economy.memory_shard}
+            isConnected={isConnected}
+            uiScale={uiScale}
+            onIncreaseScale={increaseUIScale}
+            onDecreaseScale={decreaseUIScale}
+          />
+
+          <aside className="sidebar-left">
+            <Panel title={t('panel.inventory.title')} className="flex-1">
+              <InventoryPanel />
+            </Panel>
+            <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
+            <Panel
+              title={t('panel.rule_board.title')}
+              placeholderKey="panel.rule_board.placeholder"
+            />
+          </aside>
+
+          <main className="game-center">
+            <SceneCanvas onHotspotClick={handleHotspotClick} />
+            <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
+          </main>
+
+          <aside className="sidebar-right">
+            <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
+              <AgentConsole />
+            </Panel>
+            <Panel
+              title={t('panel.memory_pin.title')}
+              hasChrome
+              placeholderKey="panel.memory_pin.placeholder"
+            />
+            <Panel title={t('panel.scanner.title')} hasChrome>
+              <div className="scanner-slot has-chrome">
+                <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
+              </div>
+            </Panel>
+          </aside>
+
+          <footer className="game-footer">
+            <ActionDeck onCardClick={handleCardClick} />
+            <div className="command-input-area">
+              <span className="command-prompt">&gt;</span>
+              <input
+                type="text"
+                className="command-input"
+                placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
+                aria-label={t('ui.command_placeholder')}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isStreaming}
+              />
+              <button type="button" onClick={handleSubmit} disabled={isStreaming}>
+                {isStreaming ? t('ui.wait') : t('ui.execute')}
+              </button>
+            </div>
+          </footer>
+        </div>
+      </DndContext>
+    </>
+  );
+}
+
+export default App;
 </file>
 
 </files>

@@ -20,10 +20,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDroppable } from '@dnd-kit/core';
-import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
+import type { SceneCanvasStatus, PlaceholderInfo } from '../types/scene';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
 import { DND_TYPE, type HotspotDropData, isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
 
 // =============================================================================
 // 상수 정의
@@ -76,12 +78,9 @@ export interface HotspotClickData {
 }
 
 interface SceneCanvasProps {
-  state: SceneCanvasState;
-  /** 클릭 가능한 오브젝트 목록 */
-  objects?: SceneObject[];
   /** 핫스팟 클릭 콜백 */
   onHotspotClick?: (data: HotspotClickData) => void;
-  /** 스트리밍 중 여부 (비활성화용) */
+  /** 스트리밍 중 여부 (비활성화용, 생략 시 agentStore.isStreaming 사용) */
   disabled?: boolean;
 }
 
@@ -212,16 +211,22 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled, isDemoState = f
  * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
  */
 export function SceneCanvas({
-  state,
-  objects = [],
   onHotspotClick,
-  disabled = false,
+  disabled: propsDisabled,
 }: SceneCanvasProps) {
+  const { t } = useTranslation();
+
+  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
+  const state = useWorldStore((state) => state.sceneState);
+  const objects = useWorldStore((state) => state.sceneObjects);
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+
+  const disabled = propsDisabled ?? isStreaming;
+
   const { status, imageUrl, message } = state;
   const [imageError, setImageError] = useState(false);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
 
   // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
   // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
