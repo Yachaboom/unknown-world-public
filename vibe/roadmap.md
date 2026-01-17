@@ -15,6 +15,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 **블로커**: 없음
 
+**추가 메모**: 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
+
 ## 맥락 요약 (SSOT 근거)
 
 ### 프로젝트 핵심 가치 (1문장)

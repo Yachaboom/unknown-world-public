@@ -36,6 +36,7 @@
 **참조**:
 
 - `vibe/prd.md` 6.7/9장 - 클릭/드래그 데모 표면 요구
+- `vibe/refactors/RU-003-S1.md` - 취소(Abort)/UI 복구 정책(취소 UX 스텁 현황 포함)
 - `.cursor/rules/10-frontend-game-ui.mdc` - Action Deck/DnD/Hotspot 규칙
 - `.cursor/rules/00-core-critical.mdc` - RULE-002/008/009
 
@@ -76,6 +77,7 @@
 **기술적 고려사항**:
 
 - 성공 경로만 보지 말고, 반드시 드롭 실패 케이스(드롭 불가 대상/대상 없음)도 확인한다.
+- 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 존재하며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI가 “멈춘 것처럼” 보일 수 있다. 이 CP의 합격 기준에는 취소 시나리오를 포함하지 않으며, 정책 SSOT는 `RU-003-S1`이다.
 
 **잠재적 리스크**:
 

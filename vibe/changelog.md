@@ -1,5 +1,53 @@
 # 로드맵 변경 이력
 
+## 2026-01-18 - roadmap-update/cancel-ux-skeleton-note
+
+### 변경 요약
+
+취소 UX(Cancel 버튼)가 `frontend/src/turn/turnRunner.ts`의 `cancel()` 수준 **기본 골격만 존재**하고, Abort 정책(Abort 시 `onComplete` 미호출)으로 인해 취소 시 UI 복구가 미정인 점을 문서에 명시하여, 체크포인트(CP-MVP-02) 검증 범위와 RU-003-S1 정책 SSOT를 정합화했습니다.
+
+### 영향받은 문서
+
+- ✏️ `vibe/roadmap.md`: 진행 현황에 취소 UX 스텁 현황/SSOT(RU-003-S1) 메모 추가
+- ✏️ `vibe/unit-plans/CP-MVP-02.md`: 취소 UX(스텁) out-of-scope 메모 및 참조(RU-003-S1) 추가
+- ✏️ `vibe/refactors/RU-003-S1.md`: `turnRunner.cancel()` 골격 반영 및 Abort 정책 설명 보강
+
+### 백로그 변경
+
+**수정**:
+
+- 없음(유닛 추가/삭제 없이 현황 메모 동기화)
+
+### 의존성 변경
+
+- 없음
+
+### 진행률 변화
+
+- **MVP**: 변경 없음
+- **MMP**: 변경 없음
+- **전체**: 변경 없음
+
+### 품질 검증 결과
+
+- **품질 기준 문서**: U-028[Mvp]
+- **신규 유닛 계획서**: 0개
+- **수정된 유닛 계획서**: 1개(CP-MVP-02) - 섹션 누락 없음, 상세도 유지/향상 ✅
+- **수정된 리팩토링 노트**: 1개(RU-003-S1) - 현 구현 상태 보강 ✅
+- **수정된 문서**: 로드맵 - 기존 섹션 유지, 정보량 감소 없음 ✅
+
+### 리스크 변경
+
+**신규**:
+
+- 없음
+
+### 주의사항
+
+- Cancel UX는 “Abort 호출”만으로 끝나면 UI가 ‘멈춘 것처럼’ 보일 수 있습니다. (Abort 시 `onComplete` 미호출) 실제 UX 완성 전까지는 “기본 골격”으로만 취급하고, 정책(Option A/B)은 `RU-003-S1`을 SSOT로 삼아 확정하세요.
+
+---
+
 ## 2026-01-14 - roadmap-update/i18n-json-locales
 
 ### 변경 요약
