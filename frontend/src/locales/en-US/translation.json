@@ -43,7 +43,8 @@
       "click_action": "Click {{label}}",
       "drop_hint": "Drop here to use",
       "drop_action": "Use {{item}} on {{target}}",
-      "drop_invalid": "You cannot use {{item}} there."
+      "drop_invalid": "You cannot use {{item}} there.",
+      "demo_hint": "[DEMO TARGET]"
     }
   },
   "agent": {

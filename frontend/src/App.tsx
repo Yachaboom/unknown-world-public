@@ -326,6 +326,9 @@ function App() {
   );
 
   // Agent Store 상태 (RU-003-Q3: 액션은 Turn Runner로 이동)
+  // RU-003-S2 Step 4: isStreaming은 agentStore에서만 SSOT로 제공
+  // - 모든 패널의 disabled 상태는 이 플래그를 공유해야 함
+  // - 향후 worldStore/Turn Runner 도입 시에도 이 원칙을 유지
   const { isStreaming, narrativeBuffer } = useAgentStore();
 
   // UI Prefs Store (U-028→U-037: Readable 모드 제거)

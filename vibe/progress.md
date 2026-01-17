@@ -1,5 +1,29 @@
 # 프로젝트 진행 상황
 
+## [2026-01-18 00:40] RU-003-S2: 엣지 케이스(Hotspot 겹침/Resize/스트리밍) 일관성 강화 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-S2] 엣지 케이스: Hotspot 오버레이 × DnD 드롭 × 스트리밍 비활성화의 일관성 강화
+- **개선 사항**:
+    - **인터랙션 정책 SSOT화**: 핫스팟 노출 및 드롭 허용 조건(`scene`, `default`)을 `dnd/types.ts`로 집중화하여 런타임 일관성 확보
+    - **겹침 해결 정책 (Priority)**: 면적이 작은 핫스팟이 더 구체적인 타겟이라는 전제하에, 작은 bbox에 더 높은 z-index를 부여하는 자동 정렬 로직 도입
+    - **Resize UX 안정화**: `ResizeObserver`에 100ms 디바운스를 적용하여 창 크기 조절 시 핫스팟 레이아웃이 과도하게 흔들리는 현상 방지
+    - **데모 시각적 힌트**: `default` 상태의 핫스팟에 `[DEMO TARGET]` 라벨을 추가하여 실제 게임 장면과의 혼란 방지 (ko/en i18n 적용)
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/components/SceneCanvas.tsx`, `frontend/src/dnd/types.ts`, `frontend/src/locales/`
+
+### 기술적 세부사항
+
+- **Area-based Priority**: `calculateBoxArea` 유틸리티를 통해 bbox 면적을 계산하고, `compareHotspotPriority`로 정렬하여 겹치는 오브젝트 중 작은 것이 항상 상단에 오도록 보장
+- **Resize Debouncing**: `setTimeout`과 `5px` 임계값(threshold)을 결합하여 불필요한 리렌더링 및 레이아웃 연산 비용 절감
+- **Streaming Policy SSOT**: `STREAMING_DISABLED_POLICY` 명세를 통해 `isStreaming` 플래그의 단일 출처(`agentStore`)와 전파 범위를 코드 수준에서 규정
+
+### 검증
+
+- **수동 검증 완료**: 겹치는 핫스팟 중 작은 대상이 우선적으로 호버/드롭됨을 확인. 창 리사이즈 중 드래그 시 핫스팟 위치가 안정적으로 유지됨을 확인. 스트리밍 중 모든 상호작용이 확실히 차단됨을 확인.
+
+---
+
 ## [2026-01-18 00:25] RU-003-Q1: DnD/Turn 이벤트 중복 제거 및 데이터 구조 SSOT화 완료
 
 ### 작업 내용

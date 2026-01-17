@@ -43,7 +43,8 @@
       "click_action": "{{label}} 클릭",
       "drop_hint": "여기에 드롭하여 사용",
       "drop_action": "{{item}}을(를) {{target}}에 사용",
-      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다."
+      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다.",
+      "demo_hint": "[데모 대상]"
     }
   },
   "agent": {

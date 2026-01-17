@@ -193,7 +193,19 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - 취소(Abort) 시에는 `onComplete`를 호출하지 않음 (Option B).
     - 호출자(Turn Runner/App)가 취소 의도를 파악하고 직접 UI를 스트리밍 종료 상태로 복구해야 함.
 
-## 6. UI 가독성 및 설정 정책 (U-037[Mvp])
+## 6. 인터랙션 및 레이아웃 안정화 정책 (RU-003-S2)
+
+1. **핫스팟 우선순위 (Area-based Priority)**:
+    - 핫스팟이 겹칠 경우, **bbox 면적이 작은 것**이 더 구체적인 대상을 가리키는 것으로 간주하여 더 높은 우선순위(zIndex)를 부여함.
+    - `dnd/types.ts`의 `compareHotspotPriority`를 기준으로 정렬하여 렌더링함.
+2. **리사이즈 안정화 (Resize Debouncing)**:
+    - 윈도우 리사이즈 시 핫스팟 레이아웃 재계산에 **100ms 디바운스**와 **5px 임계값**을 적용하여 드래그 중 UI가 흔들리는 현상을 방지함.
+3. **인터랙션 허용 상태 SSOT**:
+    - `isHotspotInteractionAllowed` 유틸리티를 통해 `scene` 및 `default(데모)` 상태에서만 핫스팟 상호작용을 허용하도록 관리함.
+4. **스트리밍 비활성화 SSOT**:
+    - `STREAMING_DISABLED_POLICY`에 따라 모든 상호작용 패널은 `agentStore.isStreaming` 플래그를 동일하게 공유하여 일관된 `disabled` 상태를 유지함.
+
+## 7. UI 가독성 및 설정 정책 (U-037[Mvp])
 
 1. **전역 UI 스케일 (Global UI Scale)**: CSS 변수 `--ui-scale-factor`를 통해 0.9x ~ 1.2x 조절 지원.
 2. **중요도 기반 가독성 레이어링 (Importance-driven Layering)**:

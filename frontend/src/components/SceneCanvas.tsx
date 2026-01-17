@@ -17,13 +17,13 @@
  * @module components/SceneCanvas
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDroppable } from '@dnd-kit/core';
 import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
-import { DND_TYPE, type HotspotDropData } from '../dnd/types';
+import { DND_TYPE, type HotspotDropData, isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
 
 // =============================================================================
 // 상수 정의
@@ -94,6 +94,10 @@ interface HotspotOverlayProps {
   canvasSize: CanvasSize;
   onClick: (data: HotspotClickData) => void;
   disabled: boolean;
+  /** RU-003-S2: 데모 상태 여부 (시각적 힌트 필요) */
+  isDemoState?: boolean;
+  /** RU-003-S2 Step 2: 우선순위 기반 z-index 스타일 */
+  style?: React.CSSProperties;
 }
 
 /**
@@ -102,7 +106,7 @@ interface HotspotOverlayProps {
  * - 클릭 시 object_id + box_2d 전송 (U-010)
  * - 드롭 타겟으로 동작 - dnd-kit useDroppable 사용 (U-012)
  */
-function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverlayProps) {
+function HotspotOverlay({ object, canvasSize, onClick, disabled, isDemoState = false, style }: HotspotOverlayProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
 
@@ -144,16 +148,20 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverla
   // 드래그 오버 상태 또는 마우스 호버 상태
   const isHighlighted = isHovered || isOver;
 
+  // RU-003-S2: 데모 상태 클래스 추가
+  const demoClass = isDemoState ? 'demo-target' : '';
+
   return (
     <div
       ref={setNodeRef}
-      className={`hotspot-overlay ${isHighlighted ? 'hovered' : ''} ${disabled ? 'disabled' : ''} ${isOver ? 'drop-target-active' : ''}`}
+      className={`hotspot-overlay ${isHighlighted ? 'hovered' : ''} ${disabled ? 'disabled' : ''} ${isOver ? 'drop-target-active' : ''} ${demoClass}`}
       style={{
         position: 'absolute',
         top: `${pixelBox.top}px`,
         left: `${pixelBox.left}px`,
         width: `${pixelBox.width}px`,
         height: `${pixelBox.height}px`,
+        ...style,
       }}
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
@@ -164,16 +172,21 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverla
       aria-label={object.label}
       aria-disabled={disabled}
       data-drop-target={!disabled}
+      data-demo-state={isDemoState}
     >
       {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
       {isHighlighted && !disabled && (
         <div className="hotspot-tooltip">
           <span className="hotspot-tooltip-label">{object.label}</span>
+          {/* RU-003-S2: 데모 상태 표시 */}
+          {isDemoState && (
+            <span className="hotspot-tooltip-demo">{t('scene.hotspot.demo_hint')}</span>
+          )}
           {/* U-012: 드래그 오버 시 드롭 힌트 표시 */}
           {isOver && (
             <span className="hotspot-tooltip-drop-hint">{t('scene.hotspot.drop_hint')}</span>
           )}
-          {!isOver && object.interaction_hint && (
+          {!isOver && !isDemoState && object.interaction_hint && (
             <span className="hotspot-tooltip-hint">
               {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
             </span>
@@ -210,16 +223,35 @@ export function SceneCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
-  // ResizeObserver로 캔버스 크기 추적 (반응형 좌표 변환용)
+  // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
+  // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
   useEffect(() => {
     const element = canvasRef.current;
     if (!element) return;
 
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    const RESIZE_DEBOUNCE_MS = 100; // 디바운스 간격
+
     const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setCanvasSize({ width, height });
+      // 디바운스: 마지막 리사이즈 이벤트 후 일정 시간 후에만 업데이트
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
       }
+      resizeTimeout = setTimeout(() => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          // 의미 있는 크기 변화만 적용 (5px 이상 차이)
+          setCanvasSize((prev) => {
+            if (
+              Math.abs(prev.width - width) > 5 ||
+              Math.abs(prev.height - height) > 5
+            ) {
+              return { width, height };
+            }
+            return prev;
+          });
+        }
+      }, RESIZE_DEBOUNCE_MS);
     });
 
     resizeObserver.observe(element);
@@ -229,6 +261,9 @@ export function SceneCanvas({
     setCanvasSize({ width: rect.width, height: rect.height });
 
     return () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
       resizeObserver.disconnect();
     };
   }, []);
@@ -254,9 +289,20 @@ export function SceneCanvas({
     ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
     : null;
 
-  // 핫스팟 렌더링 조건: scene 활성화 상태 + objects 존재 + 캔버스 크기 확보
-  const shouldRenderHotspots =
-    (isSceneActive || status === 'default') && objects.length > 0 && canvasSize.width > 0;
+  // RU-003-S2 Step 1: 핫스팟 렌더링 조건을 SSOT로 고정
+  // - isHotspotInteractionAllowed()로 허용 상태 검사 (scene, default)
+  // - objects 존재 + 캔버스 크기 확보
+  const isInteractionAllowed = isHotspotInteractionAllowed(status);
+  const shouldRenderHotspots = isInteractionAllowed && objects.length > 0 && canvasSize.width > 0;
+
+  // RU-003-S2: 데모 상태 여부 (시각적 힌트 필요)
+  const isDemoState = status === 'default' && !isSceneActive;
+
+  // RU-003-S2 Step 2: 핫스팟을 면적 기준으로 정렬 (작은 것이 뒤에 = 높은 z-index)
+  const sortedObjects = useMemo(() => {
+    if (objects.length <= 1) return objects;
+    return [...objects].sort((a, b) => compareHotspotPriority(a.box_2d, b.box_2d));
+  }, [objects]);
 
   return (
     <div
@@ -290,16 +336,19 @@ export function SceneCanvas({
         </div>
       )}
 
-      {/* 핫스팟 오버레이 레이어 */}
+      {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
       {shouldRenderHotspots && (
         <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
-          {objects.map((obj) => (
+          {sortedObjects.map((obj, index) => (
             <HotspotOverlay
               key={obj.id}
               object={obj}
               canvasSize={canvasSize}
               onClick={handleHotspotClick}
               disabled={disabled}
+              isDemoState={isDemoState}
+              // RU-003-S2 Step 2: 인덱스 기반 z-index로 작은 것이 위에 표시
+              style={{ zIndex: index + 1 }}
             />
           ))}
         </div>
