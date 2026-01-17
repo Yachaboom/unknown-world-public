@@ -22,6 +22,7 @@ import {
   selectDraggingItem,
   selectSelectedItemId,
 } from '../stores/inventoryStore';
+import { DND_TYPE, type InventoryDragData } from '../dnd/types';
 
 // =============================================================================
 // 드래그 가능한 아이템 컴포넌트
@@ -41,14 +42,15 @@ interface DraggableItemProps {
 function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
   const { t } = useTranslation();
 
-  // dnd-kit 드래그 설정
+  // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
+  const dragData: InventoryDragData = {
+    type: DND_TYPE.INVENTORY_ITEM,
+    item_id: item.id,
+    item,
+  };
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
-    data: {
-      type: 'inventory-item',
-      item_id: item.id, // U-012 연결용
-      item,
-    },
+    data: dragData,
     disabled,
   });
 

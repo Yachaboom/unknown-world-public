@@ -1,5 +1,29 @@
 # 프로젝트 진행 상황
 
+## [2026-01-18 00:25] RU-003-Q1: DnD/Turn 이벤트 중복 제거 및 데이터 구조 SSOT화 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-Q1] DnD/Turn 이벤트 중복 제거: drag/drop 타입 상수화 + 공통 데이터 구조 정리
+- **개선 사항**:
+    - **DnD 데이터 계약 SSOT화**: `frontend/src/dnd/types.ts`를 신설하여 DnD 상수(`DND_TYPE`)와 데이터 구조(`InventoryDragData`, `HotspotDropData`)를 중앙 집중화
+    - **하드코딩 제거**: `App.tsx`, `InventoryPanel.tsx`, `SceneCanvas.tsx`에 흩어져 있던 문자열 상수를 `DND_TYPE`으로 교체하여 런타임 깨짐 방지
+    - **타입 안전성 확보**: `App.tsx` 내 DnD 핸들러에서 타입 가드를 도입하여 `any` 캐스팅을 제거하고 데이터 필드 접근의 안전성 강화
+    - **코드 응집도 향상**: DnD 관련 명세가 컴포넌트 내부 구현에서 독립된 SSOT 모듈로 분리되어 유지보수 용이성 확보
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/dnd/types.ts` (신설), `frontend/src/components/InventoryPanel.tsx`, `frontend/src/components/SceneCanvas.tsx`, `frontend/src/components/DndInteraction.test.tsx`
+
+### 기술적 세부사항
+
+- **Type Guard (isInventoryDragData / isHotspotDropData)**: `dnd-kit`의 `active.data.current` 및 `over.data.current`를 검증하는 타입 가드를 통해 런타임 타입 체크 및 자동 타입 추론 실현
+- **Constant Persistence**: `'inventory-item'`, `'hotspot'` 등 매직 스트링을 상수로 치환하여 드리프트 위험 원천 차단
+
+### 검증
+
+- **수동 검증 완료**: 인벤토리 아이템 드래그 시 핫스팟 하이라이트 및 드롭 시 턴 실행이 리팩토링 전과 동일하게 정상 작동함을 확인
+- **자동 테스트 통과**: `DndInteraction.test.tsx`에서 타입 가드 기반의 새로운 데이터 구조를 반영한 테스트 케이스 통과
+
+---
+
 ## [2026-01-17 23:55] RU-003-Q5: 하드코딩/DEV 목 데이터 격리 및 i18n 혼합 출력 방지 완료
 
 ### 작업 내용

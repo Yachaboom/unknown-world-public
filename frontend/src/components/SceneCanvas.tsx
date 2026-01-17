@@ -23,6 +23,7 @@ import { useDroppable } from '@dnd-kit/core';
 import type { SceneCanvasStatus, SceneCanvasState, PlaceholderInfo } from '../types/scene';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
+import { DND_TYPE, type HotspotDropData } from '../dnd/types';
 
 // =============================================================================
 // 상수 정의
@@ -105,15 +106,16 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled }: HotspotOverla
   const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
 
-  // U-012: useDroppable 훅으로 드롭 타겟 설정
+  // U-012: useDroppable 훅으로 드롭 타겟 설정 (RU-003-Q1: 상수/타입 기반)
+  const dropData: HotspotDropData = {
+    type: DND_TYPE.HOTSPOT,
+    object_id: object.id,
+    box_2d: object.box_2d,
+    label: object.label,
+  };
   const { isOver, setNodeRef } = useDroppable({
     id: `hotspot-${object.id}`,
-    data: {
-      type: 'hotspot',
-      object_id: object.id,
-      box_2d: object.box_2d,
-      label: object.label,
-    },
+    data: dropData,
     disabled,
   });
 

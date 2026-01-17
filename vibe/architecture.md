@@ -58,13 +58,15 @@ D:\Dev\unknown-world\
 │   │   ├── i18n.ts         # 다국어 설정 SSOT (인벤토리 키 포함)
 │   │   ├── setupTests.ts   # 테스트 환경 설정
 │   │   ├── vite-env.d.ts
-│   │   ├── api/            # HTTP Streaming 클라이언트
-│   │   │   └── turnStream.ts
-│   │   ├── demo/           # 데모용 Mock 데이터 및 피처 (RU-003-Q5)
-│   │   │   └── demoFixtures.ts # 데모 인벤토리/오브젝트 및 테마 감지 유틸
-│   │   ├── turn/           # Turn Runner 모듈 (RU-003-Q3)
-│   │   │   └── turnRunner.ts # TurnInput 생성, 스트림 시작/취소, 콜백 라우팅
-│   ├── components/     # 게임 UI 컴포넌트
+    ├── api/            # HTTP Streaming 클라이언트
+    │   └── turnStream.ts
+    ├── demo/           # 데모용 Mock 데이터 및 피처 (RU-003-Q5)
+    │   └── demoFixtures.ts # 데모 인벤토리/오브젝트 및 테마 감지 유틸
+    ├── dnd/            # DnD 데이터 계약 및 타입 SSOT (RU-003-Q1)
+    │   └── types.ts    # DND_TYPE 상수 및 Drag/Drop 데이터 타입 정의
+    ├── turn/           # Turn Runner 모듈 (RU-003-Q3)
+    │   └── turnRunner.ts # TurnInput 생성, 스트림 시작/취소, 콜백 라우팅
+    ├── components/     # 게임 UI 컴포넌트
 │   │   ├── ActionDeck.tsx  # 액션 카드 덱 UI
 │   │   ├── ActionDeck.test.tsx
 │   │   ├── AgentConsole.tsx
@@ -147,6 +149,8 @@ D:\Dev\unknown-world\
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
     - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
+    - `demo/`: **RU-003-Q5에 따라 데모용 목 데이터 및 테마 감지 유틸리티를 분리 관리.**
+    - `dnd/`: **RU-003-Q1에 따라 DnD 데이터 계약(상수, 타입, 타입 가드)의 SSOT를 담당함.**
     - `turn/`: **RU-003-Q3에 따라 Turn Runner 모듈이 TurnInput 생성, 스트림 시작/취소, 콜백 라우팅(agentStore/worldStore)을 담당함. App.tsx는 이벤트 라우팅만 수행.**
     - `stores/`: Agent Console 상태, UI 설정 및 월드 세션 상태를 관리하는 Zustand 스토어. **RU-003-Q4에 따라 worldStore가 세션 상태의 SSOT 역할을 수행하며 하위 스토어 업데이트를 조정함.**
     - `components/`: 게임 전용 UI 컴포넌트 모음. U-011/U-012에 따라 인벤토리 패널과 씬 캔버스 간의 DnD 인터랙션 및 턴 실행 연동이 구현됨.

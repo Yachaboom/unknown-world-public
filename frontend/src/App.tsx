@@ -40,7 +40,7 @@ import {
   type NarrativeEntry,
 } from './stores/worldStore';
 import { useTurnRunner } from './turn/turnRunner';
-import type { ActionCard, DropInput, Box2D } from './schemas/turn';
+import type { ActionCard, DropInput } from './schemas/turn';
 import {
   DEMO_INVENTORY_ITEMS,
   DEMO_SCENE_OBJECTS,
@@ -48,6 +48,7 @@ import {
   isDemoEnvironment,
   getCurrentThemeFromDOM,
 } from './demo/demoFixtures';
+import { isInventoryDragData, isHotspotDropData } from './dnd/types';
 
 // =============================================================================
 // 패널 컴포넌트
@@ -422,12 +423,13 @@ function App() {
 
   /**
    * 드래그 시작 핸들러 (U-011)
+   * RU-003-Q1: 타입 가드로 드래그 데이터 검증
    */
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const { active } = event;
-      if (active.data.current?.type === 'inventory-item') {
-        startDrag(active.id as string);
+      if (isInventoryDragData(active.data.current)) {
+        startDrag(active.data.current.item_id);
       }
     },
     [startDrag],
@@ -440,36 +442,35 @@ function App() {
    * - 드롭 성공: item_id + target_object_id + target_box_2d로 TurnInput 생성
    * - 드롭 실패: 즉시 피드백 (무반응 금지)
    * RU-003-Q4: 시스템 내러티브는 worldStore.appendSystemNarrative 사용
+   * RU-003-Q1: 타입 가드로 드래그/드롭 데이터 검증
    */
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       endDrag();
 
-      // 드래그된 아이템 정보 추출
+      // RU-003-Q1: 타입 가드로 드래그 데이터 검증
       const activeData = active.data.current;
-      if (activeData?.type !== 'inventory-item') {
+      if (!isInventoryDragData(activeData)) {
         return;
       }
 
-      const itemId = activeData.item_id as string;
-      const draggedItem = inventoryItems.find((item) => item.id === itemId);
-      const itemName = draggedItem?.name ?? itemId;
+      // 타입 가드 통과 후 안전하게 접근
+      const itemId = activeData.item_id;
+      const itemName = activeData.item.name;
 
-      // 드롭 대상이 없거나 핫스팟이 아니면 실패 피드백 제공 (U-012)
-      // RU-003-Q4: appendSystemNarrative로 단일화
-      if (!over || over.data.current?.type !== 'hotspot') {
+      // RU-003-Q1: 타입 가드로 드롭 대상 검증
+      const overData = over?.data.current;
+      if (!over || !isHotspotDropData(overData)) {
+        // 드롭 실패 피드백 (U-012)
         appendSystemNarrative(
           `[${t('connection.online')}] ${t('scene.hotspot.drop_invalid', { item: itemName })}`,
         );
         return;
       }
 
-      // 드롭 대상이 핫스팟인 경우
-      const overData = over.data.current;
-      const targetObjectId = overData.object_id as string;
-      const targetBox2d = overData.box_2d as Box2D;
-      const targetLabel = overData.label as string;
+      // 타입 가드 통과 후 안전하게 접근
+      const { object_id: targetObjectId, box_2d: targetBox2d, label: targetLabel } = overData;
 
       // 드롭 액션 텍스트 생성
       const dropText = t('scene.hotspot.drop_action', {
@@ -487,7 +488,7 @@ function App() {
       // 턴 실행
       executeTurn(dropText, undefined, undefined, dropInput);
     },
-    [endDrag, executeTurn, inventoryItems, appendSystemNarrative, t],
+    [endDrag, executeTurn, appendSystemNarrative, t],
   );
 
   return (

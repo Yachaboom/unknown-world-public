@@ -84,13 +84,25 @@ describe('DnD Interaction - Logic Test', () => {
     render(<App />);
     const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
 
+    // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
+    const mockItem = {
+      id: 'keycard-alpha',
+      name: '키카드 A',
+      icon: '🔑',
+      quantity: 1,
+    };
+
     // 성공 시나리오 시뮬레이션
     act(() => {
       dndCallbacks.onDragEnd({
         active: {
           id: 'keycard-alpha',
           data: {
-            current: { type: 'inventory-item', item_id: 'keycard-alpha' },
+            current: {
+              type: 'inventory-item',
+              item_id: 'keycard-alpha',
+              item: mockItem,
+            },
           },
         },
         over: {
@@ -123,13 +135,25 @@ describe('DnD Interaction - Logic Test', () => {
     render(<App />);
     const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
 
+    // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
+    const mockItem = {
+      id: 'keycard-alpha',
+      name: '키카드 A',
+      icon: '🔑',
+      quantity: 1,
+    };
+
     // 실패 시나리오 시뮬레이션 (over가 null)
     act(() => {
       dndCallbacks.onDragEnd({
         active: {
           id: 'keycard-alpha',
           data: {
-            current: { type: 'inventory-item', item_id: 'keycard-alpha' },
+            current: {
+              type: 'inventory-item',
+              item_id: 'keycard-alpha',
+              item: mockItem,
+            },
           },
         },
         over: null,
