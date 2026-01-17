@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-17 22:30] RU-003-Q3: App.tsx 복잡도 축소 및 Turn Runner 모듈 분리 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-Q3] App.tsx 복잡도 축소: Turn 실행/스트리밍 결합을 “Turn Runner” 모듈로 분리
+- **개선 사항**:
+    - **Turn Runner 모듈 신설**: `frontend/src/turn/turnRunner.ts`를 신설하여 TurnInput 생성, 스트림 시작/취소, 콜백 라우팅 로직을 App.tsx에서 분리
+    - **App.tsx 책임 정제**: App.tsx를 레이아웃 구성 및 사용자 이벤트(클릭, 드롭, 입력) 라우팅 역할로 단순화
+    - **오케스트레이션 캡슐화**: 스트림 콜백 결과를 `agentStore`(진행 상태)와 `worldStore`(데이터 반영)로 분배하는 정책을 한 곳으로 모아 코드 응집도 향상
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/turn/turnRunner.ts` (신설), `frontend/src/api/turnStream.ts`
+
+### 기술적 세부사항
+
+- **createTurnRunner / useTurnRunner**: 일반 함수형 생성자와 React Hook을 모두 제공하여 컴포넌트 생명주기와 독립된 테스트 가능성 및 사용 편의성 확보
+- **Callback Routing**: `onFinal`, `onError`, `onComplete` 등 스트림 이벤트 발생 시 스토어 간의 협업 로직을 `turnRunner` 내부에 캡슐화
+
+### 검증
+
+- **수동 검증 완료**: 액션 카드, 핫스팟 클릭, 아이템 드롭 인터랙션이 이전과 동일하게 턴을 실행하고 결과를 반영함을 확인
+- **구조 검증**: `App.tsx`에서 `executeTurnStream` 직접 호출 및 콜백 핸들러 코드 제거 확인
+
+---
+
 ## [2026-01-17 21:50] RU-003-Q4: UI 상태 슬라이스/경계 재정의 및 worldStore 도입 완료
 
 ### 작업 내용

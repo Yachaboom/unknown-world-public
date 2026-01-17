@@ -16,7 +16,7 @@
  * @see vibe/prd.md 6.7/6.8/9장
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DndContext,
@@ -39,9 +39,8 @@ import {
   useWorldStore,
   type NarrativeEntry,
 } from './stores/worldStore';
-import { startTurnStream, type StreamCallbacks } from './api/turnStream';
-import type { TurnInput, ActionCard, DropInput, Box2D } from './schemas/turn';
-import { getResolvedLanguage } from './i18n';
+import { useTurnRunner } from './turn/turnRunner';
+import type { ActionCard, DropInput, Box2D } from './schemas/turn';
 
 // =============================================================================
 // 패널 컴포넌트
@@ -251,16 +250,14 @@ function App() {
   const [inputText, setInputText] = useState('');
 
   // World Store (RU-003-Q4: 세션/월드 상태 SSOT)
+  // RU-003-Q3: applyTurnOutput, setSceneState, setConnected는 Turn Runner로 이동
   const {
     economy,
     isConnected,
     sceneState,
     sceneObjects,
     narrativeEntries,
-    applyTurnOutput,
     appendSystemNarrative,
-    setSceneState,
-    setConnected,
     setSceneObjects,
     initialize: initializeWorld,
   } = useWorldStore();
@@ -323,18 +320,8 @@ function App() {
     useSensor(KeyboardSensor),
   );
 
-  // Agent Store 액션
-  const {
-    startStream,
-    handleStage,
-    handleBadges,
-    handleNarrativeDelta,
-    handleFinal,
-    handleError,
-    completeStream,
-    isStreaming,
-    narrativeBuffer,
-  } = useAgentStore();
+  // Agent Store 상태 (RU-003-Q3: 액션은 Turn Runner로 이동)
+  const { isStreaming, narrativeBuffer } = useAgentStore();
 
   // UI Prefs Store (U-028→U-037: Readable 모드 제거)
   const { uiScale, increaseUIScale, decreaseUIScale } = useUIPrefsStore();
@@ -344,98 +331,37 @@ function App() {
     applyUIPrefsToDOM({ uiScale });
   }, [uiScale]);
 
-  // 취소 함수 ref
-  const cancelStreamRef = useRef<(() => void) | null>(null);
+  // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
+  const turnRunnerDeps = useMemo(
+    () => ({
+      t,
+      theme: 'dark' as const,
+    }),
+    [t],
+  );
+  const turnRunner = useTurnRunner(turnRunnerDeps);
 
   /**
    * 턴을 실행합니다.
    *
-   * U-010: click 파라미터 추가 (Q1 결정: Option B - object_id + box_2d 전송)
-   * U-012: drop 파라미터 추가 (인벤토리 아이템 → 핫스팟 드롭)
-   * RU-003-Q4: TurnOutput 반영은 worldStore.applyTurnOutput으로 단일화
+   * RU-003-Q3: Turn Runner로 위임하여 App은 "이벤트 라우팅"만 담당합니다.
+   * - TurnInput 생성, 스트림 시작/취소, 콜백 라우팅은 모두 Turn Runner가 처리합니다.
+   *
+   * U-010: click 파라미터 (핫스팟 클릭)
+   * U-012: drop 파라미터 (인벤토리 아이템 → 핫스팟 드롭)
    */
   const executeTurn = useCallback(
     (text: string, actionId?: string, clickData?: HotspotClickData, dropData?: DropInput) => {
-      if (isStreaming) return;
-
-      // 입력 데이터 생성 (언어는 i18n resolvedLanguage와 동기화)
-      const turnInput: TurnInput = {
-        language: getResolvedLanguage(),
-        text: text || (actionId ? t('action.card_select', { cardId: actionId }) : ''),
-        action_id: actionId ?? null,
-        // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
-        click: clickData
-          ? {
-              object_id: clickData.object_id,
-              box_2d: clickData.box_2d,
-            }
-          : null,
-        // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
-        drop: dropData ?? null,
-        client: {
-          viewport_w: window.innerWidth,
-          viewport_h: window.innerHeight,
-          theme: 'dark',
-        },
-        economy_snapshot: economy,
-      };
-
-      // Agent Store 시작
-      startStream();
-
-      // Scene Canvas를 로딩 상태로 전환 (U-031)
-      setSceneState({ status: 'loading', message: t('scene.status.syncing') });
-
-      // 스트림 콜백 설정 (RU-003-Q4: worldStore.applyTurnOutput으로 단일화)
-      const callbacks: StreamCallbacks = {
-        onStage: handleStage,
-        onBadges: handleBadges,
-        onNarrativeDelta: handleNarrativeDelta,
-        onFinal: (event) => {
-          handleFinal(event);
-          // RU-003-Q4: TurnOutput 반영 SSOT
-          applyTurnOutput(event.data);
-        },
-        onError: (event) => {
-          handleError(event);
-          setConnected(false);
-          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
-          const errorCode = event.code;
-          if (errorCode === 'SAFETY_BLOCKED') {
-            setSceneState({ status: 'blocked', message: event.message });
-          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
-            setSceneState({ status: 'low_signal', message: event.message });
-          } else {
-            setSceneState({ status: 'offline', message: event.message });
-          }
-        },
-        onComplete: () => {
-          completeStream();
-          // Scene Canvas를 기본 상태로 복원 (U-031)
-          // TODO: TurnOutput에 scene.imageUrl이 있으면 scene 상태로 전환
-          setSceneState({ status: 'default', message: '' });
-        },
-      };
-
-      // 스트림 시작
-      cancelStreamRef.current = startTurnStream(turnInput, callbacks);
+      // RU-003-Q3: Turn Runner에 위임
+      turnRunner.runTurn({
+        text,
+        actionId,
+        click: clickData,
+        drop: dropData,
+      });
       setInputText('');
     },
-    [
-      isStreaming,
-      economy,
-      startStream,
-      handleStage,
-      handleBadges,
-      handleNarrativeDelta,
-      handleFinal,
-      handleError,
-      completeStream,
-      applyTurnOutput,
-      setSceneState,
-      setConnected,
-      t,
-    ],
+    [turnRunner],
   );
 
   /**
@@ -487,12 +413,7 @@ function App() {
     [handleSubmit],
   );
 
-  // 컴포넌트 언마운트 시 스트림 취소
-  useEffect(() => {
-    return () => {
-      cancelStreamRef.current?.();
-    };
-  }, []);
+  // RU-003-Q3: 컴포넌트 언마운트 시 스트림 취소는 useTurnRunner 훅에서 자동 처리
 
   /**
    * 드래그 시작 핸들러 (U-011)

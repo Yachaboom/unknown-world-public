@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 26/62 (42%) | **MVP**: 26/49 (53%) | **MMP**: 0/13 (0%)
+**전체**: 32/62 (52%) | **MVP**: 32/49 (65%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-8  
+**예상 완료(가정)**: MVP D-2 | MMP D-6  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
-_진행률 산정: `vibe/unit-results/`에 존재하는 완료 유닛(U/RU/CP) 기준. `vibe/refactors/*`는 하위 리팩토링 기록으로 분모에서 제외._
+_진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중**: [RU-003[Mvp]](unit-plans/RU-003[Mvp].md) / **최근 완료**: [U-012[Mvp]](unit-results/U-012[Mvp].md) (2026-01-17)
+**진행 중**: [CP-MVP-02](unit-plans/CP-MVP-02.md) / **최근 완료**: [RU-003[Mvp]](unit-plans/RU-003[Mvp].md) (2026-01-17)
 
 **블로커**: 없음
 
@@ -168,6 +168,9 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [RU-003-Q3](refactors/RU-003-Q3.md): App.tsx 복잡도 축소: Turn Runner 모듈 분리 (2026-01-17)
+- ✅ [RU-003-Q4](stores/worldStore.ts): UI 상태 슬라이스/경계 재정의: worldStore 도입 (2026-01-17)
+- ✅ [RU-003[Mvp]](unit-plans/RU-003[Mvp].md): 리팩토링: UI 상태 슬라이스/경계 정리 (2026-01-17)
 - ✅ [U-012[Mvp]](unit-results/U-012[Mvp].md): ⚡DnD 드롭(아이템→핫스팟) TurnInput 이벤트 (2026-01-17)
 - ✅ [U-011[Mvp]](unit-results/U-011[Mvp].md): ⚡Inventory 패널(DnD) 기본 (2026-01-17)
 - ✅ [U-010[Mvp]](unit-results/U-010[Mvp].md): ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox) (2026-01-17)
