@@ -373,7 +373,19 @@ export async function executeTurnStream(
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
+      // RU-003-S1: Abort(취소) 정책
+      // =========================================================================
+      // 현재 정책(Option B): Abort 시 onComplete를 호출하지 않음
+      // - 이유: 취소는 "사용자 의도"이므로 실패와 구분해야 함
+      // - 주의: 이 정책에서는 Cancel 버튼 구현 시 호출자가 직접 UI 복구 필요
+      //
+      // 향후 Option A로 전환 가능:
+      // - Abort 시에도 onComplete 호출 + 별도 플래그로 "취소 종료" 구분
+      // - 장점: UI가 멈추지 않음 (복구 일관성)
+      // - 단점: 취소와 실패를 구분하려면 이벤트 모델 확장 필요
+      //
+      // 결정 근거: RU-003-S1 Step 3
+      // =========================================================================
       aborted = true;
       return;
     }

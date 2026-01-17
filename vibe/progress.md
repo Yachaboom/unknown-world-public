@@ -1,5 +1,27 @@
 # 프로젝트 진행 상황
 
+## [2026-01-17 23:45] RU-003-S1: 연결 상태/Scene 상태 전이 및 취소(Abort) 정책 정리 완료
+
+### 작업 내용
+
+- **제안서**: [RU-003-S1] 잠재 버그: 연결 상태/Scene 상태 리셋/취소(Abort) 전파 정책 정리
+- **개선 사항**:
+    - **연결 상태 복구 자동화**: 스트림 성공(`onFinal`) 시 `isConnected`를 즉시 `true`로 복원하는 낙관적 복구 로직 적용
+    - **에러 시 Scene 상태 보존**: `onError` 발생 시 설정된 에러 상태(`offline`, `blocked`, `low_signal`)가 스트림 종료(`onComplete`) 시점에 `default`로 덮어씌워지지 않도록 분기 로직 구현
+    - **Abort(취소) 정책 명세화**: `turnStream.ts` 내 Abort 발생 시 `onComplete`를 호출하지 않는 정책(Option B)을 주석으로 명시하고, 호출자가 UI 복구를 담당하도록 설계 확정
+- **영향 범위**: `frontend/src/api/turnStream.ts`, `frontend/src/turn/turnRunner.ts`
+
+### 기술적 세부사항
+
+- **hasError 플래그**: `turnRunner` 내부에 스트림 중 에러 발생 여부를 추적하는 로컬 상태를 도입하여 종료 시점의 상태 전이 결정에 활용
+- **Abort Policy (Option B)**: 취소는 시스템 실패가 아닌 사용자 의도이므로, 자동 복구 대신 명시적인 UI 복구 경로를 따르도록 정책 고정
+
+### 검증
+
+- **수동 검증 완료**: 백엔드 중단 후 턴 실행 시 `offline` 상태 유지 확인, 백엔드 재개 후 턴 실행 시 `online` 복구 및 씬 정상화 확인
+
+---
+
 ## [2026-01-17 22:30] RU-003-Q3: App.tsx 복잡도 축소 및 Turn Runner 모듈 분리 완료
 
 ### 작업 내용

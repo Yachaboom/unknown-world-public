@@ -172,6 +172,9 @@ export function createTurnRunner(deps: {
     // Scene Canvas를 로딩 상태로 전환 (U-031)
     worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
+    // RU-003-S1: 에러 발생 여부 추적 (onComplete에서 sceneState 복구 정책 분기용)
+    let hasError = false;
+
     // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
     const callbacks: StreamCallbacks = {
       // Stage/Badges/NarrativeDelta → agentStore로만 전달
@@ -189,9 +192,13 @@ export function createTurnRunner(deps: {
         useAgentStore.getState().handleFinal(event);
         // RU-003-Q4: TurnOutput 반영 SSOT
         useWorldStore.getState().applyTurnOutput(event.data);
+        // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
+        useWorldStore.getState().setConnected(true);
       },
       // Error → agentStore.handleError + worldStore 상태 복구
       onError: (event) => {
+        // RU-003-S1: 에러 발생 플래그 설정 (onComplete에서 sceneState 유지 결정)
+        hasError = true;
         useAgentStore.getState().handleError(event);
         useWorldStore.getState().setConnected(false);
         // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
@@ -207,9 +214,13 @@ export function createTurnRunner(deps: {
       // Complete → agentStore.completeStream + worldStore 씬 상태 복구
       onComplete: () => {
         useAgentStore.getState().completeStream();
-        // Scene Canvas를 기본 상태로 복원 (U-031)
-        // TODO: TurnOutput에 scene.imageUrl이 있으면 scene 상태로 전환
-        useWorldStore.getState().setSceneState({ status: 'default', message: '' });
+        // RU-003-S1: 에러가 발생한 경우 sceneState를 유지 (offline/blocked/low_signal)
+        // 에러가 없었던 성공 케이스에서만 default로 복원
+        if (!hasError) {
+          // TODO: TurnOutput에 scene.imageUrl이 있으면 'scene' 상태로 전환
+          useWorldStore.getState().setSceneState({ status: 'default', message: '' });
+        }
+        // 에러 상태인 경우 sceneState 유지 → 다음 성공 턴에서 복구됨
       },
     };
 
@@ -292,6 +303,9 @@ export function useTurnRunner(deps: {
       // Scene Canvas를 로딩 상태로 전환 (U-031)
       worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
+      // RU-003-S1: 에러 발생 여부 추적 (onComplete에서 sceneState 복구 정책 분기용)
+      let hasError = false;
+
       // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
       const callbacks: StreamCallbacks = {
         onStage: (event) => {
@@ -306,8 +320,12 @@ export function useTurnRunner(deps: {
         onFinal: (event) => {
           useAgentStore.getState().handleFinal(event);
           useWorldStore.getState().applyTurnOutput(event.data);
+          // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
+          useWorldStore.getState().setConnected(true);
         },
         onError: (event) => {
+          // RU-003-S1: 에러 발생 플래그 설정 (onComplete에서 sceneState 유지 결정)
+          hasError = true;
           useAgentStore.getState().handleError(event);
           useWorldStore.getState().setConnected(false);
           const errorCode = event.code;
@@ -321,7 +339,13 @@ export function useTurnRunner(deps: {
         },
         onComplete: () => {
           useAgentStore.getState().completeStream();
-          useWorldStore.getState().setSceneState({ status: 'default', message: '' });
+          // RU-003-S1: 에러가 발생한 경우 sceneState를 유지 (offline/blocked/low_signal)
+          // 에러가 없었던 성공 케이스에서만 default로 복원
+          if (!hasError) {
+            // TODO: TurnOutput에 scene.imageUrl이 있으면 'scene' 상태로 전환
+            useWorldStore.getState().setSceneState({ status: 'default', message: '' });
+          }
+          // 에러 상태인 경우 sceneState 유지 → 다음 성공 턴에서 복구됨
         },
       };
 

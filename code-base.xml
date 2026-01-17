@@ -2868,357 +2868,6 @@ export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntr
 export const selectTurnCount = (state: WorldStore) => state.turnCount;
 </file>
 
-<file path="frontend/src/turn/turnRunner.ts">
-/**
- * Unknown World - Turn Runner 모듈
- *
- * RU-003-Q3: Turn 실행/스트리밍 결합을 App.tsx에서 분리하여
- * "레이아웃 + 이벤트 라우팅"과 "오케스트레이션"을 명확히 분리합니다.
- *
- * 책임:
- *   - TurnInput 생성 (언어/클릭/드롭/클라이언트 정보/재화 스냅샷)
- *   - 스트림 시작/취소/콜백 라우팅
- *   - agentStore/worldStore로 이벤트 분배
- *
- * 설계 원칙:
- *   - RULE-002: 채팅 앱이 아닌 상태 기반 게임 시스템
- *   - RULE-003/004: 구조화 출력 + 검증/복구
- *   - RULE-006: ko/en i18n 정책 준수
- *
- * @module turn/turnRunner
- */
-
-import type { TurnInput, DropInput } from '../schemas/turn';
-import type { HotspotClickData } from '../components/SceneCanvas';
-import { getResolvedLanguage } from '../i18n';
-import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
-import { useAgentStore } from '../stores/agentStore';
-import { useWorldStore } from '../stores/worldStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/** TurnInput 생성을 위한 파라미터 */
-export interface BuildTurnInputParams {
-  /** 사용자 입력 텍스트 */
-  text: string;
-  /** 액션 카드 ID (선택) */
-  actionId?: string;
-  /** 핫스팟 클릭 데이터 (U-010) */
-  click?: HotspotClickData;
-  /** 드롭 데이터 (U-012) */
-  drop?: DropInput;
-  /** 재화 스냅샷 */
-  economySnapshot: { signal: number; memory_shard: number };
-  /** UI 테마 */
-  theme: 'dark' | 'light';
-}
-
-/** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
-export interface RunTurnParams {
-  /** 사용자 입력 텍스트 */
-  text: string;
-  /** 액션 카드 ID (선택) */
-  actionId?: string;
-  /** 핫스팟 클릭 데이터 (U-010) */
-  click?: HotspotClickData;
-  /** 드롭 데이터 (U-012) */
-  drop?: DropInput;
-}
-
-/** Turn Runner 인터페이스 */
-export interface TurnRunner {
-  /** 턴 실행 (스트림 시작) */
-  runTurn: (params: RunTurnParams) => void;
-  /** 스트림 취소 */
-  cancel: () => void;
-}
-
-// =============================================================================
-// TurnInput 생성
-// =============================================================================
-
-/**
- * TurnInput을 생성합니다.
- *
- * 언어, 클릭, 드롭, 클라이언트 정보, 재화 스냅샷을 조합하여
- * 서버로 전송할 TurnInput을 생성합니다.
- */
-export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
-  const {
-    text,
-    actionId,
-    click,
-    drop,
-    economySnapshot,
-    theme,
-  } = params;
-
-  return {
-    language: getResolvedLanguage(),
-    text,
-    action_id: actionId ?? null,
-    // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
-    click: click
-      ? {
-          object_id: click.object_id,
-          box_2d: click.box_2d,
-        }
-      : null,
-    // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
-    drop: drop ?? null,
-    client: {
-      viewport_w: window.innerWidth,
-      viewport_h: window.innerHeight,
-      theme,
-    },
-    economy_snapshot: economySnapshot,
-  };
-}
-
-// =============================================================================
-// Turn Runner 생성
-// =============================================================================
-
-/**
- * Turn Runner를 생성합니다.
- *
- * RU-003-Q3: App에서 Turn Runner 인스턴스를 생성하여 사용합니다.
- * 스트림 콜백은 agentStore와 worldStore로 라우팅됩니다.
- *
- * @param deps - 의존성 (i18n 번역 함수 등)
- * @returns Turn Runner 인터페이스
- *
- * @example
- * ```tsx
- * // App.tsx에서 사용
- * const runner = useMemo(() => createTurnRunner({
- *   t,
- *   theme: 'dark',
- * }), [t]);
- *
- * runner.runTurn({ text: 'hello' });
- * ```
- */
-export function createTurnRunner(deps: {
-  /** i18n 번역 함수 */
-  t: (key: string, options?: Record<string, unknown>) => string;
-  /** UI 테마 */
-  theme: 'dark' | 'light';
-}): TurnRunner {
-  const { t, theme } = deps;
-
-  // 취소 함수 저장
-  let cancelFn: (() => void) | null = null;
-
-  /**
-   * 턴을 실행합니다.
-   */
-  const runTurn = (params: RunTurnParams): void => {
-    // 스트리밍 중이면 무시
-    const isStreaming = useAgentStore.getState().isStreaming;
-    if (isStreaming) return;
-
-    // Store 액션 가져오기 (클로저 외부에서 호출 시점에 최신 상태 참조)
-    const agentStore = useAgentStore.getState();
-    const worldStore = useWorldStore.getState();
-
-    // 재화 스냅샷 가져오기
-    const economySnapshot = worldStore.economy;
-
-    // TurnInput 생성
-    const turnInput = buildTurnInput({
-      text: params.text || (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
-      actionId: params.actionId,
-      click: params.click,
-      drop: params.drop,
-      economySnapshot,
-      theme,
-    });
-
-    // Agent Store 시작
-    agentStore.startStream();
-
-    // Scene Canvas를 로딩 상태로 전환 (U-031)
-    worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
-
-    // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
-    const callbacks: StreamCallbacks = {
-      // Stage/Badges/NarrativeDelta → agentStore로만 전달
-      onStage: (event) => {
-        useAgentStore.getState().handleStage(event);
-      },
-      onBadges: (event) => {
-        useAgentStore.getState().handleBadges(event);
-      },
-      onNarrativeDelta: (event) => {
-        useAgentStore.getState().handleNarrativeDelta(event);
-      },
-      // Final → agentStore.handleFinal + worldStore.applyTurnOutput
-      onFinal: (event) => {
-        useAgentStore.getState().handleFinal(event);
-        // RU-003-Q4: TurnOutput 반영 SSOT
-        useWorldStore.getState().applyTurnOutput(event.data);
-      },
-      // Error → agentStore.handleError + worldStore 상태 복구
-      onError: (event) => {
-        useAgentStore.getState().handleError(event);
-        useWorldStore.getState().setConnected(false);
-        // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
-        const errorCode = event.code;
-        if (errorCode === 'SAFETY_BLOCKED') {
-          useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
-        } else if (errorCode === 'INSUFFICIENT_BALANCE') {
-          useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
-        } else {
-          useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
-        }
-      },
-      // Complete → agentStore.completeStream + worldStore 씬 상태 복구
-      onComplete: () => {
-        useAgentStore.getState().completeStream();
-        // Scene Canvas를 기본 상태로 복원 (U-031)
-        // TODO: TurnOutput에 scene.imageUrl이 있으면 scene 상태로 전환
-        useWorldStore.getState().setSceneState({ status: 'default', message: '' });
-      },
-    };
-
-    // 스트림 시작
-    cancelFn = startTurnStream(turnInput, callbacks);
-  };
-
-  /**
-   * 스트림을 취소합니다.
-   *
-   * 추후 Cancel/Pause/Autopilot UX를 위한 기본 골격입니다.
-   * 현재 executeTurnStream은 Abort 시 onComplete를 호출하지 않으므로,
-   * Cancel 버튼을 넣을 계획이라면 "취소 시 UI 복구 정책"을 별도로 명시해야 합니다.
-   */
-  const cancel = (): void => {
-    cancelFn?.();
-    cancelFn = null;
-  };
-
-  return {
-    runTurn,
-    cancel,
-  };
-}
-
-// =============================================================================
-// React Hook (선택적 사용)
-// =============================================================================
-
-/**
- * Turn Runner를 React 컴포넌트에서 사용하기 위한 훅.
- *
- * @param deps - 의존성
- * @returns Turn Runner 인터페이스 및 취소 효과
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 사용
- * const { runTurn, cancel } = useTurnRunner({ t, theme: 'dark' });
- * ```
- */
-import { useCallback, useEffect, useRef } from 'react';
-
-export function useTurnRunner(deps: {
-  t: (key: string, options?: Record<string, unknown>) => string;
-  theme: 'dark' | 'light';
-}): TurnRunner {
-  const { t, theme } = deps;
-
-  // 취소 함수 저장 ref
-  const cancelFnRef = useRef<(() => void) | null>(null);
-
-  // runTurn을 useCallback으로 정의
-  const runTurn = useCallback(
-    (params: RunTurnParams): void => {
-      // 스트리밍 중이면 무시
-      const isStreaming = useAgentStore.getState().isStreaming;
-      if (isStreaming) return;
-
-      // Store 액션 가져오기
-      const agentStore = useAgentStore.getState();
-      const worldStore = useWorldStore.getState();
-
-      // 재화 스냅샷 가져오기
-      const economySnapshot = worldStore.economy;
-
-      // TurnInput 생성
-      const turnInput = buildTurnInput({
-        text: params.text || (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
-        actionId: params.actionId,
-        click: params.click,
-        drop: params.drop,
-        economySnapshot,
-        theme,
-      });
-
-      // Agent Store 시작
-      agentStore.startStream();
-
-      // Scene Canvas를 로딩 상태로 전환 (U-031)
-      worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
-
-      // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
-      const callbacks: StreamCallbacks = {
-        onStage: (event) => {
-          useAgentStore.getState().handleStage(event);
-        },
-        onBadges: (event) => {
-          useAgentStore.getState().handleBadges(event);
-        },
-        onNarrativeDelta: (event) => {
-          useAgentStore.getState().handleNarrativeDelta(event);
-        },
-        onFinal: (event) => {
-          useAgentStore.getState().handleFinal(event);
-          useWorldStore.getState().applyTurnOutput(event.data);
-        },
-        onError: (event) => {
-          useAgentStore.getState().handleError(event);
-          useWorldStore.getState().setConnected(false);
-          const errorCode = event.code;
-          if (errorCode === 'SAFETY_BLOCKED') {
-            useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
-          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
-            useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
-          } else {
-            useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
-          }
-        },
-        onComplete: () => {
-          useAgentStore.getState().completeStream();
-          useWorldStore.getState().setSceneState({ status: 'default', message: '' });
-        },
-      };
-
-      // 스트림 시작 및 취소 함수 저장
-      cancelFnRef.current = startTurnStream(turnInput, callbacks);
-    },
-    [t, theme],
-  );
-
-  // cancel 함수
-  const cancel = useCallback((): void => {
-    cancelFnRef.current?.();
-    cancelFnRef.current = null;
-  }, []);
-
-  // 컴포넌트 언마운트 시 스트림 취소
-  useEffect(() => {
-    return () => {
-      cancelFnRef.current?.();
-    };
-  }, []);
-
-  return { runTurn, cancel };
-}
-</file>
-
 <file path="frontend/src/types/scene.ts">
 /**
  * Scene Canvas 관련 타입 정의 (U-031: Placeholder Pack)
@@ -5334,6 +4983,381 @@ export function applyUIScaleToDOM(scale: UIScale): void {
  */
 export function applyUIPrefsToDOM(state: UIPrefsState): void {
   applyUIScaleToDOM(state.uiScale);
+}
+</file>
+
+<file path="frontend/src/turn/turnRunner.ts">
+/**
+ * Unknown World - Turn Runner 모듈
+ *
+ * RU-003-Q3: Turn 실행/스트리밍 결합을 App.tsx에서 분리하여
+ * "레이아웃 + 이벤트 라우팅"과 "오케스트레이션"을 명확히 분리합니다.
+ *
+ * 책임:
+ *   - TurnInput 생성 (언어/클릭/드롭/클라이언트 정보/재화 스냅샷)
+ *   - 스트림 시작/취소/콜백 라우팅
+ *   - agentStore/worldStore로 이벤트 분배
+ *
+ * 설계 원칙:
+ *   - RULE-002: 채팅 앱이 아닌 상태 기반 게임 시스템
+ *   - RULE-003/004: 구조화 출력 + 검증/복구
+ *   - RULE-006: ko/en i18n 정책 준수
+ *
+ * @module turn/turnRunner
+ */
+
+import type { TurnInput, DropInput } from '../schemas/turn';
+import type { HotspotClickData } from '../components/SceneCanvas';
+import { getResolvedLanguage } from '../i18n';
+import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
+import { useAgentStore } from '../stores/agentStore';
+import { useWorldStore } from '../stores/worldStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/** TurnInput 생성을 위한 파라미터 */
+export interface BuildTurnInputParams {
+  /** 사용자 입력 텍스트 */
+  text: string;
+  /** 액션 카드 ID (선택) */
+  actionId?: string;
+  /** 핫스팟 클릭 데이터 (U-010) */
+  click?: HotspotClickData;
+  /** 드롭 데이터 (U-012) */
+  drop?: DropInput;
+  /** 재화 스냅샷 */
+  economySnapshot: { signal: number; memory_shard: number };
+  /** UI 테마 */
+  theme: 'dark' | 'light';
+}
+
+/** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
+export interface RunTurnParams {
+  /** 사용자 입력 텍스트 */
+  text: string;
+  /** 액션 카드 ID (선택) */
+  actionId?: string;
+  /** 핫스팟 클릭 데이터 (U-010) */
+  click?: HotspotClickData;
+  /** 드롭 데이터 (U-012) */
+  drop?: DropInput;
+}
+
+/** Turn Runner 인터페이스 */
+export interface TurnRunner {
+  /** 턴 실행 (스트림 시작) */
+  runTurn: (params: RunTurnParams) => void;
+  /** 스트림 취소 */
+  cancel: () => void;
+}
+
+// =============================================================================
+// TurnInput 생성
+// =============================================================================
+
+/**
+ * TurnInput을 생성합니다.
+ *
+ * 언어, 클릭, 드롭, 클라이언트 정보, 재화 스냅샷을 조합하여
+ * 서버로 전송할 TurnInput을 생성합니다.
+ */
+export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
+  const {
+    text,
+    actionId,
+    click,
+    drop,
+    economySnapshot,
+    theme,
+  } = params;
+
+  return {
+    language: getResolvedLanguage(),
+    text,
+    action_id: actionId ?? null,
+    // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
+    click: click
+      ? {
+          object_id: click.object_id,
+          box_2d: click.box_2d,
+        }
+      : null,
+    // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
+    drop: drop ?? null,
+    client: {
+      viewport_w: window.innerWidth,
+      viewport_h: window.innerHeight,
+      theme,
+    },
+    economy_snapshot: economySnapshot,
+  };
+}
+
+// =============================================================================
+// Turn Runner 생성
+// =============================================================================
+
+/**
+ * Turn Runner를 생성합니다.
+ *
+ * RU-003-Q3: App에서 Turn Runner 인스턴스를 생성하여 사용합니다.
+ * 스트림 콜백은 agentStore와 worldStore로 라우팅됩니다.
+ *
+ * @param deps - 의존성 (i18n 번역 함수 등)
+ * @returns Turn Runner 인터페이스
+ *
+ * @example
+ * ```tsx
+ * // App.tsx에서 사용
+ * const runner = useMemo(() => createTurnRunner({
+ *   t,
+ *   theme: 'dark',
+ * }), [t]);
+ *
+ * runner.runTurn({ text: 'hello' });
+ * ```
+ */
+export function createTurnRunner(deps: {
+  /** i18n 번역 함수 */
+  t: (key: string, options?: Record<string, unknown>) => string;
+  /** UI 테마 */
+  theme: 'dark' | 'light';
+}): TurnRunner {
+  const { t, theme } = deps;
+
+  // 취소 함수 저장
+  let cancelFn: (() => void) | null = null;
+
+  /**
+   * 턴을 실행합니다.
+   */
+  const runTurn = (params: RunTurnParams): void => {
+    // 스트리밍 중이면 무시
+    const isStreaming = useAgentStore.getState().isStreaming;
+    if (isStreaming) return;
+
+    // Store 액션 가져오기 (클로저 외부에서 호출 시점에 최신 상태 참조)
+    const agentStore = useAgentStore.getState();
+    const worldStore = useWorldStore.getState();
+
+    // 재화 스냅샷 가져오기
+    const economySnapshot = worldStore.economy;
+
+    // TurnInput 생성
+    const turnInput = buildTurnInput({
+      text: params.text || (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
+      actionId: params.actionId,
+      click: params.click,
+      drop: params.drop,
+      economySnapshot,
+      theme,
+    });
+
+    // Agent Store 시작
+    agentStore.startStream();
+
+    // Scene Canvas를 로딩 상태로 전환 (U-031)
+    worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+
+    // RU-003-S1: 에러 발생 여부 추적 (onComplete에서 sceneState 복구 정책 분기용)
+    let hasError = false;
+
+    // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
+    const callbacks: StreamCallbacks = {
+      // Stage/Badges/NarrativeDelta → agentStore로만 전달
+      onStage: (event) => {
+        useAgentStore.getState().handleStage(event);
+      },
+      onBadges: (event) => {
+        useAgentStore.getState().handleBadges(event);
+      },
+      onNarrativeDelta: (event) => {
+        useAgentStore.getState().handleNarrativeDelta(event);
+      },
+      // Final → agentStore.handleFinal + worldStore.applyTurnOutput
+      onFinal: (event) => {
+        useAgentStore.getState().handleFinal(event);
+        // RU-003-Q4: TurnOutput 반영 SSOT
+        useWorldStore.getState().applyTurnOutput(event.data);
+        // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
+        useWorldStore.getState().setConnected(true);
+      },
+      // Error → agentStore.handleError + worldStore 상태 복구
+      onError: (event) => {
+        // RU-003-S1: 에러 발생 플래그 설정 (onComplete에서 sceneState 유지 결정)
+        hasError = true;
+        useAgentStore.getState().handleError(event);
+        useWorldStore.getState().setConnected(false);
+        // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
+        const errorCode = event.code;
+        if (errorCode === 'SAFETY_BLOCKED') {
+          useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
+        } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+          useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
+        } else {
+          useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
+        }
+      },
+      // Complete → agentStore.completeStream + worldStore 씬 상태 복구
+      onComplete: () => {
+        useAgentStore.getState().completeStream();
+        // RU-003-S1: 에러가 발생한 경우 sceneState를 유지 (offline/blocked/low_signal)
+        // 에러가 없었던 성공 케이스에서만 default로 복원
+        if (!hasError) {
+          // TODO: TurnOutput에 scene.imageUrl이 있으면 'scene' 상태로 전환
+          useWorldStore.getState().setSceneState({ status: 'default', message: '' });
+        }
+        // 에러 상태인 경우 sceneState 유지 → 다음 성공 턴에서 복구됨
+      },
+    };
+
+    // 스트림 시작
+    cancelFn = startTurnStream(turnInput, callbacks);
+  };
+
+  /**
+   * 스트림을 취소합니다.
+   *
+   * 추후 Cancel/Pause/Autopilot UX를 위한 기본 골격입니다.
+   * 현재 executeTurnStream은 Abort 시 onComplete를 호출하지 않으므로,
+   * Cancel 버튼을 넣을 계획이라면 "취소 시 UI 복구 정책"을 별도로 명시해야 합니다.
+   */
+  const cancel = (): void => {
+    cancelFn?.();
+    cancelFn = null;
+  };
+
+  return {
+    runTurn,
+    cancel,
+  };
+}
+
+// =============================================================================
+// React Hook (선택적 사용)
+// =============================================================================
+
+/**
+ * Turn Runner를 React 컴포넌트에서 사용하기 위한 훅.
+ *
+ * @param deps - 의존성
+ * @returns Turn Runner 인터페이스 및 취소 효과
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 사용
+ * const { runTurn, cancel } = useTurnRunner({ t, theme: 'dark' });
+ * ```
+ */
+import { useCallback, useEffect, useRef } from 'react';
+
+export function useTurnRunner(deps: {
+  t: (key: string, options?: Record<string, unknown>) => string;
+  theme: 'dark' | 'light';
+}): TurnRunner {
+  const { t, theme } = deps;
+
+  // 취소 함수 저장 ref
+  const cancelFnRef = useRef<(() => void) | null>(null);
+
+  // runTurn을 useCallback으로 정의
+  const runTurn = useCallback(
+    (params: RunTurnParams): void => {
+      // 스트리밍 중이면 무시
+      const isStreaming = useAgentStore.getState().isStreaming;
+      if (isStreaming) return;
+
+      // Store 액션 가져오기
+      const agentStore = useAgentStore.getState();
+      const worldStore = useWorldStore.getState();
+
+      // 재화 스냅샷 가져오기
+      const economySnapshot = worldStore.economy;
+
+      // TurnInput 생성
+      const turnInput = buildTurnInput({
+        text: params.text || (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
+        actionId: params.actionId,
+        click: params.click,
+        drop: params.drop,
+        economySnapshot,
+        theme,
+      });
+
+      // Agent Store 시작
+      agentStore.startStream();
+
+      // Scene Canvas를 로딩 상태로 전환 (U-031)
+      worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+
+      // RU-003-S1: 에러 발생 여부 추적 (onComplete에서 sceneState 복구 정책 분기용)
+      let hasError = false;
+
+      // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
+      const callbacks: StreamCallbacks = {
+        onStage: (event) => {
+          useAgentStore.getState().handleStage(event);
+        },
+        onBadges: (event) => {
+          useAgentStore.getState().handleBadges(event);
+        },
+        onNarrativeDelta: (event) => {
+          useAgentStore.getState().handleNarrativeDelta(event);
+        },
+        onFinal: (event) => {
+          useAgentStore.getState().handleFinal(event);
+          useWorldStore.getState().applyTurnOutput(event.data);
+          // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
+          useWorldStore.getState().setConnected(true);
+        },
+        onError: (event) => {
+          // RU-003-S1: 에러 발생 플래그 설정 (onComplete에서 sceneState 유지 결정)
+          hasError = true;
+          useAgentStore.getState().handleError(event);
+          useWorldStore.getState().setConnected(false);
+          const errorCode = event.code;
+          if (errorCode === 'SAFETY_BLOCKED') {
+            useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
+          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+            useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
+          } else {
+            useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
+          }
+        },
+        onComplete: () => {
+          useAgentStore.getState().completeStream();
+          // RU-003-S1: 에러가 발생한 경우 sceneState를 유지 (offline/blocked/low_signal)
+          // 에러가 없었던 성공 케이스에서만 default로 복원
+          if (!hasError) {
+            // TODO: TurnOutput에 scene.imageUrl이 있으면 'scene' 상태로 전환
+            useWorldStore.getState().setSceneState({ status: 'default', message: '' });
+          }
+          // 에러 상태인 경우 sceneState 유지 → 다음 성공 턴에서 복구됨
+        },
+      };
+
+      // 스트림 시작 및 취소 함수 저장
+      cancelFnRef.current = startTurnStream(turnInput, callbacks);
+    },
+    [t, theme],
+  );
+
+  // cancel 함수
+  const cancel = useCallback((): void => {
+    cancelFnRef.current?.();
+    cancelFnRef.current = null;
+  }, []);
+
+  // 컴포넌트 언마운트 시 스트림 취소
+  useEffect(() => {
+    return () => {
+      cancelFnRef.current?.();
+    };
+  }, []);
+
+  return { runTurn, cancel };
 }
 </file>
 
@@ -9163,6 +9187,67 @@ export default defineConfig({
 }
 </file>
 
+<file path="frontend/package.json">
+{
+  "name": "unknown-world-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "i18next": "25.7.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-i18next": "16.5.1",
+    "zod": "4.3.4",
+    "zustand": "5.0.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "globals": "16.5.0",
+    "jsdom": "^27.4.0",
+    "prettier": "3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.51.0",
+    "vite": "7.3.0",
+    "vitest": "^4.0.16"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
+</file>
+
 <file path="frontend/src/api/turnStream.ts">
 /**
  * Unknown World - HTTP Streaming 클라이언트 + NDJSON 파서.
@@ -9539,7 +9624,19 @@ export async function executeTurnStream(
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      // 사용자가 취소한 경우 - finally에서 onComplete 호출하지 않음
+      // RU-003-S1: Abort(취소) 정책
+      // =========================================================================
+      // 현재 정책(Option B): Abort 시 onComplete를 호출하지 않음
+      // - 이유: 취소는 "사용자 의도"이므로 실패와 구분해야 함
+      // - 주의: 이 정책에서는 Cancel 버튼 구현 시 호출자가 직접 UI 복구 필요
+      //
+      // 향후 Option A로 전환 가능:
+      // - Abort 시에도 onComplete 호출 + 별도 플래그로 "취소 종료" 구분
+      // - 장점: UI가 멈추지 않음 (복구 일관성)
+      // - 단점: 취소와 실패를 구분하려면 이벤트 모델 확장 필요
+      //
+      // 결정 근거: RU-003-S1 Step 3
+      // =========================================================================
       aborted = true;
       return;
     }
@@ -9633,67 +9730,6 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
   executeTurnStream(input, callbacks, { signal: controller.signal });
 
   return () => controller.abort();
-}
-</file>
-
-<file path="frontend/package.json">
-{
-  "name": "unknown-world-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "packageManager": "pnpm@10.27.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "6.3.1",
-    "@dnd-kit/sortable": "10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "i18next": "25.7.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-i18next": "16.5.1",
-    "zod": "4.3.4",
-    "zustand": "5.0.9"
-  },
-  "devDependencies": {
-    "@eslint/js": "9.39.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@types/node": "25.0.3",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "9.39.2",
-    "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-unused-imports": "4.3.0",
-    "globals": "16.5.0",
-    "jsdom": "^27.4.0",
-    "prettier": "3.7.4",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.51.0",
-    "vite": "7.3.0",
-    "vitest": "^4.0.16"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  }
 }
 </file>
 
