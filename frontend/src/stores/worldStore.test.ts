@@ -59,6 +59,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         relationships_changed: [],
         memory_pins: [],
       },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok'],
+        repair_count: 0,
+      },
       safety: { blocked: false, message: null },
     };
 
@@ -91,6 +96,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         relationships_changed: [],
         memory_pins: [],
       },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok'],
+        repair_count: 0,
+      },
       safety: { blocked: false, message: null },
     };
     useWorldStore.getState().applyTurnOutput(initialState as TurnOutput);
@@ -114,6 +124,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         rules_changed: [],
         relationships_changed: [],
         memory_pins: [],
+      },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok'],
+        repair_count: 0,
       },
       safety: { blocked: false, message: null },
     };
@@ -150,6 +165,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         relationships_changed: [],
         memory_pins: [],
       },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok'],
+        repair_count: 0,
+      },
       safety: { blocked: false, message: null },
     };
 
@@ -185,6 +205,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         relationships_changed: [],
         memory_pins: [],
       },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok'],
+        repair_count: 0,
+      },
       safety: { blocked: false, message: null },
     };
     useWorldStore.getState().applyTurnOutput(initialState as TurnOutput);
@@ -209,6 +234,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         relationships_changed: [],
         memory_pins: [],
       },
+      agent_console: {
+        current_phase: 'commit',
+        badges: ['schema_ok'],
+        repair_count: 0,
+      },
       safety: { blocked: false, message: null },
     };
     useWorldStore.getState().applyTurnOutput(updateOutput as TurnOutput);
@@ -217,5 +247,37 @@ describe('worldStore (U-013: Quest + Rules)', () => {
     expect(state.activeRules[0].description).toBe('수정됨');
     expect(state.mutationTimeline).toHaveLength(2);
     expect(state.mutationTimeline[0].type).toBe('modified');
+  });
+
+  describe('Initialization and Reset (U-015[Mvp])', () => {
+    it('reset 액션은 모든 상태를 초기값으로 되돌려야 한다', () => {
+      // 1. 임의의 상태 설정
+      useWorldStore.setState({
+        turnCount: 10,
+        economy: { signal: 50, memory_shard: 0 },
+        quests: [{ id: 'q1', label: '퀘스트', is_completed: false }],
+      });
+
+      // 2. 리셋 실행
+      useWorldStore.getState().reset();
+
+      // 3. 검증
+      const state = useWorldStore.getState();
+      expect(state.turnCount).toBe(0);
+      expect(state.economy.signal).toBe(100);
+      expect(state.quests).toEqual([]);
+      expect(state.narrativeEntries).toEqual([]);
+    });
+
+    it('initialize 액션은 웰컴 메시지와 함께 초기 상태를 설정해야 한다', () => {
+      const welcomeMsg = '환영합니다!';
+      useWorldStore.getState().initialize(welcomeMsg);
+
+      const state = useWorldStore.getState();
+      expect(state.turnCount).toBe(0);
+      expect(state.narrativeEntries).toHaveLength(1);
+      expect(state.narrativeEntries[0].text).toBe(welcomeMsg);
+      expect(state.narrativeEntries[0].turn).toBe(0);
+    });
   });
 });

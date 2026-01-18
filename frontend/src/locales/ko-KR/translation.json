@@ -1,4 +1,103 @@
 {
+  "profile": {
+    "select_title": "프로필을 선택하세요",
+    "select_hint": "프로필마다 다른 시작 조건과 목표가 있습니다",
+    "or": "또는",
+    "continue_saved": "저장된 게임 계속하기",
+    "change": "프로필 변경",
+    "change_tooltip": "다른 프로필로 새 게임 시작",
+    "narrator": {
+      "name": "서사꾼",
+      "description": "풍부한 자원으로 다양한 이야기를 탐험하세요",
+      "welcome": "고대의 도서관에 오신 것을 환영합니다. 이곳에는 잊혀진 이야기들이 잠들어 있습니다...",
+      "items": {
+        "ancient_tome": "고대 서책",
+        "quill_pen": "깃펜",
+        "memory_fragment": "기억 조각"
+      },
+      "quest": {
+        "discover_origin": "세계의 기원을 발견하기",
+        "collect_memories": "기억 조각 3개 수집하기"
+      },
+      "rule": {
+        "time_flows": "시간의 흐름",
+        "time_flows_desc": "시간은 정상적으로 흐릅니다",
+        "memories_persist": "기억의 지속",
+        "memories_persist_desc": "한번 얻은 기억은 사라지지 않습니다"
+      },
+      "scene": {
+        "bookshelf": "신비한 책장",
+        "bookshelf_hint": "오래된 책들이 빛나고 있다",
+        "portal": "빛나는 포탈",
+        "portal_hint": "어딘가로 통하는 것 같다"
+      }
+    },
+    "explorer": {
+      "name": "탐험가",
+      "description": "미지의 영역을 탐험하고 비밀을 발견하세요",
+      "welcome": "어두운 미로에서 눈을 떴습니다. 출구를 찾아 이곳을 탈출해야 합니다...",
+      "items": {
+        "compass": "나침반",
+        "rope": "밧줄",
+        "lantern": "랜턴",
+        "map_fragment": "지도 조각"
+      },
+      "quest": {
+        "find_exit": "탈출구 찾기",
+        "explore_areas": "3개 구역 탐험하기",
+        "gather_supplies": "보급품 수집"
+      },
+      "rule": {
+        "gravity": "중력 법칙",
+        "gravity_desc": "물체는 아래로 떨어집니다",
+        "darkness": "어둠의 법칙",
+        "darkness_desc": "빛 없이는 앞을 볼 수 없습니다"
+      },
+      "scene": {
+        "door": "고대의 문",
+        "door_hint": "열쇠가 필요해 보인다",
+        "mechanism": "이상한 장치",
+        "mechanism_hint": "작동시킬 수 있을 것 같다",
+        "passage": "숨겨진 통로",
+        "passage_hint": "어디로 이어질까?"
+      }
+    },
+    "tech": {
+      "name": "기술 전문가",
+      "description": "제한된 자원으로 효율적인 전략을 세우세요",
+      "welcome": "시스템 부팅 완료. 제한된 에너지로 최적의 경로를 찾아야 합니다...",
+      "items": {
+        "data_core": "데이터 코어",
+        "circuit_board": "회로 기판",
+        "energy_cell": "에너지 셀",
+        "scanner": "스캐너 장치"
+      },
+      "quest": {
+        "analyze_system": "시스템 분석 완료하기",
+        "optimize_resources": "자원 효율 최적화하기"
+      },
+      "rule": {
+        "energy_conservation": "에너지 보존",
+        "energy_conservation_desc": "에너지는 생성되거나 소멸되지 않습니다",
+        "data_integrity": "데이터 무결성",
+        "data_integrity_desc": "손상된 데이터는 복구할 수 없습니다",
+        "system_limits": "시스템 한계",
+        "system_limits_desc": "동시 처리량에 제한이 있습니다"
+      },
+      "scene": {
+        "terminal": "메인 터미널",
+        "terminal_hint": "시스템에 접속할 수 있다",
+        "conduit": "전력 도관",
+        "conduit_hint": "에너지가 흐르고 있다"
+      }
+    }
+  },
+  "reset": {
+    "button": "리셋",
+    "confirm": "다시 클릭하여 확인",
+    "cancel": "취소",
+    "tooltip": "현재 프로필의 초기 상태로 되돌립니다"
+  },
   "demo": {
     "items": {
       "keycard-alpha": {

@@ -31,7 +31,7 @@ D:\Dev\unknown-world\
 │   │       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
 │   ├── src/
 │   │   ├── main.tsx
-│   │   ├── App.tsx         # 레이아웃 통합, DndContext 최상단 배치 및 이벤트 라우팅
+│   │   ├── App.tsx         # 레이아웃 통합, 세션 관리 및 이벤트 라우팅
 │   │   ├── style.css       # 단일 CSS SSOT
 │   │   ├── i18n.ts         # 다국어 설정 SSOT
 │   │   ├── setupTests.ts   # 테스트 환경 설정
@@ -40,6 +40,10 @@ D:\Dev\unknown-world\
 │   │   ├── demo/           # 데모용 Mock 데이터 및 피처
 │   │   ├── dnd/            # DnD 데이터 계약 및 타입 SSOT
 │   │   ├── turn/           # Turn Runner 모듈
+│   │   ├── data/           # 데모 프로필 및 정적 데이터 (U-015)
+│   │   │   └── demoProfiles.ts
+│   │   ├── save/           # 세이브/로드 시스템 (U-015)
+│   │   │   └── saveGame.ts
 │   │   ├── components/     # 게임 UI 컴포넌트
 │   │   │   ├── ActionDeck.tsx
 │   │   │   ├── AgentConsole.tsx
@@ -48,7 +52,9 @@ D:\Dev\unknown-world\
 │   │   │   ├── EconomyHud.tsx (U-014)
 │   │   │   ├── QuestPanel.tsx (U-013)
 │   │   │   ├── RuleBoard.tsx (U-013)
-│   │   │   └── MutationTimeline.tsx (U-013)
+│   │   │   ├── MutationTimeline.tsx (U-013)
+│   │   │   ├── DemoProfileSelect.tsx (U-015)
+│   │   │   └── ResetButton.tsx (U-015)
 │   │   ├── locales/        # 다국어 리소스 JSON
 │   │   ├── schemas/        # 클라이언트 측 스키마 및 검증 (Zod)
 │   │   ├── stores/         # 상태 관리 (Zustand)
@@ -184,4 +190,39 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **연결성 및 복구 (Resilience)**: 오프라인 상태 전이 및 백엔드 복구 시 온라인 전환과 씬 렌더링이 안정적으로 복원되는지 확인.
 
 ---
+
+
+
+## 11. 세션 및 세이브 관리 정책 (U-015[Mvp])
+
+
+
+1. **무가입 즉시 시작 (Demo Profiles)**:
+
+    - 심사 및 데모 편의성을 위해 3종의 프리셋 프로필(Narrator, Explorer, Tech) 제공.
+
+    - 프로필 선택 시 해당 페르소나에 맞는 초기 상태(재화/아이템/퀘스트)로 즉시 게임 시작.
+
+2. **로컬 영속화 (SaveGame)**:
+
+    - **localStorage 기반**: 별도의 DB 없이 브라우저 로컬 저장소를 활용하여 세션 상태 영속화.
+
+    - **자동 저장**: 턴 결과가 반영될 때마다 현재 월드 상태, 경제 원장, 인벤토리 등을 JSON으로 직렬화하여 저장.
+
+    - **버전 관리**: `SAVEGAME_VERSION`을 통한 스키마 하위 호환성 관리 및 안전한 복구 보장.
+
+3. **즉시 리셋 (Reset)**:
+
+    - 현재 세션을 폐기하고 선택된 프로필의 초기 상태로 즉시 복구 가능.
+
+    - 실수 방지를 위해 2단계 확인(Confirmation) UI 적용.
+
+4. **언어 일관성 (RULE-006)**:
+
+    - 세이브 데이터에 `language` 필드를 포함하여, 복원 시 UI 언어와 내러티브 언어의 정합성 강제 유지.
+
+
+
+---
+
 _본 문서는 프로젝트의 진화에 따라 수시로 업데이트됩니다._

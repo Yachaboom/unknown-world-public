@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UIControls } from './UIControls';
 import { EconomyHudHeader } from './EconomyHud';
@@ -11,6 +12,8 @@ interface GameHeaderProps {
   uiScale: UIScale;
   onIncreaseScale: () => void;
   onDecreaseScale: () => void;
+  /** U-015: 추가 컨트롤 (리셋/프로필 변경 버튼 등) */
+  children?: ReactNode;
 }
 
 export function GameHeader({
@@ -20,6 +23,7 @@ export function GameHeader({
   uiScale,
   onIncreaseScale,
   onDecreaseScale,
+  children,
 }: GameHeaderProps) {
   const { t } = useTranslation();
   const isBalanceLow = useEconomyStore(selectIsBalanceLow);
@@ -30,6 +34,8 @@ export function GameHeader({
         {t('ui.logo')}
       </h1>
       <div className="header-controls">
+        {/* U-015: 리셋/프로필 변경 등 추가 컨트롤 */}
+        {children}
         {/* UI 스케일 컨트롤 (U-028→U-037: Readable 제거) */}
         <UIControls
           uiScale={uiScale}

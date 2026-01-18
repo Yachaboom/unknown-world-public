@@ -1,4 +1,103 @@
 {
+  "profile": {
+    "select_title": "Select Your Profile",
+    "select_hint": "Each profile has different starting conditions and objectives",
+    "or": "or",
+    "continue_saved": "Continue Saved Game",
+    "change": "Change Profile",
+    "change_tooltip": "Start a new game with a different profile",
+    "narrator": {
+      "name": "Narrator",
+      "description": "Explore diverse stories with abundant resources",
+      "welcome": "Welcome to the Ancient Library. Forgotten tales slumber within these walls...",
+      "items": {
+        "ancient_tome": "Ancient Tome",
+        "quill_pen": "Quill Pen",
+        "memory_fragment": "Memory Fragment"
+      },
+      "quest": {
+        "discover_origin": "Discover the World's Origin",
+        "collect_memories": "Collect 3 Memory Fragments"
+      },
+      "rule": {
+        "time_flows": "Flow of Time",
+        "time_flows_desc": "Time flows normally",
+        "memories_persist": "Memory Persistence",
+        "memories_persist_desc": "Once obtained, memories never fade"
+      },
+      "scene": {
+        "bookshelf": "Mysterious Bookshelf",
+        "bookshelf_hint": "Ancient books are glowing",
+        "portal": "Glowing Portal",
+        "portal_hint": "It seems to lead somewhere"
+      }
+    },
+    "explorer": {
+      "name": "Explorer",
+      "description": "Explore unknown territories and uncover secrets",
+      "welcome": "You wake up in a dark maze. You must find the exit and escape...",
+      "items": {
+        "compass": "Compass",
+        "rope": "Rope",
+        "lantern": "Lantern",
+        "map_fragment": "Map Fragment"
+      },
+      "quest": {
+        "find_exit": "Find the Exit",
+        "explore_areas": "Explore 3 Areas",
+        "gather_supplies": "Gather Supplies"
+      },
+      "rule": {
+        "gravity": "Gravity Law",
+        "gravity_desc": "Objects fall downward",
+        "darkness": "Darkness Law",
+        "darkness_desc": "You cannot see without light"
+      },
+      "scene": {
+        "door": "Ancient Door",
+        "door_hint": "Looks like it needs a key",
+        "mechanism": "Strange Mechanism",
+        "mechanism_hint": "It might be operable",
+        "passage": "Hidden Passage",
+        "passage_hint": "Where does it lead?"
+      }
+    },
+    "tech": {
+      "name": "Tech Expert",
+      "description": "Strategize efficiently with limited resources",
+      "welcome": "System boot complete. Find the optimal path with limited energy...",
+      "items": {
+        "data_core": "Data Core",
+        "circuit_board": "Circuit Board",
+        "energy_cell": "Energy Cell",
+        "scanner": "Scanner Device"
+      },
+      "quest": {
+        "analyze_system": "Complete System Analysis",
+        "optimize_resources": "Optimize Resource Efficiency"
+      },
+      "rule": {
+        "energy_conservation": "Energy Conservation",
+        "energy_conservation_desc": "Energy is neither created nor destroyed",
+        "data_integrity": "Data Integrity",
+        "data_integrity_desc": "Corrupted data cannot be recovered",
+        "system_limits": "System Limits",
+        "system_limits_desc": "There are limits to concurrent processing"
+      },
+      "scene": {
+        "terminal": "Main Terminal",
+        "terminal_hint": "You can access the system",
+        "conduit": "Power Conduit",
+        "conduit_hint": "Energy is flowing through it"
+      }
+    }
+  },
+  "reset": {
+    "button": "Reset",
+    "confirm": "Click again to confirm",
+    "cancel": "Cancel",
+    "tooltip": "Return to the initial state of current profile"
+  },
   "demo": {
     "items": {
       "keycard-alpha": {

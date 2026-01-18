@@ -1,6 +1,41 @@
 # 프로젝트 진행 상황
 
-## [2026-01-18 19:45] U-014[Mvp]: Economy HUD + Ledger(프론트) 완료
+## [2026-01-19 14:40] U-015[Mvp]: SaveGame(local) + Reset + Demo Profiles(3종) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 데모 프로필 3종(Narrator/Explorer/Tech), 즉시 리셋, localStorage 기반 세이브/로드 구현
+- **추가 컴포넌트**: `DemoProfileSelect.tsx`, `ResetButton.tsx`, `saveGame.ts`, `demoProfiles.ts`, `vibe/unit-results/U-015[Mvp].md`
+- **달성 요구사항**: [PRD 6.6/6.9] 즉시 시작/리셋/세이브 로드, [RULE-010] DB 금지(JSON), [RULE-006] 언어 일관성 준수
+
+### 기술적 구현 세부사항
+
+**세이브 시스템 아키텍처**:
+- **SaveGame Schema**: Zod 기반의 엄격한 스키마 버전 관리(v1.0.0) 및 직렬화 로직 구축
+- **Auto-Save**: 턴 완료(내러티브 추가) 시점에 localStorage로 자동 상태 영속화
+- **State Hydration**: 복원 시 `worldStore`, `inventoryStore`, `economyStore`를 원자적으로 동기화
+
+**온보딩 및 데모 UX**:
+- **Demo Profiles**: 페르소나별 초기 상태(재화, 인벤토리, 퀘스트, 룰 등)를 i18n 키 기반으로 정의
+- **Safe Reset**: 확인 모드(Confirmation)를 포함한 리셋 기능으로 실수 방지 및 데모 반복 보장
+- **Language Sync**: 세이브 데이터 로드 시점에 UI 언어(ko/en)를 강제 동기화하여 혼합 출력 방지
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── save/
+    │   └── saveGame.ts (세이브 유틸리티)
+    ├── data/
+    │   └── demoProfiles.ts (프로필 프리셋)
+    ├── components/
+    │   ├── DemoProfileSelect.tsx (랜딩 UI)
+    │   └── ResetButton.tsx (리셋/변경 버튼)
+    └── App.tsx (페이즈 관리 및 스토어 통합)
+
+### 다음 단계
+- [U-016[Mvp]] Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정
+
+---
 
 ### 구현 완료 항목
 

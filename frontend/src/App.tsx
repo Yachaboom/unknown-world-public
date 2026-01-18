@@ -12,6 +12,11 @@
  * - 세션/월드 상태는 worldStore로 이동
  * - TurnOutput 반영은 worldStore.applyTurnOutput으로 단일화
  *
+ * U-015[Mvp]: SaveGame + Reset + Demo Profiles
+ * - 프로필 선택 화면 → 게임 시작 플로우
+ * - 리셋 버튼으로 프로필 초기 상태로 복구
+ * - localStorage 기반 세이브/로드
+ *
  * @see vibe/ref/frontend-style-guide.md
  * @see vibe/prd.md 6.7/6.8/9장
  */
@@ -39,15 +44,37 @@ import { InventoryPanel } from './components/InventoryPanel';
 import { QuestPanel } from './components/QuestPanel';
 import { RuleBoard } from './components/RuleBoard';
 import { MutationTimeline } from './components/MutationTimeline';
+// U-015: SaveGame + Demo Profiles
+import { DemoProfileSelect } from './components/DemoProfileSelect';
+import { ResetButton, ChangeProfileButton } from './components/ResetButton';
 import { useAgentStore } from './stores/agentStore';
 import { useInventoryStore } from './stores/inventoryStore';
+import { useEconomyStore } from './stores/economyStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
 import { useWorldStore } from './stores/worldStore';
 import { useTurnRunner } from './turn/turnRunner';
 import type { ActionCard, DropInput } from './schemas/turn';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
-import { useDemoInitializer } from './demo/useDemoInitializer';
+// U-015: SaveGame 유틸리티
+import {
+  loadSaveGame,
+  saveSaveGame,
+  clearSaveGame,
+  hasSaveGame,
+  createSaveGame,
+  loadCurrentProfileId,
+  saveCurrentProfileId,
+  clearCurrentProfileId,
+} from './save/saveGame';
+import { findProfileById, createSaveGameFromProfile, type DemoProfile } from './data/demoProfiles';
+import { getResolvedLanguage, changeLanguage, type SupportedLanguage } from './i18n';
+
+// =============================================================================
+// 게임 상태 타입
+// =============================================================================
+
+type GamePhase = 'profile_select' | 'playing';
 
 // =============================================================================
 // 메인 App 컴포넌트
@@ -56,15 +83,28 @@ import { useDemoInitializer } from './demo/useDemoInitializer';
 function App() {
   const { t } = useTranslation();
 
-  // 데모 초기화 (RU-003: 훅으로 이동)
-  useDemoInitializer();
+  // U-015: 게임 진행 상태 (프로필 선택 vs 플레이 중)
+  const [gamePhase, setGamePhase] = useState<GamePhase>(() => {
+    // 저장된 프로필이 있으면 바로 플레이 상태로 시작
+    const savedProfileId = loadCurrentProfileId();
+    if (savedProfileId && hasSaveGame()) {
+      return 'playing';
+    }
+    return 'profile_select';
+  });
+
+  // 현재 선택된 프로필 ID
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(() => {
+    return loadCurrentProfileId();
+  });
 
   // 로컬 UI 상태
   const [inputText, setInputText] = useState('');
 
   // Store 상태
+  const worldStore = useWorldStore();
   const { economy, isConnected, sceneObjects, narrativeEntries, appendSystemNarrative } =
-    useWorldStore();
+    worldStore;
 
   const { startDrag, endDrag } = useInventoryStore();
   const { isStreaming, narrativeBuffer } = useAgentStore();
@@ -74,6 +114,173 @@ function App() {
   useEffect(() => {
     applyUIPrefsToDOM({ uiScale });
   }, [uiScale]);
+
+  // ==========================================================================
+  // U-015: 프로필/세이브 관련 로직
+  // ==========================================================================
+
+  /**
+   * 저장된 게임을 복원합니다.
+   */
+  const restoreSaveGame = useCallback(() => {
+    const saveGame = loadSaveGame();
+    if (!saveGame) return false;
+
+    // 언어 설정 적용 (RULE-006)
+    changeLanguage(saveGame.language as SupportedLanguage);
+
+    // Store 상태 복원
+    worldStore.reset();
+    useWorldStore.setState({
+      economy: {
+        signal: saveGame.economy.signal,
+        memory_shard: saveGame.economy.memory_shard,
+      },
+      turnCount: saveGame.turnCount,
+      narrativeEntries: saveGame.narrativeHistory,
+      quests: saveGame.quests,
+      activeRules: saveGame.activeRules,
+      mutationTimeline: saveGame.mutationTimeline,
+      sceneObjects: saveGame.sceneObjects,
+    });
+
+    // 인벤토리 복원
+    useInventoryStore.getState().setItems(saveGame.inventory);
+
+    // Economy 복원
+    useEconomyStore.getState().reset();
+    for (const entry of saveGame.economyLedger) {
+      useEconomyStore.getState().addLedgerEntry(entry);
+    }
+
+    return true;
+  }, [worldStore]);
+
+  /**
+   * 현재 상태를 저장합니다.
+   */
+  const saveCurrentState = useCallback(() => {
+    if (!currentProfileId) return;
+
+    const state = useWorldStore.getState();
+    const economyState = useEconomyStore.getState();
+    const inventoryState = useInventoryStore.getState();
+
+    const saveGame = createSaveGame({
+      language: getResolvedLanguage(),
+      profileId: currentProfileId,
+      economy: state.economy,
+      economyLedger: economyState.ledger,
+      turnCount: state.turnCount,
+      narrativeHistory: state.narrativeEntries,
+      inventory: inventoryState.items,
+      quests: state.quests,
+      activeRules: state.activeRules,
+      mutationTimeline: state.mutationTimeline,
+      sceneObjects: state.sceneObjects,
+    });
+
+    saveSaveGame(saveGame);
+  }, [currentProfileId]);
+
+  /**
+   * 프로필을 선택하고 게임을 시작합니다.
+   */
+  const handleSelectProfile = useCallback(
+    (profile: DemoProfile) => {
+      // 언어 설정 유지
+      const language = getResolvedLanguage();
+
+      // 프로필에서 SaveGame 생성
+      const saveGame = createSaveGameFromProfile(profile, language, t);
+
+      // Store 상태 초기화 및 적용
+      worldStore.reset();
+      useInventoryStore.getState().reset();
+      useEconomyStore.getState().reset();
+
+      useWorldStore.setState({
+        economy: {
+          signal: saveGame.economy.signal,
+          memory_shard: saveGame.economy.memory_shard,
+        },
+        turnCount: 0,
+        narrativeEntries: saveGame.narrativeHistory,
+        quests: saveGame.quests,
+        activeRules: saveGame.activeRules,
+        mutationTimeline: saveGame.mutationTimeline,
+        sceneObjects: saveGame.sceneObjects,
+      });
+
+      useInventoryStore.getState().setItems(saveGame.inventory);
+
+      // 프로필 ID 저장
+      setCurrentProfileId(profile.id);
+      saveCurrentProfileId(profile.id);
+
+      // SaveGame 저장
+      saveSaveGame(saveGame);
+
+      // 게임 시작
+      setGamePhase('playing');
+    },
+    [t, worldStore],
+  );
+
+  /**
+   * 저장된 게임을 계속합니다.
+   */
+  const handleContinue = useCallback(() => {
+    if (restoreSaveGame()) {
+      setGamePhase('playing');
+    }
+  }, [restoreSaveGame]);
+
+  /**
+   * 현재 프로필의 초기 상태로 리셋합니다.
+   */
+  const handleReset = useCallback(() => {
+    if (!currentProfileId) return;
+
+    const profile = findProfileById(currentProfileId);
+    if (!profile) return;
+
+    // 프로필 초기 상태로 다시 시작
+    handleSelectProfile(profile);
+  }, [currentProfileId, handleSelectProfile]);
+
+  /**
+   * 프로필 선택 화면으로 돌아갑니다.
+   */
+  const handleChangeProfile = useCallback(() => {
+    // 세이브 및 프로필 초기화
+    clearSaveGame();
+    clearCurrentProfileId();
+    setCurrentProfileId(null);
+
+    // Store 초기화
+    worldStore.reset();
+    useInventoryStore.getState().reset();
+    useEconomyStore.getState().reset();
+
+    // 프로필 선택 화면으로
+    setGamePhase('profile_select');
+  }, [worldStore]);
+
+  // 게임 시작 시 저장된 게임 복원
+  useEffect(() => {
+    if (gamePhase === 'playing' && currentProfileId) {
+      restoreSaveGame();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 턴 완료 시 자동 저장 (turnCount 변화 감지)
+  useEffect(() => {
+    if (gamePhase === 'playing' && narrativeEntries.length > 0) {
+      saveCurrentState();
+    }
+  }, [gamePhase, narrativeEntries.length, saveCurrentState]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
   const turnRunnerDeps = useMemo(
@@ -213,6 +420,25 @@ function App() {
     useSensor(KeyboardSensor),
   );
 
+  // ==========================================================================
+  // 렌더링: 프로필 선택 화면
+  // ==========================================================================
+  if (gamePhase === 'profile_select') {
+    return (
+      <>
+        <div className="crt-overlay" aria-hidden="true" />
+        <DemoProfileSelect
+          onSelectProfile={handleSelectProfile}
+          onContinue={hasSaveGame() ? handleContinue : undefined}
+          hasSavedGame={hasSaveGame()}
+        />
+      </>
+    );
+  }
+
+  // ==========================================================================
+  // 렌더링: 게임 플레이 화면
+  // ==========================================================================
   return (
     <>
       <div className="crt-overlay" aria-hidden="true" />
@@ -226,7 +452,11 @@ function App() {
             uiScale={uiScale}
             onIncreaseScale={increaseUIScale}
             onDecreaseScale={decreaseUIScale}
-          />
+          >
+            {/* U-015: 리셋/프로필 변경 버튼 */}
+            <ResetButton onReset={handleReset} disabled={isStreaming} compact requireConfirm />
+            <ChangeProfileButton onClick={handleChangeProfile} disabled={isStreaming} />
+          </GameHeader>
 
           <aside className="sidebar-left">
             <Panel title={t('panel.inventory.title')} className="flex-1">

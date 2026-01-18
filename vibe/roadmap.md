@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 40/62 (65%) | **MVP**: 40/49 (82%) | **MMP**: 0/13 (0%)
+**전체**: 41/62 (66%) | **MVP**: 41/49 (84%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-1 | MMP D-5  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중**: [U-015[Mvp]](unit-plans/U-015[Mvp].md) / **최근 완료**: [U-014[Mvp]](unit-results/U-014[Mvp].md) (2026-01-18)
+**진행 중**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) / **최근 완료**: [U-015[Mvp]](unit-results/U-015[Mvp].md) (2026-01-19)
 
 **블로커**: 없음
 
@@ -123,7 +123,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-015[Mvp]](unit-plans/U-015[Mvp].md) | ⚡SaveGame(local) + Reset + Demo Profiles(3종) | Depends=U-014,U-013 | 🚧
 ID=[RU-004[Mvp]](unit-plans/RU-004[Mvp].md) | 리팩토링: SaveGame/초기상태/데모 프로필 정리 | Depends=U-015 | ⏸️
 
 ID=[U-016[Mvp]](unit-plans/U-016[Mvp].md) | ⚡Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정 | Depends=U-003 | ⏸️
@@ -165,6 +164,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-015[Mvp]](unit-results/U-015[Mvp].md): ⚡SaveGame(local) + Reset + Demo Profiles(3종) (2026-01-19)
 - ✅ [U-014[Mvp]](unit-results/U-014[Mvp].md): ⚡Economy HUD + Ledger(프론트) (2026-01-18)
 - ✅ [U-013[Mvp]](unit-results/U-013[Mvp].md): Quest + Rule Board/Timeline 패널 (2026-01-18)
 - ✅ [CP-MVP-02](unit-results/CP-MVP-02.md): 체크포인트 - 클릭+드래그 데모 (2026-01-18)
