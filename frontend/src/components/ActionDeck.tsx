@@ -253,10 +253,7 @@ function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
 // 메인 Action Deck 컴포넌트
 // =============================================================================
 
-export function ActionDeck({
-  onCardClick,
-  disabled: propsDisabled,
-}: ActionDeckProps) {
+export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckProps) {
   const { t } = useTranslation();
   const defaultCards = useDefaultCards();
 

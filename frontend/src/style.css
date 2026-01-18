@@ -2203,6 +2203,7 @@ button:disabled,
   gap: var(--spacing-sm);
   height: 100%;
   min-height: 120px;
+  overflow: hidden; /* 드래그 중 스크롤바 생성 방지 */
 }
 
 /* 인벤토리 그리드 */

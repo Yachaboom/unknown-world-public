@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 37/62 (59%) | **MVP**: 37/49 (75%) | **MMP**: 0/13 (0%)
+**전체**: 38/62 (61%) | **MVP**: 38/49 (78%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-1 | MMP D-5  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중**: [CP-MVP-02](unit-plans/CP-MVP-02.md) / **최근 완료**: [RU-003[Mvp]](unit-results/RU-003[Mvp].md) (2026-01-18)
+**진행 중**: [U-013[Mvp]](unit-plans/U-013[Mvp].md) / **최근 완료**: [CP-MVP-02](unit-results/CP-MVP-02.md) (2026-01-18)
 
 **블로커**: 없음
 
@@ -54,8 +54,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | ---- | --------- | -------------------------------------- | ---------- | ------ | ---- |
 | MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 11/11  | ✅   |
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 8/22   | 🚧   |
-| MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ⏸️   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 9/22   | 🚧   |
+| MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-18 | 0/10   | ⏸️   |
 | MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-20 | -      | ⏸️   |
 | MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
@@ -123,8 +123,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[CP-MVP-02](unit-plans/CP-MVP-02.md) | **체크포인트: 클릭+드래그 데모** | Depends=RU-003 | 🚧
-
 ID=[U-013[Mvp]](unit-plans/U-013[Mvp].md) | Quest + Rule Board/Timeline 패널 | Depends=U-004,U-008 | ⏸️
 ID=[U-014[Mvp]](unit-plans/U-014[Mvp].md) | ⚡Economy HUD + Ledger(프론트) | Depends=U-009,U-008 | ⏸️
 ID=[U-015[Mvp]](unit-plans/U-015[Mvp].md) | ⚡SaveGame(local) + Reset + Demo Profiles(3종) | Depends=U-014,U-013 | ⏸️
@@ -169,6 +167,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [CP-MVP-02](unit-results/CP-MVP-02.md): 체크포인트 - 클릭+드래그 데모 (2026-01-18)
 - ✅ [RU-003[Mvp]](unit-results/RU-003[Mvp].md): 리팩토링: UI 상태 슬라이스/경계 정리 (2026-01-18)
 - ✅ [RU-003-S3](refactors/RU-003-S3.md): 수동 검증 시나리오: 카드/클릭/드롭/스트리밍 상태 경계 회귀 방지 (2026-01-18)
 - ✅ [RU-003-Q5](refactors/RU-003-Q5.md): 하드코딩/DEV 목 데이터 격리: i18n 혼합 출력 방지 + 데모 프로필 경계 확보 (2026-01-17)

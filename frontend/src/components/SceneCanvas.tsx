@@ -23,7 +23,12 @@ import { useDroppable } from '@dnd-kit/core';
 import type { SceneCanvasStatus, PlaceholderInfo } from '../types/scene';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
-import { DND_TYPE, type HotspotDropData, isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
+import {
+  DND_TYPE,
+  type HotspotDropData,
+  isHotspotInteractionAllowed,
+  compareHotspotPriority,
+} from '../dnd/types';
 import { useWorldStore } from '../stores/worldStore';
 import { useAgentStore } from '../stores/agentStore';
 
@@ -105,7 +110,14 @@ interface HotspotOverlayProps {
  * - 클릭 시 object_id + box_2d 전송 (U-010)
  * - 드롭 타겟으로 동작 - dnd-kit useDroppable 사용 (U-012)
  */
-function HotspotOverlay({ object, canvasSize, onClick, disabled, isDemoState = false, style }: HotspotOverlayProps) {
+function HotspotOverlay({
+  object,
+  canvasSize,
+  onClick,
+  disabled,
+  isDemoState = false,
+  style,
+}: HotspotOverlayProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
 
@@ -210,10 +222,7 @@ function HotspotOverlay({ object, canvasSize, onClick, disabled, isDemoState = f
  * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
  * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
  */
-export function SceneCanvas({
-  onHotspotClick,
-  disabled: propsDisabled,
-}: SceneCanvasProps) {
+export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCanvasProps) {
   const { t } = useTranslation();
 
   // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
@@ -247,10 +256,7 @@ export function SceneCanvas({
           const { width, height } = entry.contentRect;
           // 의미 있는 크기 변화만 적용 (5px 이상 차이)
           setCanvasSize((prev) => {
-            if (
-              Math.abs(prev.width - width) > 5 ||
-              Math.abs(prev.height - height) > 5
-            ) {
+            if (Math.abs(prev.width - width) > 5 || Math.abs(prev.height - height) > 5) {
               return { width, height };
             }
             return prev;

@@ -58,13 +58,8 @@ function App() {
   const [inputText, setInputText] = useState('');
 
   // Store 상태
-  const {
-    economy,
-    isConnected,
-    sceneObjects,
-    narrativeEntries,
-    appendSystemNarrative,
-  } = useWorldStore();
+  const { economy, isConnected, sceneObjects, narrativeEntries, appendSystemNarrative } =
+    useWorldStore();
 
   const { startDrag, endDrag } = useInventoryStore();
   const { isStreaming, narrativeBuffer } = useAgentStore();

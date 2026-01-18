@@ -91,7 +91,7 @@ describe('SceneCanvas Hotspots', () => {
       sceneState: defaultState,
       sceneObjects: mockObjects,
     });
-    
+
     render(<SceneCanvas />);
 
     // 핫스팟 레이어 확인
@@ -107,7 +107,7 @@ describe('SceneCanvas Hotspots', () => {
     expect(buttons).toHaveLength(mockObjects.length);
     expect(buttons[0]).toHaveAttribute('aria-label', 'Object 2');
     expect(buttons[1]).toHaveAttribute('aria-label', 'Object 1');
-    
+
     // z-index 확인 (RU-003-S2: HotspotOverlay 자체에 style로 적용됨)
     expect(buttons[0]).toHaveStyle({ zIndex: '1' });
     expect(buttons[1]).toHaveStyle({ zIndex: '2' });
@@ -118,7 +118,7 @@ describe('SceneCanvas Hotspots', () => {
       sceneState: { status: 'loading' },
       sceneObjects: mockObjects,
     });
-    
+
     render(<SceneCanvas />);
 
     const layer = screen.queryByLabelText('scene.hotspot.layer_label');
@@ -190,7 +190,7 @@ describe('SceneCanvas Hotspots', () => {
       sceneState: defaultState,
       sceneObjects: mockObjects,
     });
-    
+
     render(<SceneCanvas />);
 
     // Object 1 찾기 (정렬에 의해 두 번째 버튼일 수 있음)
@@ -206,7 +206,7 @@ describe('SceneCanvas Hotspots', () => {
 
     // 크기 변경 트리거 (400x300)
     triggerResize(400, 300);
-    
+
     // RU-003-S2: ResizeObserver 디바운스(100ms) 대기
     act(() => {
       vi.advanceTimersByTime(150);
@@ -219,7 +219,7 @@ describe('SceneCanvas Hotspots', () => {
       width: '40px',
       height: '30px',
     });
-    
+
     vi.useRealTimers();
   });
 });

@@ -1,5 +1,39 @@
 # 프로젝트 진행 상황
 
+## [2026-01-18 17:50] CP-MVP-02: 체크포인트 - 클릭+드래그 데모 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Action Deck 클릭, 핫스팟 클릭, 인벤토리 드래그&드롭 등 핵심 인터랙션 3종 검증 완료
+- **추가 컴포넌트**: `CP-MVP-02-click-drag-demo-runbook.md`, `vibe/unit-results/CP-MVP-02.md`, `CP-MVP-02-drag-drop-test.png`
+- **달성 요구사항**: [PRD 6.7] 조작 증거 확보(클릭+드래그), [RULE-002] 게임 UI 고정, [RULE-009] 좌표 규약 준수
+
+### 기술적 구현 세부사항
+
+**인터랙션 무결성**:
+- **Action Deck**: 클릭 시 `TurnInput` 생성 및 스트리밍 중 중복 클릭 차단 정책(Zustand `agentStore`) 확인
+- **Hotspots**: `ResizeObserver` 연동을 통한 반응형 핫스팟 좌표 정합성 및 클릭 맥락(`object_id`, `box_2d`) 전송 확인
+- **DnD (Drag & Drop)**: `dnd-kit`을 활용한 아이템 드래그 시 오버레이 및 핫스팟 하이라이트(마젠타 글로우) 피드백 확인
+
+**코드 품질**:
+- `App.tsx`, `SceneCanvas.tsx` 등 핵심 컴포넌트의 타입 가드 보강 및 린트 오류 제거
+- `turnRunner` 모듈의 콜백 로직 정제를 통한 안정적인 턴 라이프사이클 관리
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── ActionDeck.tsx (클릭 연동)
+    │   ├── SceneCanvas.tsx (핫스팟 & 드롭 타겟)
+    │   └── InventoryPanel.tsx (드래그 소스)
+    ├── turn/turnRunner.ts (실행 엔진)
+    └── utils/box2d.ts (좌표 SSOT)
+
+### 다음 단계
+- [U-013[Mvp]] Quest + Rule Board/Timeline 패널 구현
+
+---
+
 ## [2026-01-18 01:40] RU-003[Mvp]: 리팩토링 - UI 상태 슬라이스/경계 정리 완료
 
 ### 구현 완료 항목

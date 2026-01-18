@@ -284,11 +284,7 @@ export const SceneOutputSchema = z
       .nullable()
       .default(null)
       .describe('Scene 이미지 URL (존재 시 scene 상태로 전환)'),
-    alt_text: z
-      .string()
-      .nullable()
-      .default(null)
-      .describe('이미지 대체 텍스트 (접근성용, 선택)'),
+    alt_text: z.string().nullable().default(null).describe('이미지 대체 텍스트 (접근성용, 선택)'),
   })
   .strict();
 export type SceneOutput = z.infer<typeof SceneOutputSchema>;

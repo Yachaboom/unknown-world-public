@@ -27,137 +27,69 @@ D:\Dev\unknown-world\
 │   │       ├── manifest.json # 에셋 목록 및 메타데이터 (U-033)
 │   │       ├── manifest.schema.json # 매니페스트 스키마
 │   │       ├── chrome/     # UI 장식/프레임 에셋 (U-032)
-│   │       │   ├── card-frame.png
-│   │       │   ├── panel-corner-br.png
-│   │       │   └── scanner-frame.png
 │   │       ├── icons/      # UI 아이콘 세트 (24px/16px) (U-038)
-│   │       │   ├── badge-fail-24.png
-│   │       │   ├── badge-ok-16.png
-│   │       │   ├── badge-ok-24.png
-│   │       │   ├── risk-high-16.png
-│   │       │   ├── risk-high-24.png
-│   │       │   ├── risk-low-16.png
-│   │       │   ├── risk-low-24.png
-│   │       │   ├── risk-medium-16.png
-│   │       │   ├── risk-medium-24.png
-│   │       │   ├── shard-16.png
-│   │       │   ├── shard-24.png
-│   │       │   ├── signal-16.png
-│   │       │   ├── signal-24.png
-│   │       │   └── status-online-16.png
-│       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
-│           ├── scene-placeholder-default.png
-│           ├── scene-loading.webp
-│           ├── scene-offline.webp
-│           ├── scene-blocked.webp
-│           └── scene-low-signal.webp
+│   │       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
 │   ├── src/
 │   │   ├── main.tsx
-│   │   ├── App.tsx         # 레이아웃 통합, DndContext 최상단 배치 및 이벤트 라우팅 (RU-003-Q3)
-│   │   ├── style.css       # 단일 CSS SSOT (인벤토리/드래그 스타일 포함)
-│   │   ├── i18n.ts         # 다국어 설정 SSOT (인벤토리 키 포함)
+│   │   ├── App.tsx         # 레이아웃 통합, DndContext 최상단 배치 및 이벤트 라우팅
+│   │   ├── style.css       # 단일 CSS SSOT
+│   │   ├── i18n.ts         # 다국어 설정 SSOT
 │   │   ├── setupTests.ts   # 테스트 환경 설정
 │   │   ├── vite-env.d.ts
-    ├── api/            # HTTP Streaming 클라이언트
-    │   └── turnStream.ts
-    ├── demo/           # 데모용 Mock 데이터 및 피처 (RU-003-Q5)
-    │   └── demoFixtures.ts # 데모 인벤토리/오브젝트 및 테마 감지 유틸
-    ├── dnd/            # DnD 데이터 계약 및 타입 SSOT (RU-003-Q1)
-    │   └── types.ts    # DND_TYPE 상수 및 Drag/Drop 데이터 타입 정의
-    ├── turn/           # Turn Runner 모듈 (RU-003-Q3)
-    │   └── turnRunner.ts # TurnInput 생성, 스트림 시작/취소, 콜백 라우팅
-    ├── components/     # 게임 UI 컴포넌트
-│   │   ├── ActionDeck.tsx  # 액션 카드 덱 UI
-│   │   ├── ActionDeck.test.tsx
-│   │   ├── AgentConsole.tsx
-│   │   ├── AgentConsole.test.tsx
-│   │   ├── DndInteraction.test.tsx # DnD 및 턴 실행 통합 테스트 (U-012)
-│   │   ├── InventoryPanel.tsx # 드래그 가능한 인벤토리 UI (U-011)
-│   │   ├── InventoryPanel.test.tsx
-│   │   ├── SceneCanvas.tsx # 씬 캔버스 및 드롭 타겟 인터랙션 (U-010, U-012)
-│   │   ├── SceneCanvas.test.tsx
-│   │   └── SceneCanvas.hotspot.test.tsx
+│   │   ├── api/            # HTTP Streaming 클라이언트
+│   │   ├── demo/           # 데모용 Mock 데이터 및 피처
+│   │   ├── dnd/            # DnD 데이터 계약 및 타입 SSOT
+│   │   ├── turn/           # Turn Runner 모듈
+│   │   ├── components/     # 게임 UI 컴포넌트
+│   │   │   ├── ActionDeck.tsx
+│   │   │   ├── AgentConsole.tsx
+│   │   │   ├── InventoryPanel.tsx
+│   │   │   └── SceneCanvas.tsx
 │   │   ├── locales/        # 다국어 리소스 JSON
-│   │   │   ├── README.md
-│   │   │   ├── en-US/
-│   │   │   │   └── translation.json
-│   │   │   └── ko-KR/
-│   │   │       └── translation.json
-│   │   ├── schemas/        # 클라이언트 측 스키마 및 검증
-│   │   │   └── turn.ts
-    ├── stores/         # 상태 관리 (Zustand)
-    │   ├── actionDeckStore.ts
-    │   ├── actionDeckStore.test.ts
-    │   ├── agentStore.ts
-    │   ├── inventoryStore.ts # 인벤토리 아이템 및 DnD 상태 관리 (U-011)
-    │   ├── inventoryStore.test.ts
-    │   ├── uiPrefsStore.ts
-    │   ├── uiPrefsStore.test.ts
-    │   ├── worldStore.ts    # 월드/세션 상태 SSOT (경제, 씬, 오브젝트, 내러티브) (RU-003-Q4)
-    │   └── worldStore.test.ts
-    ├── types/          # 스트림 이벤트 계약 타입
-│   │   │   ├── turn_stream.ts
-│   │   │   └── scene.ts
-│   │   └── utils/          # 공통 유틸리티
-│   │       └── box2d.ts
+│   │   ├── schemas/        # 클라이언트 측 스키마 및 검증 (Zod)
+│   │   ├── stores/         # 상태 관리 (Zustand)
+│   │   │   ├── agentStore.ts
+│   │   │   ├── inventoryStore.ts
+│   │   │   └── worldStore.ts
+│   │   ├── types/          # 공통 타입 정의
+│   │   └── utils/          # 공통 유틸리티 (box2d.ts)
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock
 │   ├── src/
 │   │   └── unknown_world/
-│   │       ├── __init__.py
 │   │       ├── main.py
-│   │       ├── api/        # API 엔드포인트 및 라우팅 (U-007)
-│   │       │   ├── __init__.py
-│   │       │   ├── turn.py
-│   │       │   └── turn_stream_events.py # 스트림 이벤트 계약 모델 (RU-002-Q4)
-│   │       ├── models/     # 데이터 모델 및 스키마 (U-005)
-│   │       │   ├── __init__.py
-│   │       │   └── turn.py
-│   │       └── orchestrator/ # 오케스트레이션 엔진
-│   │           └── mock.py  # 모의 Orchestrator (U-007)
+│   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
+│   │       ├── models/     # Pydantic 데이터 모델
+│   │       └── orchestrator/ # 오케스트레이션 엔진 (Mock 포함)
 │   └── tests/
 │       ├── integration/
-│       │   └── test_api.py
-│       └── unit/           # 단위 테스트
-│           └── models/
-│               └── test_turn.py
+│       └── unit/
 ├── shared/                # 공유 리소스 (SSOT)
-│   ├── README.md
 │   └── schemas/
-│       └── turn/
-│           ├── turn_input.schema.json
-│           └── turn_output.schema.json
+│       └── turn/           # JSON Schema SSOT (Input/Output)
 ├── vibe/                  # SSOT 문서 저장소
-│   ├── architecture.md
-│   ├── progress.md
-│   ├── roadmap.md
-│   ├── tech-stack.md
+│   ├── architecture.md     # 시스템 아키텍처 및 구조 가이드
+│   ├── progress.md         # 작업 진행 이력 및 로그
+│   ├── roadmap.md          # 프로젝트 로드맵 및 백로그
+│   ├── tech-stack.md       # 기술 스택 및 버전 관리
 │   ├── ref/                # 가이드 및 참조 문서 (SSOT)
-│   │   ├── frontend-style-guide.md
-│   │   ├── standard-guide.md
-│   │   ├── rembg-guide.md
-│   │   ├── nanobanana-mcp.md # 에셋 제작 가이드 및 템플릿 (U-034)
-│   │   └── nanobanana-asset-request.schema.json # 에셋 요청 스키마 (U-034)
-    ├── unit-plans/
-    ├── unit-results/       # 유닛 개발 보고서 (U-039[Mvp] 포함)
-    └── unit-runbooks/      # 유닛 실행 가이드 (U-039-i18n-json-structure-runbook.md 포함)
+│   ├── unit-plans/         # 작업 단위(Unit) 개발 계획서
+│   ├── unit-results/       # 작업 완료 보고서 (CP-MVP-02[Mvp] 포함)
+│   └── unit-runbooks/      # 수동 검증 런북 (CP-MVP-02-click-drag-demo-runbook.md 포함)
 └── code-base.xml          # 프로젝트 스냅샷 (Repomix)
 ```
 
 ### 주요 디렉토리 책임
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
-    - `api/`: fetch 기반 HTTP Streaming 응답(NDJSON)을 소비하는 클라이언트 로직 관리.
-    - `demo/`: **RU-003-Q5에 따라 데모용 목 데이터 및 테마 감지 유틸리티를 분리 관리.**
-    - `dnd/`: **RU-003-Q1에 따라 DnD 데이터 계약(상수, 타입, 타입 가드)의 SSOT를 담당함.**
-    - `turn/`: **RU-003-Q3에 따라 Turn Runner 모듈이 TurnInput 생성, 스트림 시작/취소, 콜백 라우팅(agentStore/worldStore)을 담당함. App.tsx는 이벤트 라우팅만 수행.**
-    - `stores/`: Agent Console 상태, UI 설정 및 월드 세션 상태를 관리하는 Zustand 스토어. **RU-003-Q4에 따라 worldStore가 세션 상태의 SSOT 역할을 수행하며 하위 스토어 업데이트를 조정함.**
-    - `components/`: 게임 전용 UI 컴포넌트 모음. U-011/U-012에 따라 인벤토리 패널과 씬 캔버스 간의 DnD 인터랙션 및 턴 실행 연동이 구현됨.
-    - `schemas/`: Zod를 활용한 턴 계약 검증 및 폴백 로직 정의.
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
-- **`vibe/`**: 프로젝트의 모든 명세와 진행 상황을 기록하는 단일 진실 공급원(SSOT).
+- **`vibe/`**: 프로젝트의 모든 명세, 진행 상황, 개발 계획 및 결과 보고서를 기록하는 단일 진실 공급원(SSOT).
+    - `unit-plans/`: 각 개발 유닛의 목표, 범위, 완료 기준을 사전에 정의.
+    - `unit-results/`: 개발 완료 후 실제 구현 결과 및 검증 데이터를 기록하는 공식 보고서.
+    - `unit-runbooks/`: 기능 검증을 위한 재현 가능한 수동/자동 절차 명세.
+
 
 ---
 

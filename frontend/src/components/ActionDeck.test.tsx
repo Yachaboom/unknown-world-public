@@ -94,7 +94,7 @@ describe('ActionDeck Component', () => {
   it('disables cards when balance is insufficient in worldStore', () => {
     useActionDeckStore.setState({ cards: mockCards });
     useWorldStore.setState({ economy: { signal: 5, memory_shard: 0 } });
-    
+
     render(<ActionDeck />);
 
     // Regular Action (cost 10/estimate max 12) -> disabled
@@ -145,12 +145,12 @@ describe('ActionDeck Component', () => {
   it('disables all cards when isStreaming is true in agentStore', () => {
     useActionDeckStore.setState({ cards: mockCards });
     useAgentStore.setState({ isStreaming: true });
-    
+
     render(<ActionDeck />);
 
     const card1 = screen.getByRole('button', { name: /Regular Action/i });
     const cardAlt = screen.getByRole('button', { name: /Alternative Action/i });
-    
+
     expect(card1).toBeDisabled();
     expect(cardAlt).toBeDisabled();
   });

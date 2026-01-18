@@ -75,14 +75,7 @@ export interface TurnRunner {
  * 서버로 전송할 TurnInput을 생성합니다.
  */
 export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
-  const {
-    text,
-    actionId,
-    click,
-    drop,
-    economySnapshot,
-    theme,
-  } = params;
+  const { text, actionId, click, drop, economySnapshot, theme } = params;
 
   return {
     language: getResolvedLanguage(),
@@ -158,7 +151,9 @@ export function createTurnRunner(deps: {
 
     // TurnInput 생성
     const turnInput = buildTurnInput({
-      text: params.text || (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
+      text:
+        params.text ||
+        (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
       actionId: params.actionId,
       click: params.click,
       drop: params.drop,
@@ -283,7 +278,9 @@ export function useTurnRunner(deps: {
 
       // TurnInput 생성
       const turnInput = buildTurnInput({
-        text: params.text || (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
+        text:
+          params.text ||
+          (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
         actionId: params.actionId,
         click: params.click,
         drop: params.drop,
@@ -323,7 +320,9 @@ export function useTurnRunner(deps: {
           if (errorCode === 'SAFETY_BLOCKED') {
             useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
           } else if (errorCode === 'INSUFFICIENT_BALANCE') {
-            useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
+            useWorldStore
+              .getState()
+              .setSceneState({ status: 'low_signal', message: event.message });
           } else {
             useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
           }

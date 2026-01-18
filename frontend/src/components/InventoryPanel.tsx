@@ -55,10 +55,12 @@ function DraggableItem({ item, isSelected, onSelect, disabled = false }: Draggab
   });
 
   // 변환 스타일 계산
+  // 드래그 중일 때는 원본 아이템이 제자리에 있도록 transform 적용하지 않음
+  // DragOverlay가 별도로 렌더링되므로 원본은 위치 고정
   const style = useMemo(
     () => ({
-      transform: CSS.Translate.toString(transform),
-      opacity: isDragging ? 0.5 : 1,
+      transform: isDragging ? undefined : CSS.Translate.toString(transform),
+      opacity: isDragging ? 0.3 : 1,
     }),
     [transform, isDragging],
   );

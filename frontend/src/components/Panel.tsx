@@ -10,7 +10,13 @@ interface PanelProps {
   placeholderKey?: string;
 }
 
-export function Panel({ title, children, className = '', hasChrome = false, placeholderKey }: PanelProps) {
+export function Panel({
+  title,
+  children,
+  className = '',
+  hasChrome = false,
+  placeholderKey,
+}: PanelProps) {
   const { t } = useTranslation();
   const panelClass = `panel ${className} ${hasChrome ? 'has-chrome' : ''}`.trim();
   const headerClass = `panel-header ${hasChrome ? 'has-chrome' : ''}`.trim();

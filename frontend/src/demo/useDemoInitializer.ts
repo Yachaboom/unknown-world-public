@@ -15,7 +15,12 @@ import {
 export function useDemoInitializer() {
   const { t } = useTranslation();
   const { items: inventoryItems, addItems: addInventoryItems } = useInventoryStore();
-  const { sceneObjects, setSceneObjects, narrativeEntries, initialize: initializeWorld } = useWorldStore();
+  const {
+    sceneObjects,
+    setSceneObjects,
+    narrativeEntries,
+    initialize: initializeWorld,
+  } = useWorldStore();
 
   useEffect(() => {
     // 월드 초기화 (환영 메시지)
