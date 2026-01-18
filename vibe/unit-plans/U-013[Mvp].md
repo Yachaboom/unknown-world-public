@@ -82,9 +82,10 @@ Quest/Objective 패널과 Rule Board/Mutation Timeline 패널을 구현해, 플�
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Mutation Timeline을 별도 컴포넌트로 둘까, RuleBoard에 포함할까?
+- [x] **Q1**: Mutation Timeline을 별도 컴포넌트로 둘까, RuleBoard에 포함할까?
   - Option A: RuleBoard 내 포함(단순)
   - Option B: 별도 Timeline 컴포넌트(권장: 가독성/확장 용이)
+  **A1**: Option B
 
 ## 참고 자료
 

@@ -34,6 +34,10 @@ import { AgentConsole } from './components/AgentConsole';
 import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
 import { InventoryPanel } from './components/InventoryPanel';
+// U-013: Quest + Rule Board + Mutation Timeline
+import { QuestPanel } from './components/QuestPanel';
+import { RuleBoard } from './components/RuleBoard';
+import { MutationTimeline } from './components/MutationTimeline';
 import { useAgentStore } from './stores/agentStore';
 import { useInventoryStore } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
@@ -227,11 +231,15 @@ function App() {
             <Panel title={t('panel.inventory.title')} className="flex-1">
               <InventoryPanel />
             </Panel>
-            <Panel title={t('panel.quest.title')} placeholderKey="panel.quest.placeholder" />
-            <Panel
-              title={t('panel.rule_board.title')}
-              placeholderKey="panel.rule_board.placeholder"
-            />
+            {/* U-013: Quest Panel */}
+            <Panel title={t('panel.quest.title')}>
+              <QuestPanel />
+            </Panel>
+            {/* U-013: Rule Board + Mutation Timeline (별도 컴포넌트) */}
+            <Panel title={t('panel.rule_board.title')}>
+              <RuleBoard />
+              <MutationTimeline />
+            </Panel>
           </aside>
 
           <main className="game-center">

@@ -1,6 +1,38 @@
 # 프로젝트 진행 상황
 
-## [2026-01-18 17:50] CP-MVP-02: 체크포인트 - 클릭+드래그 데모 완료
+## [2026-01-18 19:15] U-013[Mvp]: Quest + Rule Board/Timeline 패널 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Quest Panel, Rule Board, Mutation Timeline 3종 패널 구현 및 사이드바 통합
+- **추가 컴포넌트**: `QuestPanel.tsx`, `RuleBoard.tsx`, `MutationTimeline.tsx`, `vibe/unit-results/U-013[Mvp].md`
+- **달성 요구사항**: [PRD 6.4/6.7] 룰 변형 및 퀘스트 추적 가시화, [RULE-002] 게임 UI 고정(HUD), [RULE-006] i18n 정책 준수
+
+### 기술적 구현 세부사항
+
+**패널 오케스트레이션**:
+- **Quest Panel**: `worldStore` 연동을 통한 실시간 목표/서브목표 진행 및 완료 상태 가시화
+- **Rule Board**: 현재 세계에 적용된 활성 규칙을 카드 형태로 표시하여 "룰 변형" 체감 유도
+- **Mutation Timeline**: 규칙 추가/수정/삭제 이벤트를 시간순으로 기록 (Q1 결정: Option B 적용)
+
+**디자인 및 가독성**:
+- `data-ui-importance="critical"` 적용을 통한 가독성 보호 계층 구조 유지
+- 모든 텍스트에 i18n 키 적용 및 데모 데이터와의 완벽한 격리
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── QuestPanel.tsx (목표 체크리스트)
+    │   ├── RuleBoard.tsx (활성 규칙 카드)
+    │   └── MutationTimeline.tsx (변형 이벤트 기록)
+    └── App.tsx (사이드 패널 슬롯 통합)
+
+### 다음 단계
+- [U-014[Mvp]] Economy HUD + Ledger(프론트) 구현
+
+---
+
 
 ### 구현 완료 항목
 

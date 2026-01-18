@@ -23,6 +23,51 @@
         "label": "문",
         "hint": "잠겨있는 것 같다"
       }
+    },
+    "quest": {
+      "terminal": {
+        "label": "터미널에 접속하기"
+      },
+      "escape": {
+        "label": "시설 탈출구 찾기"
+      },
+      "collect": {
+        "label": "데이터칩 수집"
+      }
+    },
+    "rule": {
+      "gravity": {
+        "label": "중력 법칙",
+        "description": "물체는 아래로 떨어진다"
+      },
+      "time": {
+        "label": "시간 흐름",
+        "description": "시간은 정상 속도로 흐른다"
+      }
+    }
+  },
+  "quest": {
+    "empty": "[ 목표 없음 ]",
+    "completed": "완료",
+    "section": {
+      "active": "진행 중",
+      "completed": "완료됨"
+    }
+  },
+  "rule_board": {
+    "empty": "[ 규칙 없음 ]",
+    "active_count": "활성 규칙: {{count}}개"
+  },
+  "mutation": {
+    "empty": "[ 변형 이력 없음 ]",
+    "timeline_title": "변형 타임라인",
+    "event_count": "{{count}}개 이벤트",
+    "more_events": "+{{count}}개 더 보기",
+    "turn_label": "T{{turn}}",
+    "type": {
+      "added": "추가됨",
+      "modified": "수정됨",
+      "removed": "제거됨"
     }
   },
   "scene": {

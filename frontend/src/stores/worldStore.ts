@@ -9,6 +9,10 @@
  *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
  *   - RULE-006: ko/en i18n 정책 준수
  *
+ * 확장 (U-013):
+ *   - Quest/Rules/MutationEvent 상태 추가
+ *   - applyTurnOutput에서 quests_updated, rules_changed 반영
+ *
  * 순환 import 방지:
  *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
  *   - 역방향 import 금지
@@ -17,7 +21,7 @@
  */
 
 import { create } from 'zustand';
-import type { TurnOutput, SceneObject } from '../schemas/turn';
+import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
 import type { SceneCanvasState } from '../types/scene';
 import { useActionDeckStore } from './actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
@@ -38,6 +42,25 @@ export interface NarrativeEntry {
   text: string;
 }
 
+/**
+ * 룰 변형 이벤트 (U-013: Mutation Timeline)
+ * 규칙이 변경된 시점과 내용을 기록합니다.
+ */
+export interface MutationEvent {
+  /** 변형 발생 턴 */
+  turn: number;
+  /** 변형된 규칙 ID */
+  ruleId: string;
+  /** 변형 유형: 추가/수정/제거 */
+  type: 'added' | 'modified' | 'removed';
+  /** 규칙 라벨 (표시용) */
+  label: string;
+  /** 규칙 설명 (선택) */
+  description?: string;
+  /** 타임스탬프 */
+  timestamp: number;
+}
+
 /** World/Session 상태 */
 export interface WorldState {
   /** 재화 상태 (RULE-005) */
@@ -52,6 +75,15 @@ export interface WorldState {
   narrativeEntries: NarrativeEntry[];
   /** 현재 턴 카운트 */
   turnCount: number;
+
+  // ============ U-013: Quest + Rule Board 확장 ============
+
+  /** 현재 퀘스트/목표 목록 */
+  quests: Quest[];
+  /** 현재 적용 중인 규칙 목록 */
+  activeRules: WorldRule[];
+  /** 룰 변형 이벤트 타임라인 (최신순) */
+  mutationTimeline: MutationEvent[];
 }
 
 /** World Store 액션 */
@@ -101,6 +133,10 @@ function createInitialState(): WorldState {
     sceneObjects: [],
     narrativeEntries: [],
     turnCount: 0,
+    // U-013: Quest + Rule Board 초기 상태
+    quests: [],
+    activeRules: [],
+    mutationTimeline: [],
   };
 }
 
@@ -189,18 +225,70 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       useInventoryStore.getState().removeItems(output.world.inventory_removed);
     }
 
-    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함)
+    // 6. Quest 상태 업데이트 (U-013)
+    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
+    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
+    const newQuests = [...state.quests];
+    for (const updatedQuest of output.world.quests_updated) {
+      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
+      if (existingIndex >= 0) {
+        // 기존 퀘스트 업데이트
+        newQuests[existingIndex] = updatedQuest;
+      } else {
+        // 새 퀘스트 추가
+        newQuests.push(updatedQuest);
+      }
+    }
+
+    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
+    const newActiveRules = [...state.activeRules];
+    const newMutationEvents: MutationEvent[] = [];
+    const now = Date.now();
+
+    for (const changedRule of output.world.rules_changed) {
+      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
+      if (existingIndex >= 0) {
+        // 기존 규칙 수정
+        newActiveRules[existingIndex] = changedRule;
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'modified',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      } else {
+        // 새 규칙 추가
+        newActiveRules.push(changedRule);
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'added',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      }
+    }
+
+    // 타임라인에 새 이벤트 추가 (최신순 정렬)
+    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
+
+    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
     set({
       turnCount: newTurnCount,
       narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
       economy: newEconomy,
       sceneObjects: newSceneObjects,
       sceneState: newSceneState,
+      // U-013 확장
+      quests: newQuests,
+      activeRules: newActiveRules,
+      mutationTimeline: updatedTimeline,
     });
 
     // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
-    // TODO: output.world.rules_changed → RuleBoard 업데이트
-    // TODO: output.world.quests_updated → Quest 패널 업데이트
     // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
   },
 
@@ -271,3 +359,22 @@ export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntr
 
 /** 턴 카운트 셀렉터 */
 export const selectTurnCount = (state: WorldStore) => state.turnCount;
+
+// ============ U-013: Quest + Rule Board 셀렉터 ============
+
+/** 퀘스트 목록 셀렉터 */
+export const selectQuests = (state: WorldStore) => state.quests;
+
+/** 활성 규칙 목록 셀렉터 */
+export const selectActiveRules = (state: WorldStore) => state.activeRules;
+
+/** 뮤테이션 타임라인 셀렉터 */
+export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
+
+/** 진행 중인 퀘스트 셀렉터 */
+export const selectActiveQuests = (state: WorldStore) =>
+  state.quests.filter((q) => !q.is_completed);
+
+/** 완료된 퀘스트 셀렉터 */
+export const selectCompletedQuests = (state: WorldStore) =>
+  state.quests.filter((q) => q.is_completed);

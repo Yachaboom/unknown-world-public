@@ -44,7 +44,10 @@ D:\Dev\unknown-world\
 │   │   │   ├── ActionDeck.tsx
 │   │   │   ├── AgentConsole.tsx
 │   │   │   ├── InventoryPanel.tsx
-│   │   │   └── SceneCanvas.tsx
+│   │   │   ├── SceneCanvas.tsx
+│   │   │   ├── QuestPanel.tsx (U-013)
+│   │   │   ├── RuleBoard.tsx (U-013)
+│   │   │   └── MutationTimeline.tsx (U-013)
 │   │   ├── locales/        # 다국어 리소스 JSON
 │   │   ├── schemas/        # 클라이언트 측 스키마 및 검증 (Zod)
 │   │   ├── stores/         # 상태 관리 (Zustand)

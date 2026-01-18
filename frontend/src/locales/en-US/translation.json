@@ -23,6 +23,51 @@
         "label": "Door",
         "hint": "It appears to be locked"
       }
+    },
+    "quest": {
+      "terminal": {
+        "label": "Access the terminal"
+      },
+      "escape": {
+        "label": "Find facility exit"
+      },
+      "collect": {
+        "label": "Collect data chips"
+      }
+    },
+    "rule": {
+      "gravity": {
+        "label": "Gravity Law",
+        "description": "Objects fall downward"
+      },
+      "time": {
+        "label": "Time Flow",
+        "description": "Time flows at normal speed"
+      }
+    }
+  },
+  "quest": {
+    "empty": "[ NO OBJECTIVES ]",
+    "completed": "DONE",
+    "section": {
+      "active": "Active",
+      "completed": "Completed"
+    }
+  },
+  "rule_board": {
+    "empty": "[ NO RULES ]",
+    "active_count": "Active Rules: {{count}}"
+  },
+  "mutation": {
+    "empty": "[ NO MUTATIONS ]",
+    "timeline_title": "Mutation Timeline",
+    "event_count": "{{count}} events",
+    "more_events": "+{{count}} more",
+    "turn_label": "T{{turn}}",
+    "type": {
+      "added": "Added",
+      "modified": "Modified",
+      "removed": "Removed"
     }
   },
   "scene": {

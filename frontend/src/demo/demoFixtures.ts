@@ -96,6 +96,79 @@ export const DEMO_SCENE_OBJECTS: readonly DemoSceneObjectDef[] = [
 ] as const;
 
 // =============================================================================
+// 데모 퀘스트 (U-013)
+// =============================================================================
+
+/**
+ * 데모 퀘스트 정의 (언어 중립)
+ *
+ * label은 i18n 키(`demo.quest.{id}.label`)로 렌더링합니다.
+ */
+export interface DemoQuestDef {
+  /** 퀘스트 고유 ID */
+  id: string;
+  /** i18n 라벨 키 */
+  labelKey: string;
+  /** 완료 여부 */
+  is_completed: boolean;
+}
+
+/**
+ * 데모용 퀘스트 목록.
+ */
+export const DEMO_QUESTS: readonly DemoQuestDef[] = [
+  {
+    id: 'demo-quest-terminal',
+    labelKey: 'demo.quest.terminal.label',
+    is_completed: false,
+  },
+  {
+    id: 'demo-quest-escape',
+    labelKey: 'demo.quest.escape.label',
+    is_completed: false,
+  },
+  {
+    id: 'demo-quest-collect',
+    labelKey: 'demo.quest.collect.label',
+    is_completed: true,
+  },
+] as const;
+
+// =============================================================================
+// 데모 규칙 (U-013)
+// =============================================================================
+
+/**
+ * 데모 규칙 정의 (언어 중립)
+ *
+ * label/description은 i18n 키로 렌더링합니다.
+ */
+export interface DemoRuleDef {
+  /** 규칙 고유 ID */
+  id: string;
+  /** i18n 라벨 키 */
+  labelKey: string;
+  /** i18n 설명 키 (선택) */
+  descriptionKey?: string;
+}
+
+/**
+ * 데모용 규칙 목록.
+ */
+export const DEMO_RULES: readonly DemoRuleDef[] = [
+  {
+    id: 'demo-rule-gravity',
+    labelKey: 'demo.rule.gravity.label',
+    descriptionKey: 'demo.rule.gravity.description',
+  },
+  {
+    id: 'demo-rule-time',
+    labelKey: 'demo.rule.time.label',
+    descriptionKey: 'demo.rule.time.description',
+  },
+] as const;
+
+// =============================================================================
 // 헬퍼 함수
 // =============================================================================
 
