@@ -1,6 +1,38 @@
 # 프로젝트 진행 상황
 
-## [2026-01-18 19:15] U-013[Mvp]: Quest + Rule Board/Timeline 패널 완료
+## [2026-01-18 19:45] U-014[Mvp]: Economy HUD + Ledger(프론트) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Economy HUD(Signal/Shard 잔액 표시) 및 Ledger(원장) 관리 시스템 구현
+- **추가 컴포넌트**: `EconomyHud.tsx`, `economyStore.ts`, `vibe/unit-results/U-014[Mvp].md`
+- **달성 요구사항**: [RULE-005] 경제 인바리언트(예상 비용 노출, 음수 금지), [RULE-002] 게임 UI 고정 HUD, [U-037] 중요도 기반 가독성 레이어링 적용
+
+### 기술적 구현 세부사항
+
+**경제 시스템 아키텍처**:
+- **Economy Store**: 최근 20턴의 원장(Ledger)을 보관하는 Option A(메모리 절감) 정책 적용
+- **Cost Estimation**: Action Deck 호버/선택 시 예상 비용을 사전에 HUD에 표시하여 전략적 판단 유도
+- **Currency Icons**: Signal(⚡), Shard(💎) 전용 아이콘 v2 및 폴백 체계 통합
+
+**UI 레이아웃 및 스타일**:
+- `sidebar-right`에 독립된 경제 패널 배치 및 헤더 잔액 동기화
+- `data-ui-importance="critical"` 및 `font-family: var(--font-micro-en)` 적용을 통한 숫자 가독성 극대화
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── EconomyHud.tsx (재화/비용 시각화)
+    │   └── ActionDeck.tsx (비용 가드 로직 통합)
+    ├── stores/
+    │   └── economyStore.ts (원장 및 상태 관리)
+    └── style.css (경제 HUD 전용 스타일 및 애니메이션)
+
+### 다음 단계
+- [U-015[Mvp]] SaveGame(local) + Reset + Demo Profiles(3종) 구현
+
+---
 
 ### 구현 완료 항목
 

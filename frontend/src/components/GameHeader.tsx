@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { UIControls } from './UIControls';
+import { EconomyHudHeader } from './EconomyHud';
 import type { UIScale } from '../stores/uiPrefsStore';
+import { useEconomyStore, selectIsBalanceLow } from '../stores/economyStore';
 
 interface GameHeaderProps {
   signal: number;
@@ -20,6 +22,7 @@ export function GameHeader({
   onDecreaseScale,
 }: GameHeaderProps) {
   const { t } = useTranslation();
+  const isBalanceLow = useEconomyStore(selectIsBalanceLow);
 
   return (
     <header className="game-header has-chrome">
@@ -33,38 +36,8 @@ export function GameHeader({
           onIncreaseScale={onIncreaseScale}
           onDecreaseScale={onDecreaseScale}
         />
-        <div className="economy-hud">
-          <span className="icon-wrapper signal-icon" aria-label={t('economy.signal')}>
-            <img
-              src="/ui/icons/signal-24.png"
-              alt=""
-              aria-hidden="true"
-              className="icon-img"
-              onError={(e) => {
-                e.currentTarget.classList.add('hidden');
-              }}
-            />
-            <span className="icon-fallback">⚡</span>
-          </span>
-          <span className="currency-value">
-            {t('economy.signal')}: {signal}
-          </span>
-          <span className="icon-wrapper shard-icon" aria-label={t('economy.shard')}>
-            <img
-              src="/ui/icons/shard-24.png"
-              alt=""
-              aria-hidden="true"
-              className="icon-img"
-              onError={(e) => {
-                e.currentTarget.classList.add('hidden');
-              }}
-            />
-            <span className="icon-fallback">💎</span>
-          </span>
-          <span className="currency-value">
-            {t('economy.shard')}: {memoryShard}
-          </span>
-        </div>
+        {/* Economy HUD (U-014: 예상 비용/확정 비용 표시 포함) */}
+        <EconomyHudHeader signal={signal} memoryShard={memoryShard} isLow={isBalanceLow} />
         <div className="connection-status">
           <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
           <span>{isConnected ? t('connection.online') : t('connection.offline')}</span>

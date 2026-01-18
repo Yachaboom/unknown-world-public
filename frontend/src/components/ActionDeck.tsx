@@ -14,12 +14,13 @@
  * @module components/ActionDeck
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionCard } from '../schemas/turn';
 import { useActionDeckStore } from '../stores/actionDeckStore';
 import { useWorldStore } from '../stores/worldStore';
 import { useAgentStore } from '../stores/agentStore';
+import { useEconomyStore } from '../stores/economyStore';
 
 // =============================================================================
 // 타입 정의
@@ -182,10 +183,11 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
 interface ActionCardItemProps {
   card: CardDisplayInfo;
   onClick: () => void;
+  onHover: (card: CardDisplayInfo | null) => void;
   disabled: boolean;
 }
 
-function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
+function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProps) {
   const { t } = useTranslation();
 
   const cardClasses = [
@@ -203,6 +205,10 @@ function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
       type="button"
       className={cardClasses}
       onClick={onClick}
+      onMouseEnter={() => onHover(card)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(card)}
+      onBlur={() => onHover(null)}
       disabled={disabled || card.isDisabled}
       aria-disabled={disabled || card.isDisabled}
       title={card.finalDisabledReason ?? card.description ?? undefined}
@@ -261,8 +267,22 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   const cards = useActionDeckStore((state) => state.cards);
   const currentBalance = useWorldStore((state) => state.economy);
   const isStreaming = useAgentStore((state) => state.isStreaming);
+  const setCostEstimateFromCard = useEconomyStore((state) => state.setCostEstimateFromCard);
+  const setCostEstimate = useEconomyStore((state) => state.setCostEstimate);
 
   const disabled = propsDisabled ?? isStreaming;
+
+  // 카드 호버 핸들러 (U-014: 예상 비용 표시)
+  const handleCardHover = useCallback(
+    (card: CardDisplayInfo | null) => {
+      if (card) {
+        setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
+      } else {
+        setCostEstimate(null);
+      }
+    },
+    [setCostEstimateFromCard, setCostEstimate],
+  );
 
   // 카드가 없으면 기본 카드 사용
   const displayCards = cards.length > 0 ? cards : defaultCards;
@@ -313,6 +333,7 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
           key={card.id}
           card={card}
           onClick={() => onCardClick?.(card)}
+          onHover={handleCardHover}
           disabled={disabled}
         />
       ))}

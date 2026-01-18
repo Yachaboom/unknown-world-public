@@ -25,6 +25,7 @@ import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn'
 import type { SceneCanvasState } from '../types/scene';
 import { useActionDeckStore } from './actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
+import { useEconomyStore } from './economyStore';
 
 // =============================================================================
 // 타입 정의
@@ -224,6 +225,18 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     if (output.world.inventory_removed.length > 0) {
       useInventoryStore.getState().removeItems(output.world.inventory_removed);
     }
+
+    // Economy Store 업데이트 (U-014: Ledger 기록)
+    const economyStore = useEconomyStore.getState();
+    economyStore.addLedgerEntry({
+      turnId: newTurnCount,
+      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
+      cost: output.economy.cost,
+      balanceAfter: output.economy.balance_after,
+      modelLabel: output.agent_console.badges.includes('schema_ok') ? 'QUALITY' : 'FAST',
+    });
+    // 잔액 부족 상태 업데이트
+    economyStore.updateBalanceLowStatus(newEconomy);
 
     // 6. Quest 상태 업데이트 (U-013)
     // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함

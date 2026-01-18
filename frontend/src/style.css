@@ -1928,6 +1928,272 @@ button:disabled,
 }
 
 /* ============================================
+   22.3 Economy HUD 스타일 (U-014)
+   - RULE-005: 예상 비용/확정 비용/잔액 부족 표시
+   ============================================ */
+
+/* Economy HUD 컨테이너 */
+.economy-hud {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--text-dim);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.economy-hud-full {
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+/* 잔액 부족 시 경고 스타일 */
+.economy-hud.economy-hud-low,
+.economy-hud-low {
+  border-color: var(--warning-color);
+  background-color: rgba(255, 170, 0, 0.1);
+}
+
+/* 잔액 표시 */
+.economy-balance {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.economy-balance.balance-low {
+  animation: balance-warning-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes balance-warning-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.balance-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.balance-value {
+  font-family: var(--font-micro-en);
+  font-weight: bold;
+  font-size: var(--font-size-sm);
+}
+
+.balance-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 잔액 부족 경고 */
+.balance-warning {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--spacing-xs);
+  padding: 2px 6px;
+  background-color: rgba(255, 170, 0, 0.2);
+  border: 1px solid var(--warning-color);
+  border-radius: 2px;
+}
+
+.balance-warning .warning-icon {
+  color: var(--warning-color);
+}
+
+.balance-warning .warning-text {
+  font-size: var(--font-size-xs);
+  color: var(--warning-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.balance-warning-icon {
+  color: var(--warning-color);
+  margin-left: var(--spacing-xs);
+  animation: blink 1s infinite;
+}
+
+/* 비용 표시 */
+.economy-cost {
+  padding: var(--spacing-xs);
+  background-color: rgba(0, 20, 0, 0.8);
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+}
+
+.economy-cost.cost-estimate {
+  border-color: var(--accent-color);
+  border-style: dashed;
+}
+
+.economy-cost.cost-confirmed {
+  border-color: var(--text-color);
+}
+
+.economy-cost.cost-unaffordable {
+  border-color: var(--error-color);
+  background-color: rgba(255, 51, 51, 0.1);
+}
+
+.cost-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+}
+
+.cost-title {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cost-label {
+  font-size: 0.625rem;
+  color: var(--accent-color);
+  padding: 1px 4px;
+  background-color: rgba(255, 0, 255, 0.1);
+  border: 1px solid var(--accent-color);
+  border-radius: 2px;
+}
+
+.cost-values {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.cost-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cost-separator {
+  color: var(--text-dim);
+  margin: 0 2px;
+}
+
+.cost-value {
+  font-family: var(--font-micro-en);
+  font-weight: bold;
+  font-size: var(--font-size-sm);
+  color: var(--warning-color);
+}
+
+.cost-warning {
+  margin-top: var(--spacing-xs);
+  padding: 2px 4px;
+  background-color: rgba(255, 51, 51, 0.2);
+  border-radius: 2px;
+}
+
+.cost-warning .warning-text {
+  font-size: var(--font-size-xs);
+  color: var(--error-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 예상 비용 미니 표시 (헤더용) */
+.economy-estimate-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--spacing-xs);
+  padding: 1px 6px;
+  background-color: rgba(255, 0, 255, 0.1);
+  border: 1px dashed var(--accent-color);
+  border-radius: 2px;
+  font-family: var(--font-micro-en);
+  font-size: var(--font-size-xs);
+  color: var(--accent-color);
+}
+
+.economy-estimate-mini.unaffordable {
+  border-color: var(--error-color);
+  background-color: rgba(255, 51, 51, 0.1);
+  color: var(--error-color);
+}
+
+.estimate-prefix {
+  opacity: 0.7;
+}
+
+.estimate-value {
+  font-weight: bold;
+}
+
+/* 대안 안내 */
+.economy-alternatives {
+  padding: var(--spacing-sm);
+  background-color: rgba(51, 255, 0, 0.05);
+  border: 1px dashed var(--text-color);
+  border-radius: 2px;
+}
+
+.alternatives-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+}
+
+.alternatives-icon {
+  font-size: 1rem;
+}
+
+.alternatives-title {
+  font-size: var(--font-size-xs);
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.alternatives-list {
+  list-style: none;
+  padding-left: calc(1rem + var(--spacing-xs));
+}
+
+.alternatives-list li {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.alternatives-list li::before {
+  content: '• ';
+  color: var(--text-color);
+}
+
+/* reduced-motion: 경고 애니메이션 비활성화 */
+@media (prefers-reduced-motion: reduce) {
+  .economy-balance.balance-low {
+    animation: none;
+  }
+
+  .balance-warning-icon {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ============================================
    23. UI 스케일 컨트롤 버튼 스타일 (U-028→U-037)
    ============================================ */
 

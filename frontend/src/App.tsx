@@ -31,6 +31,7 @@ import { Panel } from './components/Panel';
 import { GameHeader } from './components/GameHeader';
 import { NarrativeFeed } from './components/NarrativeFeed';
 import { AgentConsole } from './components/AgentConsole';
+import { EconomyHud } from './components/EconomyHud';
 import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
 import { InventoryPanel } from './components/InventoryPanel';
@@ -251,11 +252,9 @@ function App() {
             <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
               <AgentConsole />
             </Panel>
-            <Panel
-              title={t('panel.memory_pin.title')}
-              hasChrome
-              placeholderKey="panel.memory_pin.placeholder"
-            />
+            <Panel title={t('economy.hud_label')} hasChrome>
+              <EconomyHud />
+            </Panel>
             <Panel title={t('panel.scanner.title')} hasChrome>
               <div className="scanner-slot has-chrome">
                 <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>

@@ -138,7 +138,23 @@
     "shard": "Shard",
     "signal_cost": "Signal 소모",
     "shard_cost": "Shard 소모",
-    "risk_level": "위험도"
+    "risk_level": "위험도",
+    "hud_label": "재화 현황",
+    "estimated_cost": "예상 비용",
+    "confirmed_cost": "확정 비용",
+    "insufficient_funds": "잔액 부족",
+    "low_balance_warning": "잔액이 부족합니다",
+    "alternatives_title": "대안 행동",
+    "alternative_text_only": "텍스트만 생성 (이미지 없음)",
+    "alternative_low_quality": "저품질/빠른 응답 선택",
+    "ledger_title": "최근 원장 이력",
+    "ledger_empty": "[ 이력 없음 ]",
+    "model_label": {
+      "FAST": "빠름",
+      "QUALITY": "고품질",
+      "CHEAP": "저비용",
+      "REF": "참조"
+    }
   },
   "connection": {
     "online": "온라인",

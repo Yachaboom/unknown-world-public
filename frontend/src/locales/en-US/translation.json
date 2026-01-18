@@ -138,7 +138,23 @@
     "shard": "Shard",
     "signal_cost": "Signal cost",
     "shard_cost": "Shard cost",
-    "risk_level": "Risk level"
+    "risk_level": "Risk level",
+    "hud_label": "Economy Status",
+    "estimated_cost": "Est. Cost",
+    "confirmed_cost": "Confirmed",
+    "insufficient_funds": "Insufficient funds",
+    "low_balance_warning": "Low balance",
+    "alternatives_title": "Alternatives",
+    "alternative_text_only": "Text-only (no images)",
+    "alternative_low_quality": "Low quality / Fast response",
+    "ledger_title": "Recent Ledger",
+    "ledger_empty": "[ NO HISTORY ]",
+    "model_label": {
+      "FAST": "Fast",
+      "QUALITY": "Quality",
+      "CHEAP": "Cheap",
+      "REF": "Ref"
+    }
   },
   "connection": {
     "online": "ONLINE",

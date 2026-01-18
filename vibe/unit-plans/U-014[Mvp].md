@@ -88,9 +88,10 @@ Signal/Memory Shard 재화 HUD를 구현하고, 턴별 비용/잔액 변화를 *
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 클라이언트 ledger는 얼마나 오래 보관할까?
+- [x] **Q1**: 클라이언트 ledger는 얼마나 오래 보관할까?
   - Option A: 최근 N턴만 보관(권장: UI/메모리 절감)
   - Option B: 전체 세션 ledger 보관(SaveGame 크기 증가)
+  **A1**: Option A
 
 ## 참고 자료
 

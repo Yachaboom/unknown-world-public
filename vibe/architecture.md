@@ -45,6 +45,7 @@ D:\Dev\unknown-world\
 │   │   │   ├── AgentConsole.tsx
 │   │   │   ├── InventoryPanel.tsx
 │   │   │   ├── SceneCanvas.tsx
+│   │   │   ├── EconomyHud.tsx (U-014)
 │   │   │   ├── QuestPanel.tsx (U-013)
 │   │   │   ├── RuleBoard.tsx (U-013)
 │   │   │   └── MutationTimeline.tsx (U-013)
@@ -53,6 +54,7 @@ D:\Dev\unknown-world\
 │   │   ├── stores/         # 상태 관리 (Zustand)
 │   │   │   ├── agentStore.ts
 │   │   │   ├── inventoryStore.ts
+│   │   │   ├── economyStore.ts (U-014)
 │   │   │   └── worldStore.ts
 │   │   ├── types/          # 공통 타입 정의
 │   │   └── utils/          # 공통 유틸리티 (box2d.ts)
@@ -111,9 +113,21 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 1. **Stateful Orchestrator**: 월드 상태(WorldState)를 유지하고 갱신하는 시스템.
 2. **Structured Turn Contract**: 엄격한 JSON Schema 기반 통신.
 3. **Resilient Pipeline**: 이중 검증과 Repair loop를 통한 LLM 출력 안정화.
-4. **Data-driven Layering**: 데이터 속성(`data-ui-*`)을 통한 선언적 스타일 및 가독성 제어.
+4. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 스트림 이벤트를 검증함.
 
-## 5. 스트리밍 및 에러 핸들링 정책
+## 9. Economy/재화 관리 정책 (U-014[Mvp])
+
+1. **원장(Ledger) 시스템**:
+    - 모든 재화 변동은 `turn_id`, `reason`, `cost`, `balance_after`를 포함한 원장에 기록됨.
+    - **Option A 정책**: 메모리 최적화를 위해 최근 20개 엔트리만 보관하며, 세션 내에서만 유지됨.
+2. **비용 인바리언트 (RULE-005)**:
+    - **사전 비용 노출**: 액션 실행 전 예상 비용(`min`, `max`)을 HUD에 표시하여 플레이어의 전략적 선택을 지원함.
+    - **잔액 음수 금지**: 현재 잔액을 초과하는 비용의 액션은 실행을 차단하고 저비용 대안(Alternative)을 제안함.
+3. **가시성 및 식별성**:
+    - 재화 데이터는 `critical` 중요도를 부여하여 CRT 효과에 의한 가독성 저해를 차단함.
+    - 영문 마이크로 텍스트 폰트를 적용하여 숫자의 시인성을 확보함.
+
+## 10. 스트리밍 및 에러 핸들링 정책
 
 - **종료 인바리언트**: 모든 스트림은 정확히 1개의 `final` 이벤트로 종료되어야 함. (단, 사용자에 의한 Abort 제외)
 - **상태 보존형 폴백**: 실패 시에도 재화 잔액의 일관성을 유지함 (RULE-005).

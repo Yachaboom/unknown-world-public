@@ -73,6 +73,8 @@ frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.test.tsx
 frontend/src/components/AgentConsole.tsx
 frontend/src/components/DndInteraction.test.tsx
+frontend/src/components/EconomyHud.test.tsx
+frontend/src/components/EconomyHud.tsx
 frontend/src/components/GameHeader.tsx
 frontend/src/components/InventoryPanel.test.tsx
 frontend/src/components/InventoryPanel.tsx
@@ -105,6 +107,8 @@ frontend/src/stores/actionDeckStore.test.ts
 frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/agentStore.test.ts
 frontend/src/stores/agentStore.ts
+frontend/src/stores/economyStore.test.ts
+frontend/src/stores/economyStore.ts
 frontend/src/stores/inventoryStore.test.ts
 frontend/src/stores/inventoryStore.ts
 frontend/src/stores/uiPrefsStore.test.ts
@@ -942,82 +946,523 @@ var addSorting = (function() {
 window.addEventListener('load', addSorting);
 </file>
 
-<file path="frontend/src/components/GameHeader.tsx">
-import { useTranslation } from 'react-i18next';
-import { UIControls } from './UIControls';
-import type { UIScale } from '../stores/uiPrefsStore';
+<file path="frontend/src/components/EconomyHud.test.tsx">
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { EconomyHud } from './EconomyHud';
+import { useWorldStore } from '../stores/worldStore';
+import { useEconomyStore } from '../stores/economyStore';
 
-interface GameHeaderProps {
-  signal: number;
-  memoryShard: number;
-  isConnected: boolean;
-  uiScale: UIScale;
-  onIncreaseScale: () => void;
-  onDecreaseScale: () => void;
+// react-i18next 모킹
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+describe('EconomyHud', () => {
+  beforeEach(() => {
+    useWorldStore.getState().reset();
+    useEconomyStore.getState().reset();
+  });
+
+  it('현재 잔액을 올바르게 표시해야 한다', () => {
+    useWorldStore.getState().setEconomy({ signal: 50, memory_shard: 5 });
+
+    render(<EconomyHud />);
+
+    expect(screen.getByTestId('signal-balance')).toHaveTextContent('50');
+    expect(screen.getByTestId('shard-balance')).toHaveTextContent('5');
+  });
+
+  it('예상 비용이 있을 때 표시해야 한다', () => {
+    useEconomyStore.getState().setCostEstimate({
+      min: { signal: 5, memory_shard: 0 },
+      max: { signal: 10, memory_shard: 0 },
+      label: 'Test Action',
+    });
+
+    render(<EconomyHud />);
+
+    expect(screen.getByText('economy.estimated_cost')).toBeInTheDocument();
+    expect(screen.getByText('Test Action')).toBeInTheDocument();
+    expect(screen.getByText('5~10')).toBeInTheDocument();
+  });
+
+  it('감당할 수 없는 예상 비용일 때 경고를 표시해야 한다', () => {
+    useWorldStore.getState().setEconomy({ signal: 5, memory_shard: 0 });
+    useEconomyStore.getState().setCostEstimate({
+      min: { signal: 10, memory_shard: 0 },
+      max: { signal: 15, memory_shard: 0 },
+    });
+
+    const { container } = render(<EconomyHud />);
+
+    expect(screen.getByText('economy.insufficient_funds')).toBeInTheDocument();
+    expect(container.querySelector('.cost-unaffordable')).toBeInTheDocument();
+  });
+
+  it('예상 비용이 없을 때 마지막 확정 비용을 표시해야 한다', () => {
+    useEconomyStore.getState().setLastCost({
+      turnId: 1,
+      cost: { signal: 8, memory_shard: 1 },
+      balanceAfter: { signal: 92, memory_shard: 4 },
+      modelLabel: 'QUALITY',
+    });
+
+    render(<EconomyHud />);
+
+    expect(screen.getByText('economy.confirmed_cost')).toBeInTheDocument();
+    expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('economy.model_label.QUALITY')).toBeInTheDocument();
+  });
+
+  it('잔액 부족 시 경고 및 대안을 표시해야 한다', () => {
+    // 임계값 10, 현재 잔액 5
+    useWorldStore.getState().setEconomy({ signal: 5, memory_shard: 0 });
+    useEconomyStore.getState().updateBalanceLowStatus({ signal: 5, memory_shard: 0 });
+
+    render(<EconomyHud />);
+
+    expect(screen.getByText('economy.low_balance_warning')).toBeInTheDocument();
+    expect(screen.getByText('economy.alternatives_title')).toBeInTheDocument();
+    expect(screen.getByText('economy.alternative_text_only')).toBeInTheDocument();
+  });
+
+  it('compact 모드에서는 잔액만 표시해야 한다', () => {
+    useEconomyStore.getState().setCostEstimate({
+      min: { signal: 5, memory_shard: 0 },
+      max: { signal: 10, memory_shard: 0 },
+    });
+
+    render(<EconomyHud compact />);
+
+    // 잔액은 표시됨
+    expect(screen.getByTestId('signal-balance')).toBeInTheDocument();
+    // 예상 비용은 표시되지 않음
+    expect(screen.queryByText('economy.estimated_cost')).not.toBeInTheDocument();
+  });
+
+  it('원장 이력이 있을 때 표시해야 한다', () => {
+    useEconomyStore.getState().addLedgerEntry({
+      turnId: 1,
+      reason: 'test reason',
+      cost: { signal: 5, memory_shard: 0 },
+      balanceAfter: { signal: 95, memory_shard: 5 },
+      modelLabel: 'FAST',
+    });
+
+    render(<EconomyHud />);
+
+    expect(screen.getByText('economy.ledger_title')).toBeInTheDocument();
+    expect(screen.getByText('T1')).toBeInTheDocument();
+    expect(screen.getByText('test reason')).toBeInTheDocument();
+    expect(screen.getByText('-5')).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/EconomyHud.tsx">
+/**
+ * Unknown World - Economy HUD 컴포넌트 (U-014[Mvp]).
+ *
+ * Signal/Memory Shard 재화 잔액, 예상 비용, 확정 비용을 표시하고,
+ * 잔액 부족 시 경고 및 대안을 안내하는 게임 HUD 컴포넌트입니다.
+ *
+ * RULE-002 준수: 채팅 버블이 아닌 게임 HUD 형태
+ * RULE-005 준수: 예상 비용 사전 표시, 잔액 음수 표시 방지
+ * RULE-008 준수: 비용/모델 선택 이유는 라벨로만 표시 (프롬프트 노출 금지)
+ *
+ * @see vibe/prd.md 5장 - 재화 목적/UX 요구
+ * @module components/EconomyHud
+ */
+
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
+import { useWorldStore } from '../stores/worldStore';
+import {
+  useEconomyStore,
+  selectCostEstimate,
+  selectLastCost,
+  selectIsBalanceLow,
+  selectRecentLedger,
+  canAffordEstimate,
+  type LedgerEntry,
+} from '../stores/economyStore';
+import type { CurrencyAmount } from '../schemas/turn';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+export interface EconomyHudProps {
+  /** 간소화 모드 (헤더용 - 잔액만 표시) */
+  compact?: boolean;
+  /** 추가 CSS 클래스 */
+  className?: string;
 }
 
-export function GameHeader({
-  signal,
-  memoryShard,
-  isConnected,
-  uiScale,
-  onIncreaseScale,
-  onDecreaseScale,
-}: GameHeaderProps) {
+// =============================================================================
+// 아이콘 컴포넌트
+// =============================================================================
+
+interface CurrencyIconProps {
+  type: 'signal' | 'shard';
+  size?: number;
+}
+
+function CurrencyIcon({ type, size = 20 }: CurrencyIconProps) {
+  const { t } = useTranslation();
+
+  const iconSrc = type === 'signal' ? '/ui/icons/signal-24.png' : '/ui/icons/shard-24.png';
+  const fallback = type === 'signal' ? '⚡' : '💎';
+  const label = type === 'signal' ? t('economy.signal') : t('economy.shard');
+
+  return (
+    <span className="icon-wrapper" aria-label={label}>
+      <img
+        src={iconSrc}
+        alt=""
+        aria-hidden="true"
+        className="icon-img"
+        style={{ width: size, height: size }}
+        onError={(e) => e.currentTarget.classList.add('hidden')}
+      />
+      <span className="icon-fallback">{fallback}</span>
+    </span>
+  );
+}
+
+// =============================================================================
+// 잔액 표시 컴포넌트
+// =============================================================================
+
+interface BalanceDisplayProps {
+  balance: CurrencyAmount;
+  isLow?: boolean;
+}
+
+function BalanceDisplay({ balance, isLow }: BalanceDisplayProps) {
   const { t } = useTranslation();
 
   return (
-    <header className="game-header has-chrome">
-      <h1 className="game-title glitch" data-text={t('ui.logo')}>
-        {t('ui.logo')}
-      </h1>
-      <div className="header-controls">
-        {/* UI 스케일 컨트롤 (U-028→U-037: Readable 제거) */}
-        <UIControls
-          uiScale={uiScale}
-          onIncreaseScale={onIncreaseScale}
-          onDecreaseScale={onDecreaseScale}
-        />
-        <div className="economy-hud">
-          <span className="icon-wrapper signal-icon" aria-label={t('economy.signal')}>
-            <img
-              src="/ui/icons/signal-24.png"
-              alt=""
-              aria-hidden="true"
-              className="icon-img"
-              onError={(e) => {
-                e.currentTarget.classList.add('hidden');
-              }}
-            />
-            <span className="icon-fallback">⚡</span>
-          </span>
-          <span className="currency-value">
-            {t('economy.signal')}: {signal}
-          </span>
-          <span className="icon-wrapper shard-icon" aria-label={t('economy.shard')}>
-            <img
-              src="/ui/icons/shard-24.png"
-              alt=""
-              aria-hidden="true"
-              className="icon-img"
-              onError={(e) => {
-                e.currentTarget.classList.add('hidden');
-              }}
-            />
-            <span className="icon-fallback">💎</span>
-          </span>
-          <span className="currency-value">
-            {t('economy.shard')}: {memoryShard}
-          </span>
-        </div>
-        <div className="connection-status">
-          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
-          <span>{isConnected ? t('connection.online') : t('connection.offline')}</span>
-        </div>
+    <div className={`economy-balance ${isLow ? 'balance-low' : ''}`} data-ui-importance="critical">
+      <div className="balance-item">
+        <CurrencyIcon type="signal" />
+        <span className="balance-value" data-testid="signal-balance">
+          {balance.signal}
+        </span>
+        <span className="balance-label">{t('economy.signal')}</span>
       </div>
-    </header>
+      <div className="balance-item">
+        <CurrencyIcon type="shard" />
+        <span className="balance-value" data-testid="shard-balance">
+          {balance.memory_shard}
+        </span>
+        <span className="balance-label">{t('economy.shard')}</span>
+      </div>
+      {isLow && (
+        <div className="balance-warning" aria-live="polite">
+          <span className="warning-icon">⚠</span>
+          <span className="warning-text">{t('economy.low_balance_warning')}</span>
+        </div>
+      )}
+    </div>
   );
 }
+
+// =============================================================================
+// 비용 표시 컴포넌트
+// =============================================================================
+
+interface CostDisplayProps {
+  /** 비용 유형 */
+  type: 'estimate' | 'confirmed';
+  /** 비용 범위 (예상) */
+  min?: CurrencyAmount;
+  max?: CurrencyAmount;
+  /** 확정 비용 */
+  cost?: CurrencyAmount;
+  /** 감당 가능 여부 */
+  affordable?: boolean;
+  /** 라벨 */
+  label?: string;
+}
+
+function CostDisplay({ type, min, max, cost, affordable, label }: CostDisplayProps) {
+  const { t } = useTranslation();
+
+  const isRange =
+    min && max && (min.signal !== max.signal || min.memory_shard !== max.memory_shard);
+
+  const titleKey = type === 'estimate' ? 'economy.estimated_cost' : 'economy.confirmed_cost';
+  const cssClass = type === 'estimate' ? 'cost-estimate' : 'cost-confirmed';
+
+  return (
+    <div
+      className={`economy-cost ${cssClass} ${affordable === false ? 'cost-unaffordable' : ''}`}
+      data-ui-importance="critical"
+    >
+      <div className="cost-header">
+        <span className="cost-title">{t(titleKey)}</span>
+        {label && <span className="cost-label">{label}</span>}
+      </div>
+      <div className="cost-values">
+        {/* Signal 비용 */}
+        <div className="cost-item">
+          <CurrencyIcon type="signal" size={14} />
+          <span className="cost-value">
+            {type === 'estimate' && min && max
+              ? isRange
+                ? `${min.signal}~${max.signal}`
+                : min.signal
+              : cost
+                ? cost.signal
+                : '-'}
+          </span>
+        </div>
+        {/* Shard 비용 (0보다 클 때만 표시) */}
+        {((type === 'estimate' && max && max.memory_shard > 0) ||
+          (type === 'confirmed' && cost && cost.memory_shard > 0)) && (
+          <div className="cost-item">
+            <span className="cost-separator">|</span>
+            <CurrencyIcon type="shard" size={14} />
+            <span className="cost-value">
+              {type === 'estimate' && min && max
+                ? isRange
+                  ? `${min.memory_shard}~${max.memory_shard}`
+                  : min.memory_shard
+                : cost
+                  ? cost.memory_shard
+                  : '-'}
+            </span>
+          </div>
+        )}
+      </div>
+      {affordable === false && (
+        <div className="cost-warning">
+          <span className="warning-text">{t('economy.insufficient_funds')}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 원장(Ledger) 항목 컴포넌트
+// =============================================================================
+
+function LedgerItem({ entry }: { entry: LedgerEntry }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="ledger-item">
+      <div className="ledger-info">
+        <span className="ledger-turn">T{entry.turnId}</span>
+        <span className="ledger-reason">{entry.reason}</span>
+      </div>
+      <div className="ledger-values">
+        <span className="ledger-cost">
+          -{entry.cost.signal}
+          {entry.cost.memory_shard > 0 && ` / -${entry.cost.memory_shard}`}
+        </span>
+        <span
+          className="ledger-model"
+          title={entry.modelLabel ? t(`economy.model_label.${entry.modelLabel}`) : undefined}
+        >
+          {entry.modelLabel?.charAt(0)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 셀렉터 정의 (컴포넌트 외부에서 생성하여 참조 유지)
+// =============================================================================
+
+const selectHistory = selectRecentLedger(5);
+
+// =============================================================================
+// 메인 Economy HUD 컴포넌트
+// =============================================================================
+
+export function EconomyHud({ compact = false, className = '' }: EconomyHudProps) {
+  const { t } = useTranslation();
+
+  // Store 상태
+  const economy = useWorldStore((state) => state.economy);
+  const costEstimate = useEconomyStore(selectCostEstimate);
+  const lastCost = useEconomyStore(selectLastCost);
+  const isBalanceLow = useEconomyStore(selectIsBalanceLow);
+  const recentLedger = useEconomyStore(useShallow(selectHistory));
+
+  // 예상 비용 감당 가능 여부 계산
+  const estimateAffordability = useMemo(() => {
+    if (!costEstimate) return null;
+    return canAffordEstimate(economy, costEstimate);
+  }, [economy, costEstimate]);
+
+  // Compact 모드 (헤더용): 잔액만 표시
+  if (compact) {
+    return (
+      <div
+        className={`economy-hud economy-hud-compact ${className}`}
+        role="status"
+        aria-live="polite"
+      >
+        <BalanceDisplay balance={economy} isLow={isBalanceLow} />
+      </div>
+    );
+  }
+
+  // Full 모드: 잔액 + 예상 비용 + 확정 비용 + 원장 이력
+  return (
+    <div
+      className={`economy-hud economy-hud-full ${className}`}
+      role="region"
+      aria-label={t('economy.hud_label')}
+    >
+      {/* 현재 잔액 */}
+      <BalanceDisplay balance={economy} isLow={isBalanceLow} />
+
+      {/* 예상 비용 (카드 선택/호버 시) */}
+      {costEstimate && (
+        <CostDisplay
+          type="estimate"
+          min={costEstimate.min}
+          max={costEstimate.max}
+          affordable={estimateAffordability?.affordable}
+          label={costEstimate.label}
+        />
+      )}
+
+      {/* 마지막 확정 비용 (예상 비용이 없을 때만 표시) */}
+      {!costEstimate && lastCost && (
+        <CostDisplay
+          type="confirmed"
+          cost={lastCost.cost}
+          label={lastCost.modelLabel ? t(`economy.model_label.${lastCost.modelLabel}`) : undefined}
+        />
+      )}
+
+      {/* 대안 안내 (잔액 부족 시) */}
+      {isBalanceLow && (
+        <div className="economy-alternatives" data-ui-importance="critical">
+          <div className="alternatives-header">
+            <span className="alternatives-icon">💡</span>
+            <span className="alternatives-title">{t('economy.alternatives_title')}</span>
+          </div>
+          <ul className="alternatives-list">
+            <li>{t('economy.alternative_text_only')}</li>
+            <li>{t('economy.alternative_low_quality')}</li>
+          </ul>
+        </div>
+      )}
+
+      {/* 원장 이력 (Ledger) */}
+      <div className="economy-ledger">
+        <div className="ledger-header">
+          <span className="ledger-title">{t('economy.ledger_title')}</span>
+        </div>
+        {recentLedger.length > 0 ? (
+          <div className="ledger-list">
+            {recentLedger.map((entry) => (
+              <LedgerItem key={`${entry.turnId}-${entry.timestamp}`} entry={entry} />
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">{t('economy.ledger_empty')}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 헤더용 간소화 컴포넌트 (GameHeader 통합용)
+// =============================================================================
+
+export interface EconomyHudHeaderProps {
+  signal: number;
+  memoryShard: number;
+  isLow?: boolean;
+}
+
+/**
+ * GameHeader에서 사용하는 간소화된 Economy HUD.
+ * 기존 GameHeader의 economy-hud를 대체합니다.
+ */
+export function EconomyHudHeader({ signal, memoryShard, isLow }: EconomyHudHeaderProps) {
+  const { t } = useTranslation();
+  const costEstimate = useEconomyStore(selectCostEstimate);
+
+  // 예상 비용 감당 가능 여부
+  const estimateAffordability = useMemo(() => {
+    if (!costEstimate) return null;
+    const balance = { signal, memory_shard: memoryShard };
+    return canAffordEstimate(balance, costEstimate);
+  }, [signal, memoryShard, costEstimate]);
+
+  return (
+    <div className={`economy-hud ${isLow ? 'economy-hud-low' : ''}`} data-ui-importance="critical">
+      {/* 잔액 표시 */}
+      <span className="icon-wrapper signal-icon" aria-label={t('economy.signal')}>
+        <img
+          src="/ui/icons/signal-24.png"
+          alt=""
+          aria-hidden="true"
+          className="icon-img"
+          onError={(e) => e.currentTarget.classList.add('hidden')}
+        />
+        <span className="icon-fallback">⚡</span>
+      </span>
+      <span className="currency-value" data-testid="header-signal">
+        {t('economy.signal')}: {signal}
+      </span>
+      <span className="icon-wrapper shard-icon" aria-label={t('economy.shard')}>
+        <img
+          src="/ui/icons/shard-24.png"
+          alt=""
+          aria-hidden="true"
+          className="icon-img"
+          onError={(e) => e.currentTarget.classList.add('hidden')}
+        />
+        <span className="icon-fallback">💎</span>
+      </span>
+      <span className="currency-value" data-testid="header-shard">
+        {t('economy.shard')}: {memoryShard}
+      </span>
+
+      {/* 예상 비용 미니 표시 */}
+      {costEstimate && (
+        <span
+          className={`economy-estimate-mini ${
+            estimateAffordability?.affordable === false ? 'unaffordable' : ''
+          }`}
+          title={t('economy.estimated_cost')}
+        >
+          <span className="estimate-prefix">→</span>
+          <span className="estimate-value">
+            -{costEstimate.max.signal}
+            {costEstimate.max.memory_shard > 0 && `/${costEstimate.max.memory_shard}`}
+          </span>
+        </span>
+      )}
+
+      {/* 잔액 부족 경고 아이콘 */}
+      {isLow && (
+        <span className="balance-warning-icon" title={t('economy.low_balance_warning')}>
+          ⚠
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default EconomyHud;
 </file>
 
 <file path="frontend/src/components/InventoryPanel.test.tsx">
@@ -2509,6 +2954,482 @@ export function filterAlternativeCards(cards: ActionCard[]): ActionCard[] {
  */
 export function filterRegularCards(cards: ActionCard[]): ActionCard[] {
   return cards.filter((card) => !card.is_alternative);
+}
+</file>
+
+<file path="frontend/src/stores/economyStore.test.ts">
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  useEconomyStore,
+  LEDGER_MAX_ENTRIES,
+  canAffordCost,
+  canAffordEstimate,
+} from './economyStore';
+import type { CurrencyAmount, CostEstimate } from '../schemas/turn';
+
+describe('economyStore', () => {
+  beforeEach(() => {
+    useEconomyStore.getState().reset();
+  });
+
+  it('초기 상태가 올바르게 설정되어야 한다', () => {
+    const state = useEconomyStore.getState();
+    expect(state.ledger).toEqual([]);
+    expect(state.costEstimate).toBeNull();
+    expect(state.lastCost).toBeNull();
+    expect(state.isBalanceLow).toBe(false);
+    expect(state.lowBalanceThreshold).toBe(10);
+  });
+
+  it('addLedgerEntry가 엔트리를 추가하고 lastCost를 업데이트해야 한다', () => {
+    const entry = {
+      turnId: 1,
+      reason: 'explore',
+      cost: { signal: 5, memory_shard: 0 },
+      balanceAfter: { signal: 95, memory_shard: 10 },
+      modelLabel: 'FAST' as const,
+    };
+
+    useEconomyStore.getState().addLedgerEntry(entry);
+
+    const state = useEconomyStore.getState();
+    expect(state.ledger.length).toBe(1);
+    expect(state.ledger[0].turnId).toBe(1);
+    expect(state.ledger[0].timestamp).toBeDefined();
+    expect(state.lastCost).toEqual({
+      cost: entry.cost,
+      balanceAfter: entry.balanceAfter,
+      turnId: entry.turnId,
+      modelLabel: entry.modelLabel,
+    });
+  });
+
+  it(`Ledger는 최대 ${LEDGER_MAX_ENTRIES}개까지만 보관해야 한다`, () => {
+    const store = useEconomyStore.getState();
+
+    // 25개 엔트리 추가
+    for (let i = 1; i <= 25; i++) {
+      store.addLedgerEntry({
+        turnId: i,
+        reason: `test-${i}`,
+        cost: { signal: 1, memory_shard: 0 },
+        balanceAfter: { signal: 100 - i, memory_shard: 0 },
+      });
+    }
+
+    const state = useEconomyStore.getState();
+    expect(state.ledger.length).toBe(LEDGER_MAX_ENTRIES);
+    // 최신순(내림차순) 정렬 확인
+    expect(state.ledger[0].turnId).toBe(25);
+    expect(state.ledger[LEDGER_MAX_ENTRIES - 1].turnId).toBe(25 - LEDGER_MAX_ENTRIES + 1);
+  });
+
+  it('setCostEstimateFromCard가 예상 비용을 올바르게 설정해야 한다', () => {
+    const cost: CurrencyAmount = { signal: 5, memory_shard: 0 };
+    const estimate: CostEstimate = {
+      min: { signal: 3, memory_shard: 0 },
+      max: { signal: 7, memory_shard: 0 },
+    };
+
+    // 1. cost_estimate가 제공된 경우
+    useEconomyStore.getState().setCostEstimateFromCard(cost, estimate, 'action-1', 'Test Label');
+    let state = useEconomyStore.getState();
+    expect(state.costEstimate).toEqual({
+      min: estimate.min,
+      max: estimate.max,
+      actionId: 'action-1',
+      label: 'Test Label',
+    });
+
+    // 2. cost_estimate가 null인 경우 (기본 cost 사용)
+    useEconomyStore.getState().setCostEstimateFromCard(cost, null, 'action-2');
+    state = useEconomyStore.getState();
+    expect(state.costEstimate).toEqual({
+      min: cost,
+      max: cost,
+      actionId: 'action-2',
+      label: undefined,
+    });
+  });
+
+  it('updateBalanceLowStatus가 임계값에 따라 상태를 업데이트해야 한다', () => {
+    const store = useEconomyStore.getState();
+
+    // 기본 임계값 10
+    store.updateBalanceLowStatus({ signal: 15, memory_shard: 0 });
+    expect(useEconomyStore.getState().isBalanceLow).toBe(false);
+
+    store.updateBalanceLowStatus({ signal: 5, memory_shard: 0 });
+    expect(useEconomyStore.getState().isBalanceLow).toBe(true);
+
+    // 임계값 변경 테스트
+    store.setLowBalanceThreshold(20);
+    store.updateBalanceLowStatus({ signal: 15, memory_shard: 0 });
+    expect(useEconomyStore.getState().isBalanceLow).toBe(true);
+  });
+
+  describe('Utility: canAffordCost & canAffordEstimate', () => {
+    const balance: CurrencyAmount = { signal: 10, memory_shard: 2 };
+
+    it('canAffordCost: 잔액이 충분할 때', () => {
+      const cost: CurrencyAmount = { signal: 5, memory_shard: 1 };
+      const result = canAffordCost(balance, cost);
+      expect(result.affordable).toBe(true);
+      expect(result.shortfall).toEqual({ signal: 0, memory_shard: 0 });
+    });
+
+    it('canAffordCost: 잔액이 부족할 때 (Signal)', () => {
+      const cost: CurrencyAmount = { signal: 15, memory_shard: 1 };
+      const result = canAffordCost(balance, cost);
+      expect(result.affordable).toBe(false);
+      expect(result.shortfall.signal).toBe(5);
+    });
+
+    it('canAffordCost: 잔액이 부족할 때 (Shard)', () => {
+      const cost: CurrencyAmount = { signal: 5, memory_shard: 5 };
+      const result = canAffordCost(balance, cost);
+      expect(result.affordable).toBe(false);
+      expect(result.shortfall.memory_shard).toBe(3);
+    });
+
+    it('canAffordEstimate: 최대 예상 비용 기준으로 체크해야 한다', () => {
+      const estimate = {
+        min: { signal: 5, memory_shard: 0 },
+        max: { signal: 15, memory_shard: 0 },
+      };
+      // Signal 10 < Max 15 이므로 감당 불가
+      const result = canAffordEstimate(balance, estimate);
+      expect(result.affordable).toBe(false);
+      expect(result.shortfall.signal).toBe(5);
+    });
+  });
+});
+</file>
+
+<file path="frontend/src/stores/economyStore.ts">
+/**
+ * Unknown World - Economy 상태 관리 (Zustand) (U-014[Mvp]).
+ *
+ * Signal/Memory Shard 재화 HUD와 턴별 비용/잔액 변화를
+ * **원장(ledger)**으로 추적하여 "비용/지연을 게임 메커닉"으로 UX에 반영합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
+ *   - RULE-008: 비용/모델 선택 이유는 라벨(FAST/QUALITY/REF)로만 설명
+ *   - Q1 결정: Option A - 최근 N턴만 보관 (UI/메모리 절감)
+ *
+ * @module stores/economyStore
+ */
+
+import { create } from 'zustand';
+import type { CurrencyAmount, ModelLabel, CostEstimate } from '../schemas/turn';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/** 최근 N턴의 ledger만 보관 (Q1: Option A) */
+export const LEDGER_MAX_ENTRIES = 20;
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 원장(Ledger) 엔트리.
+ * 각 턴에서 발생한 비용과 잔액 변화를 기록합니다.
+ */
+export interface LedgerEntry {
+  /** 턴 ID (턴 카운트) */
+  turnId: number;
+  /** 액션 ID (선택된 카드 ID, 선택사항) */
+  actionId?: string;
+  /** 비용 사유 (예: "탐색", "이미지 생성") */
+  reason: string;
+  /** 소비된 비용 */
+  cost: CurrencyAmount;
+  /** 소비 후 잔액 */
+  balanceAfter: CurrencyAmount;
+  /** 모델 라벨 (FAST/QUALITY/CHEAP/REF) */
+  modelLabel?: ModelLabel;
+  /** 기록 시간 */
+  timestamp: number;
+}
+
+/**
+ * 예상 비용 상태.
+ * 현재 선택된 액션의 예상 비용을 추적합니다.
+ */
+export interface CostEstimateState {
+  /** 최소 예상 비용 */
+  min: CurrencyAmount;
+  /** 최대 예상 비용 */
+  max: CurrencyAmount;
+  /** 예상 비용을 계산한 액션 ID */
+  actionId?: string;
+  /** 예상 비용 라벨/설명 */
+  label?: string;
+}
+
+/**
+ * 마지막 확정 비용 상태.
+ * 가장 최근 턴에서 확정된 비용 정보입니다.
+ */
+export interface LastCostState {
+  /** 확정된 비용 */
+  cost: CurrencyAmount;
+  /** 확정 후 잔액 */
+  balanceAfter: CurrencyAmount;
+  /** 턴 ID */
+  turnId: number;
+  /** 모델 라벨 */
+  modelLabel?: ModelLabel;
+}
+
+/** Economy Store 상태 */
+export interface EconomyStoreState {
+  /** 원장 (최근 N개 엔트리, 최신순) */
+  ledger: LedgerEntry[];
+  /** 현재 예상 비용 (선택한 액션 기반) */
+  costEstimate: CostEstimateState | null;
+  /** 마지막 확정 비용 */
+  lastCost: LastCostState | null;
+  /** 잔액 부족 경고 여부 */
+  isBalanceLow: boolean;
+  /** 잔액 부족 임계값 (Signal 기준) */
+  lowBalanceThreshold: number;
+}
+
+/** Economy Store 액션 */
+export interface EconomyStoreActions {
+  /**
+   * 턴 완료 시 원장에 엔트리를 추가합니다.
+   */
+  addLedgerEntry: (entry: Omit<LedgerEntry, 'timestamp'>) => void;
+
+  /**
+   * 예상 비용을 설정합니다 (카드 선택/호버 시).
+   */
+  setCostEstimate: (estimate: CostEstimateState | null) => void;
+
+  /**
+   * 카드의 비용 정보로 예상 비용을 설정합니다.
+   */
+  setCostEstimateFromCard: (
+    cost: CurrencyAmount,
+    costEstimate: CostEstimate | null,
+    actionId: string,
+    label?: string,
+  ) => void;
+
+  /**
+   * 마지막 확정 비용을 설정합니다 (TurnOutput 반영 시).
+   */
+  setLastCost: (lastCost: LastCostState) => void;
+
+  /**
+   * 잔액 부족 상태를 업데이트합니다.
+   */
+  updateBalanceLowStatus: (currentBalance: CurrencyAmount) => void;
+
+  /**
+   * 잔액 부족 임계값을 설정합니다.
+   */
+  setLowBalanceThreshold: (threshold: number) => void;
+
+  /**
+   * 원장을 초기화합니다.
+   */
+  clearLedger: () => void;
+
+  /**
+   * 전체 상태를 초기화합니다.
+   */
+  reset: () => void;
+}
+
+export type EconomyStore = EconomyStoreState & EconomyStoreActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+function createInitialState(): EconomyStoreState {
+  return {
+    ledger: [],
+    costEstimate: null,
+    lastCost: null,
+    isBalanceLow: false,
+    lowBalanceThreshold: 10, // Signal 10 미만이면 경고
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Economy 상태 스토어.
+ *
+ * 턴별 비용/잔액 변화를 원장(ledger)으로 추적하고,
+ * 예상 비용과 확정 비용을 UI에 제공합니다.
+ *
+ * @example
+ * ```tsx
+ * // 예상 비용 설정 (카드 호버 시)
+ * const setCostEstimateFromCard = useEconomyStore(s => s.setCostEstimateFromCard);
+ * setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
+ *
+ * // 턴 완료 시 원장 기록
+ * const addLedgerEntry = useEconomyStore(s => s.addLedgerEntry);
+ * addLedgerEntry({
+ *   turnId: turnCount,
+ *   reason: 'explore',
+ *   cost: turnOutput.economy.cost,
+ *   balanceAfter: turnOutput.economy.balance_after,
+ * });
+ * ```
+ */
+export const useEconomyStore = create<EconomyStore>((set, get) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+
+  addLedgerEntry: (entry) => {
+    const timestamp = Date.now();
+    const newEntry: LedgerEntry = { ...entry, timestamp };
+
+    set((state) => {
+      // 최신순으로 추가하고 최대 개수 유지 (Q1: Option A)
+      const updatedLedger = [newEntry, ...state.ledger].slice(0, LEDGER_MAX_ENTRIES);
+
+      return {
+        ledger: updatedLedger,
+        lastCost: {
+          cost: entry.cost,
+          balanceAfter: entry.balanceAfter,
+          turnId: entry.turnId,
+          modelLabel: entry.modelLabel,
+        },
+        // 턴 완료 후 예상 비용 초기화
+        costEstimate: null,
+      };
+    });
+  },
+
+  setCostEstimate: (estimate) => {
+    set({ costEstimate: estimate });
+  },
+
+  setCostEstimateFromCard: (cost, costEstimate, actionId, label) => {
+    if (costEstimate) {
+      set({
+        costEstimate: {
+          min: costEstimate.min,
+          max: costEstimate.max,
+          actionId,
+          label,
+        },
+      });
+    } else {
+      // cost_estimate가 없으면 기본 cost를 min/max로 사용
+      set({
+        costEstimate: {
+          min: cost,
+          max: cost,
+          actionId,
+          label,
+        },
+      });
+    }
+  },
+
+  setLastCost: (lastCost) => {
+    set({ lastCost });
+  },
+
+  updateBalanceLowStatus: (currentBalance) => {
+    const { lowBalanceThreshold } = get();
+    const isLow = currentBalance.signal < lowBalanceThreshold;
+    set({ isBalanceLow: isLow });
+  },
+
+  setLowBalanceThreshold: (threshold) => {
+    set({ lowBalanceThreshold: threshold });
+  },
+
+  clearLedger: () => {
+    set({ ledger: [], lastCost: null });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 원장 셀렉터 */
+export const selectLedger = (state: EconomyStore) => state.ledger;
+
+/** 예상 비용 셀렉터 */
+export const selectCostEstimate = (state: EconomyStore) => state.costEstimate;
+
+/** 마지막 확정 비용 셀렉터 */
+export const selectLastCost = (state: EconomyStore) => state.lastCost;
+
+/** 잔액 부족 상태 셀렉터 */
+export const selectIsBalanceLow = (state: EconomyStore) => state.isBalanceLow;
+
+/** 최근 N개 원장 엔트리 셀렉터 */
+export const selectRecentLedger =
+  (count: number) =>
+  (state: EconomyStore): LedgerEntry[] =>
+    state.ledger.slice(0, count);
+
+/** 총 소비 비용 계산 셀렉터 (현재 세션) */
+export const selectTotalSpent = (state: EconomyStore): CurrencyAmount => {
+  return state.ledger.reduce(
+    (acc, entry) => ({
+      signal: acc.signal + entry.cost.signal,
+      memory_shard: acc.memory_shard + entry.cost.memory_shard,
+    }),
+    { signal: 0, memory_shard: 0 },
+  );
+};
+
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
+
+/**
+ * 현재 잔액으로 예상 비용을 감당할 수 있는지 확인합니다.
+ * RULE-005: 잔액 부족 시 실행 강행이 아니라 대체 행동을 제안.
+ */
+export function canAffordCost(
+  balance: CurrencyAmount,
+  cost: CurrencyAmount,
+): { affordable: boolean; shortfall: CurrencyAmount } {
+  const signalShortfall = Math.max(0, cost.signal - balance.signal);
+  const shardShortfall = Math.max(0, cost.memory_shard - balance.memory_shard);
+
+  return {
+    affordable: signalShortfall === 0 && shardShortfall === 0,
+    shortfall: { signal: signalShortfall, memory_shard: shardShortfall },
+  };
+}
+
+/**
+ * 예상 비용의 최대값으로 감당 가능 여부를 확인합니다.
+ */
+export function canAffordEstimate(
+  balance: CurrencyAmount,
+  estimate: CostEstimateState,
+): { affordable: boolean; shortfall: CurrencyAmount } {
+  return canAffordCost(balance, estimate.max);
 }
 </file>
 
@@ -4615,6 +5536,57 @@ describe('AgentConsole (U-037)', () => {
 });
 </file>
 
+<file path="frontend/src/components/GameHeader.tsx">
+import { useTranslation } from 'react-i18next';
+import { UIControls } from './UIControls';
+import { EconomyHudHeader } from './EconomyHud';
+import type { UIScale } from '../stores/uiPrefsStore';
+import { useEconomyStore, selectIsBalanceLow } from '../stores/economyStore';
+
+interface GameHeaderProps {
+  signal: number;
+  memoryShard: number;
+  isConnected: boolean;
+  uiScale: UIScale;
+  onIncreaseScale: () => void;
+  onDecreaseScale: () => void;
+}
+
+export function GameHeader({
+  signal,
+  memoryShard,
+  isConnected,
+  uiScale,
+  onIncreaseScale,
+  onDecreaseScale,
+}: GameHeaderProps) {
+  const { t } = useTranslation();
+  const isBalanceLow = useEconomyStore(selectIsBalanceLow);
+
+  return (
+    <header className="game-header has-chrome">
+      <h1 className="game-title glitch" data-text={t('ui.logo')}>
+        {t('ui.logo')}
+      </h1>
+      <div className="header-controls">
+        {/* UI 스케일 컨트롤 (U-028→U-037: Readable 제거) */}
+        <UIControls
+          uiScale={uiScale}
+          onIncreaseScale={onIncreaseScale}
+          onDecreaseScale={onDecreaseScale}
+        />
+        {/* Economy HUD (U-014: 예상 비용/확정 비용 표시 포함) */}
+        <EconomyHudHeader signal={signal} memoryShard={memoryShard} isLow={isBalanceLow} />
+        <div className="connection-status">
+          <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
+          <span>{isConnected ? t('connection.online') : t('connection.offline')}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+</file>
+
 <file path="frontend/src/components/Panel.tsx">
 import { useTranslation } from 'react-i18next';
 
@@ -6469,337 +7441,6 @@ describe('ActionDeck Component', () => {
 });
 </file>
 
-<file path="frontend/src/components/ActionDeck.tsx">
-/**
- * Unknown World - Action Deck 컴포넌트 (U-009[Mvp]).
- *
- * PRD 요구사항:
- *   - Action Deck(3~6장 카드)을 Footer 영역에 상시 노출
- *   - 각 카드에 예상 비용(최소/최대), 위험도, 보상 힌트 표기 (RULE-005)
- *   - 카드 클릭 시 TurnInput으로 선택된 행동 전송 (RULE-008)
- *   - 잔액 부족 시 실행 불가 표시 + 저비용 대안 노출 (RULE-005)
- *
- * RULE-002 준수: 채팅 버블/메시지 버튼이 아닌 "게임 카드" UI
- *
- * @see vibe/prd.md 6.7 - Action Deck 요구사항
- * @see .cursor/rules/10-frontend-game-ui.mdc
- * @module components/ActionDeck
- */
-
-import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { ActionCard } from '../schemas/turn';
-import { useActionDeckStore } from '../stores/actionDeckStore';
-import { useWorldStore } from '../stores/worldStore';
-import { useAgentStore } from '../stores/agentStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-export interface ActionDeckProps {
-  /** 카드 클릭 콜백 */
-  onCardClick?: (card: ActionCard) => void;
-  /** 전체 비활성화 (스트리밍 중 등, 생략 시 agentStore.isStreaming 사용) */
-  disabled?: boolean;
-}
-
-interface CardDisplayInfo extends ActionCard {
-  /** 클라이언트 측 실행 가능 여부 (서버 enabled가 없을 때 폴백) */
-  isAffordable: boolean;
-  /** 최종 비활성화 여부 */
-  isDisabled: boolean;
-  /** 최종 비활성화 사유 */
-  finalDisabledReason: string | null;
-}
-
-// =============================================================================
-// 기본 카드 생성 (i18n 기반)
-// =============================================================================
-
-function useDefaultCards(): ActionCard[] {
-  const { t } = useTranslation();
-
-  return useMemo(
-    () => [
-      {
-        id: 'default-explore',
-        label: t('action.default.explore.label'),
-        description: t('action.default.explore.description'),
-        cost: { signal: 1, memory_shard: 0 },
-        cost_estimate: null,
-        risk: 'low' as const,
-        hint: null,
-        reward_hint: null,
-        enabled: true,
-        disabled_reason: null,
-        is_alternative: false,
-      },
-      {
-        id: 'default-investigate',
-        label: t('action.default.investigate.label'),
-        description: t('action.default.investigate.description'),
-        cost: { signal: 2, memory_shard: 0 },
-        cost_estimate: null,
-        risk: 'medium' as const,
-        hint: null,
-        reward_hint: null,
-        enabled: true,
-        disabled_reason: null,
-        is_alternative: false,
-      },
-      {
-        id: 'default-talk',
-        label: t('action.default.talk.label'),
-        description: t('action.default.talk.description'),
-        cost: { signal: 1, memory_shard: 0 },
-        cost_estimate: null,
-        risk: 'low' as const,
-        hint: null,
-        reward_hint: null,
-        enabled: true,
-        disabled_reason: null,
-        is_alternative: false,
-      },
-    ],
-    [t],
-  );
-}
-
-// =============================================================================
-// 카드 비용 표시 컴포넌트
-// =============================================================================
-
-interface CardCostDisplayProps {
-  card: CardDisplayInfo;
-}
-
-function CardCostDisplay({ card }: CardCostDisplayProps) {
-  const { t } = useTranslation();
-
-  // 비용 추정 범위가 있으면 min~max 표시, 없으면 기본 cost 표시
-  const costDisplay = card.cost_estimate
-    ? `${card.cost_estimate.min.signal}~${card.cost_estimate.max.signal}`
-    : `${card.cost.signal}`;
-
-  const shardCost = card.cost_estimate
-    ? card.cost_estimate.max.memory_shard
-    : card.cost.memory_shard;
-
-  return (
-    <div className="action-card-cost" data-ui-importance="critical">
-      {/* Signal 비용 */}
-      <span className="cost-item">
-        <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
-          <img
-            src="/ui/icons/signal-16.png"
-            alt=""
-            aria-hidden="true"
-            className="icon-img"
-            style={{ width: 14, height: 14 }}
-            onError={(e) => e.currentTarget.classList.add('hidden')}
-          />
-          <span className="icon-fallback">⚡</span>
-        </span>
-        <span className="cost-value">{costDisplay}</span>
-      </span>
-
-      {/* Shard 비용 (0보다 클 때만 표시) */}
-      {shardCost > 0 && (
-        <span className="cost-item">
-          <span className="cost-separator">|</span>
-          <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
-            <img
-              src="/ui/icons/shard-16.png"
-              alt=""
-              aria-hidden="true"
-              className="icon-img"
-              style={{ width: 14, height: 14 }}
-              onError={(e) => e.currentTarget.classList.add('hidden')}
-            />
-            <span className="icon-fallback">💎</span>
-          </span>
-          <span className="cost-value">
-            {card.cost_estimate
-              ? `${card.cost_estimate.min.memory_shard}~${card.cost_estimate.max.memory_shard}`
-              : card.cost.memory_shard}
-          </span>
-        </span>
-      )}
-
-      {/* 위험도 */}
-      <span className="cost-item">
-        <span className="cost-separator">|</span>
-        <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
-          <img
-            src={`/ui/icons/risk-${card.risk}-16.png`}
-            alt=""
-            aria-hidden="true"
-            className={`icon-img risk-${card.risk}`}
-            style={{ width: 14, height: 14 }}
-            onError={(e) => e.currentTarget.classList.add('hidden')}
-          />
-          <span className="icon-fallback">⚠</span>
-        </span>
-        <span className={`risk-label risk-${card.risk}`}>{t(`action.risk.${card.risk}`)}</span>
-      </span>
-    </div>
-  );
-}
-
-// =============================================================================
-// 단일 카드 컴포넌트
-// =============================================================================
-
-interface ActionCardItemProps {
-  card: CardDisplayInfo;
-  onClick: () => void;
-  disabled: boolean;
-}
-
-function ActionCardItem({ card, onClick, disabled }: ActionCardItemProps) {
-  const { t } = useTranslation();
-
-  const cardClasses = [
-    'action-card',
-    'has-chrome',
-    card.isDisabled ? 'card-disabled' : '',
-    card.is_alternative ? 'card-alternative' : '',
-    `risk-border-${card.risk}`,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <button
-      type="button"
-      className={cardClasses}
-      onClick={onClick}
-      disabled={disabled || card.isDisabled}
-      aria-disabled={disabled || card.isDisabled}
-      title={card.finalDisabledReason ?? card.description ?? undefined}
-    >
-      {/* 대안 카드 표시 */}
-      {card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
-
-      {/* 카드 타이틀 */}
-      <div className="action-card-title">{card.label}</div>
-
-      {/* 카드 설명 (있을 때만) */}
-      {card.description && <div className="action-card-description">{card.description}</div>}
-
-      {/* 비용/위험도 정보 */}
-      <CardCostDisplay card={card} />
-
-      {/* 힌트 영역 */}
-      {(card.hint || card.reward_hint) && (
-        <div className="action-card-hints">
-          {card.hint && (
-            <div className="hint-item hint-risk">
-              <span className="hint-icon">⚠</span>
-              <span className="hint-text">{card.hint}</span>
-            </div>
-          )}
-          {card.reward_hint && (
-            <div className="hint-item hint-reward">
-              <span className="hint-icon">★</span>
-              <span className="hint-text">{card.reward_hint}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 비활성화 오버레이 */}
-      {card.isDisabled && (
-        <div className="card-disabled-overlay">
-          <span className="disabled-reason">
-            {card.finalDisabledReason ?? t('action.insufficient_balance')}
-          </span>
-        </div>
-      )}
-    </button>
-  );
-}
-
-// =============================================================================
-// 메인 Action Deck 컴포넌트
-// =============================================================================
-
-export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckProps) {
-  const { t } = useTranslation();
-  const defaultCards = useDefaultCards();
-
-  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
-  const cards = useActionDeckStore((state) => state.cards);
-  const currentBalance = useWorldStore((state) => state.economy);
-  const isStreaming = useAgentStore((state) => state.isStreaming);
-
-  const disabled = propsDisabled ?? isStreaming;
-
-  // 카드가 없으면 기본 카드 사용
-  const displayCards = cards.length > 0 ? cards : defaultCards;
-
-  // 카드별 실행 가능 여부 계산 (Q1: Option A - 서버 우선, 클라이언트 폴백)
-  const processedCards: CardDisplayInfo[] = useMemo(() => {
-    return displayCards.map((card) => {
-      // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
-      const serverEnabled = card.enabled;
-
-      // 클라이언트 측 잔액 체크 (서버가 판단하지 않았을 때 폴백)
-      const costToCheck = card.cost_estimate?.max ?? card.cost;
-      const isAffordable =
-        currentBalance.signal >= costToCheck.signal &&
-        currentBalance.memory_shard >= costToCheck.memory_shard;
-
-      // 최종 비활성화 여부: 서버 판단 우선, 없으면 클라이언트 판단
-      const isDisabled = !serverEnabled || !isAffordable;
-
-      // 비활성화 사유 결정
-      let finalDisabledReason: string | null = null;
-      if (!serverEnabled && card.disabled_reason) {
-        finalDisabledReason = card.disabled_reason;
-      } else if (!isAffordable) {
-        finalDisabledReason = t('action.insufficient_balance');
-      }
-
-      return {
-        ...card,
-        isAffordable,
-        isDisabled,
-        finalDisabledReason,
-      };
-    });
-  }, [displayCards, currentBalance, t]);
-
-  // 일반 카드와 대안 카드 분리 (대안 카드는 뒤에 배치)
-  const sortedCards = useMemo(() => {
-    const regular = processedCards.filter((c) => !c.is_alternative);
-    const alternatives = processedCards.filter((c) => c.is_alternative);
-    return [...regular, ...alternatives];
-  }, [processedCards]);
-
-  return (
-    <div className="action-deck" role="group" aria-label={t('action.deck_label')}>
-      {sortedCards.map((card) => (
-        <ActionCardItem
-          key={card.id}
-          card={card}
-          onClick={() => onCardClick?.(card)}
-          disabled={disabled}
-        />
-      ))}
-
-      {/* 모든 카드가 비활성화되었을 때 안내 */}
-      {sortedCards.every((c) => c.isDisabled) && !disabled && (
-        <div className="deck-empty-notice">{t('action.all_disabled_notice')}</div>
-      )}
-    </div>
-  );
-}
-
-export default ActionDeck;
-</file>
-
 <file path="frontend/src/components/DndInteraction.test.tsx">
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -7555,389 +8196,6 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 export const selectError = (state: AgentStore) => state.error;
 </file>
 
-<file path="frontend/src/stores/worldStore.ts">
-/**
- * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
- *
- * TurnOutput 반영으로 갱신되는 세션 월드/UI 상태를 SSOT로 관리합니다.
- * App.tsx의 로컬 상태를 이 스토어로 이동하여 책임 경계를 명확히 합니다.
- *
- * 설계 원칙:
- *   - RU-003 Q1 결정: 도메인별 store 분리 (Option A)
- *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
- *   - RULE-006: ko/en i18n 정책 준수
- *
- * 확장 (U-013):
- *   - Quest/Rules/MutationEvent 상태 추가
- *   - applyTurnOutput에서 quests_updated, rules_changed 반영
- *
- * 순환 import 방지:
- *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
- *   - 역방향 import 금지
- *
- * @module stores/worldStore
- */
-
-import { create } from 'zustand';
-import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
-import type { SceneCanvasState } from '../types/scene';
-import { useActionDeckStore } from './actionDeckStore';
-import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/** 재화 상태 */
-export interface EconomyState {
-  signal: number;
-  memory_shard: number;
-}
-
-/** 내러티브 엔트리 */
-export interface NarrativeEntry {
-  turn: number;
-  text: string;
-}
-
-/**
- * 룰 변형 이벤트 (U-013: Mutation Timeline)
- * 규칙이 변경된 시점과 내용을 기록합니다.
- */
-export interface MutationEvent {
-  /** 변형 발생 턴 */
-  turn: number;
-  /** 변형된 규칙 ID */
-  ruleId: string;
-  /** 변형 유형: 추가/수정/제거 */
-  type: 'added' | 'modified' | 'removed';
-  /** 규칙 라벨 (표시용) */
-  label: string;
-  /** 규칙 설명 (선택) */
-  description?: string;
-  /** 타임스탬프 */
-  timestamp: number;
-}
-
-/** World/Session 상태 */
-export interface WorldState {
-  /** 재화 상태 (RULE-005) */
-  economy: EconomyState;
-  /** 연결 상태 */
-  isConnected: boolean;
-  /** Scene Canvas 상태 (U-031) */
-  sceneState: SceneCanvasState;
-  /** Scene Objects (U-010: 핫스팟 오버레이) */
-  sceneObjects: SceneObject[];
-  /** 내러티브 히스토리 */
-  narrativeEntries: NarrativeEntry[];
-  /** 현재 턴 카운트 */
-  turnCount: number;
-
-  // ============ U-013: Quest + Rule Board 확장 ============
-
-  /** 현재 퀘스트/목표 목록 */
-  quests: Quest[];
-  /** 현재 적용 중인 규칙 목록 */
-  activeRules: WorldRule[];
-  /** 룰 변형 이벤트 타임라인 (최신순) */
-  mutationTimeline: MutationEvent[];
-}
-
-/** World Store 액션 */
-export interface WorldActions {
-  /**
-   * TurnOutput을 받아 모든 관련 상태를 업데이트합니다.
-   * 이 메서드가 TurnOutput 반영의 SSOT입니다.
-   */
-  applyTurnOutput: (output: TurnOutput) => void;
-
-  /**
-   * 시스템 내러티브를 추가합니다 (턴 미발생 피드백용).
-   * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
-   */
-  appendSystemNarrative: (text: string) => void;
-
-  /** Scene 상태 설정 */
-  setSceneState: (state: SceneCanvasState) => void;
-
-  /** 연결 상태 설정 */
-  setConnected: (connected: boolean) => void;
-
-  /** 경제 상태 설정 (직접 조작용, 일반적으로 applyTurnOutput 사용) */
-  setEconomy: (economy: EconomyState) => void;
-
-  /** Scene Objects 설정 (직접 조작용) */
-  setSceneObjects: (objects: SceneObject[]) => void;
-
-  /** 초기화 (초기 내러티브 메시지 포함) */
-  initialize: (welcomeMessage: string) => void;
-
-  /** 상태 완전 초기화 */
-  reset: () => void;
-}
-
-export type WorldStore = WorldState & WorldActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-function createInitialState(): WorldState {
-  return {
-    economy: { signal: 100, memory_shard: 5 },
-    isConnected: true,
-    sceneState: { status: 'default', message: '' },
-    sceneObjects: [],
-    narrativeEntries: [],
-    turnCount: 0,
-    // U-013: Quest + Rule Board 초기 상태
-    quests: [],
-    activeRules: [],
-    mutationTimeline: [],
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * World/Session 상태 스토어.
- *
- * TurnOutput 반영의 SSOT로, App.tsx의 로컬 상태를 대체합니다.
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 상태 구독
- * const { economy, narrativeEntries } = useWorldStore();
- *
- * // TurnOutput 반영 (스트림 완료 시)
- * const applyTurnOutput = useWorldStore((state) => state.applyTurnOutput);
- * applyTurnOutput(turnOutput);
- *
- * // 시스템 피드백 추가 (드롭 실패 등)
- * const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
- * appendSystemNarrative('아이템을 사용할 수 없습니다.');
- * ```
- */
-export const useWorldStore = create<WorldStore>((set, get) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-
-  applyTurnOutput: (output) => {
-    const state = get();
-
-    // 1. 턴 카운트 증가
-    const newTurnCount = state.turnCount + 1;
-
-    // 2. 내러티브 추가
-    const newNarrativeEntry: NarrativeEntry = {
-      turn: newTurnCount,
-      text: output.narrative,
-    };
-
-    // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
-    const newEconomy: EconomyState = {
-      signal: output.economy.balance_after.signal,
-      memory_shard: output.economy.balance_after.memory_shard,
-    };
-
-    // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
-    const newSceneObjects = output.ui.objects;
-
-    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
-    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
-    // - 없으면 'default' 상태 유지
-    // - safety.blocked인 경우 'blocked' 상태로 전환
-    let newSceneState: SceneCanvasState;
-    if (output.safety.blocked) {
-      newSceneState = {
-        status: 'blocked',
-        message: output.safety.message ?? undefined,
-      };
-    } else if (output.ui.scene?.image_url) {
-      newSceneState = {
-        status: 'scene',
-        imageUrl: output.ui.scene.image_url,
-        message: output.ui.scene.alt_text ?? undefined,
-      };
-    } else {
-      newSceneState = {
-        status: 'default',
-        message: '',
-      };
-    }
-
-    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
-    // Action Deck 카드 업데이트 (U-009)
-    useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
-
-    // Inventory 업데이트 (U-011)
-    if (output.world.inventory_added.length > 0) {
-      useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
-    }
-    if (output.world.inventory_removed.length > 0) {
-      useInventoryStore.getState().removeItems(output.world.inventory_removed);
-    }
-
-    // 6. Quest 상태 업데이트 (U-013)
-    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
-    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
-    const newQuests = [...state.quests];
-    for (const updatedQuest of output.world.quests_updated) {
-      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
-      if (existingIndex >= 0) {
-        // 기존 퀘스트 업데이트
-        newQuests[existingIndex] = updatedQuest;
-      } else {
-        // 새 퀘스트 추가
-        newQuests.push(updatedQuest);
-      }
-    }
-
-    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
-    const newActiveRules = [...state.activeRules];
-    const newMutationEvents: MutationEvent[] = [];
-    const now = Date.now();
-
-    for (const changedRule of output.world.rules_changed) {
-      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
-      if (existingIndex >= 0) {
-        // 기존 규칙 수정
-        newActiveRules[existingIndex] = changedRule;
-        newMutationEvents.push({
-          turn: newTurnCount,
-          ruleId: changedRule.id,
-          type: 'modified',
-          label: changedRule.label,
-          description: changedRule.description ?? undefined,
-          timestamp: now,
-        });
-      } else {
-        // 새 규칙 추가
-        newActiveRules.push(changedRule);
-        newMutationEvents.push({
-          turn: newTurnCount,
-          ruleId: changedRule.id,
-          type: 'added',
-          label: changedRule.label,
-          description: changedRule.description ?? undefined,
-          timestamp: now,
-        });
-      }
-    }
-
-    // 타임라인에 새 이벤트 추가 (최신순 정렬)
-    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
-
-    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
-    set({
-      turnCount: newTurnCount,
-      narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
-      economy: newEconomy,
-      sceneObjects: newSceneObjects,
-      sceneState: newSceneState,
-      // U-013 확장
-      quests: newQuests,
-      activeRules: newActiveRules,
-      mutationTimeline: updatedTimeline,
-    });
-
-    // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
-    // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
-  },
-
-  appendSystemNarrative: (text) => {
-    set((state) => ({
-      narrativeEntries: [
-        ...state.narrativeEntries,
-        {
-          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
-          text,
-        },
-      ],
-    }));
-  },
-
-  setSceneState: (sceneState) => {
-    set({ sceneState });
-  },
-
-  setConnected: (isConnected) => {
-    set({ isConnected });
-  },
-
-  setEconomy: (economy) => {
-    set({ economy });
-  },
-
-  setSceneObjects: (sceneObjects) => {
-    set({ sceneObjects });
-  },
-
-  initialize: (welcomeMessage) => {
-    set({
-      ...createInitialState(),
-      narrativeEntries: [{ turn: 0, text: welcomeMessage }],
-    });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 경제 상태 셀렉터 */
-export const selectEconomy = (state: WorldStore) => state.economy;
-
-/** Signal 잔액 셀렉터 */
-export const selectSignal = (state: WorldStore) => state.economy.signal;
-
-/** Memory Shard 잔액 셀렉터 */
-export const selectMemoryShard = (state: WorldStore) => state.economy.memory_shard;
-
-/** 연결 상태 셀렉터 */
-export const selectIsConnected = (state: WorldStore) => state.isConnected;
-
-/** Scene 상태 셀렉터 */
-export const selectSceneState = (state: WorldStore) => state.sceneState;
-
-/** Scene Objects 셀렉터 */
-export const selectSceneObjects = (state: WorldStore) => state.sceneObjects;
-
-/** 내러티브 엔트리 셀렉터 */
-export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntries;
-
-/** 턴 카운트 셀렉터 */
-export const selectTurnCount = (state: WorldStore) => state.turnCount;
-
-// ============ U-013: Quest + Rule Board 셀렉터 ============
-
-/** 퀘스트 목록 셀렉터 */
-export const selectQuests = (state: WorldStore) => state.quests;
-
-/** 활성 규칙 목록 셀렉터 */
-export const selectActiveRules = (state: WorldStore) => state.activeRules;
-
-/** 뮤테이션 타임라인 셀렉터 */
-export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
-
-/** 진행 중인 퀘스트 셀렉터 */
-export const selectActiveQuests = (state: WorldStore) =>
-  state.quests.filter((q) => !q.is_completed);
-
-/** 완료된 퀘스트 셀렉터 */
-export const selectCompletedQuests = (state: WorldStore) =>
-  state.quests.filter((q) => q.is_completed);
-</file>
-
 <file path="shared/schemas/turn/turn_input.schema.json">
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -8575,6 +8833,358 @@ describe('executeTurnStream', () => {
 });
 </file>
 
+<file path="frontend/src/components/ActionDeck.tsx">
+/**
+ * Unknown World - Action Deck 컴포넌트 (U-009[Mvp]).
+ *
+ * PRD 요구사항:
+ *   - Action Deck(3~6장 카드)을 Footer 영역에 상시 노출
+ *   - 각 카드에 예상 비용(최소/최대), 위험도, 보상 힌트 표기 (RULE-005)
+ *   - 카드 클릭 시 TurnInput으로 선택된 행동 전송 (RULE-008)
+ *   - 잔액 부족 시 실행 불가 표시 + 저비용 대안 노출 (RULE-005)
+ *
+ * RULE-002 준수: 채팅 버블/메시지 버튼이 아닌 "게임 카드" UI
+ *
+ * @see vibe/prd.md 6.7 - Action Deck 요구사항
+ * @see .cursor/rules/10-frontend-game-ui.mdc
+ * @module components/ActionDeck
+ */
+
+import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ActionCard } from '../schemas/turn';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
+import { useEconomyStore } from '../stores/economyStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+export interface ActionDeckProps {
+  /** 카드 클릭 콜백 */
+  onCardClick?: (card: ActionCard) => void;
+  /** 전체 비활성화 (스트리밍 중 등, 생략 시 agentStore.isStreaming 사용) */
+  disabled?: boolean;
+}
+
+interface CardDisplayInfo extends ActionCard {
+  /** 클라이언트 측 실행 가능 여부 (서버 enabled가 없을 때 폴백) */
+  isAffordable: boolean;
+  /** 최종 비활성화 여부 */
+  isDisabled: boolean;
+  /** 최종 비활성화 사유 */
+  finalDisabledReason: string | null;
+}
+
+// =============================================================================
+// 기본 카드 생성 (i18n 기반)
+// =============================================================================
+
+function useDefaultCards(): ActionCard[] {
+  const { t } = useTranslation();
+
+  return useMemo(
+    () => [
+      {
+        id: 'default-explore',
+        label: t('action.default.explore.label'),
+        description: t('action.default.explore.description'),
+        cost: { signal: 1, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'low' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+      {
+        id: 'default-investigate',
+        label: t('action.default.investigate.label'),
+        description: t('action.default.investigate.description'),
+        cost: { signal: 2, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'medium' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+      {
+        id: 'default-talk',
+        label: t('action.default.talk.label'),
+        description: t('action.default.talk.description'),
+        cost: { signal: 1, memory_shard: 0 },
+        cost_estimate: null,
+        risk: 'low' as const,
+        hint: null,
+        reward_hint: null,
+        enabled: true,
+        disabled_reason: null,
+        is_alternative: false,
+      },
+    ],
+    [t],
+  );
+}
+
+// =============================================================================
+// 카드 비용 표시 컴포넌트
+// =============================================================================
+
+interface CardCostDisplayProps {
+  card: CardDisplayInfo;
+}
+
+function CardCostDisplay({ card }: CardCostDisplayProps) {
+  const { t } = useTranslation();
+
+  // 비용 추정 범위가 있으면 min~max 표시, 없으면 기본 cost 표시
+  const costDisplay = card.cost_estimate
+    ? `${card.cost_estimate.min.signal}~${card.cost_estimate.max.signal}`
+    : `${card.cost.signal}`;
+
+  const shardCost = card.cost_estimate
+    ? card.cost_estimate.max.memory_shard
+    : card.cost.memory_shard;
+
+  return (
+    <div className="action-card-cost" data-ui-importance="critical">
+      {/* Signal 비용 */}
+      <span className="cost-item">
+        <span className="icon-wrapper" aria-label={t('economy.signal_cost')}>
+          <img
+            src="/ui/icons/signal-16.png"
+            alt=""
+            aria-hidden="true"
+            className="icon-img"
+            style={{ width: 14, height: 14 }}
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback">⚡</span>
+        </span>
+        <span className="cost-value">{costDisplay}</span>
+      </span>
+
+      {/* Shard 비용 (0보다 클 때만 표시) */}
+      {shardCost > 0 && (
+        <span className="cost-item">
+          <span className="cost-separator">|</span>
+          <span className="icon-wrapper" aria-label={t('economy.shard_cost')}>
+            <img
+              src="/ui/icons/shard-16.png"
+              alt=""
+              aria-hidden="true"
+              className="icon-img"
+              style={{ width: 14, height: 14 }}
+              onError={(e) => e.currentTarget.classList.add('hidden')}
+            />
+            <span className="icon-fallback">💎</span>
+          </span>
+          <span className="cost-value">
+            {card.cost_estimate
+              ? `${card.cost_estimate.min.memory_shard}~${card.cost_estimate.max.memory_shard}`
+              : card.cost.memory_shard}
+          </span>
+        </span>
+      )}
+
+      {/* 위험도 */}
+      <span className="cost-item">
+        <span className="cost-separator">|</span>
+        <span className="icon-wrapper" aria-label={t('economy.risk_level')}>
+          <img
+            src={`/ui/icons/risk-${card.risk}-16.png`}
+            alt=""
+            aria-hidden="true"
+            className={`icon-img risk-${card.risk}`}
+            style={{ width: 14, height: 14 }}
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback">⚠</span>
+        </span>
+        <span className={`risk-label risk-${card.risk}`}>{t(`action.risk.${card.risk}`)}</span>
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 단일 카드 컴포넌트
+// =============================================================================
+
+interface ActionCardItemProps {
+  card: CardDisplayInfo;
+  onClick: () => void;
+  onHover: (card: CardDisplayInfo | null) => void;
+  disabled: boolean;
+}
+
+function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProps) {
+  const { t } = useTranslation();
+
+  const cardClasses = [
+    'action-card',
+    'has-chrome',
+    card.isDisabled ? 'card-disabled' : '',
+    card.is_alternative ? 'card-alternative' : '',
+    `risk-border-${card.risk}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <button
+      type="button"
+      className={cardClasses}
+      onClick={onClick}
+      onMouseEnter={() => onHover(card)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(card)}
+      onBlur={() => onHover(null)}
+      disabled={disabled || card.isDisabled}
+      aria-disabled={disabled || card.isDisabled}
+      title={card.finalDisabledReason ?? card.description ?? undefined}
+    >
+      {/* 대안 카드 표시 */}
+      {card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
+
+      {/* 카드 타이틀 */}
+      <div className="action-card-title">{card.label}</div>
+
+      {/* 카드 설명 (있을 때만) */}
+      {card.description && <div className="action-card-description">{card.description}</div>}
+
+      {/* 비용/위험도 정보 */}
+      <CardCostDisplay card={card} />
+
+      {/* 힌트 영역 */}
+      {(card.hint || card.reward_hint) && (
+        <div className="action-card-hints">
+          {card.hint && (
+            <div className="hint-item hint-risk">
+              <span className="hint-icon">⚠</span>
+              <span className="hint-text">{card.hint}</span>
+            </div>
+          )}
+          {card.reward_hint && (
+            <div className="hint-item hint-reward">
+              <span className="hint-icon">★</span>
+              <span className="hint-text">{card.reward_hint}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 비활성화 오버레이 */}
+      {card.isDisabled && (
+        <div className="card-disabled-overlay">
+          <span className="disabled-reason">
+            {card.finalDisabledReason ?? t('action.insufficient_balance')}
+          </span>
+        </div>
+      )}
+    </button>
+  );
+}
+
+// =============================================================================
+// 메인 Action Deck 컴포넌트
+// =============================================================================
+
+export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckProps) {
+  const { t } = useTranslation();
+  const defaultCards = useDefaultCards();
+
+  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
+  const cards = useActionDeckStore((state) => state.cards);
+  const currentBalance = useWorldStore((state) => state.economy);
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+  const setCostEstimateFromCard = useEconomyStore((state) => state.setCostEstimateFromCard);
+  const setCostEstimate = useEconomyStore((state) => state.setCostEstimate);
+
+  const disabled = propsDisabled ?? isStreaming;
+
+  // 카드 호버 핸들러 (U-014: 예상 비용 표시)
+  const handleCardHover = useCallback(
+    (card: CardDisplayInfo | null) => {
+      if (card) {
+        setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
+      } else {
+        setCostEstimate(null);
+      }
+    },
+    [setCostEstimateFromCard, setCostEstimate],
+  );
+
+  // 카드가 없으면 기본 카드 사용
+  const displayCards = cards.length > 0 ? cards : defaultCards;
+
+  // 카드별 실행 가능 여부 계산 (Q1: Option A - 서버 우선, 클라이언트 폴백)
+  const processedCards: CardDisplayInfo[] = useMemo(() => {
+    return displayCards.map((card) => {
+      // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
+      const serverEnabled = card.enabled;
+
+      // 클라이언트 측 잔액 체크 (서버가 판단하지 않았을 때 폴백)
+      const costToCheck = card.cost_estimate?.max ?? card.cost;
+      const isAffordable =
+        currentBalance.signal >= costToCheck.signal &&
+        currentBalance.memory_shard >= costToCheck.memory_shard;
+
+      // 최종 비활성화 여부: 서버 판단 우선, 없으면 클라이언트 판단
+      const isDisabled = !serverEnabled || !isAffordable;
+
+      // 비활성화 사유 결정
+      let finalDisabledReason: string | null = null;
+      if (!serverEnabled && card.disabled_reason) {
+        finalDisabledReason = card.disabled_reason;
+      } else if (!isAffordable) {
+        finalDisabledReason = t('action.insufficient_balance');
+      }
+
+      return {
+        ...card,
+        isAffordable,
+        isDisabled,
+        finalDisabledReason,
+      };
+    });
+  }, [displayCards, currentBalance, t]);
+
+  // 일반 카드와 대안 카드 분리 (대안 카드는 뒤에 배치)
+  const sortedCards = useMemo(() => {
+    const regular = processedCards.filter((c) => !c.is_alternative);
+    const alternatives = processedCards.filter((c) => c.is_alternative);
+    return [...regular, ...alternatives];
+  }, [processedCards]);
+
+  return (
+    <div className="action-deck" role="group" aria-label={t('action.deck_label')}>
+      {sortedCards.map((card) => (
+        <ActionCardItem
+          key={card.id}
+          card={card}
+          onClick={() => onCardClick?.(card)}
+          onHover={handleCardHover}
+          disabled={disabled}
+        />
+      ))}
+
+      {/* 모든 카드가 비활성화되었을 때 안내 */}
+      {sortedCards.every((c) => c.isDisabled) && !disabled && (
+        <div className="deck-empty-notice">{t('action.all_disabled_notice')}</div>
+      )}
+    </div>
+  );
+}
+
+export default ActionDeck;
+</file>
+
 <file path="frontend/src/components/AgentConsole.tsx">
 /**
  * Unknown World - Agent Console 컴포넌트.
@@ -9043,6 +9653,402 @@ describe('SceneCanvas Hotspots', () => {
     vi.useRealTimers();
   });
 });
+</file>
+
+<file path="frontend/src/stores/worldStore.ts">
+/**
+ * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
+ *
+ * TurnOutput 반영으로 갱신되는 세션 월드/UI 상태를 SSOT로 관리합니다.
+ * App.tsx의 로컬 상태를 이 스토어로 이동하여 책임 경계를 명확히 합니다.
+ *
+ * 설계 원칙:
+ *   - RU-003 Q1 결정: 도메인별 store 분리 (Option A)
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
+ *   - RULE-006: ko/en i18n 정책 준수
+ *
+ * 확장 (U-013):
+ *   - Quest/Rules/MutationEvent 상태 추가
+ *   - applyTurnOutput에서 quests_updated, rules_changed 반영
+ *
+ * 순환 import 방지:
+ *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
+ *   - 역방향 import 금지
+ *
+ * @module stores/worldStore
+ */
+
+import { create } from 'zustand';
+import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
+import type { SceneCanvasState } from '../types/scene';
+import { useActionDeckStore } from './actionDeckStore';
+import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
+import { useEconomyStore } from './economyStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/** 재화 상태 */
+export interface EconomyState {
+  signal: number;
+  memory_shard: number;
+}
+
+/** 내러티브 엔트리 */
+export interface NarrativeEntry {
+  turn: number;
+  text: string;
+}
+
+/**
+ * 룰 변형 이벤트 (U-013: Mutation Timeline)
+ * 규칙이 변경된 시점과 내용을 기록합니다.
+ */
+export interface MutationEvent {
+  /** 변형 발생 턴 */
+  turn: number;
+  /** 변형된 규칙 ID */
+  ruleId: string;
+  /** 변형 유형: 추가/수정/제거 */
+  type: 'added' | 'modified' | 'removed';
+  /** 규칙 라벨 (표시용) */
+  label: string;
+  /** 규칙 설명 (선택) */
+  description?: string;
+  /** 타임스탬프 */
+  timestamp: number;
+}
+
+/** World/Session 상태 */
+export interface WorldState {
+  /** 재화 상태 (RULE-005) */
+  economy: EconomyState;
+  /** 연결 상태 */
+  isConnected: boolean;
+  /** Scene Canvas 상태 (U-031) */
+  sceneState: SceneCanvasState;
+  /** Scene Objects (U-010: 핫스팟 오버레이) */
+  sceneObjects: SceneObject[];
+  /** 내러티브 히스토리 */
+  narrativeEntries: NarrativeEntry[];
+  /** 현재 턴 카운트 */
+  turnCount: number;
+
+  // ============ U-013: Quest + Rule Board 확장 ============
+
+  /** 현재 퀘스트/목표 목록 */
+  quests: Quest[];
+  /** 현재 적용 중인 규칙 목록 */
+  activeRules: WorldRule[];
+  /** 룰 변형 이벤트 타임라인 (최신순) */
+  mutationTimeline: MutationEvent[];
+}
+
+/** World Store 액션 */
+export interface WorldActions {
+  /**
+   * TurnOutput을 받아 모든 관련 상태를 업데이트합니다.
+   * 이 메서드가 TurnOutput 반영의 SSOT입니다.
+   */
+  applyTurnOutput: (output: TurnOutput) => void;
+
+  /**
+   * 시스템 내러티브를 추가합니다 (턴 미발생 피드백용).
+   * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
+   */
+  appendSystemNarrative: (text: string) => void;
+
+  /** Scene 상태 설정 */
+  setSceneState: (state: SceneCanvasState) => void;
+
+  /** 연결 상태 설정 */
+  setConnected: (connected: boolean) => void;
+
+  /** 경제 상태 설정 (직접 조작용, 일반적으로 applyTurnOutput 사용) */
+  setEconomy: (economy: EconomyState) => void;
+
+  /** Scene Objects 설정 (직접 조작용) */
+  setSceneObjects: (objects: SceneObject[]) => void;
+
+  /** 초기화 (초기 내러티브 메시지 포함) */
+  initialize: (welcomeMessage: string) => void;
+
+  /** 상태 완전 초기화 */
+  reset: () => void;
+}
+
+export type WorldStore = WorldState & WorldActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+function createInitialState(): WorldState {
+  return {
+    economy: { signal: 100, memory_shard: 5 },
+    isConnected: true,
+    sceneState: { status: 'default', message: '' },
+    sceneObjects: [],
+    narrativeEntries: [],
+    turnCount: 0,
+    // U-013: Quest + Rule Board 초기 상태
+    quests: [],
+    activeRules: [],
+    mutationTimeline: [],
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * World/Session 상태 스토어.
+ *
+ * TurnOutput 반영의 SSOT로, App.tsx의 로컬 상태를 대체합니다.
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 상태 구독
+ * const { economy, narrativeEntries } = useWorldStore();
+ *
+ * // TurnOutput 반영 (스트림 완료 시)
+ * const applyTurnOutput = useWorldStore((state) => state.applyTurnOutput);
+ * applyTurnOutput(turnOutput);
+ *
+ * // 시스템 피드백 추가 (드롭 실패 등)
+ * const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
+ * appendSystemNarrative('아이템을 사용할 수 없습니다.');
+ * ```
+ */
+export const useWorldStore = create<WorldStore>((set, get) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+
+  applyTurnOutput: (output) => {
+    const state = get();
+
+    // 1. 턴 카운트 증가
+    const newTurnCount = state.turnCount + 1;
+
+    // 2. 내러티브 추가
+    const newNarrativeEntry: NarrativeEntry = {
+      turn: newTurnCount,
+      text: output.narrative,
+    };
+
+    // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
+    const newEconomy: EconomyState = {
+      signal: output.economy.balance_after.signal,
+      memory_shard: output.economy.balance_after.memory_shard,
+    };
+
+    // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
+    const newSceneObjects = output.ui.objects;
+
+    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
+    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
+    // - 없으면 'default' 상태 유지
+    // - safety.blocked인 경우 'blocked' 상태로 전환
+    let newSceneState: SceneCanvasState;
+    if (output.safety.blocked) {
+      newSceneState = {
+        status: 'blocked',
+        message: output.safety.message ?? undefined,
+      };
+    } else if (output.ui.scene?.image_url) {
+      newSceneState = {
+        status: 'scene',
+        imageUrl: output.ui.scene.image_url,
+        message: output.ui.scene.alt_text ?? undefined,
+      };
+    } else {
+      newSceneState = {
+        status: 'default',
+        message: '',
+      };
+    }
+
+    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
+    // Action Deck 카드 업데이트 (U-009)
+    useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
+
+    // Inventory 업데이트 (U-011)
+    if (output.world.inventory_added.length > 0) {
+      useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
+    }
+    if (output.world.inventory_removed.length > 0) {
+      useInventoryStore.getState().removeItems(output.world.inventory_removed);
+    }
+
+    // Economy Store 업데이트 (U-014: Ledger 기록)
+    const economyStore = useEconomyStore.getState();
+    economyStore.addLedgerEntry({
+      turnId: newTurnCount,
+      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
+      cost: output.economy.cost,
+      balanceAfter: output.economy.balance_after,
+      modelLabel: output.agent_console.badges.includes('schema_ok') ? 'QUALITY' : 'FAST',
+    });
+    // 잔액 부족 상태 업데이트
+    economyStore.updateBalanceLowStatus(newEconomy);
+
+    // 6. Quest 상태 업데이트 (U-013)
+    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
+    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
+    const newQuests = [...state.quests];
+    for (const updatedQuest of output.world.quests_updated) {
+      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
+      if (existingIndex >= 0) {
+        // 기존 퀘스트 업데이트
+        newQuests[existingIndex] = updatedQuest;
+      } else {
+        // 새 퀘스트 추가
+        newQuests.push(updatedQuest);
+      }
+    }
+
+    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
+    const newActiveRules = [...state.activeRules];
+    const newMutationEvents: MutationEvent[] = [];
+    const now = Date.now();
+
+    for (const changedRule of output.world.rules_changed) {
+      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
+      if (existingIndex >= 0) {
+        // 기존 규칙 수정
+        newActiveRules[existingIndex] = changedRule;
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'modified',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      } else {
+        // 새 규칙 추가
+        newActiveRules.push(changedRule);
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'added',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      }
+    }
+
+    // 타임라인에 새 이벤트 추가 (최신순 정렬)
+    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
+
+    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
+    set({
+      turnCount: newTurnCount,
+      narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
+      economy: newEconomy,
+      sceneObjects: newSceneObjects,
+      sceneState: newSceneState,
+      // U-013 확장
+      quests: newQuests,
+      activeRules: newActiveRules,
+      mutationTimeline: updatedTimeline,
+    });
+
+    // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
+    // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
+  },
+
+  appendSystemNarrative: (text) => {
+    set((state) => ({
+      narrativeEntries: [
+        ...state.narrativeEntries,
+        {
+          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
+          text,
+        },
+      ],
+    }));
+  },
+
+  setSceneState: (sceneState) => {
+    set({ sceneState });
+  },
+
+  setConnected: (isConnected) => {
+    set({ isConnected });
+  },
+
+  setEconomy: (economy) => {
+    set({ economy });
+  },
+
+  setSceneObjects: (sceneObjects) => {
+    set({ sceneObjects });
+  },
+
+  initialize: (welcomeMessage) => {
+    set({
+      ...createInitialState(),
+      narrativeEntries: [{ turn: 0, text: welcomeMessage }],
+    });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 경제 상태 셀렉터 */
+export const selectEconomy = (state: WorldStore) => state.economy;
+
+/** Signal 잔액 셀렉터 */
+export const selectSignal = (state: WorldStore) => state.economy.signal;
+
+/** Memory Shard 잔액 셀렉터 */
+export const selectMemoryShard = (state: WorldStore) => state.economy.memory_shard;
+
+/** 연결 상태 셀렉터 */
+export const selectIsConnected = (state: WorldStore) => state.isConnected;
+
+/** Scene 상태 셀렉터 */
+export const selectSceneState = (state: WorldStore) => state.sceneState;
+
+/** Scene Objects 셀렉터 */
+export const selectSceneObjects = (state: WorldStore) => state.sceneObjects;
+
+/** 내러티브 엔트리 셀렉터 */
+export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntries;
+
+/** 턴 카운트 셀렉터 */
+export const selectTurnCount = (state: WorldStore) => state.turnCount;
+
+// ============ U-013: Quest + Rule Board 셀렉터 ============
+
+/** 퀘스트 목록 셀렉터 */
+export const selectQuests = (state: WorldStore) => state.quests;
+
+/** 활성 규칙 목록 셀렉터 */
+export const selectActiveRules = (state: WorldStore) => state.activeRules;
+
+/** 뮤테이션 타임라인 셀렉터 */
+export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
+
+/** 진행 중인 퀘스트 셀렉터 */
+export const selectActiveQuests = (state: WorldStore) =>
+  state.quests.filter((q) => !q.is_completed);
+
+/** 완료된 퀘스트 셀렉터 */
+export const selectCompletedQuests = (state: WorldStore) =>
+  state.quests.filter((q) => q.is_completed);
 </file>
 
 <file path="frontend/src/turn/turnRunner.ts">
@@ -11935,219 +12941,6 @@ export function startTurnStream(input: TurnInput, callbacks: StreamCallbacks): (
 }
 </file>
 
-<file path="frontend/src/locales/ko-KR/translation.json">
-{
-  "demo": {
-    "items": {
-      "keycard-alpha": {
-        "name": "키카드 A"
-      },
-      "medkit": {
-        "name": "응급 키트"
-      },
-      "flashlight": {
-        "name": "손전등"
-      },
-      "data-chip": {
-        "name": "데이터칩"
-      }
-    },
-    "scene": {
-      "terminal": {
-        "label": "터미널",
-        "hint": "활성화된 터미널이다"
-      },
-      "door": {
-        "label": "문",
-        "hint": "잠겨있는 것 같다"
-      }
-    },
-    "quest": {
-      "terminal": {
-        "label": "터미널에 접속하기"
-      },
-      "escape": {
-        "label": "시설 탈출구 찾기"
-      },
-      "collect": {
-        "label": "데이터칩 수집"
-      }
-    },
-    "rule": {
-      "gravity": {
-        "label": "중력 법칙",
-        "description": "물체는 아래로 떨어진다"
-      },
-      "time": {
-        "label": "시간 흐름",
-        "description": "시간은 정상 속도로 흐른다"
-      }
-    }
-  },
-  "quest": {
-    "empty": "[ 목표 없음 ]",
-    "completed": "완료",
-    "section": {
-      "active": "진행 중",
-      "completed": "완료됨"
-    }
-  },
-  "rule_board": {
-    "empty": "[ 규칙 없음 ]",
-    "active_count": "활성 규칙: {{count}}개"
-  },
-  "mutation": {
-    "empty": "[ 변형 이력 없음 ]",
-    "timeline_title": "변형 타임라인",
-    "event_count": "{{count}}개 이벤트",
-    "more_events": "+{{count}}개 더 보기",
-    "turn_label": "T{{turn}}",
-    "type": {
-      "added": "추가됨",
-      "modified": "수정됨",
-      "removed": "제거됨"
-    }
-  },
-  "scene": {
-    "status": {
-      "default": "데이터 대기 중",
-      "loading": "동기화 중...",
-      "offline": "연결 끊김",
-      "blocked": "접근 제한됨",
-      "low_signal": "신호 약함",
-      "image_error": "장면 이미지를 불러올 수 없습니다.",
-      "initial_sync": "전역 데이터 동기화 대기 중...",
-      "syncing": "데이터 동기화 중...",
-      "alt": "장면 이미지"
-    },
-    "hotspot": {
-      "layer_label": "클릭 가능한 오브젝트 영역",
-      "hint_prefix": "힌트",
-      "click_action": "{{label}} 클릭",
-      "drop_hint": "여기에 드롭하여 사용",
-      "drop_action": "{{item}}을(를) {{target}}에 사용",
-      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다.",
-      "demo_hint": "[데모 대상]"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "대기열",
-      "badges": "검증 배지",
-      "repair": "자동 복구",
-      "status": {
-        "idle": "대기 중",
-        "processing": "처리 중"
-      },
-      "badges_empty": "[ 검증 대기 중 ]",
-      "repaired": "(복구됨)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "명령을 입력하세요...",
-    "processing": "처리 중...",
-    "execute": "실행",
-    "wait": "대기",
-    "panel_placeholder": "[ 준비 중 ]",
-    "scale_decrease": "글자 크기 줄이기",
-    "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal 소모",
-    "shard_cost": "Shard 소모",
-    "risk_level": "위험도"
-  },
-  "connection": {
-    "online": "온라인",
-    "offline": "오프라인"
-  },
-  "inventory": {
-    "empty": "[ 아이템 없음 ]",
-    "grid_label": "인벤토리 아이템 목록",
-    "item_label": "{{name}} (수량: {{quantity}})",
-    "drag_hint": "드래그하여 사용"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ 드래그 앤 드롭 영역 ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ 목표/퀘스트 목록 ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ 고정된 기억/단서 ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ 이미지 업로드 슬롯 ]"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "탐색하기",
-        "description": "주변을 살펴본다"
-      },
-      "investigate": {
-        "label": "조사하기",
-        "description": "자세히 살펴본다"
-      },
-      "talk": {
-        "label": "대화하기",
-        "description": "말을 걸어본다"
-      }
-    },
-    "card_select": "카드 선택: {{cardId}}",
-    "deck_label": "행동 선택 카드",
-    "alternative": "대안",
-    "insufficient_balance": "잔액 부족",
-    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
-    "risk": {
-      "low": "낮음",
-      "medium": "보통",
-      "high": "높음"
-    },
-    "cost_range": "{{min}}~{{max}}"
-  },
-  "narrative": {
-    "welcome": "미지의 세계에 오신 것을 환영합니다...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
-  }
-}
-</file>
-
 <file path="frontend/src/components/SceneCanvas.tsx">
 /**
  * Unknown World - Scene Canvas 컴포넌트
@@ -12520,6 +13313,235 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 }
 </file>
 
+<file path="frontend/src/locales/ko-KR/translation.json">
+{
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "키카드 A"
+      },
+      "medkit": {
+        "name": "응급 키트"
+      },
+      "flashlight": {
+        "name": "손전등"
+      },
+      "data-chip": {
+        "name": "데이터칩"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "터미널",
+        "hint": "활성화된 터미널이다"
+      },
+      "door": {
+        "label": "문",
+        "hint": "잠겨있는 것 같다"
+      }
+    },
+    "quest": {
+      "terminal": {
+        "label": "터미널에 접속하기"
+      },
+      "escape": {
+        "label": "시설 탈출구 찾기"
+      },
+      "collect": {
+        "label": "데이터칩 수집"
+      }
+    },
+    "rule": {
+      "gravity": {
+        "label": "중력 법칙",
+        "description": "물체는 아래로 떨어진다"
+      },
+      "time": {
+        "label": "시간 흐름",
+        "description": "시간은 정상 속도로 흐른다"
+      }
+    }
+  },
+  "quest": {
+    "empty": "[ 목표 없음 ]",
+    "completed": "완료",
+    "section": {
+      "active": "진행 중",
+      "completed": "완료됨"
+    }
+  },
+  "rule_board": {
+    "empty": "[ 규칙 없음 ]",
+    "active_count": "활성 규칙: {{count}}개"
+  },
+  "mutation": {
+    "empty": "[ 변형 이력 없음 ]",
+    "timeline_title": "변형 타임라인",
+    "event_count": "{{count}}개 이벤트",
+    "more_events": "+{{count}}개 더 보기",
+    "turn_label": "T{{turn}}",
+    "type": {
+      "added": "추가됨",
+      "modified": "수정됨",
+      "removed": "제거됨"
+    }
+  },
+  "scene": {
+    "status": {
+      "default": "데이터 대기 중",
+      "loading": "동기화 중...",
+      "offline": "연결 끊김",
+      "blocked": "접근 제한됨",
+      "low_signal": "신호 약함",
+      "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "initial_sync": "전역 데이터 동기화 대기 중...",
+      "syncing": "데이터 동기화 중...",
+      "alt": "장면 이미지"
+    },
+    "hotspot": {
+      "layer_label": "클릭 가능한 오브젝트 영역",
+      "hint_prefix": "힌트",
+      "click_action": "{{label}} 클릭",
+      "drop_hint": "여기에 드롭하여 사용",
+      "drop_action": "{{item}}을(를) {{target}}에 사용",
+      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다.",
+      "demo_hint": "[데모 대상]"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "대기열",
+      "badges": "검증 배지",
+      "repair": "자동 복구",
+      "status": {
+        "idle": "대기 중",
+        "processing": "처리 중"
+      },
+      "badges_empty": "[ 검증 대기 중 ]",
+      "repaired": "(복구됨)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "명령을 입력하세요...",
+    "processing": "처리 중...",
+    "execute": "실행",
+    "wait": "대기",
+    "panel_placeholder": "[ 준비 중 ]",
+    "scale_decrease": "글자 크기 줄이기",
+    "scale_increase": "글자 크기 늘리기",
+    "scale_label": "UI 스케일 설정"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal 소모",
+    "shard_cost": "Shard 소모",
+    "risk_level": "위험도",
+    "hud_label": "재화 현황",
+    "estimated_cost": "예상 비용",
+    "confirmed_cost": "확정 비용",
+    "insufficient_funds": "잔액 부족",
+    "low_balance_warning": "잔액이 부족합니다",
+    "alternatives_title": "대안 행동",
+    "alternative_text_only": "텍스트만 생성 (이미지 없음)",
+    "alternative_low_quality": "저품질/빠른 응답 선택",
+    "ledger_title": "최근 원장 이력",
+    "ledger_empty": "[ 이력 없음 ]",
+    "model_label": {
+      "FAST": "빠름",
+      "QUALITY": "고품질",
+      "CHEAP": "저비용",
+      "REF": "참조"
+    }
+  },
+  "connection": {
+    "online": "온라인",
+    "offline": "오프라인"
+  },
+  "inventory": {
+    "empty": "[ 아이템 없음 ]",
+    "grid_label": "인벤토리 아이템 목록",
+    "item_label": "{{name}} (수량: {{quantity}})",
+    "drag_hint": "드래그하여 사용"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ 드래그 앤 드롭 영역 ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ 목표/퀘스트 목록 ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ 고정된 기억/단서 ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ 이미지 업로드 슬롯 ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "탐색하기",
+        "description": "주변을 살펴본다"
+      },
+      "investigate": {
+        "label": "조사하기",
+        "description": "자세히 살펴본다"
+      },
+      "talk": {
+        "label": "대화하기",
+        "description": "말을 걸어본다"
+      }
+    },
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "미지의 세계에 오신 것을 환영합니다...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
+}
+</file>
+
 <file path="frontend/src/App.tsx">
 /**
  * Unknown World - 메인 게임 UI 레이아웃
@@ -12554,6 +13576,7 @@ import { Panel } from './components/Panel';
 import { GameHeader } from './components/GameHeader';
 import { NarrativeFeed } from './components/NarrativeFeed';
 import { AgentConsole } from './components/AgentConsole';
+import { EconomyHud } from './components/EconomyHud';
 import { SceneCanvas, type HotspotClickData } from './components/SceneCanvas';
 import { ActionDeck } from './components/ActionDeck';
 import { InventoryPanel } from './components/InventoryPanel';
@@ -12774,11 +13797,9 @@ function App() {
             <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
               <AgentConsole />
             </Panel>
-            <Panel
-              title={t('panel.memory_pin.title')}
-              hasChrome
-              placeholderKey="panel.memory_pin.placeholder"
-            />
+            <Panel title={t('economy.hud_label')} hasChrome>
+              <EconomyHud />
+            </Panel>
             <Panel title={t('panel.scanner.title')} hasChrome>
               <div className="scanner-slot has-chrome">
                 <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
