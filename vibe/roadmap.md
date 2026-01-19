@@ -4,18 +4,20 @@
 
 ## 진행 현황
 
-**전체**: 41/62 (66%) | **MVP**: 41/49 (84%) | **MMP**: 0/13 (0%)
+**전체**: 31/65 (48%) | **MVP**: 31/52 (60%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-1 | MMP D-5  
+**예상 완료(가정)**: MVP D-5 | MMP D-8  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) / **최근 완료**: [U-015[Mvp]](unit-results/U-015[Mvp].md) (2026-01-19)
+**진행 중(현재 포커스)**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) / **최근 완료**: [U-015[Mvp]](unit-results/U-015[Mvp].md) (2026-01-19)
 
 **블로커**: 없음
 
-**추가 메모**: 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
+**추가 메모**:
+- 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
+- M3 통합 구간에서 “나중에 한 번에 붙이기”로 인한 기술 부채/회귀를 줄이기 위해, 중간 체크포인트(CP-MVP-04~06)를 추가했다(실모델 Hard Gate / 멀티모달 이미지 게이트 / Scanner 업로드 게이트). **ID는 유지**하되, 목표일/Depends 기준으로 실행 순서를 정렬한다.
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -56,8 +58,11 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
 | MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 10/22  | 🚧   |
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
-| MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-18 | 0/10   | ⏸️   |
-| MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-20 | -      | ⏸️   |
+| MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-24 | 1/10   | 🚧   |
+| MVP  | CP-MVP-04 | **✓ 체크포인트: 실모델 Hard Gate**     | 2026-01-21 | -      | ⏸️   |
+| MVP  | CP-MVP-05 | **✓ 체크포인트: 멀티모달 이미지 게이트** | 2026-01-22 | -      | ⏸️   |
+| MVP  | CP-MVP-06 | **✓ 체크포인트: Scanner 업로드 게이트** | 2026-01-23 | -      | ⏸️   |
+| MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-24 | -      | ⏸️   |
 | MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
 | MMP  | CP-MMP-01 | **✓ 체크포인트: 배포/관측 게이트**     | 2026-02-01 | -      | ⏸️   |
 | MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/6    | ⏸️   |
@@ -68,7 +73,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### Turn 계약 + 오케스트레이터 스트리밍
 
 - **완료 기준**: HTTP Streaming(POST)로 Queue/Badges/Auto-repair를 스트리밍하고, 최종 TurnOutput이 스키마/비즈니스 룰을 통과
-- **책임 Unit**: U-005 ~ CP-MVP-01, U-016 ~ U-018
+- **책임 Unit**: U-005 ~ CP-MVP-01, U-016 ~ U-018, CP-MVP-04
 - **상태**: 🚧
 
 ### “채팅이 아닌” 고정 게임 UI + 핵심 인터랙션
@@ -81,12 +86,12 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 - **완료 기준**: 데모프로필 3종 + 즉시 시작/리셋 + SaveGame + 엔딩 리포트 아티팩트 생성
 - **책임 Unit**: U-015, U-025
-- **상태**: ⏸️
+- **상태**: 🚧
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
 - **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원
-- **책임 Unit**: U-019 ~ U-022, U-035, U-036
+- **책임 Unit**: U-019 ~ U-022, U-035, U-036, CP-MVP-05, CP-MVP-06
 - **상태**: ⏸️
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
@@ -104,6 +109,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | R-003 | UI가 채팅처럼 보여 제출/데모 실패   | High | 25%  | 고정 HUD + DnD/핫스팟/스캐너/콘솔 강조 |
 | R-004 | 작은 글씨/CRT 튜닝으로 가독성·정체성 균형 붕괴 | Medium | 25% | UI 스케일 + 중요도(critical/ambient) 기반 효과 분리 + 대비/라인하이트 가이드 + reduced-motion 가드 |
 | R-005 | 에셋 난립/용량 비대화/스타일 불일치  | Medium | 25% | nanobanana mcp 에셋 SSOT + 매니페스트/QA + 예산 상한 + (필요 시) rembg 배경 제거 |
+| R-006 | 통합 구간(M3)에서 체크포인트 부족으로 기술 부채/회귀 누적 | Medium | 30% | 중간 CP 추가(CP-MVP-04~06) + debt-log 기록 + 리플레이로 Hard Gate 회귀 확인 |
 
 ## 메트릭
 
@@ -114,7 +120,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | 이미지 생성 시간(p95)      | -    | < 12s(선택) |
 | Hard Gate 통과율(리플레이) | -    | 100%        |
 
-**기술 부채**: 0h / 한도 8h
+**기술 부채**: 0h(미추정 1건 있음) / 한도 8h  \| SSOT: `vibe/debt-log.md`
 
 ---
 
@@ -129,13 +135,16 @@ ID=[U-016[Mvp]](unit-plans/U-016[Mvp].md) | ⚡Vertex 인증 + google-genai 클�
 ID=[U-017[Mvp]](unit-plans/U-017[Mvp].md) | ⚡Structured Output TurnOutput 생성 + Pydantic 검증 | Depends=U-016,U-005 | ⏸️
 ID=[U-018[Mvp]](unit-plans/U-018[Mvp].md) | ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백 | Depends=U-017 | ⏸️
 ID=[RU-005[Mvp]](unit-plans/RU-005[Mvp].md) | 리팩토링: orchestrator pipeline stages 정리 | Depends=U-018 | ⏸️
+ID=[CP-MVP-04](unit-plans/CP-MVP-04.md) | **체크포인트: 실모델 Hard Gate(스키마/경제/복구)** | Depends=RU-005 | ⏸️
 
 ID=[U-019[Mvp]](unit-plans/U-019[Mvp].md) | ⚡이미지 생성 엔드포인트/잡(조건부) | Depends=U-016,U-017 | ⏸️
 ID=[U-020[Mvp]](unit-plans/U-020[Mvp].md) | ⚡프론트 이미지 Lazy Render(placeholder/폴백) | Depends=U-010,U-019 | ⏸️
 ID=[U-035[Mvp]](unit-plans/U-035[Mvp].md) | 실시간 이미지 생성 시 rembg 배경 제거 통합 | Depends=U-019,U-020 | ⏸️
 ID=[U-036[Mvp]](unit-plans/U-036[Mvp].md) | 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 | Depends=U-017,U-019 | ⏸️
+ID=[CP-MVP-05](unit-plans/CP-MVP-05.md) | **체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)** | Depends=U-035,U-036 | ⏸️
 ID=[U-021[Mvp]](unit-plans/U-021[Mvp].md) | 이미지 이해(Scanner) 백엔드 엔드포인트 | Depends=U-016 | ⏸️
 ID=[U-022[Mvp]](unit-plans/U-022[Mvp].md) | ⚡Scanner 슬롯 UI + 업로드→아이템화 반영 | Depends=U-011,U-021 | ⏸️
+ID=[CP-MVP-06](unit-plans/CP-MVP-06.md) | **체크포인트: Scanner 업로드 게이트(안전/좌표/비용)** | Depends=U-022 | ⏸️
 ID=[RU-006[Mvp]](unit-plans/RU-006[Mvp].md) | 리팩토링: media/artifacts 스토리지 추상화 | Depends=U-022 | ⏸️
 
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
@@ -210,7 +219,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-010[Mvp]](unit-plans/U-010[Mvp].md) - ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox)
+**현재 작업**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) - ⚡Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -239,11 +248,11 @@ pnpm kill
 
 ---
 
-## 일일 스탠드업 (2026-01-17)
+## 일일 스탠드업 (2026-01-19)
 
-**완료**: [U-009[Mvp]](unit-results/U-009[Mvp].md) - ⚡Action Deck(카드+비용/대안) UI 및 연동
+**완료**: [U-015[Mvp]](unit-results/U-015[Mvp].md) - ⚡SaveGame(local) + Reset + Demo Profiles(3종)
 
-**진행중**: [U-010[Mvp]](unit-plans/U-010[Mvp].md) - ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox)
+**진행중**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) - ⚡Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정
 
 **블로커**: 없음
 
