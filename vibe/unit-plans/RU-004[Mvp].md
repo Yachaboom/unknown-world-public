@@ -79,9 +79,10 @@ Demo Profiles/Reset/SaveGame이 추가되며 생기는 중복/불일치를 제�
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Demo Profiles 프리셋은 어디에 두는 게 좋을까?
+- [x] **Q1**: Demo Profiles 프리셋은 어디에 두는 게 좋을까?
   - Option A: `frontend/src/data/demoProfiles.ts` 같은 코드 기반(권장: 타입 안정)
   - Option B: `frontend/public/demo-profiles/*.json` 같은 데이터 파일(편집 용이)
+  **A1**: Option A
 
 ## 참고 자료
 
