@@ -289,6 +289,7 @@ export function saveSaveGame(saveGame: SaveGame): boolean {
 
 /**
  * localStorage에서 SaveGame을 로드합니다.
+ * 마이그레이션이 필요한 경우 자동으로 적용합니다 (RU-004-S2).
  *
  * @returns SaveGame 객체 또는 null (없거나 유효하지 않은 경우)
  */
@@ -307,7 +308,14 @@ export function loadSaveGame(): SaveGame | null {
       return null;
     }
 
-    return result.data;
+    // RU-004-S2: 버전 마이그레이션 적용
+    const migrated = migrateSaveGame(result.data);
+    if (!migrated) {
+      console.warn('[SaveGame] 마이그레이션 실패, 새로 시작 필요');
+      return null;
+    }
+
+    return migrated;
   } catch (error) {
     console.error('[SaveGame] 로드 실패:', error);
     return null;
@@ -327,6 +335,9 @@ export function clearSaveGame(): void {
 
 /**
  * SaveGame이 존재하는지 확인합니다.
+ *
+ * @deprecated RU-004-S2: 이 함수는 키 존재만 확인하므로 "유효한 세이브" 판단에 부적합합니다.
+ *             대신 `getValidSaveGameOrNull()`을 사용하세요.
  */
 export function hasSaveGame(): boolean {
   try {
@@ -334,6 +345,19 @@ export function hasSaveGame(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * 유효한 SaveGame을 반환합니다. 없거나 검증/마이그레이션 실패 시 null을 반환합니다 (RU-004-S2).
+ *
+ * `hasSaveGame()` 대신 이 함수를 사용하면 "Continue 버튼 노출" 판단이 정확해집니다:
+ * - localStorage에 데이터가 있어도 스키마 검증 실패 시 null 반환
+ * - 버전 불일치로 마이그레이션 실패 시 null 반환
+ *
+ * @returns 유효한 SaveGame 또는 null
+ */
+export function getValidSaveGameOrNull(): SaveGame | null {
+  return loadSaveGame();
 }
 
 // =============================================================================

@@ -1,5 +1,30 @@
 # 프로젝트 진행 상황
 
+## [2026-01-22 23:55] RU-004-S2: Continue/Reset 엣지 케이스 및 profileId SSOT 드리프트 해결 완료
+
+### 작업 내용
+
+- **제안서**: [RU-004-S2] 엣지 케이스: Continue/Reset에서 profileId·저장 키·스토어 상태 드리프트(데모 반복성 붕괴)
+- **개선 사항**:
+    - **유효성 기반 Continue**: `hasSaveGame()`(단순 키 존재 확인) 대신 `getValidSaveGameOrNull()`(스키마 및 마이그레이션 검증 포함)을 도입하여 "실제로 복원 가능한 경우"에만 Continue 버튼을 노출하도록 개선
+    - **profileId SSOT 확정**: `SaveGame.profileId`를 단일 진실 공급원(SSOT)으로 설정하고, 로드 시점에 `CURRENT_PROFILE_KEY`를 자동 동기화하여 프로필 드리프트로 인한 리셋/저장 불능 사례 제거
+    - **세션 초기화 표준화**: 프로필 선택, 복원, 리셋 시 `actionDeckStore` 및 `agentStore`를 포함한 모든 관련 스토어를 명시적으로 초기화하여 이전 세션의 UI 잔재(카드, 배지 등) 제거
+    - **안전 폴백 파이프라인**: 세이브 데이터 손상 또는 로드 실패 시 명시적인 클린업(`clearSaveGame`) 후 `profile_select` 화면으로 안전하게 복귀하는 로직 구축
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/save/saveGame.ts`, `frontend/src/stores/actionDeckStore.ts`, `frontend/src/stores/agentStore.ts`
+
+### 기술적 세부사항
+
+- **Validation-First Loading**: `loadSaveGame` 내부에 `migrateSaveGame`을 내장하고, `Zod` 스키마 검증 실패 시 즉시 `null`을 반환하도록 하여 부팅 시점의 상태 정합성 확보
+- **Store Reset Orchestration**: `App.tsx` 내의 세션 전환 지점(Select/Continue/Reset)마다 초기화 대상 스토어 리스트를 표준화하여 데모 반복성(Repeatability) 극대화
+
+### 검증
+
+- **드리프트 복구 확인**: `unknown_world_current_profile` 키 수동 삭제 후 Continue 실행 시 `profileId`가 세이브로부터 정상 복구되고 리셋/자동저장이 동작함을 확인.
+- **UI 클린업 확인**: 리셋 직후 이전 세션의 에이전트 배지 및 액션 카드가 즉시 제거됨을 확인.
+- **손상 데이터 폴백**: 비정상 JSON 주입 시 `profile_select` 화면으로 안전하게 전환됨을 확인.
+
+---
+
 ## [2026-01-22 15:30] RU-004-S1: SaveGame 복원 시 ledger/lastCost/언어 적용 불일치 해결 완료
 
 ### 작업 내용
