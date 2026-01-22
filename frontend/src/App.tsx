@@ -121,13 +121,17 @@ function App() {
 
   /**
    * 저장된 게임을 복원합니다.
+   *
+   * RU-004-S1: async로 전환하여 언어 적용을 await
+   * - 언어 적용 비동기 완료 후 상태 반영
+   * - Economy 복원은 hydrateLedger로 순서/timestamp 보존
    */
-  const restoreSaveGame = useCallback(() => {
+  const restoreSaveGame = useCallback(async (): Promise<boolean> => {
     const saveGame = loadSaveGame();
     if (!saveGame) return false;
 
-    // 언어 설정 적용 (RULE-006)
-    changeLanguage(saveGame.language as SupportedLanguage);
+    // 언어 설정 적용 (RULE-006) - RU-004-S1: await 적용으로 비동기 완료 보장
+    await changeLanguage(saveGame.language as SupportedLanguage);
 
     // Store 상태 복원
     worldStore.reset();
@@ -147,11 +151,9 @@ function App() {
     // 인벤토리 복원
     useInventoryStore.getState().setItems(saveGame.inventory);
 
-    // Economy 복원
+    // Economy 복원 (RU-004-S1: hydrateLedger로 순서/timestamp/lastCost/isBalanceLow 정합성 보장)
     useEconomyStore.getState().reset();
-    for (const entry of saveGame.economyLedger) {
-      useEconomyStore.getState().addLedgerEntry(entry);
-    }
+    useEconomyStore.getState().hydrateLedger(saveGame.economyLedger, saveGame.economy);
 
     return true;
   }, [worldStore]);
@@ -229,9 +231,11 @@ function App() {
 
   /**
    * 저장된 게임을 계속합니다.
+   * RU-004-S1: async로 전환된 restoreSaveGame에 await 적용
    */
-  const handleContinue = useCallback(() => {
-    if (restoreSaveGame()) {
+  const handleContinue = useCallback(async () => {
+    const restored = await restoreSaveGame();
+    if (restored) {
       setGamePhase('playing');
     }
   }, [restoreSaveGame]);
@@ -268,9 +272,10 @@ function App() {
   }, [worldStore]);
 
   // 게임 시작 시 저장된 게임 복원
+  // RU-004-S1: async 함수로 전환된 restoreSaveGame 호출 (void로 처리, 에러는 내부 로깅)
   useEffect(() => {
     if (gamePhase === 'playing' && currentProfileId) {
-      restoreSaveGame();
+      void restoreSaveGame();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

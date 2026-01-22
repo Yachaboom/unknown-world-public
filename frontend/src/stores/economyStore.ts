@@ -99,6 +99,19 @@ export interface EconomyStoreActions {
   addLedgerEntry: (entry: Omit<LedgerEntry, 'timestamp'>) => void;
 
   /**
+   * SaveGame 복원 시 원장을 그대로 주입합니다 (RU-004-S1).
+   *
+   * - ledger는 저장된 순서(최신순)를 유지합니다.
+   * - timestamp는 저장된 값을 보존합니다.
+   * - lastCost는 최신 엔트리(첫 원소) 기준으로 설정합니다.
+   * - isBalanceLow는 전달된 currentBalance로 재계산합니다.
+   *
+   * @param ledger - 저장된 원장 배열 (최신순, timestamp 포함)
+   * @param currentBalance - 복원된 잔액 (isBalanceLow 계산용)
+   */
+  hydrateLedger: (ledger: LedgerEntry[], currentBalance: CurrencyAmount) => void;
+
+  /**
    * 예상 비용을 설정합니다 (카드 선택/호버 시).
    */
   setCostEstimate: (estimate: CostEstimateState | null) => void;
@@ -206,6 +219,34 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
         // 턴 완료 후 예상 비용 초기화
         costEstimate: null,
       };
+    });
+  },
+
+  hydrateLedger: (ledger, currentBalance) => {
+    const { lowBalanceThreshold } = get();
+
+    // LEDGER_MAX_ENTRIES 정책 적용 (저장된 것이 더 많을 경우 대비)
+    const hydratedLedger = ledger.slice(0, LEDGER_MAX_ENTRIES);
+
+    // lastCost는 가장 최신 엔트리(첫 원소) 기준으로 설정
+    const latestEntry = hydratedLedger[0] ?? null;
+    const lastCost: LastCostState | null = latestEntry
+      ? {
+          cost: latestEntry.cost,
+          balanceAfter: latestEntry.balanceAfter,
+          turnId: latestEntry.turnId,
+          modelLabel: latestEntry.modelLabel,
+        }
+      : null;
+
+    // isBalanceLow는 복원된 잔액 기준으로 재계산
+    const isBalanceLow = currentBalance.signal < lowBalanceThreshold;
+
+    set({
+      ledger: hydratedLedger,
+      lastCost,
+      isBalanceLow,
+      costEstimate: null,
     });
   },
 

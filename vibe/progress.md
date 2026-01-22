@@ -1,5 +1,27 @@
 # 프로젝트 진행 상황
 
+## [2026-01-22 15:30] RU-004-S1: SaveGame 복원 시 ledger/lastCost/언어 적용 불일치 해결 완료
+
+### 작업 내용
+
+- **제안서**: [RU-004-S1] 잠재 버그: SaveGame 복원 시 ledger/lastCost/언어 적용 불일치(데모 반복성 붕괴 위험)
+- **개선 사항**:
+    - **언어 복원 안정화**: `restoreSaveGame`을 `async`로 전환하고 `changeLanguage`를 `await` 하도록 수정하여 복원 직후의 언어 불일치(깜빡임) 제거
+    - **Economy 복원 정합성**: `economyStore`에 `hydrateLedger` 전용 액션을 추가하여 저장된 원장(ledger)의 순서와 타임스탬프를 보존하고, 최신 엔트리 기반으로 `lastCost`를 정확히 재설정
+    - **HUD 상태 동기화**: 복원된 잔액을 바탕으로 `isBalanceLow` 경고 상태를 즉시 재계산하여 HUD 가시성 확보
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/stores/economyStore.ts`, `frontend/src/i18n.ts`
+
+### 기술적 세부사항
+
+- **Snapshot Hydration**: 기존의 턴 이벤트 기반 `addLedgerEntry` 대신 스냅샷 주입 방식인 `hydrateLedger`를 도입하여 복원 로직의 순부작용(역전된 순서, 타임스탬프 왜곡) 원천 차단
+- **Async Orchestration**: React 컴포넌트 생명주기 내에서 비동기 I/O(언어 리소스 로딩)가 완료된 후 UI가 렌더링되도록 실행 흐름 조정
+
+### 검증
+
+- **정합성 확인**: Continue 실행 후 Economy HUD의 원장 순서가 최신순으로 유지되고, 마지막 확정 비용이 정확히 표시됨을 확인. 잔액 부족 상태가 복원 즉시 경고로 나타남을 확인.
+
+---
+
 ## [2026-01-19 14:40] U-015[Mvp]: SaveGame(local) + Reset + Demo Profiles(3종) 완료
 
 ### 구현 완료 항목
