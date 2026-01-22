@@ -1,5 +1,29 @@
 # 프로젝트 진행 상황
 
+## [2026-01-23 11:30] RU-004-Q4: 모듈 설계 - 세션 초기화/복원/리셋 SSOT 단일화 완료
+
+### 작업 내용
+
+- **제안서**: [RU-004-Q4] 모듈 설계: 세션 초기화/복원/리셋 SSOT 단일화(App.tsx 의존성 축소)
+- **개선 사항**:
+    - **세션 라이프사이클 모듈화**: `App.tsx`에 흩어져 있던 부팅, 프로필 선택, 복원, 리셋, 프로필 변경 로직을 `sessionLifecycle.ts`로 통합하여 세션 관리의 단일 진실 공급원(SSOT) 구축
+    - **App.tsx 책임 정제**: 세션 관리의 복잡한 비즈니스 로직(스토어 주입, localStorage 동기화 등)을 외부로 위임하고, App 컴포넌트는 레이아웃과 이벤트 라우팅에 집중하도록 의존성 대폭 축소
+    - **스토어 초기화 단일화**: `resetAllSessionStores`를 도입하여 세션 전환 시 모든 관련 스토어(world, inventory, economy, actionDeck, agent)를 원자적으로 초기화함으로써 데모 반복성 및 정합성 보장
+    - **비동기 복원 파이프라인 완성**: `RU-004-S1/S2`에서 정립된 언어 복원 await, `hydrateLedger`, `profileId` 동기화 정책을 세션 모듈 내부에 캡슐화
+- **영향 범위**: `frontend/src/App.tsx`, `frontend/src/save/sessionLifecycle.ts` (신규)
+
+### 기술적 세부사항
+
+- **Encapsulated Lifecycle API**: `bootstrapSession`, `startSessionFromProfile`, `continueSession` 등 명확한 시맨틱을 가진 API를 통해 세션 상태 전이를 선언적으로 관리
+- **Bootstrap Phase SSOT**: 부팅 시점의 `gamePhase`와 `profileId` 결정 로직을 모듈 내 `bootstrapSession`과 `getInitialProfileId`로 일치시켜 부팅 드리프트 위험 제거
+
+### 검증
+
+- **동작 일관성 확인**: 프로필 선택 → 턴 진행 → 새로고침 → Continue 및 Reset 시나리오에서 상태 복원 및 클린업이 기존 정책과 동일하게 작동함을 확인.
+- **의존성 확인**: `App.tsx` 내의 다수 스토어 직접 참조 및 localStorage 유틸리티 직접 참조가 제거되었음을 확인.
+
+---
+
 ## [2026-01-22 23:55] RU-004-S2: Continue/Reset 엣지 케이스 및 profileId SSOT 드리프트 해결 완료
 
 ### 작업 내용

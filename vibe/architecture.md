@@ -31,7 +31,7 @@ D:\Dev\unknown-world\
 │   │       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
 │   ├── src/
 │   │   ├── main.tsx
-│   │   ├── App.tsx         # 레이아웃 통합, 세션 관리 및 이벤트 라우팅
+│   │   ├── App.tsx         # 레이아웃 통합 및 세션 이벤트 라우팅
 │   │   ├── style.css       # 단일 CSS SSOT
 │   │   ├── i18n.ts         # 다국어 설정 SSOT
 │   │   ├── setupTests.ts   # 테스트 환경 설정
@@ -42,8 +42,9 @@ D:\Dev\unknown-world\
 │   │   ├── turn/           # Turn Runner 모듈
 │   │   ├── data/           # 데모 프로필 및 정적 데이터 (U-015)
 │   │   │   └── demoProfiles.ts
-│   │   ├── save/           # 세이브/로드 시스템 (U-015)
-│   │   │   └── saveGame.ts
+│   │   ├── save/           # 세이브/로드 및 세션 관리 시스템 (U-015, RU-004)
+│   │   │   ├── saveGame.ts
+│   │   │   └── sessionLifecycle.ts # 세션 생명주기 SSOT (RU-004-Q4)
 │   │   ├── components/     # 게임 UI 컴포넌트
 │   │   │   ├── ActionDeck.tsx
 │   │   │   ├── AgentConsole.tsx
@@ -193,7 +194,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 
 
-## 11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2)
+11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2, RU-004-Q4)
 
 
 
@@ -217,7 +218,27 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 
 
-2. **유효성 기반 로컬 영속화 (SaveGame)**:
+2. **세션 라이프사이클 SSOT (RU-004-Q4)**:
+
+
+
+    - **중앙 집중화**: 부팅, 선택, 복원, 리셋, 변경 등 모든 세션 전환 이벤트를 `sessionLifecycle.ts` 모듈로 단일화.
+
+
+
+    - **App.tsx 의존성 제거**: App은 비즈니스 로직(스토어 주입 등)을 직접 수행하지 않고 세션 모듈의 API를 호출하는 얇은 인터페이스 역할만 수행.
+
+
+
+    - **원자적 초기화**: `resetAllSessionStores`를 통해 세션 전환 시 모든 관련 스토어를 일괄 초기화하여 이전 세션의 잔재를 완전히 제거.
+
+
+
+
+
+
+
+3. **유효성 기반 로컬 영속화 (SaveGame)**:
 
 
 

@@ -12,6 +12,10 @@
  * - 세션/월드 상태는 worldStore로 이동
  * - TurnOutput 반영은 worldStore.applyTurnOutput으로 단일화
  *
+ * RU-004-Q4: 세션 라이프사이클 SSOT
+ * - 세션 초기화/복원/리셋/변경은 sessionLifecycle 모듈로 단일화
+ * - App.tsx는 세션 API 호출 + UI 전환만 담당
+ *
  * U-015[Mvp]: SaveGame + Reset + Demo Profiles
  * - 프로필 선택 화면 → 게임 시작 플로우
  * - 리셋 버튼으로 프로필 초기 상태로 복구
@@ -49,28 +53,24 @@ import { DemoProfileSelect } from './components/DemoProfileSelect';
 import { ResetButton, ChangeProfileButton } from './components/ResetButton';
 import { useAgentStore } from './stores/agentStore';
 import { useInventoryStore } from './stores/inventoryStore';
-import { useEconomyStore } from './stores/economyStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
 import { useWorldStore } from './stores/worldStore';
 import { useTurnRunner } from './turn/turnRunner';
 import type { ActionCard, DropInput } from './schemas/turn';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
-// U-015: SaveGame 유틸리티
-// RU-004-S2: getValidSaveGameOrNull 도입으로 "유효한 세이브만 Continue" 보장
+// RU-004-Q4: 세션 라이프사이클 SSOT
 import {
-  loadSaveGame,
-  saveSaveGame,
-  clearSaveGame,
-  getValidSaveGameOrNull,
-  createSaveGame,
-  loadCurrentProfileId,
-  saveCurrentProfileId,
-  clearCurrentProfileId,
-} from './save/saveGame';
-import { useActionDeckStore } from './stores/actionDeckStore';
-import { findProfileById, createSaveGameFromProfile, type DemoProfile } from './data/demoProfiles';
-import { getResolvedLanguage, changeLanguage, type SupportedLanguage } from './i18n';
+  bootstrapSession,
+  hasValidSaveGame,
+  startSessionFromProfile,
+  continueSession,
+  resetToCurrentProfile,
+  clearSessionAndReturnToSelect,
+  saveCurrentSession,
+  getInitialProfileId,
+} from './save/sessionLifecycle';
+import type { DemoProfile } from './data/demoProfiles';
 
 // =============================================================================
 // 게임 상태 타입
@@ -86,26 +86,16 @@ function App() {
   const { t } = useTranslation();
 
   // U-015: 게임 진행 상태 (프로필 선택 vs 플레이 중)
-  // RU-004-S2: hasSaveGame() 대신 getValidSaveGameOrNull()로 "유효한 세이브만" 판단
+  // RU-004-Q4: bootstrapSession()으로 초기 phase 결정 (SSOT)
   const [gamePhase, setGamePhase] = useState<GamePhase>(() => {
-    // 유효한 SaveGame이 있으면 바로 플레이 상태로 시작
-    const validSaveGame = getValidSaveGameOrNull();
-    if (validSaveGame) {
-      return 'playing';
-    }
-    return 'profile_select';
+    const bootstrap = bootstrapSession();
+    return bootstrap.phase;
   });
 
   // 현재 선택된 프로필 ID
-  // RU-004-S2: SaveGame.profileId를 SSOT로 사용 (CURRENT_PROFILE_KEY는 캐시 역할)
+  // RU-004-Q4: getInitialProfileId()로 초기 profileId 결정 (SSOT)
   const [currentProfileId, setCurrentProfileId] = useState<string | null>(() => {
-    // 유효한 SaveGame이 있으면 그 profileId를 사용
-    const validSaveGame = getValidSaveGameOrNull();
-    if (validSaveGame?.profileId) {
-      return validSaveGame.profileId;
-    }
-    // 폴백: CURRENT_PROFILE_KEY (호환성)
-    return loadCurrentProfileId();
+    return getInitialProfileId();
   });
 
   // 로컬 UI 상태
@@ -126,209 +116,87 @@ function App() {
   }, [uiScale]);
 
   // ==========================================================================
-  // U-015: 프로필/세이브 관련 로직
+  // U-015 + RU-004-Q4: 프로필/세이브 관련 로직 (sessionLifecycle SSOT)
   // ==========================================================================
-
-  /**
-   * 저장된 게임을 복원합니다.
-   *
-   * RU-004-S1: async로 전환하여 언어 적용을 await
-   * - 언어 적용 비동기 완료 후 상태 반영
-   * - Economy 복원은 hydrateLedger로 순서/timestamp 보존
-   *
-   * RU-004-S2: profileId 확정/복구 추가
-   * - SaveGame.profileId를 SSOT로 사용하여 currentProfileId 확정
-   * - CURRENT_PROFILE_KEY도 동기화하여 드리프트 방지
-   * - actionDeckStore/agentStore도 초기화
-   */
-  const restoreSaveGame = useCallback(async (): Promise<boolean> => {
-    const saveGame = loadSaveGame();
-    if (!saveGame) return false;
-
-    // RU-004-S2: profileId 확정 (SaveGame.profileId가 SSOT)
-    if (saveGame.profileId) {
-      setCurrentProfileId(saveGame.profileId);
-      saveCurrentProfileId(saveGame.profileId); // localStorage 동기화
-    }
-
-    // 언어 설정 적용 (RULE-006) - RU-004-S1: await 적용으로 비동기 완료 보장
-    await changeLanguage(saveGame.language as SupportedLanguage);
-
-    // RU-004-S2: 세션 초기화 시 모든 관련 store를 reset (이전 세션 잔재 제거)
-    worldStore.reset();
-    useActionDeckStore.getState().reset();
-    useAgentStore.getState().reset();
-
-    // Store 상태 복원
-    useWorldStore.setState({
-      economy: {
-        signal: saveGame.economy.signal,
-        memory_shard: saveGame.economy.memory_shard,
-      },
-      turnCount: saveGame.turnCount,
-      narrativeEntries: saveGame.narrativeHistory,
-      quests: saveGame.quests,
-      activeRules: saveGame.activeRules,
-      mutationTimeline: saveGame.mutationTimeline,
-      sceneObjects: saveGame.sceneObjects,
-    });
-
-    // 인벤토리 복원
-    useInventoryStore.getState().setItems(saveGame.inventory);
-
-    // Economy 복원 (RU-004-S1: hydrateLedger로 순서/timestamp/lastCost/isBalanceLow 정합성 보장)
-    useEconomyStore.getState().reset();
-    useEconomyStore.getState().hydrateLedger(saveGame.economyLedger, saveGame.economy);
-
-    return true;
-  }, [worldStore]);
-
-  /**
-   * 현재 상태를 저장합니다.
-   */
-  const saveCurrentState = useCallback(() => {
-    if (!currentProfileId) return;
-
-    const state = useWorldStore.getState();
-    const economyState = useEconomyStore.getState();
-    const inventoryState = useInventoryStore.getState();
-
-    const saveGame = createSaveGame({
-      language: getResolvedLanguage(),
-      profileId: currentProfileId,
-      economy: state.economy,
-      economyLedger: economyState.ledger,
-      turnCount: state.turnCount,
-      narrativeHistory: state.narrativeEntries,
-      inventory: inventoryState.items,
-      quests: state.quests,
-      activeRules: state.activeRules,
-      mutationTimeline: state.mutationTimeline,
-      sceneObjects: state.sceneObjects,
-    });
-
-    saveSaveGame(saveGame);
-  }, [currentProfileId]);
 
   /**
    * 프로필을 선택하고 게임을 시작합니다.
    *
-   * RU-004-S2: 세션 초기화 시 actionDeckStore/agentStore도 reset
+   * RU-004-Q4: sessionLifecycle.startSessionFromProfile 호출
    */
   const handleSelectProfile = useCallback(
     (profile: DemoProfile) => {
-      // 언어 설정 유지
-      const language = getResolvedLanguage();
-
-      // 프로필에서 SaveGame 생성
-      const saveGame = createSaveGameFromProfile(profile, language, t);
-
-      // RU-004-S2: 세션 초기화 시 모든 관련 store를 reset (이전 세션 잔재 제거)
-      worldStore.reset();
-      useInventoryStore.getState().reset();
-      useEconomyStore.getState().reset();
-      useActionDeckStore.getState().reset();
-      useAgentStore.getState().reset();
-
-      useWorldStore.setState({
-        economy: {
-          signal: saveGame.economy.signal,
-          memory_shard: saveGame.economy.memory_shard,
-        },
-        turnCount: 0,
-        narrativeEntries: saveGame.narrativeHistory,
-        quests: saveGame.quests,
-        activeRules: saveGame.activeRules,
-        mutationTimeline: saveGame.mutationTimeline,
-        sceneObjects: saveGame.sceneObjects,
-      });
-
-      useInventoryStore.getState().setItems(saveGame.inventory);
-
-      // 프로필 ID 저장
-      setCurrentProfileId(profile.id);
-      saveCurrentProfileId(profile.id);
-
-      // SaveGame 저장
-      saveSaveGame(saveGame);
-
-      // 게임 시작
-      setGamePhase('playing');
+      const result = startSessionFromProfile({ profile, t });
+      if (result.success) {
+        setCurrentProfileId(result.profileId);
+        setGamePhase('playing');
+      }
     },
-    [t, worldStore],
+    [t],
   );
 
   /**
    * 저장된 게임을 계속합니다.
-   * RU-004-S1: async로 전환된 restoreSaveGame에 await 적용
-   * RU-004-S2: 로드 실패 시 클린업 + profile_select 폴백
+   *
+   * RU-004-Q4: sessionLifecycle.continueSession 호출
    */
   const handleContinue = useCallback(async () => {
-    const restored = await restoreSaveGame();
-    if (restored) {
+    const result = await continueSession();
+    if (result) {
+      setCurrentProfileId(result.profileId);
       setGamePhase('playing');
     } else {
-      // RU-004-S2: 로드 실패 시 클린업하고 profile_select로 폴백
-      // 손상된 세이브를 제거하여 다음 Continue 시 혼란 방지
-      clearSaveGame();
-      clearCurrentProfileId();
+      // 로드 실패 시 profile_select로 폴백
       setCurrentProfileId(null);
       setGamePhase('profile_select');
-      // 시스템 안내는 profile_select 화면에서 표시 (채팅 버블 금지)
       console.warn('[App] SaveGame 복원 실패, 새로 시작');
     }
-  }, [restoreSaveGame]);
+  }, []);
 
   /**
    * 현재 프로필의 초기 상태로 리셋합니다.
+   *
+   * RU-004-Q4: sessionLifecycle.resetToCurrentProfile 호출
    */
   const handleReset = useCallback(() => {
-    if (!currentProfileId) return;
-
-    const profile = findProfileById(currentProfileId);
-    if (!profile) return;
-
-    // 프로필 초기 상태로 다시 시작
-    handleSelectProfile(profile);
-  }, [currentProfileId, handleSelectProfile]);
+    const result = resetToCurrentProfile({ t, currentProfileId });
+    if (result.success && result.profileId) {
+      setCurrentProfileId(result.profileId);
+      // 게임 상태는 이미 playing이므로 별도 설정 불필요
+    }
+  }, [t, currentProfileId]);
 
   /**
    * 프로필 선택 화면으로 돌아갑니다.
    *
-   * RU-004-S2: 세션 초기화 시 actionDeckStore/agentStore도 reset
+   * RU-004-Q4: sessionLifecycle.clearSessionAndReturnToSelect 호출
    */
   const handleChangeProfile = useCallback(() => {
-    // 세이브 및 프로필 초기화
-    clearSaveGame();
-    clearCurrentProfileId();
+    clearSessionAndReturnToSelect();
     setCurrentProfileId(null);
-
-    // RU-004-S2: 세션 초기화 시 모든 관련 store를 reset (이전 세션 잔재 제거)
-    worldStore.reset();
-    useInventoryStore.getState().reset();
-    useEconomyStore.getState().reset();
-    useActionDeckStore.getState().reset();
-    useAgentStore.getState().reset();
-
-    // 프로필 선택 화면으로
     setGamePhase('profile_select');
-  }, [worldStore]);
+  }, []);
 
   // 게임 시작 시 저장된 게임 복원
-  // RU-004-S1: async 함수로 전환된 restoreSaveGame 호출 (void로 처리, 에러는 내부 로깅)
+  // RU-004-Q4: sessionLifecycle.continueSession 호출
   useEffect(() => {
     if (gamePhase === 'playing' && currentProfileId) {
-      void restoreSaveGame();
+      void continueSession().then((result) => {
+        if (result) {
+          setCurrentProfileId(result.profileId);
+        }
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 턴 완료 시 자동 저장 (turnCount 변화 감지)
+  // RU-004-Q4: sessionLifecycle.saveCurrentSession 호출
   useEffect(() => {
     if (gamePhase === 'playing' && narrativeEntries.length > 0) {
-      saveCurrentState();
+      saveCurrentSession(currentProfileId);
     }
-  }, [gamePhase, narrativeEntries.length, saveCurrentState]);
+  }, [gamePhase, narrativeEntries.length, currentProfileId]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
   const turnRunnerDeps = useMemo(
@@ -470,11 +338,10 @@ function App() {
 
   // ==========================================================================
   // 렌더링: 프로필 선택 화면
-  // RU-004-S2: hasSaveGame() 대신 getValidSaveGameOrNull()으로 "유효한 세이브만" Continue 노출
+  // RU-004-Q4: hasValidSaveGame()으로 "유효한 세이브만" Continue 노출
   // ==========================================================================
   if (gamePhase === 'profile_select') {
-    const validSaveGame = getValidSaveGameOrNull();
-    const hasSavedGame = validSaveGame !== null;
+    const hasSavedGame = hasValidSaveGame();
     return (
       <>
         <div className="crt-overlay" aria-hidden="true" />
