@@ -1,0 +1,31 @@
+"""Unknown World - 서비스 레이어 패키지.
+
+이 패키지는 외부 서비스와의 통신을 담당하는 모듈을 관리합니다.
+GenAI 클라이언트, 스토리지 클라이언트 등이 포함됩니다.
+
+참조:
+    - vibe/tech-stack.md (google-genai 버전, Vertex AI 인증)
+    - .cursor/rules/20-backend-orchestrator.mdc (Vertex 인증/비밀정보 금지)
+"""
+
+from unknown_world.services.genai_client import (
+    GenAIClient,
+    GenAIClientType,
+    GenAIMode,
+    GenerateRequest,
+    GenerateResponse,
+    MockGenAIClient,
+    get_genai_client,
+    reset_genai_client,
+)
+
+__all__ = [
+    "GenAIClient",
+    "GenAIClientType",
+    "GenAIMode",
+    "GenerateRequest",
+    "GenerateResponse",
+    "MockGenAIClient",
+    "get_genai_client",
+    "reset_genai_client",
+]

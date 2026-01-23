@@ -1,6 +1,38 @@
 # 프로젝트 진행 상황
 
-## [2026-01-24 16:20] RU-004[Mvp]: 리팩토링 - SaveGame/초기상태/데모 프로필 정리 완료
+## [2026-01-24 17:10] U-016[Mvp]: Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Vertex AI 서비스 계정 인증 기반 `google-genai` 클라이언트 래퍼 및 모델 라벨/ID SSOT 체계 구축
+- **추가 컴포넌트**: `genai_client.py` (클라이언트 래퍼), `models.py` (모델 설정), `vibe/unit-results/U-016[Mvp].md`
+- **달성 요구사항**: [RULE-007] BYOK 금지(서비스계정), [RULE-010] 기술 스택/모델 버전 고정, [RULE-008] 프롬프트 원문 노출 금지
+
+### 기술적 구현 세부사항
+
+**GenAI 아키텍처**:
+- **Unified Client Wrapper**: `google-genai` SDK(1.56.0)를 캡슐화하여 `generate` 및 `generate_stream` 표준 인터페이스 제공
+- **Model Labeling SSOT**: `tech-stack.md`의 모델 ID(Gemini 3 프리뷰)를 `ModelLabel`(`FAST`, `QUALITY`, `IMAGE`, `VISION`)로 추상화하여 모델 교체 유연성 확보
+- **Hybrid Mode (Real/Mock)**: 환경변수 `UW_MODE`에 따라 실제 Vertex AI 호출과 로컬 개발용 Mock 응답을 원활하게 전환
+
+**보안 및 운영**:
+- **Vertex AI Service Account**: `GOOGLE_APPLICATION_CREDENTIALS`를 통한 백엔드 전용 인증 구현 (사용자 API 키 요구 금지)
+- **Privacy-First Logging**: 로그 기록 시 프롬프트 원문과 내부 추론을 제외하고 모델 라벨, 토큰 사용량 등 메타데이터만 남기도록 설계
+
+### 코드 구조
+repo-root/
+└── backend/
+    ├── src/unknown_world/
+    │   ├── config/
+    │   │   └── models.py (모델 ID/라벨 SSOT)
+    │   └── services/
+    │       └── genai_client.py (클라이언트 래퍼 및 팩토리)
+    └── .env.example (GenAI 설정 템플릿 추가)
+
+### 다음 단계
+- [U-017[Mvp]] Structured Output TurnOutput 생성 + Pydantic 검증
+
+---
 
 ### 구현 완료 항목
 

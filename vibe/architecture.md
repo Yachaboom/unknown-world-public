@@ -46,12 +46,19 @@ D:\Dev\unknown-world\
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
 │   ├── pyproject.toml
 │   ├── uv.lock
+│   ├── .env.example        # 환경 변수 설정 템플릿 (U-016)
 │   ├── src/
 │   │   └── unknown_world/
 │   │       ├── main.py
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
+│   │       ├── config/     # 모델 ID 및 라벨 SSOT (U-016)
+│   │       │   ├── __init__.py
+│   │       │   └── models.py
 │   │       ├── models/     # Pydantic 데이터 모델
-│   │       └── orchestrator/ # 오케스트레이션 엔진
+│   │       ├── orchestrator/ # 오케스트레이션 엔진
+│   │       └── services/    # 외부 서비스 연동 (U-016)
+│   │           ├── __init__.py
+│   │           └── genai_client.py (Vertex AI/google-genai 래퍼)
 ├── vibe/                  # SSOT 문서 저장소
 │   ├── architecture.md     # 시스템 아키텍처 및 구조 가이드
 │   ├── progress.md         # 작업 진행 이력 및 로그
@@ -64,7 +71,7 @@ D:\Dev\unknown-world\
 ### 주요 디렉토리 책임
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
-- **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini 연동 담당.
+- **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini(Vertex AI) 연동 담당. 서비스 계정 인증을 통한 보안 모델 호출 관리.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
 - **`vibe/`**: 프로젝트의 모든 명세, 진행 상황, 개발 계획 및 결과 보고서를 기록하는 단일 진실 공급원(SSOT).
     - `unit-plans/`: 각 개발 유닛의 목표, 범위, 완료 기준을 사전에 정의.
@@ -240,11 +247,20 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
     - **상태 재계산**: 복원된 잔액을 기준으로 `isBalanceLow` 등 유도된 상태(derived state)를 즉시 갱신하여 HUD 일관성 확보.
 
+## 12. GenAI 연동 및 모델 정책 (U-016[Mvp])
 
-
-
-
-
+1. **모델 라벨링 SSOT**:
+    - 모델 ID 원문 대신 **라벨**(`FAST`, `QUALITY`, `IMAGE`, `VISION`)을 사용하여 코드와 정책을 분리함.
+    - `config/models.py`를 단일 진실 공급원(SSOT)으로 삼아 `tech-stack.md`의 모델 ID와 1:1 매핑함.
+2. **Vertex AI 인증 체계**:
+    - **서비스 계정 인증**: `GOOGLE_APPLICATION_CREDENTIALS`를 통한 백엔드 전용 인증을 사용하여 보안을 강화함.
+    - **BYOK 금지 (RULE-007)**: 사용자에게 API 키 입력을 요구하지 않으며, 모든 호출은 백엔드 서비스 계정을 경유함.
+3. **Hybrid Client (Mock/Real)**:
+    - 환경변수 `UW_MODE`에 따라 실제 API 호출(`real`)과 모의 응답(`mock`)을 선택적으로 운용함.
+    - 실제 클라이언트 초기화 실패 시 시스템 가용성 유지를 위해 자동으로 Mock 모드로 폴백함.
+4. **보안 및 개인정보 보호 (RULE-007/008)**:
+    - **프롬프트 은닉**: 로그 및 UI에는 프롬프트 원문이나 내부 추론(CoT)을 노출하지 않고 메타데이터(라벨, 버전, 사용량)만 기록함.
+    - **비밀정보 보호**: 인증 키 파일 및 민감한 환경변수가 코드 저장소에 커밋되지 않도록 `.gitignore` 및 보안 가이드라인을 철저히 준수함.
 
 ---
 

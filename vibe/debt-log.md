@@ -1,16 +1,13 @@
-## [2026-01-12] 이슈: Chrome 에셋(scanner-frame) 용량 최적화 필요
+# Unknown World 부채 로그 (Debt Log)
 
-- **발견 위치**: `frontend/public/ui/chrome/scanner-frame.png`
-- **현상**: 파일 크기가 약 100KB로, 초기 Chrome 에셋 예산(50KB)을 초과함. (현재 예산을 120KB로 임시 상향 조정하여 대응)
-- **추정 원인**: 346x200 해상도의 고품질 텍스처 및 투명도가 포함된 PNG 포맷 특성상 용량이 큼.
-- **보류 사유**: U-033[Mvp]의 목표는 "QA 프로세스 도입"이며, 당장 이미지 품질을 저하시키지 않고 예산을 조정하는 것으로 합의함. 추후 MMP 단계에서 WebP 변환 또는 추가 최적화 고려 필요.
+이 문서는 발견되었으나 당장 해결하지 못한 기술 부채, 버그, 개선 사항을 기록합니다.
+유닛 작업 중 발견된 이슈가 범위 밖일 경우 여기에 기록하고 다음 단계로 넘깁니다.
 
 ---
 
-## ✅ 해결된 기술 부채 (Resolved Debt)
+## 2026-01-24 이슈: 에셋 요청 스키마 검증 실패 (U-034 관련)
 
-### [2026-01-18] SceneCanvas의 `scene(imageUrl)` 전이 SSOT 확정 (RU-003-T1)
-
-- **해결 내용**: `TurnOutput` 스키마에 `ui.scene.image_url` 필드를 추가하고, `worldStore`에서 이를 기반으로 한 상태 전이 자동화 로직을 구축함.
-- **결과**: `App.tsx`의 "미정" TODO 제거 및 Scene 상태 결정권의 계약(Schema) 이관 완료.
-- **관련 작업**: [RU-003-T1] 리팩토링 완료 내역 참조 (vibe/progress.md)
+- **발견 위치**: backend/tests/unit/test_u034_verification.py
+- **현상**: test_schema_required_properties 테스트에서 'rembg_model' 필드가 스키마에 없다는 AssertionError 발생.
+- **추정 원인**: vibe/ref/nanobanana-asset-request.schema.json 파일에 'rembg_model' 필드가 정의되지 않았거나 이름이 다름.
+- **보류 사유**: 이번 유닛(U-016[Mvp]) 범위 밖이며, GenAI 클라이언트 구현과는 무관한 에셋 제작용 스키마 이슈임.
