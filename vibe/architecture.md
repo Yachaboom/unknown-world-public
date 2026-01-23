@@ -14,56 +14,33 @@ D:\Dev\unknown-world\
 ├── .gitignore             # 비밀정보 및 빌드 결과물 제외
 ├── package.json           # 루트 개발 스크립트 및 프로세스 제어
 ├── code-base.xml          # 프로젝트 스냅샷 (Repomix)
+├── shared/                # 공유 리소스 (SSOT)
+│   └── schemas/
+│       └── turn/           # JSON Schema SSOT (Input/Output)
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── index.html
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tsconfig.node.json
-│   ├── vite.config.ts
 │   ├── public/             # 정적 에셋
-│   │   └── ui/             # UI 이미지 에셋 SSOT (U-030, U-033)
-│   │       ├── README.md   # 제작/관리 규칙
-│   │       ├── QA_CHECKLIST.md # 품질 검증 체크리스트 (U-033)
-│   │       ├── manifest.json # 에셋 목록 및 메타데이터 (U-033)
-│   │       ├── manifest.schema.json # 매니페스트 스키마
-│   │       ├── chrome/     # UI 장식/프레임 에셋 (U-032)
-│   │       ├── icons/      # UI 아이콘 세트 (24px/16px) (U-038)
-│   │       └── placeholders/ # Scene 플레이스홀더 (U-029, U-031)
+│   │   └── ui/             # UI 이미지 에셋 SSOT
+│   │       ├── manifest.json
+│   │       ├── chrome/
+│   │       ├── icons/
+│   │       └── placeholders/
 │   ├── src/
-│   │   ├── main.tsx
 │   │   ├── App.tsx         # 레이아웃 통합 및 세션 이벤트 라우팅
 │   │   ├── style.css       # 단일 CSS SSOT
 │   │   ├── i18n.ts         # 다국어 설정 SSOT
-│   │   ├── setupTests.ts   # 테스트 환경 설정
-│   │   ├── vite-env.d.ts
 │   │   ├── api/            # HTTP Streaming 클라이언트
+│   │   ├── components/     # 게임 UI 컴포넌트 (ActionDeck, Canvas 등)
+│   │   ├── data/           # 데모 프로필 및 정적 데이터 (demoProfiles.ts)
 │   │   ├── demo/           # 데모용 Mock 데이터 및 피처
 │   │   ├── dnd/            # DnD 데이터 계약 및 타입 SSOT
-│   │   ├── turn/           # Turn Runner 모듈
-│   │   ├── data/           # 데모 프로필 및 정적 데이터 (U-015)
-│   │   │   └── demoProfiles.ts
-│   ├── save/           # 세이브/로드 및 세션 관리 시스템 (U-015, RU-004)
-│   │   ├── saveGame.ts
-│   │   ├── constants.ts    # 세이브/정책 상수 SSOT (RU-004-Q5)
-│   │   └── sessionLifecycle.ts # 세션 생명주기 SSOT (RU-004-Q4)
-│   ├── components/     # 게임 UI 컴포넌트
-│   │   │   ├── ActionDeck.tsx
-│   │   │   ├── AgentConsole.tsx
-│   │   │   ├── InventoryPanel.tsx
-│   │   │   ├── SceneCanvas.tsx
-│   │   │   ├── EconomyHud.tsx (U-014)
-│   │   │   ├── QuestPanel.tsx (U-013)
-│   │   │   ├── RuleBoard.tsx (U-013)
-│   │   │   ├── MutationTimeline.tsx (U-013)
-│   │   │   ├── DemoProfileSelect.tsx (U-015)
-│   │   │   └── ResetButton.tsx (U-015)
-│   │   ├── locales/        # 다국어 리소스 JSON
+│   │   ├── save/           # 세이브/로드 및 세션 관리 시스템 (RU-004)
+│   │   │   ├── constants.ts    # 정책 상수 SSOT (RU-004-Q5)
+│   │   │   ├── saveGame.ts     # 생성/검증 단일화 (RU-004-Q1)
+│   │   │   └── sessionLifecycle.ts # 세션 생명주기 SSOT (RU-004-Q4)
 │   │   ├── schemas/        # 클라이언트 측 스키마 및 검증 (Zod)
-│   │   ├── stores/         # 상태 관리 (Zustand)
-│   │   │   ├── agentStore.ts
-│   │   │   ├── inventoryStore.ts
-│   │   │   ├── economyStore.ts (U-014)
-│   │   │   └── worldStore.ts
+│   │   ├── stores/         # 상태 관리 (world, economy, inventory 등)
+│   │   ├── turn/           # Turn Runner 모듈
 │   │   ├── types/          # 공통 타입 정의
 │   │   └── utils/          # 공통 유틸리티 (box2d.ts)
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
@@ -74,23 +51,14 @@ D:\Dev\unknown-world\
 │   │       ├── main.py
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
 │   │       ├── models/     # Pydantic 데이터 모델
-│   │       └── orchestrator/ # 오케스트레이션 엔진 (Mock 포함)
-│   └── tests/
-│       ├── integration/
-│       └── unit/
-├── shared/                # 공유 리소스 (SSOT)
-│   └── schemas/
-│       └── turn/           # JSON Schema SSOT (Input/Output)
+│   │       └── orchestrator/ # 오케스트레이션 엔진
 ├── vibe/                  # SSOT 문서 저장소
 │   ├── architecture.md     # 시스템 아키텍처 및 구조 가이드
 │   ├── progress.md         # 작업 진행 이력 및 로그
 │   ├── roadmap.md          # 프로젝트 로드맵 및 백로그
 │   ├── tech-stack.md       # 기술 스택 및 버전 관리
-│   ├── ref/                # 가이드 및 참조 문서 (SSOT)
 │   ├── unit-plans/         # 작업 단위(Unit) 개발 계획서
-│   ├── unit-results/       # 작업 완료 보고서 (CP-MVP-02[Mvp] 포함)
-│   └── unit-runbooks/      # 수동 검증 런북 (CP-MVP-02-click-drag-demo-runbook.md 포함)
-└── code-base.xml          # 프로젝트 스냅샷 (Repomix)
+│   └── unit-results/       # 작업 완료 보고서
 ```
 
 ### 주요 디렉토리 책임
@@ -194,165 +162,81 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **i18n 일관성 (Language Consistency)**: 모든 시나리오(성공/실패/에러)에서 ko/en 혼합 출력이 발생하지 않는지 전수 조사.
 4. **연결성 및 복구 (Resilience)**: 오프라인 상태 전이 및 백엔드 복구 시 온라인 전환과 씬 렌더링이 안정적으로 복원되는지 확인.
 
----
-
-
-
-11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2, RU-004-Q4, RU-004-Q1, RU-004-Q5)
-
-
-
-
+## 11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004)
 
 
 
 1. **정책 상수 및 초기값 SSOT (RU-004-Q5)**:
 
-
-
     - **상수 중앙화**: `frontend/src/save/constants.ts`를 단일 진실 공급원(SSOT)으로 삼아 세이브 버전, 스토리지 키, 시드 정책, 재화 임계치 등을 집중 관리함.
 
-
-
     - **초기값 주입 정책 (Injection-first)**: 스토어의 `createInitialState` 값은 "플레이 전 placeholder"로 정의하며, 실제 게임 데이터는 세션 진입 시 프로필 초기값 또는 세이브 데이터로부터 주입받아야 함.
-
-
 
     - **시드 정책 (Seed Policy)**: `generateDemoSeed`를 통해 시드 생성 로직을 통일하고, 세션 유지 기간 동안 동일한 시드가 보존되도록 보장함.
 
 
 
-
-
-
-
 2. **무가입 즉시 시작 (Demo Profiles)**:
 
-
-
     - 심사 및 데모 편의성을 위해 3종의 프리셋 프로필(Narrator, Explorer, Tech) 제공.
-
-
 
     - 프로필 선택 시 해당 페르소나에 맞는 초기 상태(재화/아이템/퀘스트)로 즉시 게임 시작.
 
 
 
-
-
-
-
-2. **SaveGame 생성 SSOT 단일화 (RU-004-Q1)**:
-
-
+3. **SaveGame 생성 SSOT 단일화 (RU-004-Q1)**:
 
     - **단일 생성 창구**: 모든 `SaveGame` 객체는 `frontend/src/save/saveGame.ts`의 `createSaveGame` 함수를 통해서만 생성되어야 함.
 
-
-
     - **Input Adapter 패턴**: 프로필 시작 등 다른 소스에서 `SaveGame`을 만들 경우, 직접 조립하지 않고 `SaveGameInput` 형태로 데이터를 변환(Adapt)하여 `createSaveGame`에 전달함.
-
-
 
     - **드리프트 방지**: 스키마 변경, 기본값 설정, 버전 관리 로직을 `saveGame.ts` 한 곳으로 집중하여 생성 경로에 따른 데이터 불일치를 원천 차단함.
 
 
 
-
-
-
-
-3. **세션 라이프사이클 SSOT (RU-004-Q4)**:
-
-
-
-
-
-
+4. **세션 라이프사이클 SSOT (RU-004-Q4)**:
 
     - **중앙 집중화**: 부팅, 선택, 복원, 리셋, 변경 등 모든 세션 전환 이벤트를 `sessionLifecycle.ts` 모듈로 단일화.
 
-
-
     - **App.tsx 의존성 제거**: App은 비즈니스 로직(스토어 주입 등)을 직접 수행하지 않고 세션 모듈의 API를 호출하는 얇은 인터페이스 역할만 수행.
-
-
 
     - **원자적 초기화**: `resetAllSessionStores`를 통해 세션 전환 시 모든 관련 스토어를 일괄 초기화하여 이전 세션의 잔재를 완전히 제거.
 
 
 
-
-
-
-
-3. **유효성 기반 로컬 영속화 (SaveGame)**:
-
-
+5. **유효성 기반 로컬 영속화 (SaveGame)**:
 
     - **localStorage 기반**: 별도의 DB 없이 브라우저 로컬 저장소를 활용하여 세션 상태 영속화.
 
-
-
     - **유효성 우선 로드**: `hasSaveGame()` 대신 `getValidSaveGameOrNull()`을 사용하여 스키마 검증 및 버전 마이그레이션이 완료된 데이터만 "세이브 있음"으로 취급.
 
-
-
     - **자동 저장**: 턴 결과가 반영될 때마다 현재 월드 상태, 경제 원장, 인벤토리 등을 JSON으로 직렬화하여 저장.
-
-
 
     - **버전 관리**: `SAVEGAME_VERSION`을 통한 스키마 하위 호환성 관리 및 `migrateSaveGame`을 통한 자동 마이그레이션 적용.
 
 
 
-
-
-
-
-3. **즉시 리셋 및 세션 초기화 (Reset)**:
-
-
+6. **즉시 리셋 및 세션 초기화 (Reset)**:
 
     - **스토어 초기화 표준화**: 세션 전환(Select/Continue/Reset) 시 `world`, `inventory`, `economy`, `actionDeck`, `agent` 스토어를 모두 리셋하여 이전 세션의 잔재를 완전히 제거.
-
-
 
     - **안전 리셋**: 현재 세션을 폐기하고 선택된 프로필의 초기 상태로 복구. 실수 방지를 위해 2단계 확인 UI 적용.
 
 
 
-
-
-
-
-4. **ID 및 상태 SSOT (Single Source of Truth)**:
-
-
+7. **ID 및 상태 SSOT (Single Source of Truth)**:
 
     - **profileId SSOT**: `SaveGame.profileId`를 최우선 권위자로 설정. Continue/Load 시점에 브라우저 캐시 키(`CURRENT_PROFILE_KEY`)를 이 값으로 강제 동기화하여 드리프트 방지.
-
-
 
     - **복원 실패 폴백**: 세이브 데이터 손상 시 자동 클린업 후 프로필 선택 화면(`profile_select`)으로 안전하게 이동.
 
 
 
-
-
-
-
-5. **복원 정합성 보장 (RU-004-S1)**:
-
-
+8. **복원 정합성 보장 (RU-004-S1)**:
 
     - **비동기 언어 동기화**: `changeLanguage`를 `await` 하여 비동기 언어 리소스 로딩 완료 후 UI가 렌더링되도록 보장(혼합 출력 방지).
 
-
-
     - **원장(Ledger) 스냅샷 주입**: 턴 이벤트(`addLedgerEntry`) 대신 전용 `hydrateLedger` 경로를 통해 저장된 원장의 순서, 타임스탬프, 마지막 비용(`lastCost`)을 원본 그대로 복원.
-
-
 
     - **상태 재계산**: 복원된 잔액을 기준으로 `isBalanceLow` 등 유도된 상태(derived state)를 즉시 갱신하여 HUD 일관성 확보.
 

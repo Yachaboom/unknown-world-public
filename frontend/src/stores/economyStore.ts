@@ -16,10 +16,7 @@
 import { create } from 'zustand';
 import type { CurrencyAmount, ModelLabel, CostEstimate } from '../schemas/turn';
 // RU-004-Q5: 상수 중앙화 - constants.ts에서 import
-import {
-  LEDGER_MAX_ENTRIES,
-  LOW_BALANCE_THRESHOLD,
-} from '../save/constants';
+import { LEDGER_MAX_ENTRIES, LOW_BALANCE_THRESHOLD } from '../save/constants';
 
 // RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
 export { LEDGER_MAX_ENTRIES };

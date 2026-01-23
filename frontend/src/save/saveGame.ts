@@ -22,11 +22,7 @@ import type { MutationEvent, NarrativeEntry, EconomyState } from '../stores/worl
 import type { SceneObject } from '../schemas/turn';
 
 // RU-004-Q5: 상수 중앙화 - constants.ts에서 import
-import {
-  SAVEGAME_VERSION,
-  SAVEGAME_STORAGE_KEY,
-  CURRENT_PROFILE_KEY,
-} from './constants';
+import { SAVEGAME_VERSION, SAVEGAME_STORAGE_KEY, CURRENT_PROFILE_KEY } from './constants';
 
 // RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
 export { SAVEGAME_VERSION, SAVEGAME_STORAGE_KEY, CURRENT_PROFILE_KEY };

@@ -1,5 +1,40 @@
 # 프로젝트 진행 상황
 
+## [2026-01-24 16:20] RU-004[Mvp]: 리팩토링 - SaveGame/초기상태/데모 프로필 정리 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 세션 라이프사이클(부팅/복원/리셋) 모듈화 및 SaveGame 생성 경로 SSOT 단일화
+- **추가 컴포넌트**: `save/constants.ts`, `save/sessionLifecycle.ts`, `vibe/unit-results/RU-004[Mvp].md`
+- **달성 요구사항**: [PRD 6.6/6.9] 데모 반복성 확보, [RULE-001/002] HUD 중심 플로우 유지, [RULE-010] 기술 스택 버전 고정
+
+### 기술적 구현 세부사항
+
+**세션 아키텍처 리팩토링**:
+- **Lifecycle SSOT**: `App.tsx`에 산재하던 부팅/복원/리셋 로직을 `sessionLifecycle.ts`로 통합하여 세션 전이 로직 캡슐화
+- **Creation SSOT**: `createSaveGame`을 유일한 객체 생성 창구로 고정하고, 프로필 변환 어댑터를 통해 스키마 일관성 강제
+- **Validation-First**: `getValidSaveGameOrNull` 및 Zod 검증을 통해 부팅 시점의 상태 정합성 전수 검사
+
+**데모 안정성 강화**:
+- **Atomic Reset**: `resetAllSessionStores`를 도입하여 리셋 시 이전 세션의 UI 잔재(카드, 배지 등)를 원자적으로 소거
+- **Constants Centralization**: 세이브 버전, 스토리지 키 등 핵심 정책 상수를 `constants.ts`로 모아 정책 변경 대응력 확보
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── save/
+    │   ├── constants.ts (신규: 정책 상수)
+    │   ├── sessionLifecycle.ts (신규: 세션 관리)
+    │   └── saveGame.ts (생성/검증 단일화)
+    ├── data/
+    │   └── demoProfiles.ts (어댑터 적용)
+    └── App.tsx (로직 위임 및 컴포넌트 정제)
+
+### 다음 단계
+- [U-016[Mvp]] Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정
+
+---
+
 ## [2026-01-24 15:40] RU-004-S3: “SaveGame/프로필/리셋/복원” 수동 검증 시나리오 패키지 구축 완료
 
 ### 작업 내용
