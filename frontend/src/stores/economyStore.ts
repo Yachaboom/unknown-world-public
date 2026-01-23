@@ -8,19 +8,21 @@
  *   - RULE-005: Economy 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
  *   - RULE-008: 비용/모델 선택 이유는 라벨(FAST/QUALITY/REF)로만 설명
  *   - Q1 결정: Option A - 최근 N턴만 보관 (UI/메모리 절감)
+ *   - RU-004-Q5: 상수는 save/constants.ts에서 중앙 관리
  *
  * @module stores/economyStore
  */
 
 import { create } from 'zustand';
 import type { CurrencyAmount, ModelLabel, CostEstimate } from '../schemas/turn';
+// RU-004-Q5: 상수 중앙화 - constants.ts에서 import
+import {
+  LEDGER_MAX_ENTRIES,
+  LOW_BALANCE_THRESHOLD,
+} from '../save/constants';
 
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/** 최근 N턴의 ledger만 보관 (Q1: Option A) */
-export const LEDGER_MAX_ENTRIES = 20;
+// RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
+export { LEDGER_MAX_ENTRIES };
 
 // =============================================================================
 // 타입 정의
@@ -164,7 +166,8 @@ function createInitialState(): EconomyStoreState {
     costEstimate: null,
     lastCost: null,
     isBalanceLow: false,
-    lowBalanceThreshold: 10, // Signal 10 미만이면 경고
+    // RU-004-Q5: 임계값 상수 SSOT (save/constants.ts)
+    lowBalanceThreshold: LOW_BALANCE_THRESHOLD,
   };
 }
 

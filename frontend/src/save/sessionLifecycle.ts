@@ -294,6 +294,9 @@ export function clearSessionAndReturnToSelect(): void {
  *
  * 턴 완료 시 자동 저장에 사용됩니다.
  *
+ * RU-004-Q5: seed는 세션 시작 시 생성되고, 이후 변경되지 않아야 합니다.
+ * 기존 SaveGame에서 seed를 읽어와서 유지합니다.
+ *
  * @param profileId - 현재 프로필 ID
  * @returns 저장 성공 여부
  */
@@ -304,9 +307,14 @@ export function saveCurrentSession(profileId: string | null): boolean {
   const economyState = useEconomyStore.getState();
   const inventoryState = useInventoryStore.getState();
 
+  // RU-004-Q5: 기존 SaveGame에서 seed를 가져와 유지 (SSOT)
+  const existingSaveGame = getValidSaveGameOrNull();
+  const seed = existingSaveGame?.seed ?? null;
+
   const saveGame = createSaveGame({
     language: getResolvedLanguage(),
     profileId,
+    seed, // RU-004-Q5: seed 유지
     economy: worldState.economy,
     economyLedger: economyState.ledger,
     turnCount: worldState.turnCount,

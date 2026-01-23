@@ -78,6 +78,7 @@ frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
 frontend/src/locales/ko-KR/translation.json
 frontend/src/locales/README.md
+frontend/src/save/constants.ts
 frontend/src/save/saveGame.test.ts
 frontend/src/save/saveGame.ts
 frontend/src/save/sessionLifecycle.ts
@@ -1509,6 +1510,208 @@ function LanguageToggle() {
 - [react-i18next 공식 문서](https://react.i18next.com/)
 </file>
 
+<file path="frontend/src/save/constants.ts">
+/**
+ * Unknown World - SaveGame/세션 관련 상수 SSOT (RU-004-Q5).
+ *
+ * 정책/초기값을 한 곳으로 모아 변경 시 누락 위험을 방지합니다.
+ * 모든 SaveGame/세션 관련 상수는 이 파일에서 관리합니다.
+ *
+ * 설계 원칙:
+ *   - RU-004-Q5: 하드코딩 정리 - 상수 중앙화
+ *   - RULE-010: DB 도입 금지, SaveGame JSON 직렬화 기반
+ *   - 향후 확장: U-026(리플레이), U-025(엔딩 리포트) 호환
+ *
+ * @module save/constants
+ */
+
+// =============================================================================
+// SaveGame 버전 관리
+// =============================================================================
+
+/**
+ * 현재 SaveGame 스키마 버전.
+ *
+ * 버전 변경 시 `migrateSaveGame()`에 마이그레이션 로직을 추가해야 합니다.
+ * 버전 형식: semver (major.minor.patch)
+ *
+ * @see saveGame.ts#migrateSaveGame
+ */
+export const SAVEGAME_VERSION = '1.0.0' as const;
+
+/**
+ * 지원하는 SaveGame 버전 목록.
+ *
+ * 마이그레이션 가능한 이전 버전들을 포함합니다.
+ * 이 목록에 없는 버전은 마이그레이션 불가로 처리됩니다.
+ */
+export const SUPPORTED_SAVEGAME_VERSIONS: readonly string[] = ['1.0.0'] as const;
+
+// =============================================================================
+// localStorage 키 (Storage Keys)
+// =============================================================================
+
+/**
+ * SaveGame 저장 키.
+ *
+ * localStorage에서 세이브 데이터를 저장/로드할 때 사용합니다.
+ * 이 키를 변경하면 기존 세이브 데이터가 무효화됩니다.
+ */
+export const SAVEGAME_STORAGE_KEY = 'unknown_world_savegame' as const;
+
+/**
+ * 현재 선택된 프로필 ID 저장 키.
+ *
+ * localStorage에서 현재 프로필 ID를 저장/로드할 때 사용합니다.
+ * SaveGame.profileId가 SSOT이며, 이 키는 폴백/호환성용입니다.
+ *
+ * @see sessionLifecycle.ts#getInitialProfileId
+ */
+export const CURRENT_PROFILE_KEY = 'unknown_world_current_profile' as const;
+
+// =============================================================================
+// Seed 생성 정책
+// =============================================================================
+
+/**
+ * 데모 seed 접두사.
+ *
+ * 데모 프로필에서 생성되는 seed의 접두사입니다.
+ * seed 형식: `{DEMO_SEED_PREFIX}-{profileId}-{timestamp}`
+ *
+ * @example 'demo-narrator-1706000000000'
+ */
+export const DEMO_SEED_PREFIX = 'demo' as const;
+
+/**
+ * Seed 생성 정책 (문서화용 주석).
+ *
+ * ## 현재 정책: now 기반 seed (세션 다양성 중시)
+ *
+ * 프로필 시작 시마다 새로운 seed가 생성됩니다.
+ * - 장점: 매 세션마다 다른 초기 상태/이벤트 가능
+ * - 단점: 데모 반복성(동일 시작) 보장 어려움
+ *
+ * ## 대안: 고정 seed (데모 반복성 중시)
+ *
+ * 프로필 ID만으로 seed를 생성합니다.
+ * - 장점: 동일 프로필은 항상 동일한 시작 상태
+ * - 단점: 세션 다양성 부족
+ *
+ * ## 향후 확장 (U-026: 리플레이)
+ *
+ * seed를 SaveGame에 저장하여 리플레이 시 동일 결과 재현 가능.
+ * 엔딩 리포트(U-025)에서도 seed를 기록하여 결과 분석에 활용.
+ *
+ * @see demoProfiles.ts#profileToSaveGameInput
+ */
+export const SEED_POLICY = {
+  /** 현재 적용 중인 정책 */
+  current: 'timestamp' as const,
+  /** 가능한 정책 목록 */
+  options: ['timestamp', 'fixed', 'hybrid'] as const,
+} as const;
+
+/**
+ * Seed를 생성합니다.
+ *
+ * 현재 정책(now 기반)에 따라 seed 문자열을 생성합니다.
+ *
+ * @param profileId - 프로필 ID
+ * @returns seed 문자열
+ */
+export function generateDemoSeed(profileId: string): string {
+  const now = Date.now();
+  return `${DEMO_SEED_PREFIX}-${profileId}-${now}`;
+}
+
+// =============================================================================
+// Economy 정책 상수
+// =============================================================================
+
+/**
+ * 잔액 부족 경고 임계값 (Signal 기준).
+ *
+ * Signal 잔액이 이 값 미만이면 isBalanceLow가 true가 됩니다.
+ * HUD에서 경고 표시 및 대체 행동 제안에 사용됩니다.
+ *
+ * @see economyStore.ts#updateBalanceLowStatus
+ */
+export const LOW_BALANCE_THRESHOLD = 10 as const;
+
+/**
+ * 원장(Ledger) 최대 보관 개수.
+ *
+ * 최근 N개의 턴 원장만 보관합니다 (메모리 최적화).
+ * 세션 내에서만 유지되며, SaveGame에 함께 저장됩니다.
+ *
+ * @see economyStore.ts#addLedgerEntry
+ */
+export const LEDGER_MAX_ENTRIES = 20 as const;
+
+// =============================================================================
+// 초기값 정책 (Placeholder vs 주입)
+// =============================================================================
+
+/**
+ * World/Economy 초기값 정책 (문서화용 주석).
+ *
+ * ## 설계 원칙
+ *
+ * Store의 createInitialState()에서 정의하는 economy 등의 값은
+ * **"플레이 전 placeholder"**로 취급합니다.
+ *
+ * 실제 게임 시작 값은 항상 다음 중 하나에서 주입됩니다:
+ * 1. 프로필 초기 SaveGame (startSessionFromProfile)
+ * 2. 저장된 SaveGame 복원 (continueSession)
+ *
+ * ## Placeholder 값의 의미
+ *
+ * - worldStore.economy: { signal: 100, memory_shard: 5 }
+ *   → playing 진입 전 profile_select 상태에서는 HUD가 노출되지 않음
+ *   → 따라서 이 값이 화면에 표시될 일은 없음
+ *
+ * ## 향후 개선 (S2 선행 필요)
+ *
+ * S2(잘못된 playing 진입)가 해결되면:
+ * - economy: null 같은 "미초기화 상태"로 변경 가능
+ * - playing 진입 전에 반드시 프로필/세이브 주입을 강제
+ * - "placeholder가 화면에 보이는" 문제를 원천 차단
+ *
+ * @see worldStore.ts#createInitialState
+ * @see sessionLifecycle.ts
+ */
+export const INITIAL_VALUE_POLICY = {
+  description: 'Placeholder values for pre-play state',
+  worldEconomy: {
+    signal: 100,
+    memory_shard: 5,
+  },
+} as const;
+
+// =============================================================================
+// 데모 프로필 기본 재화 범위 (참고용)
+// =============================================================================
+
+/**
+ * 데모 프로필 재화 범위 참고 (문서화용).
+ *
+ * 각 프로필의 초기 재화는 demoProfiles.ts에서 직접 정의합니다.
+ * 이 상수는 "정책 범위"를 문서화하기 위한 참고용입니다.
+ *
+ * - Narrator: 풍부한 재화 (다양한 선택지 탐색)
+ * - Explorer: 적당한 재화 (균형 잡힌 플레이)
+ * - Tech: 제한된 재화 (효율적 전략 필요)
+ *
+ * @see demoProfiles.ts
+ */
+export const DEMO_PROFILE_ECONOMY_REFERENCE = {
+  narrator: { signal: 200, memory_shard: 10 },
+  explorer: { signal: 150, memory_shard: 5 },
+  tech: { signal: 80, memory_shard: 15 },
+} as const;
+</file>
+
 <file path="frontend/src/save/saveGame.test.ts">
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
@@ -1612,348 +1815,6 @@ describe('saveGame utility (U-015[Mvp])', () => {
     expect(hasSaveGame()).toBe(true);
   });
 });
-</file>
-
-<file path="frontend/src/save/sessionLifecycle.ts">
-/**
- * Unknown World - 세션 라이프사이클 관리 모듈 (RU-004-Q4).
- *
- * 세션 초기화/복원/리셋/변경을 SSOT로 관리합니다.
- * App.tsx의 세션 관련 로직을 이 모듈로 이동하여 책임 경계를 명확히 합니다.
- *
- * 설계 원칙:
- *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
- *   - RULE-006: ko/en i18n 정책 준수 (언어 적용 후 UI 렌더링)
- *   - RU-004-S1: 언어 async 적용 완료 후 store 주입
- *   - RU-004-S2: profileId SSOT + 유효 SaveGame만 Continue
- *
- * @module save/sessionLifecycle
- */
-
-import {
-  loadSaveGame,
-  saveSaveGame,
-  clearSaveGame,
-  getValidSaveGameOrNull,
-  createSaveGame,
-  loadCurrentProfileId,
-  saveCurrentProfileId,
-  clearCurrentProfileId,
-} from './saveGame';
-import { findProfileById, createSaveGameFromProfile, type DemoProfile } from '../data/demoProfiles';
-import { getResolvedLanguage, changeLanguage, type SupportedLanguage } from '../i18n';
-import { useWorldStore } from '../stores/worldStore';
-import { useInventoryStore } from '../stores/inventoryStore';
-import { useEconomyStore } from '../stores/economyStore';
-import { useActionDeckStore } from '../stores/actionDeckStore';
-import { useAgentStore } from '../stores/agentStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/**
- * 부팅 결과 타입.
- * 앱 시작 시 어떤 phase로 시작할지 결정합니다.
- */
-export type SessionBootstrap =
-  | { phase: 'profile_select'; savedGameAvailable: boolean }
-  | { phase: 'playing'; profileId: string | null };
-
-/**
- * 세션 시작 결과 타입.
- */
-export interface SessionStartResult {
-  success: true;
-  profileId: string;
-}
-
-/**
- * 세션 복원 결과 타입.
- */
-export interface SessionContinueResult {
-  success: true;
-  profileId: string;
-}
-
-/**
- * 세션 리셋 결과 타입.
- */
-export interface SessionResetResult {
-  success: boolean;
-  profileId: string | null;
-}
-
-// =============================================================================
-// 내부 헬퍼: 모든 세션 관련 store를 초기화
-// =============================================================================
-
-/**
- * 모든 세션 관련 store를 초기화합니다.
- *
- * RU-004-Q4 Step 2: store reset/hydrate 범위 표준화
- * - worldStore, inventoryStore, economyStore, actionDeckStore, agentStore
- *
- * 세션 경계에서 항상 이 함수를 호출하여 이전 세션 잔재를 완전히 제거합니다.
- */
-function resetAllSessionStores(): void {
-  useWorldStore.getState().reset();
-  useInventoryStore.getState().reset();
-  useEconomyStore.getState().reset();
-  useActionDeckStore.getState().reset();
-  useAgentStore.getState().reset();
-}
-
-// =============================================================================
-// 세션 라이프사이클 API
-// =============================================================================
-
-/**
- * 부팅 시 세션 상태를 확인하고 시작 phase를 결정합니다.
- *
- * RU-004-S2: hasSaveGame() 대신 getValidSaveGameOrNull()로 "유효한 세이브만" 판단
- *
- * @returns SessionBootstrap - 시작 phase와 관련 정보
- */
-export function bootstrapSession(): SessionBootstrap {
-  const validSaveGame = getValidSaveGameOrNull();
-
-  if (validSaveGame) {
-    // 유효한 세이브가 있으면 playing 상태로 시작
-    return {
-      phase: 'playing',
-      profileId: validSaveGame.profileId,
-    };
-  }
-
-  // 유효한 세이브가 없으면 profile_select로 시작
-  // 단, localStorage에 깨진 세이브가 있을 수 있으므로 savedGameAvailable은 false
-  return {
-    phase: 'profile_select',
-    savedGameAvailable: false,
-  };
-}
-
-/**
- * 저장된 게임이 있는지 확인합니다 (Continue 버튼 표시용).
- *
- * RU-004-S2: 유효한 세이브만 "있음"으로 판단
- *
- * @returns 유효한 세이브가 있으면 true
- */
-export function hasValidSaveGame(): boolean {
-  return getValidSaveGameOrNull() !== null;
-}
-
-/**
- * 프로필을 선택하고 새 세션을 시작합니다.
- *
- * RU-004-Q4 Step 1: startSessionFromProfile
- * - 모든 store를 초기화
- * - 프로필 기반 SaveGame 생성
- * - store에 초기 상태 주입
- * - localStorage에 저장
- *
- * @param args.profile - 선택한 데모 프로필
- * @param args.t - i18n 번역 함수
- * @returns 세션 시작 결과
- */
-export function startSessionFromProfile(args: {
-  profile: DemoProfile;
-  t: (key: string) => string;
-}): SessionStartResult {
-  const { profile, t } = args;
-
-  // 현재 언어 설정 유지
-  const language = getResolvedLanguage();
-
-  // 프로필에서 SaveGame 생성
-  const saveGame = createSaveGameFromProfile(profile, language, t);
-
-  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
-  resetAllSessionStores();
-
-  // Store에 초기 상태 주입
-  useWorldStore.setState({
-    economy: {
-      signal: saveGame.economy.signal,
-      memory_shard: saveGame.economy.memory_shard,
-    },
-    turnCount: 0,
-    narrativeEntries: saveGame.narrativeHistory,
-    quests: saveGame.quests,
-    activeRules: saveGame.activeRules,
-    mutationTimeline: saveGame.mutationTimeline,
-    sceneObjects: saveGame.sceneObjects,
-  });
-
-  useInventoryStore.getState().setItems(saveGame.inventory);
-
-  // 프로필 ID 저장 (localStorage)
-  saveCurrentProfileId(profile.id);
-
-  // SaveGame 저장 (localStorage)
-  saveSaveGame(saveGame);
-
-  return {
-    success: true,
-    profileId: profile.id,
-  };
-}
-
-/**
- * 저장된 게임을 복원하여 세션을 계속합니다.
- *
- * RU-004-Q4 Step 1: continueSession
- * RU-004-S1: async로 언어 적용 완료 후 store 주입
- * RU-004-S2: profileId SSOT + 로드 실패 시 null 반환
- *
- * @returns 세션 복원 결과 또는 null (실패 시)
- */
-export async function continueSession(): Promise<SessionContinueResult | null> {
-  const saveGame = loadSaveGame();
-  if (!saveGame) {
-    // 로드 실패 시 클린업
-    clearSaveGame();
-    clearCurrentProfileId();
-    console.warn('[SessionLifecycle] SaveGame 로드 실패, 새로 시작 필요');
-    return null;
-  }
-
-  // RU-004-S1: 언어 설정 비동기 적용 완료 후 진행 (RULE-006)
-  await changeLanguage(saveGame.language as SupportedLanguage);
-
-  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
-  resetAllSessionStores();
-
-  // Store에 저장된 상태 복원
-  useWorldStore.setState({
-    economy: {
-      signal: saveGame.economy.signal,
-      memory_shard: saveGame.economy.memory_shard,
-    },
-    turnCount: saveGame.turnCount,
-    narrativeEntries: saveGame.narrativeHistory,
-    quests: saveGame.quests,
-    activeRules: saveGame.activeRules,
-    mutationTimeline: saveGame.mutationTimeline,
-    sceneObjects: saveGame.sceneObjects,
-  });
-
-  // 인벤토리 복원
-  useInventoryStore.getState().setItems(saveGame.inventory);
-
-  // Economy 복원 (RU-004-S1: hydrateLedger로 순서/timestamp/lastCost/isBalanceLow 정합성 보장)
-  useEconomyStore.getState().hydrateLedger(saveGame.economyLedger, saveGame.economy);
-
-  // RU-004-S2: profileId SSOT - SaveGame.profileId를 권위자로 사용
-  const profileId = saveGame.profileId;
-  if (profileId) {
-    saveCurrentProfileId(profileId); // localStorage 동기화 (드리프트 방지)
-  }
-
-  return {
-    success: true,
-    profileId: profileId ?? loadCurrentProfileId() ?? '',
-  };
-}
-
-/**
- * 현재 프로필의 초기 상태로 리셋합니다.
- *
- * RU-004-Q4 Step 1: resetToCurrentProfile
- *
- * @param args.t - i18n 번역 함수
- * @param args.currentProfileId - 현재 프로필 ID
- * @returns 리셋 성공 여부
- */
-export function resetToCurrentProfile(args: {
-  t: (key: string) => string;
-  currentProfileId: string | null;
-}): SessionResetResult {
-  const { t, currentProfileId } = args;
-
-  if (!currentProfileId) {
-    return { success: false, profileId: null };
-  }
-
-  const profile = findProfileById(currentProfileId);
-  if (!profile) {
-    return { success: false, profileId: null };
-  }
-
-  // 동일 프로필로 새 세션 시작
-  const result = startSessionFromProfile({ profile, t });
-
-  return {
-    success: result.success,
-    profileId: result.profileId,
-  };
-}
-
-/**
- * 세션을 종료하고 프로필 선택 화면으로 돌아갑니다.
- *
- * RU-004-Q4 Step 1: clearSessionAndReturnToSelect
- * - 모든 세션 데이터 클린업 (localStorage + store)
- */
-export function clearSessionAndReturnToSelect(): void {
-  // localStorage 클린업
-  clearSaveGame();
-  clearCurrentProfileId();
-
-  // 모든 세션 store 초기화
-  resetAllSessionStores();
-}
-
-/**
- * 현재 상태를 저장합니다.
- *
- * 턴 완료 시 자동 저장에 사용됩니다.
- *
- * @param profileId - 현재 프로필 ID
- * @returns 저장 성공 여부
- */
-export function saveCurrentSession(profileId: string | null): boolean {
-  if (!profileId) return false;
-
-  const worldState = useWorldStore.getState();
-  const economyState = useEconomyStore.getState();
-  const inventoryState = useInventoryStore.getState();
-
-  const saveGame = createSaveGame({
-    language: getResolvedLanguage(),
-    profileId,
-    economy: worldState.economy,
-    economyLedger: economyState.ledger,
-    turnCount: worldState.turnCount,
-    narrativeHistory: worldState.narrativeEntries,
-    inventory: inventoryState.items,
-    quests: worldState.quests,
-    activeRules: worldState.activeRules,
-    mutationTimeline: worldState.mutationTimeline,
-    sceneObjects: worldState.sceneObjects,
-  });
-
-  return saveSaveGame(saveGame);
-}
-
-/**
- * 초기 profileId를 결정합니다.
- *
- * RU-004-S2: SaveGame.profileId가 SSOT, CURRENT_PROFILE_KEY는 폴백
- *
- * @returns 초기 profileId 또는 null
- */
-export function getInitialProfileId(): string | null {
-  // 유효한 SaveGame이 있으면 그 profileId를 사용
-  const validSaveGame = getValidSaveGameOrNull();
-  if (validSaveGame?.profileId) {
-    return validSaveGame.profileId;
-  }
-  // 폴백: CURRENT_PROFILE_KEY (호환성)
-  return loadCurrentProfileId();
-}
 </file>
 
 <file path="frontend/src/schemas/index.ts">
@@ -4845,442 +4706,6 @@ def test_schema_rembg_rules():
 }
 </file>
 
-<file path="frontend/src/data/demoProfiles.ts">
-/**
- * Unknown World - 데모 프로필 정의 (U-015[Mvp]).
- *
- * 로그인 없이 즉시 시작 가능한 데모 프로필 3종을 정의합니다.
- * 각 프로필은 서로 다른 초기 상태(재화/인벤토리/퀘스트/룰)를 가집니다.
- *
- * 프로필:
- *   1. Narrator: 내러티브/스토리 중심 체험
- *   2. Explorer: 탐색/발견 중심 체험
- *   3. Tech Enthusiast: 시스템/메커닉 중심 체험
- *
- * 설계 원칙:
- *   - RULE-006: 표시 문자열은 i18n 키 기반
- *   - RULE-010: SaveGame JSON 직렬화로 저장
- *   - PRD 6.9: 데모 프로필 3종 + 즉시 리셋
- *
- * @module data/demoProfiles
- */
-
-import type { SupportedLanguage } from '../i18n';
-import type { SaveGame, SaveGameInput } from '../save/saveGame';
-import { createSaveGame } from '../save/saveGame';
-
-// =============================================================================
-// 프로필 타입 정의
-// =============================================================================
-
-/**
- * 데모 프로필 정의 (언어 중립).
- * 표시용 문자열은 i18n 키로 참조합니다.
- */
-export interface DemoProfileDef {
-  /** 프로필 고유 ID */
-  id: string;
-  /** 프로필 이름 i18n 키 */
-  nameKey: string;
-  /** 프로필 설명 i18n 키 */
-  descriptionKey: string;
-  /** 프로필 아이콘 (이모지) */
-  icon: string;
-  /** 프로필 테마 색상 (CSS 변수명 또는 hex) */
-  themeColor: string;
-}
-
-/**
- * 프로필 초기 상태.
- * SaveGame으로 변환 가능한 구조입니다.
- */
-export interface DemoProfileInitialState {
-  /** 초기 재화 */
-  economy: {
-    signal: number;
-    memory_shard: number;
-  };
-  /** 초기 인벤토리 아이템 정의 (ID와 i18n 키) */
-  inventoryDefs: Array<{
-    id: string;
-    nameKey: string;
-    icon: string;
-    quantity: number;
-  }>;
-  /** 초기 퀘스트 정의 */
-  questDefs: Array<{
-    id: string;
-    labelKey: string;
-    is_completed: boolean;
-  }>;
-  /** 초기 규칙 정의 */
-  ruleDefs: Array<{
-    id: string;
-    labelKey: string;
-    descriptionKey?: string;
-  }>;
-  /** 초기 Scene Objects 정의 */
-  sceneObjectDefs: Array<{
-    id: string;
-    labelKey: string;
-    hintKey: string;
-    box_2d: {
-      ymin: number;
-      xmin: number;
-      ymax: number;
-      xmax: number;
-    };
-  }>;
-  /** 환영 메시지 i18n 키 */
-  welcomeMessageKey: string;
-}
-
-/**
- * 데모 프로필 전체 정의.
- */
-export interface DemoProfile extends DemoProfileDef {
-  initialState: DemoProfileInitialState;
-}
-
-// =============================================================================
-// 데모 프로필 정의 (3종)
-// =============================================================================
-
-/**
- * Narrator 프로필: 내러티브/스토리 중심 체험.
- * 풍부한 재화로 다양한 선택지를 탐색할 수 있습니다.
- */
-export const PROFILE_NARRATOR: DemoProfile = {
-  id: 'narrator',
-  nameKey: 'profile.narrator.name',
-  descriptionKey: 'profile.narrator.description',
-  icon: '📖',
-  themeColor: 'var(--accent-color)',
-  initialState: {
-    economy: {
-      signal: 200,
-      memory_shard: 10,
-    },
-    inventoryDefs: [
-      {
-        id: 'ancient-tome',
-        nameKey: 'profile.narrator.items.ancient_tome',
-        icon: '📕',
-        quantity: 1,
-      },
-      { id: 'quill-pen', nameKey: 'profile.narrator.items.quill_pen', icon: '🖋️', quantity: 1 },
-      {
-        id: 'memory-fragment',
-        nameKey: 'profile.narrator.items.memory_fragment',
-        icon: '💠',
-        quantity: 3,
-      },
-    ],
-    questDefs: [
-      {
-        id: 'quest-discover-origin',
-        labelKey: 'profile.narrator.quest.discover_origin',
-        is_completed: false,
-      },
-      {
-        id: 'quest-collect-memories',
-        labelKey: 'profile.narrator.quest.collect_memories',
-        is_completed: false,
-      },
-    ],
-    ruleDefs: [
-      {
-        id: 'rule-time-flows',
-        labelKey: 'profile.narrator.rule.time_flows',
-        descriptionKey: 'profile.narrator.rule.time_flows_desc',
-      },
-      {
-        id: 'rule-memories-persist',
-        labelKey: 'profile.narrator.rule.memories_persist',
-        descriptionKey: 'profile.narrator.rule.memories_persist_desc',
-      },
-    ],
-    sceneObjectDefs: [
-      {
-        id: 'mysterious-bookshelf',
-        labelKey: 'profile.narrator.scene.bookshelf',
-        hintKey: 'profile.narrator.scene.bookshelf_hint',
-        box_2d: { ymin: 200, xmin: 100, ymax: 700, xmax: 400 },
-      },
-      {
-        id: 'glowing-portal',
-        labelKey: 'profile.narrator.scene.portal',
-        hintKey: 'profile.narrator.scene.portal_hint',
-        box_2d: { ymin: 300, xmin: 600, ymax: 800, xmax: 900 },
-      },
-    ],
-    welcomeMessageKey: 'profile.narrator.welcome',
-  },
-};
-
-/**
- * Explorer 프로필: 탐색/발견 중심 체험.
- * 적당한 재화와 탐색 도구로 새로운 영역을 발견합니다.
- */
-export const PROFILE_EXPLORER: DemoProfile = {
-  id: 'explorer',
-  nameKey: 'profile.explorer.name',
-  descriptionKey: 'profile.explorer.description',
-  icon: '🧭',
-  themeColor: 'var(--text-color)',
-  initialState: {
-    economy: {
-      signal: 150,
-      memory_shard: 5,
-    },
-    inventoryDefs: [
-      { id: 'compass', nameKey: 'profile.explorer.items.compass', icon: '🧭', quantity: 1 },
-      { id: 'rope', nameKey: 'profile.explorer.items.rope', icon: '🪢', quantity: 2 },
-      { id: 'lantern', nameKey: 'profile.explorer.items.lantern', icon: '🏮', quantity: 1 },
-      {
-        id: 'map-fragment',
-        nameKey: 'profile.explorer.items.map_fragment',
-        icon: '🗺️',
-        quantity: 1,
-      },
-    ],
-    questDefs: [
-      { id: 'quest-find-exit', labelKey: 'profile.explorer.quest.find_exit', is_completed: false },
-      {
-        id: 'quest-explore-areas',
-        labelKey: 'profile.explorer.quest.explore_areas',
-        is_completed: false,
-      },
-      {
-        id: 'quest-gather-supplies',
-        labelKey: 'profile.explorer.quest.gather_supplies',
-        is_completed: true,
-      },
-    ],
-    ruleDefs: [
-      {
-        id: 'rule-gravity',
-        labelKey: 'profile.explorer.rule.gravity',
-        descriptionKey: 'profile.explorer.rule.gravity_desc',
-      },
-      {
-        id: 'rule-darkness',
-        labelKey: 'profile.explorer.rule.darkness',
-        descriptionKey: 'profile.explorer.rule.darkness_desc',
-      },
-    ],
-    sceneObjectDefs: [
-      {
-        id: 'ancient-door',
-        labelKey: 'profile.explorer.scene.door',
-        hintKey: 'profile.explorer.scene.door_hint',
-        box_2d: { ymin: 150, xmin: 400, ymax: 850, xmax: 600 },
-      },
-      {
-        id: 'strange-mechanism',
-        labelKey: 'profile.explorer.scene.mechanism',
-        hintKey: 'profile.explorer.scene.mechanism_hint',
-        box_2d: { ymin: 500, xmin: 100, ymax: 700, xmax: 300 },
-      },
-      {
-        id: 'hidden-passage',
-        labelKey: 'profile.explorer.scene.passage',
-        hintKey: 'profile.explorer.scene.passage_hint',
-        box_2d: { ymin: 600, xmin: 700, ymax: 800, xmax: 950 },
-      },
-    ],
-    welcomeMessageKey: 'profile.explorer.welcome',
-  },
-};
-
-/**
- * Tech Enthusiast 프로필: 시스템/메커닉 중심 체험.
- * 제한된 재화로 효율적인 전략을 세워야 합니다.
- */
-export const PROFILE_TECH: DemoProfile = {
-  id: 'tech',
-  nameKey: 'profile.tech.name',
-  descriptionKey: 'profile.tech.description',
-  icon: '⚙️',
-  themeColor: 'var(--warning-color)',
-  initialState: {
-    economy: {
-      signal: 80,
-      memory_shard: 15,
-    },
-    inventoryDefs: [
-      { id: 'data-core', nameKey: 'profile.tech.items.data_core', icon: '💿', quantity: 1 },
-      { id: 'circuit-board', nameKey: 'profile.tech.items.circuit_board', icon: '🔌', quantity: 2 },
-      { id: 'energy-cell', nameKey: 'profile.tech.items.energy_cell', icon: '🔋', quantity: 3 },
-      { id: 'scanner-device', nameKey: 'profile.tech.items.scanner', icon: '📡', quantity: 1 },
-    ],
-    questDefs: [
-      {
-        id: 'quest-analyze-system',
-        labelKey: 'profile.tech.quest.analyze_system',
-        is_completed: false,
-      },
-      {
-        id: 'quest-optimize-resources',
-        labelKey: 'profile.tech.quest.optimize_resources',
-        is_completed: false,
-      },
-    ],
-    ruleDefs: [
-      {
-        id: 'rule-energy-conservation',
-        labelKey: 'profile.tech.rule.energy_conservation',
-        descriptionKey: 'profile.tech.rule.energy_conservation_desc',
-      },
-      {
-        id: 'rule-data-integrity',
-        labelKey: 'profile.tech.rule.data_integrity',
-        descriptionKey: 'profile.tech.rule.data_integrity_desc',
-      },
-      {
-        id: 'rule-system-limits',
-        labelKey: 'profile.tech.rule.system_limits',
-        descriptionKey: 'profile.tech.rule.system_limits_desc',
-      },
-    ],
-    sceneObjectDefs: [
-      {
-        id: 'main-terminal',
-        labelKey: 'profile.tech.scene.terminal',
-        hintKey: 'profile.tech.scene.terminal_hint',
-        box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
-      },
-      {
-        id: 'power-conduit',
-        labelKey: 'profile.tech.scene.conduit',
-        hintKey: 'profile.tech.scene.conduit_hint',
-        box_2d: { ymin: 100, xmin: 50, ymax: 400, xmax: 200 },
-      },
-    ],
-    welcomeMessageKey: 'profile.tech.welcome',
-  },
-};
-
-/**
- * 모든 데모 프로필 목록.
- */
-export const DEMO_PROFILES: readonly DemoProfile[] = [
-  PROFILE_NARRATOR,
-  PROFILE_EXPLORER,
-  PROFILE_TECH,
-] as const;
-
-/**
- * 프로필 ID로 프로필을 찾습니다.
- */
-export function findProfileById(profileId: string): DemoProfile | undefined {
-  return DEMO_PROFILES.find((p) => p.id === profileId);
-}
-
-// =============================================================================
-// 프로필 → SaveGameInput 변환 (RU-004-Q1: SSOT 단일화)
-// =============================================================================
-
-/**
- * 데모 프로필을 SaveGameInput으로 변환합니다.
- *
- * RU-004-Q1: SaveGame 생성은 createSaveGame(SSOT)만 수행하도록 분리.
- * 이 함수는 "입력 변환(input adapter)" 역할만 담당합니다.
- *
- * @param profile - 데모 프로필
- * @param language - 언어 설정
- * @param t - i18n 번역 함수
- * @returns SaveGameInput 객체 (createSaveGame에 전달 가능)
- */
-export function profileToSaveGameInput(
-  profile: DemoProfile,
-  language: SupportedLanguage,
-  t: (key: string) => string,
-): SaveGameInput {
-  const now = Date.now();
-
-  return {
-    language,
-    profileId: profile.id,
-    seed: `demo-${profile.id}-${now}`,
-    economy: {
-      signal: profile.initialState.economy.signal,
-      memory_shard: profile.initialState.economy.memory_shard,
-    },
-    economyLedger: [],
-    turnCount: 0,
-    narrativeHistory: [
-      {
-        turn: 0,
-        text: t(profile.initialState.welcomeMessageKey),
-      },
-    ],
-    inventory: profile.initialState.inventoryDefs.map((item) => ({
-      id: item.id,
-      name: t(item.nameKey),
-      icon: item.icon,
-      quantity: item.quantity,
-    })),
-    quests: profile.initialState.questDefs.map((quest) => ({
-      id: quest.id,
-      label: t(quest.labelKey),
-      is_completed: quest.is_completed,
-    })),
-    activeRules: profile.initialState.ruleDefs.map((rule) => ({
-      id: rule.id,
-      label: t(rule.labelKey),
-      description: rule.descriptionKey ? t(rule.descriptionKey) : null,
-    })),
-    mutationTimeline: profile.initialState.ruleDefs.map((rule, index) => ({
-      turn: 0,
-      ruleId: rule.id,
-      type: 'added' as const,
-      label: t(rule.labelKey),
-      description: rule.descriptionKey ? t(rule.descriptionKey) : undefined,
-      timestamp: now - index * 1000,
-    })),
-    sceneObjects: profile.initialState.sceneObjectDefs.map((obj) => ({
-      id: obj.id,
-      label: t(obj.labelKey),
-      box_2d: obj.box_2d,
-      interaction_hint: t(obj.hintKey),
-    })),
-  };
-}
-
-/**
- * 데모 프로필을 SaveGame 형태로 변환합니다.
- *
- * RU-004-Q1: createSaveGame(SSOT)를 호출하는 얇은 wrapper입니다.
- * 기존 호출자와의 호환성을 유지합니다.
- *
- * @param profile - 데모 프로필
- * @param language - 언어 설정
- * @param t - i18n 번역 함수
- * @returns SaveGame 객체
- */
-export function createSaveGameFromProfile(
-  profile: DemoProfile,
-  language: SupportedLanguage,
-  t: (key: string) => string,
-): SaveGame {
-  return createSaveGame(profileToSaveGameInput(profile, language, t));
-}
-
-/**
- * 프로필 목록 정보만 가져옵니다 (선택 UI용).
- */
-export function getProfileSummaries(): Array<DemoProfileDef> {
-  return DEMO_PROFILES.map((p) => ({
-    id: p.id,
-    nameKey: p.nameKey,
-    descriptionKey: p.descriptionKey,
-    icon: p.icon,
-    themeColor: p.themeColor,
-  }));
-}
-</file>
-
 <file path="frontend/src/demo/demoFixtures.ts">
 /**
  * Unknown World - 데모용 Fixtures (RU-003-Q5)
@@ -5778,428 +5203,353 @@ export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
 export default i18n;
 </file>
 
-<file path="frontend/src/save/saveGame.ts">
+<file path="frontend/src/save/sessionLifecycle.ts">
 /**
- * Unknown World - SaveGame 저장/복원 모듈 (U-015[Mvp]).
+ * Unknown World - 세션 라이프사이클 관리 모듈 (RU-004-Q4).
  *
- * 로그인 없이 즉시 시작 가능한 데모 프로필과 세이브/로드 기능을 제공합니다.
- * DB 없이 SaveGame JSON 직렬화 기반으로 localStorage에 저장합니다.
+ * 세션 초기화/복원/리셋/변경을 SSOT로 관리합니다.
+ * App.tsx의 세션 관련 로직을 이 모듈로 이동하여 책임 경계를 명확히 합니다.
  *
  * 설계 원칙:
- *   - RULE-010: DB/ORM 도입 금지 (SaveGame JSON 직렬화 기반)
- *   - RULE-006: language 필드로 ko/en 혼합 방지
- *   - Q1 결정: Option A - localStorage 사용 (단순/데모 적합)
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
+ *   - RULE-006: ko/en i18n 정책 준수 (언어 적용 후 UI 렌더링)
+ *   - RU-004-S1: 언어 async 적용 완료 후 store 주입
+ *   - RU-004-S2: profileId SSOT + 유효 SaveGame만 Continue
  *
- * @module save/saveGame
+ * @module save/sessionLifecycle
  */
 
-import { z } from 'zod';
-import type { SupportedLanguage } from '../i18n';
-import type { LedgerEntry } from '../stores/economyStore';
-import type { Quest, WorldRule } from '../schemas/turn';
-import type { InventoryItem } from '../stores/inventoryStore';
-import type { MutationEvent, NarrativeEntry, EconomyState } from '../stores/worldStore';
-import type { SceneObject } from '../schemas/turn';
+import {
+  loadSaveGame,
+  saveSaveGame,
+  clearSaveGame,
+  getValidSaveGameOrNull,
+  createSaveGame,
+  loadCurrentProfileId,
+  saveCurrentProfileId,
+  clearCurrentProfileId,
+} from './saveGame';
+import { findProfileById, createSaveGameFromProfile, type DemoProfile } from '../data/demoProfiles';
+import { getResolvedLanguage, changeLanguage, type SupportedLanguage } from '../i18n';
+import { useWorldStore } from '../stores/worldStore';
+import { useInventoryStore } from '../stores/inventoryStore';
+import { useEconomyStore } from '../stores/economyStore';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useAgentStore } from '../stores/agentStore';
 
 // =============================================================================
-// 버전 및 상수
+// 타입 정의
 // =============================================================================
 
 /**
- * 현재 SaveGame 스키마 버전.
- * 버전이 바뀌어도 복원 가능하도록 version 필드를 필수로 둡니다.
+ * 부팅 결과 타입.
+ * 앱 시작 시 어떤 phase로 시작할지 결정합니다.
  */
-export const SAVEGAME_VERSION = '1.0.0' as const;
-
-/** localStorage 키 */
-export const SAVEGAME_STORAGE_KEY = 'unknown_world_savegame' as const;
-
-/** 현재 선택된 프로필 키 */
-export const CURRENT_PROFILE_KEY = 'unknown_world_current_profile' as const;
-
-// =============================================================================
-// SaveGame 스키마 정의
-// =============================================================================
+export type SessionBootstrap =
+  | { phase: 'profile_select'; savedGameAvailable: boolean }
+  | { phase: 'playing'; profileId: string | null };
 
 /**
- * SaveGame Zod 스키마.
- * 최소 필드만 포함하여 MVP 요구사항을 충족합니다.
+ * 세션 시작 결과 타입.
  */
-export const SaveGameSchema = z
-  .object({
-    /** 스키마 버전 (마이그레이션용) */
-    version: z.string().describe('SaveGame 스키마 버전'),
-    /** 세션 시드 (리플레이 재현용, 선택) */
-    seed: z.string().nullable().default(null).describe('세션 시드'),
-    /** 언어 설정 (RULE-006: 복원 시 UI i18n에도 적용) */
-    language: z.enum(['ko-KR', 'en-US']).describe('언어 설정'),
-    /** 사용된 데모 프로필 ID */
-    profileId: z.string().nullable().default(null).describe('데모 프로필 ID'),
-    /** 저장 시각 (ISO 8601) */
-    savedAt: z.string().describe('저장 시각'),
-
-    /** 재화 상태 */
-    economy: z
-      .object({
-        signal: z.number().int().min(0),
-        memory_shard: z.number().int().min(0),
-      })
-      .describe('재화 상태'),
-
-    /** 경제 원장 이력 */
-    economyLedger: z
-      .array(
-        z.object({
-          turnId: z.number().int(),
-          actionId: z.string().optional(),
-          reason: z.string(),
-          cost: z.object({
-            signal: z.number().int().min(0),
-            memory_shard: z.number().int().min(0),
-          }),
-          balanceAfter: z.object({
-            signal: z.number().int().min(0),
-            memory_shard: z.number().int().min(0),
-          }),
-          modelLabel: z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']).optional(),
-          timestamp: z.number(),
-        }),
-      )
-      .default([])
-      .describe('경제 원장 이력'),
-
-    /** 현재 턴 카운트 */
-    turnCount: z.number().int().min(0).default(0).describe('현재 턴 카운트'),
-
-    /** 내러티브 히스토리 */
-    narrativeHistory: z
-      .array(
-        z.object({
-          turn: z.number().int(),
-          text: z.string(),
-        }),
-      )
-      .default([])
-      .describe('내러티브 히스토리'),
-
-    /** 인벤토리 아이템 */
-    inventory: z
-      .array(
-        z.object({
-          id: z.string(),
-          name: z.string(),
-          description: z.string().optional(),
-          icon: z.string().optional(),
-          quantity: z.number().int().min(1),
-        }),
-      )
-      .default([])
-      .describe('인벤토리 아이템'),
-
-    /** 활성 퀘스트 */
-    quests: z
-      .array(
-        z.object({
-          id: z.string(),
-          label: z.string(),
-          is_completed: z.boolean().default(false),
-        }),
-      )
-      .default([])
-      .describe('활성 퀘스트'),
-
-    /** 활성 규칙 */
-    activeRules: z
-      .array(
-        z.object({
-          id: z.string(),
-          label: z.string(),
-          description: z.string().nullable().default(null),
-        }),
-      )
-      .default([])
-      .describe('활성 규칙'),
-
-    /** 룰 변형 타임라인 */
-    mutationTimeline: z
-      .array(
-        z.object({
-          turn: z.number().int(),
-          ruleId: z.string(),
-          type: z.enum(['added', 'modified', 'removed']),
-          label: z.string(),
-          description: z.string().optional(),
-          timestamp: z.number(),
-        }),
-      )
-      .default([])
-      .describe('룰 변형 타임라인'),
-
-    /** Scene Objects (핫스팟) */
-    sceneObjects: z
-      .array(
-        z.object({
-          id: z.string(),
-          label: z.string(),
-          box_2d: z.object({
-            ymin: z.number().int().min(0).max(1000),
-            xmin: z.number().int().min(0).max(1000),
-            ymax: z.number().int().min(0).max(1000),
-            xmax: z.number().int().min(0).max(1000),
-          }),
-          interaction_hint: z.string().nullable().default(null),
-        }),
-      )
-      .default([])
-      .describe('Scene Objects'),
-  })
-  .strict();
-
-export type SaveGame = z.infer<typeof SaveGameSchema>;
-
-// =============================================================================
-// 저장/복원 함수
-// =============================================================================
-
-/**
- * SaveGame 인터페이스 (저장할 상태 전체를 캡처).
- */
-export interface SaveGameInput {
-  language: SupportedLanguage;
-  profileId?: string | null;
-  seed?: string | null;
-  economy: EconomyState;
-  economyLedger: LedgerEntry[];
-  turnCount: number;
-  narrativeHistory: NarrativeEntry[];
-  inventory: InventoryItem[];
-  quests: Quest[];
-  activeRules: WorldRule[];
-  mutationTimeline: MutationEvent[];
-  sceneObjects: SceneObject[];
+export interface SessionStartResult {
+  success: true;
+  profileId: string;
 }
 
 /**
- * 현재 상태를 SaveGame 객체로 직렬화합니다.
+ * 세션 복원 결과 타입.
  */
-export function createSaveGame(input: SaveGameInput): SaveGame {
+export interface SessionContinueResult {
+  success: true;
+  profileId: string;
+}
+
+/**
+ * 세션 리셋 결과 타입.
+ */
+export interface SessionResetResult {
+  success: boolean;
+  profileId: string | null;
+}
+
+// =============================================================================
+// 내부 헬퍼: 모든 세션 관련 store를 초기화
+// =============================================================================
+
+/**
+ * 모든 세션 관련 store를 초기화합니다.
+ *
+ * RU-004-Q4 Step 2: store reset/hydrate 범위 표준화
+ * - worldStore, inventoryStore, economyStore, actionDeckStore, agentStore
+ *
+ * 세션 경계에서 항상 이 함수를 호출하여 이전 세션 잔재를 완전히 제거합니다.
+ */
+function resetAllSessionStores(): void {
+  useWorldStore.getState().reset();
+  useInventoryStore.getState().reset();
+  useEconomyStore.getState().reset();
+  useActionDeckStore.getState().reset();
+  useAgentStore.getState().reset();
+}
+
+// =============================================================================
+// 세션 라이프사이클 API
+// =============================================================================
+
+/**
+ * 부팅 시 세션 상태를 확인하고 시작 phase를 결정합니다.
+ *
+ * RU-004-S2: hasSaveGame() 대신 getValidSaveGameOrNull()로 "유효한 세이브만" 판단
+ *
+ * @returns SessionBootstrap - 시작 phase와 관련 정보
+ */
+export function bootstrapSession(): SessionBootstrap {
+  const validSaveGame = getValidSaveGameOrNull();
+
+  if (validSaveGame) {
+    // 유효한 세이브가 있으면 playing 상태로 시작
+    return {
+      phase: 'playing',
+      profileId: validSaveGame.profileId,
+    };
+  }
+
+  // 유효한 세이브가 없으면 profile_select로 시작
+  // 단, localStorage에 깨진 세이브가 있을 수 있으므로 savedGameAvailable은 false
   return {
-    version: SAVEGAME_VERSION,
-    seed: input.seed ?? null,
-    language: input.language,
-    profileId: input.profileId ?? null,
-    savedAt: new Date().toISOString(),
-    economy: {
-      signal: input.economy.signal,
-      memory_shard: input.economy.memory_shard,
-    },
-    economyLedger: input.economyLedger.map((entry) => ({
-      turnId: entry.turnId,
-      actionId: entry.actionId,
-      reason: entry.reason,
-      cost: {
-        signal: entry.cost.signal,
-        memory_shard: entry.cost.memory_shard,
-      },
-      balanceAfter: {
-        signal: entry.balanceAfter.signal,
-        memory_shard: entry.balanceAfter.memory_shard,
-      },
-      modelLabel: entry.modelLabel,
-      timestamp: entry.timestamp,
-    })),
-    turnCount: input.turnCount,
-    narrativeHistory: input.narrativeHistory.map((entry) => ({
-      turn: entry.turn,
-      text: entry.text,
-    })),
-    inventory: input.inventory.map((item) => ({
-      id: item.id,
-      name: item.name,
-      description: item.description,
-      icon: item.icon,
-      quantity: item.quantity,
-    })),
-    quests: input.quests.map((quest) => ({
-      id: quest.id,
-      label: quest.label,
-      is_completed: quest.is_completed,
-    })),
-    activeRules: input.activeRules.map((rule) => ({
-      id: rule.id,
-      label: rule.label,
-      description: rule.description,
-    })),
-    mutationTimeline: input.mutationTimeline.map((event) => ({
-      turn: event.turn,
-      ruleId: event.ruleId,
-      type: event.type,
-      label: event.label,
-      description: event.description,
-      timestamp: event.timestamp,
-    })),
-    sceneObjects: input.sceneObjects.map((obj) => ({
-      id: obj.id,
-      label: obj.label,
-      box_2d: {
-        ymin: obj.box_2d.ymin,
-        xmin: obj.box_2d.xmin,
-        ymax: obj.box_2d.ymax,
-        xmax: obj.box_2d.xmax,
-      },
-      interaction_hint: obj.interaction_hint,
-    })),
+    phase: 'profile_select',
+    savedGameAvailable: false,
   };
 }
 
 /**
- * SaveGame을 localStorage에 저장합니다.
+ * 저장된 게임이 있는지 확인합니다 (Continue 버튼 표시용).
  *
+ * RU-004-S2: 유효한 세이브만 "있음"으로 판단
+ *
+ * @returns 유효한 세이브가 있으면 true
+ */
+export function hasValidSaveGame(): boolean {
+  return getValidSaveGameOrNull() !== null;
+}
+
+/**
+ * 프로필을 선택하고 새 세션을 시작합니다.
+ *
+ * RU-004-Q4 Step 1: startSessionFromProfile
+ * - 모든 store를 초기화
+ * - 프로필 기반 SaveGame 생성
+ * - store에 초기 상태 주입
+ * - localStorage에 저장
+ *
+ * @param args.profile - 선택한 데모 프로필
+ * @param args.t - i18n 번역 함수
+ * @returns 세션 시작 결과
+ */
+export function startSessionFromProfile(args: {
+  profile: DemoProfile;
+  t: (key: string) => string;
+}): SessionStartResult {
+  const { profile, t } = args;
+
+  // 현재 언어 설정 유지
+  const language = getResolvedLanguage();
+
+  // 프로필에서 SaveGame 생성
+  const saveGame = createSaveGameFromProfile(profile, language, t);
+
+  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
+  resetAllSessionStores();
+
+  // Store에 초기 상태 주입
+  useWorldStore.setState({
+    economy: {
+      signal: saveGame.economy.signal,
+      memory_shard: saveGame.economy.memory_shard,
+    },
+    turnCount: 0,
+    narrativeEntries: saveGame.narrativeHistory,
+    quests: saveGame.quests,
+    activeRules: saveGame.activeRules,
+    mutationTimeline: saveGame.mutationTimeline,
+    sceneObjects: saveGame.sceneObjects,
+  });
+
+  useInventoryStore.getState().setItems(saveGame.inventory);
+
+  // 프로필 ID 저장 (localStorage)
+  saveCurrentProfileId(profile.id);
+
+  // SaveGame 저장 (localStorage)
+  saveSaveGame(saveGame);
+
+  return {
+    success: true,
+    profileId: profile.id,
+  };
+}
+
+/**
+ * 저장된 게임을 복원하여 세션을 계속합니다.
+ *
+ * RU-004-Q4 Step 1: continueSession
+ * RU-004-S1: async로 언어 적용 완료 후 store 주입
+ * RU-004-S2: profileId SSOT + 로드 실패 시 null 반환
+ *
+ * @returns 세션 복원 결과 또는 null (실패 시)
+ */
+export async function continueSession(): Promise<SessionContinueResult | null> {
+  const saveGame = loadSaveGame();
+  if (!saveGame) {
+    // 로드 실패 시 클린업
+    clearSaveGame();
+    clearCurrentProfileId();
+    console.warn('[SessionLifecycle] SaveGame 로드 실패, 새로 시작 필요');
+    return null;
+  }
+
+  // RU-004-S1: 언어 설정 비동기 적용 완료 후 진행 (RULE-006)
+  await changeLanguage(saveGame.language as SupportedLanguage);
+
+  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
+  resetAllSessionStores();
+
+  // Store에 저장된 상태 복원
+  useWorldStore.setState({
+    economy: {
+      signal: saveGame.economy.signal,
+      memory_shard: saveGame.economy.memory_shard,
+    },
+    turnCount: saveGame.turnCount,
+    narrativeEntries: saveGame.narrativeHistory,
+    quests: saveGame.quests,
+    activeRules: saveGame.activeRules,
+    mutationTimeline: saveGame.mutationTimeline,
+    sceneObjects: saveGame.sceneObjects,
+  });
+
+  // 인벤토리 복원
+  useInventoryStore.getState().setItems(saveGame.inventory);
+
+  // Economy 복원 (RU-004-S1: hydrateLedger로 순서/timestamp/lastCost/isBalanceLow 정합성 보장)
+  useEconomyStore.getState().hydrateLedger(saveGame.economyLedger, saveGame.economy);
+
+  // RU-004-S2: profileId SSOT - SaveGame.profileId를 권위자로 사용
+  const profileId = saveGame.profileId;
+  if (profileId) {
+    saveCurrentProfileId(profileId); // localStorage 동기화 (드리프트 방지)
+  }
+
+  return {
+    success: true,
+    profileId: profileId ?? loadCurrentProfileId() ?? '',
+  };
+}
+
+/**
+ * 현재 프로필의 초기 상태로 리셋합니다.
+ *
+ * RU-004-Q4 Step 1: resetToCurrentProfile
+ *
+ * @param args.t - i18n 번역 함수
+ * @param args.currentProfileId - 현재 프로필 ID
+ * @returns 리셋 성공 여부
+ */
+export function resetToCurrentProfile(args: {
+  t: (key: string) => string;
+  currentProfileId: string | null;
+}): SessionResetResult {
+  const { t, currentProfileId } = args;
+
+  if (!currentProfileId) {
+    return { success: false, profileId: null };
+  }
+
+  const profile = findProfileById(currentProfileId);
+  if (!profile) {
+    return { success: false, profileId: null };
+  }
+
+  // 동일 프로필로 새 세션 시작
+  const result = startSessionFromProfile({ profile, t });
+
+  return {
+    success: result.success,
+    profileId: result.profileId,
+  };
+}
+
+/**
+ * 세션을 종료하고 프로필 선택 화면으로 돌아갑니다.
+ *
+ * RU-004-Q4 Step 1: clearSessionAndReturnToSelect
+ * - 모든 세션 데이터 클린업 (localStorage + store)
+ */
+export function clearSessionAndReturnToSelect(): void {
+  // localStorage 클린업
+  clearSaveGame();
+  clearCurrentProfileId();
+
+  // 모든 세션 store 초기화
+  resetAllSessionStores();
+}
+
+/**
+ * 현재 상태를 저장합니다.
+ *
+ * 턴 완료 시 자동 저장에 사용됩니다.
+ *
+ * RU-004-Q5: seed는 세션 시작 시 생성되고, 이후 변경되지 않아야 합니다.
+ * 기존 SaveGame에서 seed를 읽어와서 유지합니다.
+ *
+ * @param profileId - 현재 프로필 ID
  * @returns 저장 성공 여부
  */
-export function saveSaveGame(saveGame: SaveGame): boolean {
-  try {
-    const json = JSON.stringify(saveGame);
-    localStorage.setItem(SAVEGAME_STORAGE_KEY, json);
-    return true;
-  } catch (error) {
-    console.error('[SaveGame] 저장 실패:', error);
-    return false;
-  }
+export function saveCurrentSession(profileId: string | null): boolean {
+  if (!profileId) return false;
+
+  const worldState = useWorldStore.getState();
+  const economyState = useEconomyStore.getState();
+  const inventoryState = useInventoryStore.getState();
+
+  // RU-004-Q5: 기존 SaveGame에서 seed를 가져와 유지 (SSOT)
+  const existingSaveGame = getValidSaveGameOrNull();
+  const seed = existingSaveGame?.seed ?? null;
+
+  const saveGame = createSaveGame({
+    language: getResolvedLanguage(),
+    profileId,
+    seed, // RU-004-Q5: seed 유지
+    economy: worldState.economy,
+    economyLedger: economyState.ledger,
+    turnCount: worldState.turnCount,
+    narrativeHistory: worldState.narrativeEntries,
+    inventory: inventoryState.items,
+    quests: worldState.quests,
+    activeRules: worldState.activeRules,
+    mutationTimeline: worldState.mutationTimeline,
+    sceneObjects: worldState.sceneObjects,
+  });
+
+  return saveSaveGame(saveGame);
 }
 
 /**
- * localStorage에서 SaveGame을 로드합니다.
- * 마이그레이션이 필요한 경우 자동으로 적용합니다 (RU-004-S2).
+ * 초기 profileId를 결정합니다.
  *
- * @returns SaveGame 객체 또는 null (없거나 유효하지 않은 경우)
- */
-export function loadSaveGame(): SaveGame | null {
-  try {
-    const json = localStorage.getItem(SAVEGAME_STORAGE_KEY);
-    if (!json) {
-      return null;
-    }
-
-    const parsed = JSON.parse(json);
-    const result = SaveGameSchema.safeParse(parsed);
-
-    if (!result.success) {
-      console.warn('[SaveGame] 스키마 검증 실패:', result.error);
-      return null;
-    }
-
-    // RU-004-S2: 버전 마이그레이션 적용
-    const migrated = migrateSaveGame(result.data);
-    if (!migrated) {
-      console.warn('[SaveGame] 마이그레이션 실패, 새로 시작 필요');
-      return null;
-    }
-
-    return migrated;
-  } catch (error) {
-    console.error('[SaveGame] 로드 실패:', error);
-    return null;
-  }
-}
-
-/**
- * 저장된 SaveGame을 삭제합니다.
- */
-export function clearSaveGame(): void {
-  try {
-    localStorage.removeItem(SAVEGAME_STORAGE_KEY);
-  } catch (error) {
-    console.error('[SaveGame] 삭제 실패:', error);
-  }
-}
-
-/**
- * SaveGame이 존재하는지 확인합니다.
+ * RU-004-S2: SaveGame.profileId가 SSOT, CURRENT_PROFILE_KEY는 폴백
  *
- * @deprecated RU-004-S2: 이 함수는 키 존재만 확인하므로 "유효한 세이브" 판단에 부적합합니다.
- *             대신 `getValidSaveGameOrNull()`을 사용하세요.
+ * @returns 초기 profileId 또는 null
  */
-export function hasSaveGame(): boolean {
-  try {
-    return localStorage.getItem(SAVEGAME_STORAGE_KEY) !== null;
-  } catch {
-    return false;
+export function getInitialProfileId(): string | null {
+  // 유효한 SaveGame이 있으면 그 profileId를 사용
+  const validSaveGame = getValidSaveGameOrNull();
+  if (validSaveGame?.profileId) {
+    return validSaveGame.profileId;
   }
-}
-
-/**
- * 유효한 SaveGame을 반환합니다. 없거나 검증/마이그레이션 실패 시 null을 반환합니다 (RU-004-S2).
- *
- * `hasSaveGame()` 대신 이 함수를 사용하면 "Continue 버튼 노출" 판단이 정확해집니다:
- * - localStorage에 데이터가 있어도 스키마 검증 실패 시 null 반환
- * - 버전 불일치로 마이그레이션 실패 시 null 반환
- *
- * @returns 유효한 SaveGame 또는 null
- */
-export function getValidSaveGameOrNull(): SaveGame | null {
-  return loadSaveGame();
-}
-
-// =============================================================================
-// 프로필 관련 유틸리티
-// =============================================================================
-
-/**
- * 현재 선택된 프로필 ID를 저장합니다.
- */
-export function saveCurrentProfileId(profileId: string): void {
-  try {
-    localStorage.setItem(CURRENT_PROFILE_KEY, profileId);
-  } catch (error) {
-    console.error('[SaveGame] 프로필 ID 저장 실패:', error);
-  }
-}
-
-/**
- * 현재 선택된 프로필 ID를 로드합니다.
- */
-export function loadCurrentProfileId(): string | null {
-  try {
-    return localStorage.getItem(CURRENT_PROFILE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * 현재 선택된 프로필 ID를 삭제합니다.
- */
-export function clearCurrentProfileId(): void {
-  try {
-    localStorage.removeItem(CURRENT_PROFILE_KEY);
-  } catch (error) {
-    console.error('[SaveGame] 프로필 ID 삭제 실패:', error);
-  }
-}
-
-// =============================================================================
-// 버전 마이그레이션 (향후 확장)
-// =============================================================================
-
-/**
- * SaveGame 버전을 확인하고 필요 시 마이그레이션합니다.
- * 현재는 v1.0.0만 지원하므로 패스스루입니다.
- *
- * @param saveGame - 로드된 SaveGame
- * @returns 마이그레이션된 SaveGame 또는 null (마이그레이션 불가)
- */
-export function migrateSaveGame(saveGame: SaveGame): SaveGame | null {
-  // 현재 버전이면 그대로 반환
-  if (saveGame.version === SAVEGAME_VERSION) {
-    return saveGame;
-  }
-
-  // 향후 버전 업그레이드 시 마이그레이션 로직 추가
-  console.warn(`[SaveGame] 버전 불일치: ${saveGame.version} -> ${SAVEGAME_VERSION}`);
-
-  // MVP에서는 버전 불일치 시 null 반환 (새로 시작 유도)
-  return null;
+  // 폴백: CURRENT_PROFILE_KEY (호환성)
+  return loadCurrentProfileId();
 }
 </file>
 
@@ -6344,374 +5694,6 @@ describe('agentStore', () => {
     expect(state.narrativeBuffer).toBe('');
   });
 });
-</file>
-
-<file path="frontend/src/stores/economyStore.ts">
-/**
- * Unknown World - Economy 상태 관리 (Zustand) (U-014[Mvp]).
- *
- * Signal/Memory Shard 재화 HUD와 턴별 비용/잔액 변화를
- * **원장(ledger)**으로 추적하여 "비용/지연을 게임 메커닉"으로 UX에 반영합니다.
- *
- * 설계 원칙:
- *   - RULE-005: Economy 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
- *   - RULE-008: 비용/모델 선택 이유는 라벨(FAST/QUALITY/REF)로만 설명
- *   - Q1 결정: Option A - 최근 N턴만 보관 (UI/메모리 절감)
- *
- * @module stores/economyStore
- */
-
-import { create } from 'zustand';
-import type { CurrencyAmount, ModelLabel, CostEstimate } from '../schemas/turn';
-
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/** 최근 N턴의 ledger만 보관 (Q1: Option A) */
-export const LEDGER_MAX_ENTRIES = 20;
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/**
- * 원장(Ledger) 엔트리.
- * 각 턴에서 발생한 비용과 잔액 변화를 기록합니다.
- */
-export interface LedgerEntry {
-  /** 턴 ID (턴 카운트) */
-  turnId: number;
-  /** 액션 ID (선택된 카드 ID, 선택사항) */
-  actionId?: string;
-  /** 비용 사유 (예: "탐색", "이미지 생성") */
-  reason: string;
-  /** 소비된 비용 */
-  cost: CurrencyAmount;
-  /** 소비 후 잔액 */
-  balanceAfter: CurrencyAmount;
-  /** 모델 라벨 (FAST/QUALITY/CHEAP/REF) */
-  modelLabel?: ModelLabel;
-  /** 기록 시간 */
-  timestamp: number;
-}
-
-/**
- * 예상 비용 상태.
- * 현재 선택된 액션의 예상 비용을 추적합니다.
- */
-export interface CostEstimateState {
-  /** 최소 예상 비용 */
-  min: CurrencyAmount;
-  /** 최대 예상 비용 */
-  max: CurrencyAmount;
-  /** 예상 비용을 계산한 액션 ID */
-  actionId?: string;
-  /** 예상 비용 라벨/설명 */
-  label?: string;
-}
-
-/**
- * 마지막 확정 비용 상태.
- * 가장 최근 턴에서 확정된 비용 정보입니다.
- */
-export interface LastCostState {
-  /** 확정된 비용 */
-  cost: CurrencyAmount;
-  /** 확정 후 잔액 */
-  balanceAfter: CurrencyAmount;
-  /** 턴 ID */
-  turnId: number;
-  /** 모델 라벨 */
-  modelLabel?: ModelLabel;
-}
-
-/** Economy Store 상태 */
-export interface EconomyStoreState {
-  /** 원장 (최근 N개 엔트리, 최신순) */
-  ledger: LedgerEntry[];
-  /** 현재 예상 비용 (선택한 액션 기반) */
-  costEstimate: CostEstimateState | null;
-  /** 마지막 확정 비용 */
-  lastCost: LastCostState | null;
-  /** 잔액 부족 경고 여부 */
-  isBalanceLow: boolean;
-  /** 잔액 부족 임계값 (Signal 기준) */
-  lowBalanceThreshold: number;
-}
-
-/** Economy Store 액션 */
-export interface EconomyStoreActions {
-  /**
-   * 턴 완료 시 원장에 엔트리를 추가합니다.
-   */
-  addLedgerEntry: (entry: Omit<LedgerEntry, 'timestamp'>) => void;
-
-  /**
-   * SaveGame 복원 시 원장을 그대로 주입합니다 (RU-004-S1).
-   *
-   * - ledger는 저장된 순서(최신순)를 유지합니다.
-   * - timestamp는 저장된 값을 보존합니다.
-   * - lastCost는 최신 엔트리(첫 원소) 기준으로 설정합니다.
-   * - isBalanceLow는 전달된 currentBalance로 재계산합니다.
-   *
-   * @param ledger - 저장된 원장 배열 (최신순, timestamp 포함)
-   * @param currentBalance - 복원된 잔액 (isBalanceLow 계산용)
-   */
-  hydrateLedger: (ledger: LedgerEntry[], currentBalance: CurrencyAmount) => void;
-
-  /**
-   * 예상 비용을 설정합니다 (카드 선택/호버 시).
-   */
-  setCostEstimate: (estimate: CostEstimateState | null) => void;
-
-  /**
-   * 카드의 비용 정보로 예상 비용을 설정합니다.
-   */
-  setCostEstimateFromCard: (
-    cost: CurrencyAmount,
-    costEstimate: CostEstimate | null,
-    actionId: string,
-    label?: string,
-  ) => void;
-
-  /**
-   * 마지막 확정 비용을 설정합니다 (TurnOutput 반영 시).
-   */
-  setLastCost: (lastCost: LastCostState) => void;
-
-  /**
-   * 잔액 부족 상태를 업데이트합니다.
-   */
-  updateBalanceLowStatus: (currentBalance: CurrencyAmount) => void;
-
-  /**
-   * 잔액 부족 임계값을 설정합니다.
-   */
-  setLowBalanceThreshold: (threshold: number) => void;
-
-  /**
-   * 원장을 초기화합니다.
-   */
-  clearLedger: () => void;
-
-  /**
-   * 전체 상태를 초기화합니다.
-   */
-  reset: () => void;
-}
-
-export type EconomyStore = EconomyStoreState & EconomyStoreActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-function createInitialState(): EconomyStoreState {
-  return {
-    ledger: [],
-    costEstimate: null,
-    lastCost: null,
-    isBalanceLow: false,
-    lowBalanceThreshold: 10, // Signal 10 미만이면 경고
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * Economy 상태 스토어.
- *
- * 턴별 비용/잔액 변화를 원장(ledger)으로 추적하고,
- * 예상 비용과 확정 비용을 UI에 제공합니다.
- *
- * @example
- * ```tsx
- * // 예상 비용 설정 (카드 호버 시)
- * const setCostEstimateFromCard = useEconomyStore(s => s.setCostEstimateFromCard);
- * setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
- *
- * // 턴 완료 시 원장 기록
- * const addLedgerEntry = useEconomyStore(s => s.addLedgerEntry);
- * addLedgerEntry({
- *   turnId: turnCount,
- *   reason: 'explore',
- *   cost: turnOutput.economy.cost,
- *   balanceAfter: turnOutput.economy.balance_after,
- * });
- * ```
- */
-export const useEconomyStore = create<EconomyStore>((set, get) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-
-  addLedgerEntry: (entry) => {
-    const timestamp = Date.now();
-    const newEntry: LedgerEntry = { ...entry, timestamp };
-
-    set((state) => {
-      // 최신순으로 추가하고 최대 개수 유지 (Q1: Option A)
-      const updatedLedger = [newEntry, ...state.ledger].slice(0, LEDGER_MAX_ENTRIES);
-
-      return {
-        ledger: updatedLedger,
-        lastCost: {
-          cost: entry.cost,
-          balanceAfter: entry.balanceAfter,
-          turnId: entry.turnId,
-          modelLabel: entry.modelLabel,
-        },
-        // 턴 완료 후 예상 비용 초기화
-        costEstimate: null,
-      };
-    });
-  },
-
-  hydrateLedger: (ledger, currentBalance) => {
-    const { lowBalanceThreshold } = get();
-
-    // LEDGER_MAX_ENTRIES 정책 적용 (저장된 것이 더 많을 경우 대비)
-    const hydratedLedger = ledger.slice(0, LEDGER_MAX_ENTRIES);
-
-    // lastCost는 가장 최신 엔트리(첫 원소) 기준으로 설정
-    const latestEntry = hydratedLedger[0] ?? null;
-    const lastCost: LastCostState | null = latestEntry
-      ? {
-          cost: latestEntry.cost,
-          balanceAfter: latestEntry.balanceAfter,
-          turnId: latestEntry.turnId,
-          modelLabel: latestEntry.modelLabel,
-        }
-      : null;
-
-    // isBalanceLow는 복원된 잔액 기준으로 재계산
-    const isBalanceLow = currentBalance.signal < lowBalanceThreshold;
-
-    set({
-      ledger: hydratedLedger,
-      lastCost,
-      isBalanceLow,
-      costEstimate: null,
-    });
-  },
-
-  setCostEstimate: (estimate) => {
-    set({ costEstimate: estimate });
-  },
-
-  setCostEstimateFromCard: (cost, costEstimate, actionId, label) => {
-    if (costEstimate) {
-      set({
-        costEstimate: {
-          min: costEstimate.min,
-          max: costEstimate.max,
-          actionId,
-          label,
-        },
-      });
-    } else {
-      // cost_estimate가 없으면 기본 cost를 min/max로 사용
-      set({
-        costEstimate: {
-          min: cost,
-          max: cost,
-          actionId,
-          label,
-        },
-      });
-    }
-  },
-
-  setLastCost: (lastCost) => {
-    set({ lastCost });
-  },
-
-  updateBalanceLowStatus: (currentBalance) => {
-    const { lowBalanceThreshold } = get();
-    const isLow = currentBalance.signal < lowBalanceThreshold;
-    set({ isBalanceLow: isLow });
-  },
-
-  setLowBalanceThreshold: (threshold) => {
-    set({ lowBalanceThreshold: threshold });
-  },
-
-  clearLedger: () => {
-    set({ ledger: [], lastCost: null });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 원장 셀렉터 */
-export const selectLedger = (state: EconomyStore) => state.ledger;
-
-/** 예상 비용 셀렉터 */
-export const selectCostEstimate = (state: EconomyStore) => state.costEstimate;
-
-/** 마지막 확정 비용 셀렉터 */
-export const selectLastCost = (state: EconomyStore) => state.lastCost;
-
-/** 잔액 부족 상태 셀렉터 */
-export const selectIsBalanceLow = (state: EconomyStore) => state.isBalanceLow;
-
-/** 최근 N개 원장 엔트리 셀렉터 */
-export const selectRecentLedger =
-  (count: number) =>
-  (state: EconomyStore): LedgerEntry[] =>
-    state.ledger.slice(0, count);
-
-/** 총 소비 비용 계산 셀렉터 (현재 세션) */
-export const selectTotalSpent = (state: EconomyStore): CurrencyAmount => {
-  return state.ledger.reduce(
-    (acc, entry) => ({
-      signal: acc.signal + entry.cost.signal,
-      memory_shard: acc.memory_shard + entry.cost.memory_shard,
-    }),
-    { signal: 0, memory_shard: 0 },
-  );
-};
-
-// =============================================================================
-// 유틸리티 함수
-// =============================================================================
-
-/**
- * 현재 잔액으로 예상 비용을 감당할 수 있는지 확인합니다.
- * RULE-005: 잔액 부족 시 실행 강행이 아니라 대체 행동을 제안.
- */
-export function canAffordCost(
-  balance: CurrencyAmount,
-  cost: CurrencyAmount,
-): { affordable: boolean; shortfall: CurrencyAmount } {
-  const signalShortfall = Math.max(0, cost.signal - balance.signal);
-  const shardShortfall = Math.max(0, cost.memory_shard - balance.memory_shard);
-
-  return {
-    affordable: signalShortfall === 0 && shardShortfall === 0,
-    shortfall: { signal: signalShortfall, memory_shard: shardShortfall },
-  };
-}
-
-/**
- * 예상 비용의 최대값으로 감당 가능 여부를 확인합니다.
- */
-export function canAffordEstimate(
-  balance: CurrencyAmount,
-  estimate: CostEstimateState,
-): { affordable: boolean; shortfall: CurrencyAmount } {
-  return canAffordCost(balance, estimate.max);
-}
 </file>
 
 <file path="frontend/src/stores/uiPrefsStore.test.ts">
@@ -7969,6 +6951,446 @@ class MockOrchestrator:
         )
 </file>
 
+<file path="frontend/src/data/demoProfiles.ts">
+/**
+ * Unknown World - 데모 프로필 정의 (U-015[Mvp]).
+ *
+ * 로그인 없이 즉시 시작 가능한 데모 프로필 3종을 정의합니다.
+ * 각 프로필은 서로 다른 초기 상태(재화/인벤토리/퀘스트/룰)를 가집니다.
+ *
+ * 프로필:
+ *   1. Narrator: 내러티브/스토리 중심 체험
+ *   2. Explorer: 탐색/발견 중심 체험
+ *   3. Tech Enthusiast: 시스템/메커닉 중심 체험
+ *
+ * 설계 원칙:
+ *   - RULE-006: 표시 문자열은 i18n 키 기반
+ *   - RULE-010: SaveGame JSON 직렬화로 저장
+ *   - PRD 6.9: 데모 프로필 3종 + 즉시 리셋
+ *   - RU-004-Q5: seed 생성은 constants.ts SSOT 사용
+ *
+ * @module data/demoProfiles
+ */
+
+import type { SupportedLanguage } from '../i18n';
+import type { SaveGame, SaveGameInput } from '../save/saveGame';
+import { createSaveGame } from '../save/saveGame';
+// RU-004-Q5: seed 생성 정책 SSOT
+import { generateDemoSeed } from '../save/constants';
+
+// =============================================================================
+// 프로필 타입 정의
+// =============================================================================
+
+/**
+ * 데모 프로필 정의 (언어 중립).
+ * 표시용 문자열은 i18n 키로 참조합니다.
+ */
+export interface DemoProfileDef {
+  /** 프로필 고유 ID */
+  id: string;
+  /** 프로필 이름 i18n 키 */
+  nameKey: string;
+  /** 프로필 설명 i18n 키 */
+  descriptionKey: string;
+  /** 프로필 아이콘 (이모지) */
+  icon: string;
+  /** 프로필 테마 색상 (CSS 변수명 또는 hex) */
+  themeColor: string;
+}
+
+/**
+ * 프로필 초기 상태.
+ * SaveGame으로 변환 가능한 구조입니다.
+ */
+export interface DemoProfileInitialState {
+  /** 초기 재화 */
+  economy: {
+    signal: number;
+    memory_shard: number;
+  };
+  /** 초기 인벤토리 아이템 정의 (ID와 i18n 키) */
+  inventoryDefs: Array<{
+    id: string;
+    nameKey: string;
+    icon: string;
+    quantity: number;
+  }>;
+  /** 초기 퀘스트 정의 */
+  questDefs: Array<{
+    id: string;
+    labelKey: string;
+    is_completed: boolean;
+  }>;
+  /** 초기 규칙 정의 */
+  ruleDefs: Array<{
+    id: string;
+    labelKey: string;
+    descriptionKey?: string;
+  }>;
+  /** 초기 Scene Objects 정의 */
+  sceneObjectDefs: Array<{
+    id: string;
+    labelKey: string;
+    hintKey: string;
+    box_2d: {
+      ymin: number;
+      xmin: number;
+      ymax: number;
+      xmax: number;
+    };
+  }>;
+  /** 환영 메시지 i18n 키 */
+  welcomeMessageKey: string;
+}
+
+/**
+ * 데모 프로필 전체 정의.
+ */
+export interface DemoProfile extends DemoProfileDef {
+  initialState: DemoProfileInitialState;
+}
+
+// =============================================================================
+// 데모 프로필 정의 (3종)
+// =============================================================================
+
+/**
+ * Narrator 프로필: 내러티브/스토리 중심 체험.
+ * 풍부한 재화로 다양한 선택지를 탐색할 수 있습니다.
+ */
+export const PROFILE_NARRATOR: DemoProfile = {
+  id: 'narrator',
+  nameKey: 'profile.narrator.name',
+  descriptionKey: 'profile.narrator.description',
+  icon: '📖',
+  themeColor: 'var(--accent-color)',
+  initialState: {
+    economy: {
+      signal: 200,
+      memory_shard: 10,
+    },
+    inventoryDefs: [
+      {
+        id: 'ancient-tome',
+        nameKey: 'profile.narrator.items.ancient_tome',
+        icon: '📕',
+        quantity: 1,
+      },
+      { id: 'quill-pen', nameKey: 'profile.narrator.items.quill_pen', icon: '🖋️', quantity: 1 },
+      {
+        id: 'memory-fragment',
+        nameKey: 'profile.narrator.items.memory_fragment',
+        icon: '💠',
+        quantity: 3,
+      },
+    ],
+    questDefs: [
+      {
+        id: 'quest-discover-origin',
+        labelKey: 'profile.narrator.quest.discover_origin',
+        is_completed: false,
+      },
+      {
+        id: 'quest-collect-memories',
+        labelKey: 'profile.narrator.quest.collect_memories',
+        is_completed: false,
+      },
+    ],
+    ruleDefs: [
+      {
+        id: 'rule-time-flows',
+        labelKey: 'profile.narrator.rule.time_flows',
+        descriptionKey: 'profile.narrator.rule.time_flows_desc',
+      },
+      {
+        id: 'rule-memories-persist',
+        labelKey: 'profile.narrator.rule.memories_persist',
+        descriptionKey: 'profile.narrator.rule.memories_persist_desc',
+      },
+    ],
+    sceneObjectDefs: [
+      {
+        id: 'mysterious-bookshelf',
+        labelKey: 'profile.narrator.scene.bookshelf',
+        hintKey: 'profile.narrator.scene.bookshelf_hint',
+        box_2d: { ymin: 200, xmin: 100, ymax: 700, xmax: 400 },
+      },
+      {
+        id: 'glowing-portal',
+        labelKey: 'profile.narrator.scene.portal',
+        hintKey: 'profile.narrator.scene.portal_hint',
+        box_2d: { ymin: 300, xmin: 600, ymax: 800, xmax: 900 },
+      },
+    ],
+    welcomeMessageKey: 'profile.narrator.welcome',
+  },
+};
+
+/**
+ * Explorer 프로필: 탐색/발견 중심 체험.
+ * 적당한 재화와 탐색 도구로 새로운 영역을 발견합니다.
+ */
+export const PROFILE_EXPLORER: DemoProfile = {
+  id: 'explorer',
+  nameKey: 'profile.explorer.name',
+  descriptionKey: 'profile.explorer.description',
+  icon: '🧭',
+  themeColor: 'var(--text-color)',
+  initialState: {
+    economy: {
+      signal: 150,
+      memory_shard: 5,
+    },
+    inventoryDefs: [
+      { id: 'compass', nameKey: 'profile.explorer.items.compass', icon: '🧭', quantity: 1 },
+      { id: 'rope', nameKey: 'profile.explorer.items.rope', icon: '🪢', quantity: 2 },
+      { id: 'lantern', nameKey: 'profile.explorer.items.lantern', icon: '🏮', quantity: 1 },
+      {
+        id: 'map-fragment',
+        nameKey: 'profile.explorer.items.map_fragment',
+        icon: '🗺️',
+        quantity: 1,
+      },
+    ],
+    questDefs: [
+      { id: 'quest-find-exit', labelKey: 'profile.explorer.quest.find_exit', is_completed: false },
+      {
+        id: 'quest-explore-areas',
+        labelKey: 'profile.explorer.quest.explore_areas',
+        is_completed: false,
+      },
+      {
+        id: 'quest-gather-supplies',
+        labelKey: 'profile.explorer.quest.gather_supplies',
+        is_completed: true,
+      },
+    ],
+    ruleDefs: [
+      {
+        id: 'rule-gravity',
+        labelKey: 'profile.explorer.rule.gravity',
+        descriptionKey: 'profile.explorer.rule.gravity_desc',
+      },
+      {
+        id: 'rule-darkness',
+        labelKey: 'profile.explorer.rule.darkness',
+        descriptionKey: 'profile.explorer.rule.darkness_desc',
+      },
+    ],
+    sceneObjectDefs: [
+      {
+        id: 'ancient-door',
+        labelKey: 'profile.explorer.scene.door',
+        hintKey: 'profile.explorer.scene.door_hint',
+        box_2d: { ymin: 150, xmin: 400, ymax: 850, xmax: 600 },
+      },
+      {
+        id: 'strange-mechanism',
+        labelKey: 'profile.explorer.scene.mechanism',
+        hintKey: 'profile.explorer.scene.mechanism_hint',
+        box_2d: { ymin: 500, xmin: 100, ymax: 700, xmax: 300 },
+      },
+      {
+        id: 'hidden-passage',
+        labelKey: 'profile.explorer.scene.passage',
+        hintKey: 'profile.explorer.scene.passage_hint',
+        box_2d: { ymin: 600, xmin: 700, ymax: 800, xmax: 950 },
+      },
+    ],
+    welcomeMessageKey: 'profile.explorer.welcome',
+  },
+};
+
+/**
+ * Tech Enthusiast 프로필: 시스템/메커닉 중심 체험.
+ * 제한된 재화로 효율적인 전략을 세워야 합니다.
+ */
+export const PROFILE_TECH: DemoProfile = {
+  id: 'tech',
+  nameKey: 'profile.tech.name',
+  descriptionKey: 'profile.tech.description',
+  icon: '⚙️',
+  themeColor: 'var(--warning-color)',
+  initialState: {
+    economy: {
+      signal: 80,
+      memory_shard: 15,
+    },
+    inventoryDefs: [
+      { id: 'data-core', nameKey: 'profile.tech.items.data_core', icon: '💿', quantity: 1 },
+      { id: 'circuit-board', nameKey: 'profile.tech.items.circuit_board', icon: '🔌', quantity: 2 },
+      { id: 'energy-cell', nameKey: 'profile.tech.items.energy_cell', icon: '🔋', quantity: 3 },
+      { id: 'scanner-device', nameKey: 'profile.tech.items.scanner', icon: '📡', quantity: 1 },
+    ],
+    questDefs: [
+      {
+        id: 'quest-analyze-system',
+        labelKey: 'profile.tech.quest.analyze_system',
+        is_completed: false,
+      },
+      {
+        id: 'quest-optimize-resources',
+        labelKey: 'profile.tech.quest.optimize_resources',
+        is_completed: false,
+      },
+    ],
+    ruleDefs: [
+      {
+        id: 'rule-energy-conservation',
+        labelKey: 'profile.tech.rule.energy_conservation',
+        descriptionKey: 'profile.tech.rule.energy_conservation_desc',
+      },
+      {
+        id: 'rule-data-integrity',
+        labelKey: 'profile.tech.rule.data_integrity',
+        descriptionKey: 'profile.tech.rule.data_integrity_desc',
+      },
+      {
+        id: 'rule-system-limits',
+        labelKey: 'profile.tech.rule.system_limits',
+        descriptionKey: 'profile.tech.rule.system_limits_desc',
+      },
+    ],
+    sceneObjectDefs: [
+      {
+        id: 'main-terminal',
+        labelKey: 'profile.tech.scene.terminal',
+        hintKey: 'profile.tech.scene.terminal_hint',
+        box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
+      },
+      {
+        id: 'power-conduit',
+        labelKey: 'profile.tech.scene.conduit',
+        hintKey: 'profile.tech.scene.conduit_hint',
+        box_2d: { ymin: 100, xmin: 50, ymax: 400, xmax: 200 },
+      },
+    ],
+    welcomeMessageKey: 'profile.tech.welcome',
+  },
+};
+
+/**
+ * 모든 데모 프로필 목록.
+ */
+export const DEMO_PROFILES: readonly DemoProfile[] = [
+  PROFILE_NARRATOR,
+  PROFILE_EXPLORER,
+  PROFILE_TECH,
+] as const;
+
+/**
+ * 프로필 ID로 프로필을 찾습니다.
+ */
+export function findProfileById(profileId: string): DemoProfile | undefined {
+  return DEMO_PROFILES.find((p) => p.id === profileId);
+}
+
+// =============================================================================
+// 프로필 → SaveGameInput 변환 (RU-004-Q1: SSOT 단일화)
+// =============================================================================
+
+/**
+ * 데모 프로필을 SaveGameInput으로 변환합니다.
+ *
+ * RU-004-Q1: SaveGame 생성은 createSaveGame(SSOT)만 수행하도록 분리.
+ * 이 함수는 "입력 변환(input adapter)" 역할만 담당합니다.
+ *
+ * @param profile - 데모 프로필
+ * @param language - 언어 설정
+ * @param t - i18n 번역 함수
+ * @returns SaveGameInput 객체 (createSaveGame에 전달 가능)
+ */
+export function profileToSaveGameInput(
+  profile: DemoProfile,
+  language: SupportedLanguage,
+  t: (key: string) => string,
+): SaveGameInput {
+  const now = Date.now();
+
+  return {
+    language,
+    profileId: profile.id,
+    // RU-004-Q5: seed 생성 정책 SSOT (constants.ts)
+    seed: generateDemoSeed(profile.id),
+    economy: {
+      signal: profile.initialState.economy.signal,
+      memory_shard: profile.initialState.economy.memory_shard,
+    },
+    economyLedger: [],
+    turnCount: 0,
+    narrativeHistory: [
+      {
+        turn: 0,
+        text: t(profile.initialState.welcomeMessageKey),
+      },
+    ],
+    inventory: profile.initialState.inventoryDefs.map((item) => ({
+      id: item.id,
+      name: t(item.nameKey),
+      icon: item.icon,
+      quantity: item.quantity,
+    })),
+    quests: profile.initialState.questDefs.map((quest) => ({
+      id: quest.id,
+      label: t(quest.labelKey),
+      is_completed: quest.is_completed,
+    })),
+    activeRules: profile.initialState.ruleDefs.map((rule) => ({
+      id: rule.id,
+      label: t(rule.labelKey),
+      description: rule.descriptionKey ? t(rule.descriptionKey) : null,
+    })),
+    mutationTimeline: profile.initialState.ruleDefs.map((rule, index) => ({
+      turn: 0,
+      ruleId: rule.id,
+      type: 'added' as const,
+      label: t(rule.labelKey),
+      description: rule.descriptionKey ? t(rule.descriptionKey) : undefined,
+      timestamp: now - index * 1000,
+    })),
+    sceneObjects: profile.initialState.sceneObjectDefs.map((obj) => ({
+      id: obj.id,
+      label: t(obj.labelKey),
+      box_2d: obj.box_2d,
+      interaction_hint: t(obj.hintKey),
+    })),
+  };
+}
+
+/**
+ * 데모 프로필을 SaveGame 형태로 변환합니다.
+ *
+ * RU-004-Q1: createSaveGame(SSOT)를 호출하는 얇은 wrapper입니다.
+ * 기존 호출자와의 호환성을 유지합니다.
+ *
+ * @param profile - 데모 프로필
+ * @param language - 언어 설정
+ * @param t - i18n 번역 함수
+ * @returns SaveGame 객체
+ */
+export function createSaveGameFromProfile(
+  profile: DemoProfile,
+  language: SupportedLanguage,
+  t: (key: string) => string,
+): SaveGame {
+  return createSaveGame(profileToSaveGameInput(profile, language, t));
+}
+
+/**
+ * 프로필 목록 정보만 가져옵니다 (선택 UI용).
+ */
+export function getProfileSummaries(): Array<DemoProfileDef> {
+  return DEMO_PROFILES.map((p) => ({
+    id: p.id,
+    nameKey: p.nameKey,
+    descriptionKey: p.descriptionKey,
+    icon: p.icon,
+    themeColor: p.themeColor,
+  }));
+}
+</file>
+
 <file path="frontend/src/demo/useDemoInitializer.ts">
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8066,6 +7488,426 @@ export function useDemoInitializer() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
+}
+</file>
+
+<file path="frontend/src/save/saveGame.ts">
+/**
+ * Unknown World - SaveGame 저장/복원 모듈 (U-015[Mvp]).
+ *
+ * 로그인 없이 즉시 시작 가능한 데모 프로필과 세이브/로드 기능을 제공합니다.
+ * DB 없이 SaveGame JSON 직렬화 기반으로 localStorage에 저장합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-010: DB/ORM 도입 금지 (SaveGame JSON 직렬화 기반)
+ *   - RULE-006: language 필드로 ko/en 혼합 방지
+ *   - Q1 결정: Option A - localStorage 사용 (단순/데모 적합)
+ *   - RU-004-Q5: 상수는 constants.ts에서 중앙 관리
+ *
+ * @module save/saveGame
+ */
+
+import { z } from 'zod';
+import type { SupportedLanguage } from '../i18n';
+import type { LedgerEntry } from '../stores/economyStore';
+import type { Quest, WorldRule } from '../schemas/turn';
+import type { InventoryItem } from '../stores/inventoryStore';
+import type { MutationEvent, NarrativeEntry, EconomyState } from '../stores/worldStore';
+import type { SceneObject } from '../schemas/turn';
+
+// RU-004-Q5: 상수 중앙화 - constants.ts에서 import
+import {
+  SAVEGAME_VERSION,
+  SAVEGAME_STORAGE_KEY,
+  CURRENT_PROFILE_KEY,
+} from './constants';
+
+// RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
+export { SAVEGAME_VERSION, SAVEGAME_STORAGE_KEY, CURRENT_PROFILE_KEY };
+
+// =============================================================================
+// SaveGame 스키마 정의
+// =============================================================================
+
+/**
+ * SaveGame Zod 스키마.
+ * 최소 필드만 포함하여 MVP 요구사항을 충족합니다.
+ */
+export const SaveGameSchema = z
+  .object({
+    /** 스키마 버전 (마이그레이션용) */
+    version: z.string().describe('SaveGame 스키마 버전'),
+    /** 세션 시드 (리플레이 재현용, 선택) */
+    seed: z.string().nullable().default(null).describe('세션 시드'),
+    /** 언어 설정 (RULE-006: 복원 시 UI i18n에도 적용) */
+    language: z.enum(['ko-KR', 'en-US']).describe('언어 설정'),
+    /** 사용된 데모 프로필 ID */
+    profileId: z.string().nullable().default(null).describe('데모 프로필 ID'),
+    /** 저장 시각 (ISO 8601) */
+    savedAt: z.string().describe('저장 시각'),
+
+    /** 재화 상태 */
+    economy: z
+      .object({
+        signal: z.number().int().min(0),
+        memory_shard: z.number().int().min(0),
+      })
+      .describe('재화 상태'),
+
+    /** 경제 원장 이력 */
+    economyLedger: z
+      .array(
+        z.object({
+          turnId: z.number().int(),
+          actionId: z.string().optional(),
+          reason: z.string(),
+          cost: z.object({
+            signal: z.number().int().min(0),
+            memory_shard: z.number().int().min(0),
+          }),
+          balanceAfter: z.object({
+            signal: z.number().int().min(0),
+            memory_shard: z.number().int().min(0),
+          }),
+          modelLabel: z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']).optional(),
+          timestamp: z.number(),
+        }),
+      )
+      .default([])
+      .describe('경제 원장 이력'),
+
+    /** 현재 턴 카운트 */
+    turnCount: z.number().int().min(0).default(0).describe('현재 턴 카운트'),
+
+    /** 내러티브 히스토리 */
+    narrativeHistory: z
+      .array(
+        z.object({
+          turn: z.number().int(),
+          text: z.string(),
+        }),
+      )
+      .default([])
+      .describe('내러티브 히스토리'),
+
+    /** 인벤토리 아이템 */
+    inventory: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string().optional(),
+          icon: z.string().optional(),
+          quantity: z.number().int().min(1),
+        }),
+      )
+      .default([])
+      .describe('인벤토리 아이템'),
+
+    /** 활성 퀘스트 */
+    quests: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          is_completed: z.boolean().default(false),
+        }),
+      )
+      .default([])
+      .describe('활성 퀘스트'),
+
+    /** 활성 규칙 */
+    activeRules: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          description: z.string().nullable().default(null),
+        }),
+      )
+      .default([])
+      .describe('활성 규칙'),
+
+    /** 룰 변형 타임라인 */
+    mutationTimeline: z
+      .array(
+        z.object({
+          turn: z.number().int(),
+          ruleId: z.string(),
+          type: z.enum(['added', 'modified', 'removed']),
+          label: z.string(),
+          description: z.string().optional(),
+          timestamp: z.number(),
+        }),
+      )
+      .default([])
+      .describe('룰 변형 타임라인'),
+
+    /** Scene Objects (핫스팟) */
+    sceneObjects: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          box_2d: z.object({
+            ymin: z.number().int().min(0).max(1000),
+            xmin: z.number().int().min(0).max(1000),
+            ymax: z.number().int().min(0).max(1000),
+            xmax: z.number().int().min(0).max(1000),
+          }),
+          interaction_hint: z.string().nullable().default(null),
+        }),
+      )
+      .default([])
+      .describe('Scene Objects'),
+  })
+  .strict();
+
+export type SaveGame = z.infer<typeof SaveGameSchema>;
+
+// =============================================================================
+// 저장/복원 함수
+// =============================================================================
+
+/**
+ * SaveGame 인터페이스 (저장할 상태 전체를 캡처).
+ */
+export interface SaveGameInput {
+  language: SupportedLanguage;
+  profileId?: string | null;
+  seed?: string | null;
+  economy: EconomyState;
+  economyLedger: LedgerEntry[];
+  turnCount: number;
+  narrativeHistory: NarrativeEntry[];
+  inventory: InventoryItem[];
+  quests: Quest[];
+  activeRules: WorldRule[];
+  mutationTimeline: MutationEvent[];
+  sceneObjects: SceneObject[];
+}
+
+/**
+ * 현재 상태를 SaveGame 객체로 직렬화합니다.
+ */
+export function createSaveGame(input: SaveGameInput): SaveGame {
+  return {
+    version: SAVEGAME_VERSION,
+    seed: input.seed ?? null,
+    language: input.language,
+    profileId: input.profileId ?? null,
+    savedAt: new Date().toISOString(),
+    economy: {
+      signal: input.economy.signal,
+      memory_shard: input.economy.memory_shard,
+    },
+    economyLedger: input.economyLedger.map((entry) => ({
+      turnId: entry.turnId,
+      actionId: entry.actionId,
+      reason: entry.reason,
+      cost: {
+        signal: entry.cost.signal,
+        memory_shard: entry.cost.memory_shard,
+      },
+      balanceAfter: {
+        signal: entry.balanceAfter.signal,
+        memory_shard: entry.balanceAfter.memory_shard,
+      },
+      modelLabel: entry.modelLabel,
+      timestamp: entry.timestamp,
+    })),
+    turnCount: input.turnCount,
+    narrativeHistory: input.narrativeHistory.map((entry) => ({
+      turn: entry.turn,
+      text: entry.text,
+    })),
+    inventory: input.inventory.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      icon: item.icon,
+      quantity: item.quantity,
+    })),
+    quests: input.quests.map((quest) => ({
+      id: quest.id,
+      label: quest.label,
+      is_completed: quest.is_completed,
+    })),
+    activeRules: input.activeRules.map((rule) => ({
+      id: rule.id,
+      label: rule.label,
+      description: rule.description,
+    })),
+    mutationTimeline: input.mutationTimeline.map((event) => ({
+      turn: event.turn,
+      ruleId: event.ruleId,
+      type: event.type,
+      label: event.label,
+      description: event.description,
+      timestamp: event.timestamp,
+    })),
+    sceneObjects: input.sceneObjects.map((obj) => ({
+      id: obj.id,
+      label: obj.label,
+      box_2d: {
+        ymin: obj.box_2d.ymin,
+        xmin: obj.box_2d.xmin,
+        ymax: obj.box_2d.ymax,
+        xmax: obj.box_2d.xmax,
+      },
+      interaction_hint: obj.interaction_hint,
+    })),
+  };
+}
+
+/**
+ * SaveGame을 localStorage에 저장합니다.
+ *
+ * @returns 저장 성공 여부
+ */
+export function saveSaveGame(saveGame: SaveGame): boolean {
+  try {
+    const json = JSON.stringify(saveGame);
+    localStorage.setItem(SAVEGAME_STORAGE_KEY, json);
+    return true;
+  } catch (error) {
+    console.error('[SaveGame] 저장 실패:', error);
+    return false;
+  }
+}
+
+/**
+ * localStorage에서 SaveGame을 로드합니다.
+ * 마이그레이션이 필요한 경우 자동으로 적용합니다 (RU-004-S2).
+ *
+ * @returns SaveGame 객체 또는 null (없거나 유효하지 않은 경우)
+ */
+export function loadSaveGame(): SaveGame | null {
+  try {
+    const json = localStorage.getItem(SAVEGAME_STORAGE_KEY);
+    if (!json) {
+      return null;
+    }
+
+    const parsed = JSON.parse(json);
+    const result = SaveGameSchema.safeParse(parsed);
+
+    if (!result.success) {
+      console.warn('[SaveGame] 스키마 검증 실패:', result.error);
+      return null;
+    }
+
+    // RU-004-S2: 버전 마이그레이션 적용
+    const migrated = migrateSaveGame(result.data);
+    if (!migrated) {
+      console.warn('[SaveGame] 마이그레이션 실패, 새로 시작 필요');
+      return null;
+    }
+
+    return migrated;
+  } catch (error) {
+    console.error('[SaveGame] 로드 실패:', error);
+    return null;
+  }
+}
+
+/**
+ * 저장된 SaveGame을 삭제합니다.
+ */
+export function clearSaveGame(): void {
+  try {
+    localStorage.removeItem(SAVEGAME_STORAGE_KEY);
+  } catch (error) {
+    console.error('[SaveGame] 삭제 실패:', error);
+  }
+}
+
+/**
+ * SaveGame이 존재하는지 확인합니다.
+ *
+ * @deprecated RU-004-S2: 이 함수는 키 존재만 확인하므로 "유효한 세이브" 판단에 부적합합니다.
+ *             대신 `getValidSaveGameOrNull()`을 사용하세요.
+ */
+export function hasSaveGame(): boolean {
+  try {
+    return localStorage.getItem(SAVEGAME_STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 유효한 SaveGame을 반환합니다. 없거나 검증/마이그레이션 실패 시 null을 반환합니다 (RU-004-S2).
+ *
+ * `hasSaveGame()` 대신 이 함수를 사용하면 "Continue 버튼 노출" 판단이 정확해집니다:
+ * - localStorage에 데이터가 있어도 스키마 검증 실패 시 null 반환
+ * - 버전 불일치로 마이그레이션 실패 시 null 반환
+ *
+ * @returns 유효한 SaveGame 또는 null
+ */
+export function getValidSaveGameOrNull(): SaveGame | null {
+  return loadSaveGame();
+}
+
+// =============================================================================
+// 프로필 관련 유틸리티
+// =============================================================================
+
+/**
+ * 현재 선택된 프로필 ID를 저장합니다.
+ */
+export function saveCurrentProfileId(profileId: string): void {
+  try {
+    localStorage.setItem(CURRENT_PROFILE_KEY, profileId);
+  } catch (error) {
+    console.error('[SaveGame] 프로필 ID 저장 실패:', error);
+  }
+}
+
+/**
+ * 현재 선택된 프로필 ID를 로드합니다.
+ */
+export function loadCurrentProfileId(): string | null {
+  try {
+    return localStorage.getItem(CURRENT_PROFILE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 현재 선택된 프로필 ID를 삭제합니다.
+ */
+export function clearCurrentProfileId(): void {
+  try {
+    localStorage.removeItem(CURRENT_PROFILE_KEY);
+  } catch (error) {
+    console.error('[SaveGame] 프로필 ID 삭제 실패:', error);
+  }
+}
+
+// =============================================================================
+// 버전 마이그레이션 (향후 확장)
+// =============================================================================
+
+/**
+ * SaveGame 버전을 확인하고 필요 시 마이그레이션합니다.
+ * 현재는 v1.0.0만 지원하므로 패스스루입니다.
+ *
+ * @param saveGame - 로드된 SaveGame
+ * @returns 마이그레이션된 SaveGame 또는 null (마이그레이션 불가)
+ */
+export function migrateSaveGame(saveGame: SaveGame): SaveGame | null {
+  // 현재 버전이면 그대로 반환
+  if (saveGame.version === SAVEGAME_VERSION) {
+    return saveGame;
+  }
+
+  // 향후 버전 업그레이드 시 마이그레이션 로직 추가
+  console.warn(`[SaveGame] 버전 불일치: ${saveGame.version} -> ${SAVEGAME_VERSION}`);
+
+  // MVP에서는 버전 불일치 시 null 반환 (새로 시작 유도)
+  return null;
 }
 </file>
 
@@ -8317,6 +8159,377 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 
 /** 에러 셀렉터 */
 export const selectError = (state: AgentStore) => state.error;
+</file>
+
+<file path="frontend/src/stores/economyStore.ts">
+/**
+ * Unknown World - Economy 상태 관리 (Zustand) (U-014[Mvp]).
+ *
+ * Signal/Memory Shard 재화 HUD와 턴별 비용/잔액 변화를
+ * **원장(ledger)**으로 추적하여 "비용/지연을 게임 메커닉"으로 UX에 반영합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
+ *   - RULE-008: 비용/모델 선택 이유는 라벨(FAST/QUALITY/REF)로만 설명
+ *   - Q1 결정: Option A - 최근 N턴만 보관 (UI/메모리 절감)
+ *   - RU-004-Q5: 상수는 save/constants.ts에서 중앙 관리
+ *
+ * @module stores/economyStore
+ */
+
+import { create } from 'zustand';
+import type { CurrencyAmount, ModelLabel, CostEstimate } from '../schemas/turn';
+// RU-004-Q5: 상수 중앙화 - constants.ts에서 import
+import {
+  LEDGER_MAX_ENTRIES,
+  LOW_BALANCE_THRESHOLD,
+} from '../save/constants';
+
+// RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
+export { LEDGER_MAX_ENTRIES };
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 원장(Ledger) 엔트리.
+ * 각 턴에서 발생한 비용과 잔액 변화를 기록합니다.
+ */
+export interface LedgerEntry {
+  /** 턴 ID (턴 카운트) */
+  turnId: number;
+  /** 액션 ID (선택된 카드 ID, 선택사항) */
+  actionId?: string;
+  /** 비용 사유 (예: "탐색", "이미지 생성") */
+  reason: string;
+  /** 소비된 비용 */
+  cost: CurrencyAmount;
+  /** 소비 후 잔액 */
+  balanceAfter: CurrencyAmount;
+  /** 모델 라벨 (FAST/QUALITY/CHEAP/REF) */
+  modelLabel?: ModelLabel;
+  /** 기록 시간 */
+  timestamp: number;
+}
+
+/**
+ * 예상 비용 상태.
+ * 현재 선택된 액션의 예상 비용을 추적합니다.
+ */
+export interface CostEstimateState {
+  /** 최소 예상 비용 */
+  min: CurrencyAmount;
+  /** 최대 예상 비용 */
+  max: CurrencyAmount;
+  /** 예상 비용을 계산한 액션 ID */
+  actionId?: string;
+  /** 예상 비용 라벨/설명 */
+  label?: string;
+}
+
+/**
+ * 마지막 확정 비용 상태.
+ * 가장 최근 턴에서 확정된 비용 정보입니다.
+ */
+export interface LastCostState {
+  /** 확정된 비용 */
+  cost: CurrencyAmount;
+  /** 확정 후 잔액 */
+  balanceAfter: CurrencyAmount;
+  /** 턴 ID */
+  turnId: number;
+  /** 모델 라벨 */
+  modelLabel?: ModelLabel;
+}
+
+/** Economy Store 상태 */
+export interface EconomyStoreState {
+  /** 원장 (최근 N개 엔트리, 최신순) */
+  ledger: LedgerEntry[];
+  /** 현재 예상 비용 (선택한 액션 기반) */
+  costEstimate: CostEstimateState | null;
+  /** 마지막 확정 비용 */
+  lastCost: LastCostState | null;
+  /** 잔액 부족 경고 여부 */
+  isBalanceLow: boolean;
+  /** 잔액 부족 임계값 (Signal 기준) */
+  lowBalanceThreshold: number;
+}
+
+/** Economy Store 액션 */
+export interface EconomyStoreActions {
+  /**
+   * 턴 완료 시 원장에 엔트리를 추가합니다.
+   */
+  addLedgerEntry: (entry: Omit<LedgerEntry, 'timestamp'>) => void;
+
+  /**
+   * SaveGame 복원 시 원장을 그대로 주입합니다 (RU-004-S1).
+   *
+   * - ledger는 저장된 순서(최신순)를 유지합니다.
+   * - timestamp는 저장된 값을 보존합니다.
+   * - lastCost는 최신 엔트리(첫 원소) 기준으로 설정합니다.
+   * - isBalanceLow는 전달된 currentBalance로 재계산합니다.
+   *
+   * @param ledger - 저장된 원장 배열 (최신순, timestamp 포함)
+   * @param currentBalance - 복원된 잔액 (isBalanceLow 계산용)
+   */
+  hydrateLedger: (ledger: LedgerEntry[], currentBalance: CurrencyAmount) => void;
+
+  /**
+   * 예상 비용을 설정합니다 (카드 선택/호버 시).
+   */
+  setCostEstimate: (estimate: CostEstimateState | null) => void;
+
+  /**
+   * 카드의 비용 정보로 예상 비용을 설정합니다.
+   */
+  setCostEstimateFromCard: (
+    cost: CurrencyAmount,
+    costEstimate: CostEstimate | null,
+    actionId: string,
+    label?: string,
+  ) => void;
+
+  /**
+   * 마지막 확정 비용을 설정합니다 (TurnOutput 반영 시).
+   */
+  setLastCost: (lastCost: LastCostState) => void;
+
+  /**
+   * 잔액 부족 상태를 업데이트합니다.
+   */
+  updateBalanceLowStatus: (currentBalance: CurrencyAmount) => void;
+
+  /**
+   * 잔액 부족 임계값을 설정합니다.
+   */
+  setLowBalanceThreshold: (threshold: number) => void;
+
+  /**
+   * 원장을 초기화합니다.
+   */
+  clearLedger: () => void;
+
+  /**
+   * 전체 상태를 초기화합니다.
+   */
+  reset: () => void;
+}
+
+export type EconomyStore = EconomyStoreState & EconomyStoreActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+function createInitialState(): EconomyStoreState {
+  return {
+    ledger: [],
+    costEstimate: null,
+    lastCost: null,
+    isBalanceLow: false,
+    // RU-004-Q5: 임계값 상수 SSOT (save/constants.ts)
+    lowBalanceThreshold: LOW_BALANCE_THRESHOLD,
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Economy 상태 스토어.
+ *
+ * 턴별 비용/잔액 변화를 원장(ledger)으로 추적하고,
+ * 예상 비용과 확정 비용을 UI에 제공합니다.
+ *
+ * @example
+ * ```tsx
+ * // 예상 비용 설정 (카드 호버 시)
+ * const setCostEstimateFromCard = useEconomyStore(s => s.setCostEstimateFromCard);
+ * setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
+ *
+ * // 턴 완료 시 원장 기록
+ * const addLedgerEntry = useEconomyStore(s => s.addLedgerEntry);
+ * addLedgerEntry({
+ *   turnId: turnCount,
+ *   reason: 'explore',
+ *   cost: turnOutput.economy.cost,
+ *   balanceAfter: turnOutput.economy.balance_after,
+ * });
+ * ```
+ */
+export const useEconomyStore = create<EconomyStore>((set, get) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+
+  addLedgerEntry: (entry) => {
+    const timestamp = Date.now();
+    const newEntry: LedgerEntry = { ...entry, timestamp };
+
+    set((state) => {
+      // 최신순으로 추가하고 최대 개수 유지 (Q1: Option A)
+      const updatedLedger = [newEntry, ...state.ledger].slice(0, LEDGER_MAX_ENTRIES);
+
+      return {
+        ledger: updatedLedger,
+        lastCost: {
+          cost: entry.cost,
+          balanceAfter: entry.balanceAfter,
+          turnId: entry.turnId,
+          modelLabel: entry.modelLabel,
+        },
+        // 턴 완료 후 예상 비용 초기화
+        costEstimate: null,
+      };
+    });
+  },
+
+  hydrateLedger: (ledger, currentBalance) => {
+    const { lowBalanceThreshold } = get();
+
+    // LEDGER_MAX_ENTRIES 정책 적용 (저장된 것이 더 많을 경우 대비)
+    const hydratedLedger = ledger.slice(0, LEDGER_MAX_ENTRIES);
+
+    // lastCost는 가장 최신 엔트리(첫 원소) 기준으로 설정
+    const latestEntry = hydratedLedger[0] ?? null;
+    const lastCost: LastCostState | null = latestEntry
+      ? {
+          cost: latestEntry.cost,
+          balanceAfter: latestEntry.balanceAfter,
+          turnId: latestEntry.turnId,
+          modelLabel: latestEntry.modelLabel,
+        }
+      : null;
+
+    // isBalanceLow는 복원된 잔액 기준으로 재계산
+    const isBalanceLow = currentBalance.signal < lowBalanceThreshold;
+
+    set({
+      ledger: hydratedLedger,
+      lastCost,
+      isBalanceLow,
+      costEstimate: null,
+    });
+  },
+
+  setCostEstimate: (estimate) => {
+    set({ costEstimate: estimate });
+  },
+
+  setCostEstimateFromCard: (cost, costEstimate, actionId, label) => {
+    if (costEstimate) {
+      set({
+        costEstimate: {
+          min: costEstimate.min,
+          max: costEstimate.max,
+          actionId,
+          label,
+        },
+      });
+    } else {
+      // cost_estimate가 없으면 기본 cost를 min/max로 사용
+      set({
+        costEstimate: {
+          min: cost,
+          max: cost,
+          actionId,
+          label,
+        },
+      });
+    }
+  },
+
+  setLastCost: (lastCost) => {
+    set({ lastCost });
+  },
+
+  updateBalanceLowStatus: (currentBalance) => {
+    const { lowBalanceThreshold } = get();
+    const isLow = currentBalance.signal < lowBalanceThreshold;
+    set({ isBalanceLow: isLow });
+  },
+
+  setLowBalanceThreshold: (threshold) => {
+    set({ lowBalanceThreshold: threshold });
+  },
+
+  clearLedger: () => {
+    set({ ledger: [], lastCost: null });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 원장 셀렉터 */
+export const selectLedger = (state: EconomyStore) => state.ledger;
+
+/** 예상 비용 셀렉터 */
+export const selectCostEstimate = (state: EconomyStore) => state.costEstimate;
+
+/** 마지막 확정 비용 셀렉터 */
+export const selectLastCost = (state: EconomyStore) => state.lastCost;
+
+/** 잔액 부족 상태 셀렉터 */
+export const selectIsBalanceLow = (state: EconomyStore) => state.isBalanceLow;
+
+/** 최근 N개 원장 엔트리 셀렉터 */
+export const selectRecentLedger =
+  (count: number) =>
+  (state: EconomyStore): LedgerEntry[] =>
+    state.ledger.slice(0, count);
+
+/** 총 소비 비용 계산 셀렉터 (현재 세션) */
+export const selectTotalSpent = (state: EconomyStore): CurrencyAmount => {
+  return state.ledger.reduce(
+    (acc, entry) => ({
+      signal: acc.signal + entry.cost.signal,
+      memory_shard: acc.memory_shard + entry.cost.memory_shard,
+    }),
+    { signal: 0, memory_shard: 0 },
+  );
+};
+
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
+
+/**
+ * 현재 잔액으로 예상 비용을 감당할 수 있는지 확인합니다.
+ * RULE-005: 잔액 부족 시 실행 강행이 아니라 대체 행동을 제안.
+ */
+export function canAffordCost(
+  balance: CurrencyAmount,
+  cost: CurrencyAmount,
+): { affordable: boolean; shortfall: CurrencyAmount } {
+  const signalShortfall = Math.max(0, cost.signal - balance.signal);
+  const shardShortfall = Math.max(0, cost.memory_shard - balance.memory_shard);
+
+  return {
+    affordable: signalShortfall === 0 && shardShortfall === 0,
+    shortfall: { signal: signalShortfall, memory_shard: shardShortfall },
+  };
+}
+
+/**
+ * 예상 비용의 최대값으로 감당 가능 여부를 확인합니다.
+ */
+export function canAffordEstimate(
+  balance: CurrencyAmount,
+  estimate: CostEstimateState,
+): { affordable: boolean; shortfall: CurrencyAmount } {
+  return canAffordCost(balance, estimate.max);
+}
 </file>
 
 <file path="shared/schemas/turn/turn_input.schema.json">
@@ -9289,402 +9502,6 @@ describe('executeTurnStream', () => {
     );
   });
 });
-</file>
-
-<file path="frontend/src/stores/worldStore.ts">
-/**
- * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
- *
- * TurnOutput 반영으로 갱신되는 세션 월드/UI 상태를 SSOT로 관리합니다.
- * App.tsx의 로컬 상태를 이 스토어로 이동하여 책임 경계를 명확히 합니다.
- *
- * 설계 원칙:
- *   - RU-003 Q1 결정: 도메인별 store 분리 (Option A)
- *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
- *   - RULE-006: ko/en i18n 정책 준수
- *
- * 확장 (U-013):
- *   - Quest/Rules/MutationEvent 상태 추가
- *   - applyTurnOutput에서 quests_updated, rules_changed 반영
- *
- * 순환 import 방지:
- *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
- *   - 역방향 import 금지
- *
- * @module stores/worldStore
- */
-
-import { create } from 'zustand';
-import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
-import type { SceneCanvasState } from '../types/scene';
-import { useActionDeckStore } from './actionDeckStore';
-import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
-import { useEconomyStore } from './economyStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/** 재화 상태 */
-export interface EconomyState {
-  signal: number;
-  memory_shard: number;
-}
-
-/** 내러티브 엔트리 */
-export interface NarrativeEntry {
-  turn: number;
-  text: string;
-}
-
-/**
- * 룰 변형 이벤트 (U-013: Mutation Timeline)
- * 규칙이 변경된 시점과 내용을 기록합니다.
- */
-export interface MutationEvent {
-  /** 변형 발생 턴 */
-  turn: number;
-  /** 변형된 규칙 ID */
-  ruleId: string;
-  /** 변형 유형: 추가/수정/제거 */
-  type: 'added' | 'modified' | 'removed';
-  /** 규칙 라벨 (표시용) */
-  label: string;
-  /** 규칙 설명 (선택) */
-  description?: string;
-  /** 타임스탬프 */
-  timestamp: number;
-}
-
-/** World/Session 상태 */
-export interface WorldState {
-  /** 재화 상태 (RULE-005) */
-  economy: EconomyState;
-  /** 연결 상태 */
-  isConnected: boolean;
-  /** Scene Canvas 상태 (U-031) */
-  sceneState: SceneCanvasState;
-  /** Scene Objects (U-010: 핫스팟 오버레이) */
-  sceneObjects: SceneObject[];
-  /** 내러티브 히스토리 */
-  narrativeEntries: NarrativeEntry[];
-  /** 현재 턴 카운트 */
-  turnCount: number;
-
-  // ============ U-013: Quest + Rule Board 확장 ============
-
-  /** 현재 퀘스트/목표 목록 */
-  quests: Quest[];
-  /** 현재 적용 중인 규칙 목록 */
-  activeRules: WorldRule[];
-  /** 룰 변형 이벤트 타임라인 (최신순) */
-  mutationTimeline: MutationEvent[];
-}
-
-/** World Store 액션 */
-export interface WorldActions {
-  /**
-   * TurnOutput을 받아 모든 관련 상태를 업데이트합니다.
-   * 이 메서드가 TurnOutput 반영의 SSOT입니다.
-   */
-  applyTurnOutput: (output: TurnOutput) => void;
-
-  /**
-   * 시스템 내러티브를 추가합니다 (턴 미발생 피드백용).
-   * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
-   */
-  appendSystemNarrative: (text: string) => void;
-
-  /** Scene 상태 설정 */
-  setSceneState: (state: SceneCanvasState) => void;
-
-  /** 연결 상태 설정 */
-  setConnected: (connected: boolean) => void;
-
-  /** 경제 상태 설정 (직접 조작용, 일반적으로 applyTurnOutput 사용) */
-  setEconomy: (economy: EconomyState) => void;
-
-  /** Scene Objects 설정 (직접 조작용) */
-  setSceneObjects: (objects: SceneObject[]) => void;
-
-  /** 초기화 (초기 내러티브 메시지 포함) */
-  initialize: (welcomeMessage: string) => void;
-
-  /** 상태 완전 초기화 */
-  reset: () => void;
-}
-
-export type WorldStore = WorldState & WorldActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-function createInitialState(): WorldState {
-  return {
-    economy: { signal: 100, memory_shard: 5 },
-    isConnected: true,
-    sceneState: { status: 'default', message: '' },
-    sceneObjects: [],
-    narrativeEntries: [],
-    turnCount: 0,
-    // U-013: Quest + Rule Board 초기 상태
-    quests: [],
-    activeRules: [],
-    mutationTimeline: [],
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * World/Session 상태 스토어.
- *
- * TurnOutput 반영의 SSOT로, App.tsx의 로컬 상태를 대체합니다.
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 상태 구독
- * const { economy, narrativeEntries } = useWorldStore();
- *
- * // TurnOutput 반영 (스트림 완료 시)
- * const applyTurnOutput = useWorldStore((state) => state.applyTurnOutput);
- * applyTurnOutput(turnOutput);
- *
- * // 시스템 피드백 추가 (드롭 실패 등)
- * const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
- * appendSystemNarrative('아이템을 사용할 수 없습니다.');
- * ```
- */
-export const useWorldStore = create<WorldStore>((set, get) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-
-  applyTurnOutput: (output) => {
-    const state = get();
-
-    // 1. 턴 카운트 증가
-    const newTurnCount = state.turnCount + 1;
-
-    // 2. 내러티브 추가
-    const newNarrativeEntry: NarrativeEntry = {
-      turn: newTurnCount,
-      text: output.narrative,
-    };
-
-    // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
-    const newEconomy: EconomyState = {
-      signal: output.economy.balance_after.signal,
-      memory_shard: output.economy.balance_after.memory_shard,
-    };
-
-    // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
-    const newSceneObjects = output.ui.objects;
-
-    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
-    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
-    // - 없으면 'default' 상태 유지
-    // - safety.blocked인 경우 'blocked' 상태로 전환
-    let newSceneState: SceneCanvasState;
-    if (output.safety.blocked) {
-      newSceneState = {
-        status: 'blocked',
-        message: output.safety.message ?? undefined,
-      };
-    } else if (output.ui.scene?.image_url) {
-      newSceneState = {
-        status: 'scene',
-        imageUrl: output.ui.scene.image_url,
-        message: output.ui.scene.alt_text ?? undefined,
-      };
-    } else {
-      newSceneState = {
-        status: 'default',
-        message: '',
-      };
-    }
-
-    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
-    // Action Deck 카드 업데이트 (U-009)
-    useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
-
-    // Inventory 업데이트 (U-011)
-    if (output.world.inventory_added.length > 0) {
-      useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
-    }
-    if (output.world.inventory_removed.length > 0) {
-      useInventoryStore.getState().removeItems(output.world.inventory_removed);
-    }
-
-    // Economy Store 업데이트 (U-014: Ledger 기록)
-    const economyStore = useEconomyStore.getState();
-    economyStore.addLedgerEntry({
-      turnId: newTurnCount,
-      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
-      cost: output.economy.cost,
-      balanceAfter: output.economy.balance_after,
-      modelLabel: output.agent_console.badges.includes('schema_ok') ? 'QUALITY' : 'FAST',
-    });
-    // 잔액 부족 상태 업데이트
-    economyStore.updateBalanceLowStatus(newEconomy);
-
-    // 6. Quest 상태 업데이트 (U-013)
-    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
-    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
-    const newQuests = [...state.quests];
-    for (const updatedQuest of output.world.quests_updated) {
-      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
-      if (existingIndex >= 0) {
-        // 기존 퀘스트 업데이트
-        newQuests[existingIndex] = updatedQuest;
-      } else {
-        // 새 퀘스트 추가
-        newQuests.push(updatedQuest);
-      }
-    }
-
-    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
-    const newActiveRules = [...state.activeRules];
-    const newMutationEvents: MutationEvent[] = [];
-    const now = Date.now();
-
-    for (const changedRule of output.world.rules_changed) {
-      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
-      if (existingIndex >= 0) {
-        // 기존 규칙 수정
-        newActiveRules[existingIndex] = changedRule;
-        newMutationEvents.push({
-          turn: newTurnCount,
-          ruleId: changedRule.id,
-          type: 'modified',
-          label: changedRule.label,
-          description: changedRule.description ?? undefined,
-          timestamp: now,
-        });
-      } else {
-        // 새 규칙 추가
-        newActiveRules.push(changedRule);
-        newMutationEvents.push({
-          turn: newTurnCount,
-          ruleId: changedRule.id,
-          type: 'added',
-          label: changedRule.label,
-          description: changedRule.description ?? undefined,
-          timestamp: now,
-        });
-      }
-    }
-
-    // 타임라인에 새 이벤트 추가 (최신순 정렬)
-    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
-
-    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
-    set({
-      turnCount: newTurnCount,
-      narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
-      economy: newEconomy,
-      sceneObjects: newSceneObjects,
-      sceneState: newSceneState,
-      // U-013 확장
-      quests: newQuests,
-      activeRules: newActiveRules,
-      mutationTimeline: updatedTimeline,
-    });
-
-    // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
-    // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
-  },
-
-  appendSystemNarrative: (text) => {
-    set((state) => ({
-      narrativeEntries: [
-        ...state.narrativeEntries,
-        {
-          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
-          text,
-        },
-      ],
-    }));
-  },
-
-  setSceneState: (sceneState) => {
-    set({ sceneState });
-  },
-
-  setConnected: (isConnected) => {
-    set({ isConnected });
-  },
-
-  setEconomy: (economy) => {
-    set({ economy });
-  },
-
-  setSceneObjects: (sceneObjects) => {
-    set({ sceneObjects });
-  },
-
-  initialize: (welcomeMessage) => {
-    set({
-      ...createInitialState(),
-      narrativeEntries: [{ turn: 0, text: welcomeMessage }],
-    });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 경제 상태 셀렉터 */
-export const selectEconomy = (state: WorldStore) => state.economy;
-
-/** Signal 잔액 셀렉터 */
-export const selectSignal = (state: WorldStore) => state.economy.signal;
-
-/** Memory Shard 잔액 셀렉터 */
-export const selectMemoryShard = (state: WorldStore) => state.economy.memory_shard;
-
-/** 연결 상태 셀렉터 */
-export const selectIsConnected = (state: WorldStore) => state.isConnected;
-
-/** Scene 상태 셀렉터 */
-export const selectSceneState = (state: WorldStore) => state.sceneState;
-
-/** Scene Objects 셀렉터 */
-export const selectSceneObjects = (state: WorldStore) => state.sceneObjects;
-
-/** 내러티브 엔트리 셀렉터 */
-export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntries;
-
-/** 턴 카운트 셀렉터 */
-export const selectTurnCount = (state: WorldStore) => state.turnCount;
-
-// ============ U-013: Quest + Rule Board 셀렉터 ============
-
-/** 퀘스트 목록 셀렉터 */
-export const selectQuests = (state: WorldStore) => state.quests;
-
-/** 활성 규칙 목록 셀렉터 */
-export const selectActiveRules = (state: WorldStore) => state.activeRules;
-
-/** 뮤테이션 타임라인 셀렉터 */
-export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
-
-/** 진행 중인 퀘스트 셀렉터 */
-export const selectActiveQuests = (state: WorldStore) =>
-  state.quests.filter((q) => !q.is_completed);
-
-/** 완료된 퀘스트 셀렉터 */
-export const selectCompletedQuests = (state: WorldStore) =>
-  state.quests.filter((q) => q.is_completed);
 </file>
 
 <file path="frontend/src/turn/turnRunner.ts">
@@ -11058,6 +10875,420 @@ export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safePar
 export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
   return TurnInputSchema.safeParse(data);
 }
+</file>
+
+<file path="frontend/src/stores/worldStore.ts">
+/**
+ * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
+ *
+ * TurnOutput 반영으로 갱신되는 세션 월드/UI 상태를 SSOT로 관리합니다.
+ * App.tsx의 로컬 상태를 이 스토어로 이동하여 책임 경계를 명확히 합니다.
+ *
+ * 설계 원칙:
+ *   - RU-003 Q1 결정: 도메인별 store 분리 (Option A)
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
+ *   - RULE-006: ko/en i18n 정책 준수
+ *
+ * 확장 (U-013):
+ *   - Quest/Rules/MutationEvent 상태 추가
+ *   - applyTurnOutput에서 quests_updated, rules_changed 반영
+ *
+ * 순환 import 방지:
+ *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
+ *   - 역방향 import 금지
+ *
+ * @module stores/worldStore
+ */
+
+import { create } from 'zustand';
+import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
+import type { SceneCanvasState } from '../types/scene';
+import { useActionDeckStore } from './actionDeckStore';
+import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
+import { useEconomyStore } from './economyStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/** 재화 상태 */
+export interface EconomyState {
+  signal: number;
+  memory_shard: number;
+}
+
+/** 내러티브 엔트리 */
+export interface NarrativeEntry {
+  turn: number;
+  text: string;
+}
+
+/**
+ * 룰 변형 이벤트 (U-013: Mutation Timeline)
+ * 규칙이 변경된 시점과 내용을 기록합니다.
+ */
+export interface MutationEvent {
+  /** 변형 발생 턴 */
+  turn: number;
+  /** 변형된 규칙 ID */
+  ruleId: string;
+  /** 변형 유형: 추가/수정/제거 */
+  type: 'added' | 'modified' | 'removed';
+  /** 규칙 라벨 (표시용) */
+  label: string;
+  /** 규칙 설명 (선택) */
+  description?: string;
+  /** 타임스탬프 */
+  timestamp: number;
+}
+
+/** World/Session 상태 */
+export interface WorldState {
+  /** 재화 상태 (RULE-005) */
+  economy: EconomyState;
+  /** 연결 상태 */
+  isConnected: boolean;
+  /** Scene Canvas 상태 (U-031) */
+  sceneState: SceneCanvasState;
+  /** Scene Objects (U-010: 핫스팟 오버레이) */
+  sceneObjects: SceneObject[];
+  /** 내러티브 히스토리 */
+  narrativeEntries: NarrativeEntry[];
+  /** 현재 턴 카운트 */
+  turnCount: number;
+
+  // ============ U-013: Quest + Rule Board 확장 ============
+
+  /** 현재 퀘스트/목표 목록 */
+  quests: Quest[];
+  /** 현재 적용 중인 규칙 목록 */
+  activeRules: WorldRule[];
+  /** 룰 변형 이벤트 타임라인 (최신순) */
+  mutationTimeline: MutationEvent[];
+}
+
+/** World Store 액션 */
+export interface WorldActions {
+  /**
+   * TurnOutput을 받아 모든 관련 상태를 업데이트합니다.
+   * 이 메서드가 TurnOutput 반영의 SSOT입니다.
+   */
+  applyTurnOutput: (output: TurnOutput) => void;
+
+  /**
+   * 시스템 내러티브를 추가합니다 (턴 미발생 피드백용).
+   * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
+   */
+  appendSystemNarrative: (text: string) => void;
+
+  /** Scene 상태 설정 */
+  setSceneState: (state: SceneCanvasState) => void;
+
+  /** 연결 상태 설정 */
+  setConnected: (connected: boolean) => void;
+
+  /** 경제 상태 설정 (직접 조작용, 일반적으로 applyTurnOutput 사용) */
+  setEconomy: (economy: EconomyState) => void;
+
+  /** Scene Objects 설정 (직접 조작용) */
+  setSceneObjects: (objects: SceneObject[]) => void;
+
+  /** 초기화 (초기 내러티브 메시지 포함) */
+  initialize: (welcomeMessage: string) => void;
+
+  /** 상태 완전 초기화 */
+  reset: () => void;
+}
+
+export type WorldStore = WorldState & WorldActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+/**
+ * 초기 상태를 생성합니다.
+ *
+ * RU-004-Q5: 초기값 정책 SSOT
+ *
+ * ## 중요: 이 값들은 "플레이 전 placeholder"입니다.
+ *
+ * 실제 게임 시작 값은 항상 다음 중 하나에서 주입됩니다:
+ * 1. 프로필 초기 SaveGame (startSessionFromProfile)
+ * 2. 저장된 SaveGame 복원 (continueSession)
+ *
+ * profile_select 상태에서는 HUD가 노출되지 않으므로
+ * 이 placeholder 값이 화면에 표시될 일은 없습니다.
+ *
+ * @see save/constants.ts#INITIAL_VALUE_POLICY
+ * @see save/sessionLifecycle.ts
+ */
+function createInitialState(): WorldState {
+  return {
+    // RU-004-Q5: Placeholder - 실제 값은 프로필/세이브에서 주입됨
+    economy: { signal: 100, memory_shard: 5 },
+    isConnected: true,
+    sceneState: { status: 'default', message: '' },
+    sceneObjects: [],
+    narrativeEntries: [],
+    turnCount: 0,
+    // U-013: Quest + Rule Board 초기 상태
+    quests: [],
+    activeRules: [],
+    mutationTimeline: [],
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * World/Session 상태 스토어.
+ *
+ * TurnOutput 반영의 SSOT로, App.tsx의 로컬 상태를 대체합니다.
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 상태 구독
+ * const { economy, narrativeEntries } = useWorldStore();
+ *
+ * // TurnOutput 반영 (스트림 완료 시)
+ * const applyTurnOutput = useWorldStore((state) => state.applyTurnOutput);
+ * applyTurnOutput(turnOutput);
+ *
+ * // 시스템 피드백 추가 (드롭 실패 등)
+ * const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
+ * appendSystemNarrative('아이템을 사용할 수 없습니다.');
+ * ```
+ */
+export const useWorldStore = create<WorldStore>((set, get) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+
+  applyTurnOutput: (output) => {
+    const state = get();
+
+    // 1. 턴 카운트 증가
+    const newTurnCount = state.turnCount + 1;
+
+    // 2. 내러티브 추가
+    const newNarrativeEntry: NarrativeEntry = {
+      turn: newTurnCount,
+      text: output.narrative,
+    };
+
+    // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
+    const newEconomy: EconomyState = {
+      signal: output.economy.balance_after.signal,
+      memory_shard: output.economy.balance_after.memory_shard,
+    };
+
+    // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
+    const newSceneObjects = output.ui.objects;
+
+    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
+    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
+    // - 없으면 'default' 상태 유지
+    // - safety.blocked인 경우 'blocked' 상태로 전환
+    let newSceneState: SceneCanvasState;
+    if (output.safety.blocked) {
+      newSceneState = {
+        status: 'blocked',
+        message: output.safety.message ?? undefined,
+      };
+    } else if (output.ui.scene?.image_url) {
+      newSceneState = {
+        status: 'scene',
+        imageUrl: output.ui.scene.image_url,
+        message: output.ui.scene.alt_text ?? undefined,
+      };
+    } else {
+      newSceneState = {
+        status: 'default',
+        message: '',
+      };
+    }
+
+    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
+    // Action Deck 카드 업데이트 (U-009)
+    useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
+
+    // Inventory 업데이트 (U-011)
+    if (output.world.inventory_added.length > 0) {
+      useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
+    }
+    if (output.world.inventory_removed.length > 0) {
+      useInventoryStore.getState().removeItems(output.world.inventory_removed);
+    }
+
+    // Economy Store 업데이트 (U-014: Ledger 기록)
+    const economyStore = useEconomyStore.getState();
+    economyStore.addLedgerEntry({
+      turnId: newTurnCount,
+      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
+      cost: output.economy.cost,
+      balanceAfter: output.economy.balance_after,
+      modelLabel: output.agent_console.badges.includes('schema_ok') ? 'QUALITY' : 'FAST',
+    });
+    // 잔액 부족 상태 업데이트
+    economyStore.updateBalanceLowStatus(newEconomy);
+
+    // 6. Quest 상태 업데이트 (U-013)
+    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
+    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
+    const newQuests = [...state.quests];
+    for (const updatedQuest of output.world.quests_updated) {
+      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
+      if (existingIndex >= 0) {
+        // 기존 퀘스트 업데이트
+        newQuests[existingIndex] = updatedQuest;
+      } else {
+        // 새 퀘스트 추가
+        newQuests.push(updatedQuest);
+      }
+    }
+
+    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
+    const newActiveRules = [...state.activeRules];
+    const newMutationEvents: MutationEvent[] = [];
+    const now = Date.now();
+
+    for (const changedRule of output.world.rules_changed) {
+      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
+      if (existingIndex >= 0) {
+        // 기존 규칙 수정
+        newActiveRules[existingIndex] = changedRule;
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'modified',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      } else {
+        // 새 규칙 추가
+        newActiveRules.push(changedRule);
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'added',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      }
+    }
+
+    // 타임라인에 새 이벤트 추가 (최신순 정렬)
+    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
+
+    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
+    set({
+      turnCount: newTurnCount,
+      narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
+      economy: newEconomy,
+      sceneObjects: newSceneObjects,
+      sceneState: newSceneState,
+      // U-013 확장
+      quests: newQuests,
+      activeRules: newActiveRules,
+      mutationTimeline: updatedTimeline,
+    });
+
+    // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
+    // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
+  },
+
+  appendSystemNarrative: (text) => {
+    set((state) => ({
+      narrativeEntries: [
+        ...state.narrativeEntries,
+        {
+          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
+          text,
+        },
+      ],
+    }));
+  },
+
+  setSceneState: (sceneState) => {
+    set({ sceneState });
+  },
+
+  setConnected: (isConnected) => {
+    set({ isConnected });
+  },
+
+  setEconomy: (economy) => {
+    set({ economy });
+  },
+
+  setSceneObjects: (sceneObjects) => {
+    set({ sceneObjects });
+  },
+
+  initialize: (welcomeMessage) => {
+    set({
+      ...createInitialState(),
+      narrativeEntries: [{ turn: 0, text: welcomeMessage }],
+    });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 경제 상태 셀렉터 */
+export const selectEconomy = (state: WorldStore) => state.economy;
+
+/** Signal 잔액 셀렉터 */
+export const selectSignal = (state: WorldStore) => state.economy.signal;
+
+/** Memory Shard 잔액 셀렉터 */
+export const selectMemoryShard = (state: WorldStore) => state.economy.memory_shard;
+
+/** 연결 상태 셀렉터 */
+export const selectIsConnected = (state: WorldStore) => state.isConnected;
+
+/** Scene 상태 셀렉터 */
+export const selectSceneState = (state: WorldStore) => state.sceneState;
+
+/** Scene Objects 셀렉터 */
+export const selectSceneObjects = (state: WorldStore) => state.sceneObjects;
+
+/** 내러티브 엔트리 셀렉터 */
+export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntries;
+
+/** 턴 카운트 셀렉터 */
+export const selectTurnCount = (state: WorldStore) => state.turnCount;
+
+// ============ U-013: Quest + Rule Board 셀렉터 ============
+
+/** 퀘스트 목록 셀렉터 */
+export const selectQuests = (state: WorldStore) => state.quests;
+
+/** 활성 규칙 목록 셀렉터 */
+export const selectActiveRules = (state: WorldStore) => state.activeRules;
+
+/** 뮤테이션 타임라인 셀렉터 */
+export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
+
+/** 진행 중인 퀘스트 셀렉터 */
+export const selectActiveQuests = (state: WorldStore) =>
+  state.quests.filter((q) => !q.is_completed);
+
+/** 완료된 퀘스트 셀렉터 */
+export const selectCompletedQuests = (state: WorldStore) =>
+  state.quests.filter((q) => q.is_completed);
 </file>
 
 <file path="package.json">

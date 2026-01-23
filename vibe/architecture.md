@@ -42,10 +42,11 @@ D:\Dev\unknown-world\
 │   │   ├── turn/           # Turn Runner 모듈
 │   │   ├── data/           # 데모 프로필 및 정적 데이터 (U-015)
 │   │   │   └── demoProfiles.ts
-│   │   ├── save/           # 세이브/로드 및 세션 관리 시스템 (U-015, RU-004)
-│   │   │   ├── saveGame.ts
-│   │   │   └── sessionLifecycle.ts # 세션 생명주기 SSOT (RU-004-Q4)
-│   │   ├── components/     # 게임 UI 컴포넌트
+│   ├── save/           # 세이브/로드 및 세션 관리 시스템 (U-015, RU-004)
+│   │   ├── saveGame.ts
+│   │   ├── constants.ts    # 세이브/정책 상수 SSOT (RU-004-Q5)
+│   │   └── sessionLifecycle.ts # 세션 생명주기 SSOT (RU-004-Q4)
+│   ├── components/     # 게임 UI 컴포넌트
 │   │   │   ├── ActionDeck.tsx
 │   │   │   ├── AgentConsole.tsx
 │   │   │   ├── InventoryPanel.tsx
@@ -194,7 +195,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 
 
-11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2, RU-004-Q4, RU-004-Q1)
+11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2, RU-004-Q4, RU-004-Q1, RU-004-Q5)
 
 
 
@@ -202,7 +203,27 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 
 
-1. **무가입 즉시 시작 (Demo Profiles)**:
+1. **정책 상수 및 초기값 SSOT (RU-004-Q5)**:
+
+
+
+    - **상수 중앙화**: `frontend/src/save/constants.ts`를 단일 진실 공급원(SSOT)으로 삼아 세이브 버전, 스토리지 키, 시드 정책, 재화 임계치 등을 집중 관리함.
+
+
+
+    - **초기값 주입 정책 (Injection-first)**: 스토어의 `createInitialState` 값은 "플레이 전 placeholder"로 정의하며, 실제 게임 데이터는 세션 진입 시 프로필 초기값 또는 세이브 데이터로부터 주입받아야 함.
+
+
+
+    - **시드 정책 (Seed Policy)**: `generateDemoSeed`를 통해 시드 생성 로직을 통일하고, 세션 유지 기간 동안 동일한 시드가 보존되도록 보장함.
+
+
+
+
+
+
+
+2. **무가입 즉시 시작 (Demo Profiles)**:
 
 
 

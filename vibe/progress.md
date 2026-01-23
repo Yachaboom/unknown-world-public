@@ -1,5 +1,30 @@
 # 프로젝트 진행 상황
 
+## [2026-01-24 01:40] RU-004-Q5: 하드코딩 정리 - SaveGame/프로필/초기값 상수 중앙화(SSOT) 완료
+
+### 작업 내용
+
+- **제안서**: [RU-004-Q5] 하드코딩 정리: SaveGame/프로필/초기값 상수 분산으로 정책 변경 시 누락 위험
+- **개선 사항**:
+    - **정책 상수 중앙화**: `save/constants.ts`를 신설하여 세이브 버전, 스토리지 키, 시드 정책, 재화 임계치 등 분산되어 있던 하드코딩 상수를 단일 진실 공급원(SSOT)으로 통합
+    - **시드 생성 정책 표준화**: `generateDemoSeed` 유틸리티를 도입하여 프로필별 시드 생성 로직을 통일하고, 세션 내 시드 보존 정책(Session Persistence)을 강화
+    - **초기값 의미론적 구분**: 스토어의 `createInitialState` 값은 "플레이 전 placeholder"임을 명시하고, 실제 게임 데이터는 항상 프로필/세이브에서 주입받는 구조(Injection-first) 확립
+    - **하위 호환성 유지**: 기존 모듈에서 참조하던 상수를 `save/saveGame.ts` 등에서 re-export 하여 리팩토링으로 인한 파괴적 변경 최소화
+- **영향 범위**: `frontend/src/save/constants.ts` (신규), `frontend/src/save/saveGame.ts`, `frontend/src/save/sessionLifecycle.ts`, `frontend/src/data/demoProfiles.ts`, `frontend/src/stores/economyStore.ts`, `frontend/src/stores/worldStore.ts`
+
+### 기술적 세부사항
+
+- **Constants SSOT**: `SAVEGAME_VERSION`, `SAVEGAME_STORAGE_KEY`, `LOW_BALANCE_THRESHOLD` 등 핵심 정책 상수를 한 곳으로 모아 정책 변경 시 누락 위험 원천 차단
+- **Seed Persistence**: `saveCurrentSession` 시 기존 세이브의 시드를 유지하도록 수정하여, 세션 도중 시드가 변하거나 유실되는 문제 방지
+- **Documentation as Code**: 상수 파일 내부에 시드 정책(`SEED_POLICY`) 및 초기값 주입 정책(`INITIAL_VALUE_POLICY`)을 상세히 문서화하여 향후 확장(U-026 리플레이 등)에 대비
+
+### 검증
+
+- **정합성 확인**: 프로필 선택 및 게임 진행 시 세이브 데이터의 버전과 키가 중앙화된 상수와 일치함을 확인.
+- **상수 연동 확인**: `economyStore`의 경고 임계치 및 `worldStore`의 초기 상태 설명이 리팩토링된 정책에 부합함을 확인.
+
+---
+
 ## [2026-01-24 14:30] RU-004-Q1: 코드 중복 - SaveGame 생성 경로 단일화(SSOT) 완료
 
 ### 작업 내용

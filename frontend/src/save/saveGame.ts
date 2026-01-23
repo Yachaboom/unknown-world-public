@@ -8,6 +8,7 @@
  *   - RULE-010: DB/ORM 도입 금지 (SaveGame JSON 직렬화 기반)
  *   - RULE-006: language 필드로 ko/en 혼합 방지
  *   - Q1 결정: Option A - localStorage 사용 (단순/데모 적합)
+ *   - RU-004-Q5: 상수는 constants.ts에서 중앙 관리
  *
  * @module save/saveGame
  */
@@ -20,21 +21,15 @@ import type { InventoryItem } from '../stores/inventoryStore';
 import type { MutationEvent, NarrativeEntry, EconomyState } from '../stores/worldStore';
 import type { SceneObject } from '../schemas/turn';
 
-// =============================================================================
-// 버전 및 상수
-// =============================================================================
+// RU-004-Q5: 상수 중앙화 - constants.ts에서 import
+import {
+  SAVEGAME_VERSION,
+  SAVEGAME_STORAGE_KEY,
+  CURRENT_PROFILE_KEY,
+} from './constants';
 
-/**
- * 현재 SaveGame 스키마 버전.
- * 버전이 바뀌어도 복원 가능하도록 version 필드를 필수로 둡니다.
- */
-export const SAVEGAME_VERSION = '1.0.0' as const;
-
-/** localStorage 키 */
-export const SAVEGAME_STORAGE_KEY = 'unknown_world_savegame' as const;
-
-/** 현재 선택된 프로필 키 */
-export const CURRENT_PROFILE_KEY = 'unknown_world_current_profile' as const;
+// RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
+export { SAVEGAME_VERSION, SAVEGAME_STORAGE_KEY, CURRENT_PROFILE_KEY };
 
 // =============================================================================
 // SaveGame 스키마 정의

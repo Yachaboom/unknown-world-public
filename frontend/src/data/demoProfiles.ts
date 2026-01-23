@@ -13,6 +13,7 @@
  *   - RULE-006: 표시 문자열은 i18n 키 기반
  *   - RULE-010: SaveGame JSON 직렬화로 저장
  *   - PRD 6.9: 데모 프로필 3종 + 즉시 리셋
+ *   - RU-004-Q5: seed 생성은 constants.ts SSOT 사용
  *
  * @module data/demoProfiles
  */
@@ -20,6 +21,8 @@
 import type { SupportedLanguage } from '../i18n';
 import type { SaveGame, SaveGameInput } from '../save/saveGame';
 import { createSaveGame } from '../save/saveGame';
+// RU-004-Q5: seed 생성 정책 SSOT
+import { generateDemoSeed } from '../save/constants';
 
 // =============================================================================
 // 프로필 타입 정의
@@ -354,7 +357,8 @@ export function profileToSaveGameInput(
   return {
     language,
     profileId: profile.id,
-    seed: `demo-${profile.id}-${now}`,
+    // RU-004-Q5: seed 생성 정책 SSOT (constants.ts)
+    seed: generateDemoSeed(profile.id),
     economy: {
       signal: profile.initialState.economy.signal,
       memory_shard: profile.initialState.economy.memory_shard,
