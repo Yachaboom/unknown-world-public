@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-24 14:30] RU-004-Q1: 코드 중복 - SaveGame 생성 경로 단일화(SSOT) 완료
+
+### 작업 내용
+
+- **제안서**: [RU-004-Q1] 코드 중복: SaveGame 생성 경로 이원화(createSaveGame vs createSaveGameFromProfile)로 스키마 드리프트 위험
+- **개선 사항**:
+    - **생성 경로 SSOT 단일화**: `demoProfiles.ts`에서 직접 `SaveGame` 객체를 조립하던 중복 로직을 제거하고, `saveGame.ts`의 `createSaveGame`을 유일한 생성 창구로 고정
+    - **Input Adapter 패턴 도입**: 프로필 데이터를 `SaveGameInput`으로 변환하는 `profileToSaveGameInput` 함수를 분리하여, "데이터 준비"와 "객체 생성(SSOT)" 책임을 명확히 분리
+    - **스키마 드리프트 원천 차단**: 필드 추가나 기본값 변경 시 `createSaveGame` 한 곳만 수정하면 프로필 시작 및 일반 생성 경로 모두에 즉시 반영되도록 개선
+- **영향 범위**: `frontend/src/data/demoProfiles.ts`, `frontend/src/save/saveGame.ts`
+
+### 기술적 세부사항
+
+- **Thin Wrapper**: 기존 `createSaveGameFromProfile`을 `createSaveGame(profileToSaveGameInput(...))`를 호출하는 얇은 래퍼로 전환하여 기존 코드와의 하위 호환성 유지
+- **Validation Consistency**: 모든 생성 경로가 `createSaveGame` 내부의 Zod 스키마 검증 및 기본값 주입 로직을 공유하게 됨
+
+### 검증
+
+- **정합성 확인**: 프로필 선택 시 생성되는 세이브 데이터의 구조가 `saveGame.ts`에 정의된 최신 스키마 및 버전(`SAVEGAME_VERSION`)과 완벽히 일치함을 확인.
+- **하위 호환성 확인**: 프로필 선택 및 게임 시작 시나리오가 기존과 동일하게 정상 작동함을 확인.
+
+---
+
 ## [2026-01-23 11:30] RU-004-Q4: 모듈 설계 - 세션 초기화/복원/리셋 SSOT 단일화 완료
 
 ### 작업 내용

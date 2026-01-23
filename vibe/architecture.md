@@ -194,7 +194,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 
 
-11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2, RU-004-Q4)
+11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004-S2, RU-004-Q4, RU-004-Q1)
 
 
 
@@ -218,7 +218,31 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 
 
-2. **세션 라이프사이클 SSOT (RU-004-Q4)**:
+2. **SaveGame 생성 SSOT 단일화 (RU-004-Q1)**:
+
+
+
+    - **단일 생성 창구**: 모든 `SaveGame` 객체는 `frontend/src/save/saveGame.ts`의 `createSaveGame` 함수를 통해서만 생성되어야 함.
+
+
+
+    - **Input Adapter 패턴**: 프로필 시작 등 다른 소스에서 `SaveGame`을 만들 경우, 직접 조립하지 않고 `SaveGameInput` 형태로 데이터를 변환(Adapt)하여 `createSaveGame`에 전달함.
+
+
+
+    - **드리프트 방지**: 스키마 변경, 기본값 설정, 버전 관리 로직을 `saveGame.ts` 한 곳으로 집중하여 생성 경로에 따른 데이터 불일치를 원천 차단함.
+
+
+
+
+
+
+
+3. **세션 라이프사이클 SSOT (RU-004-Q4)**:
+
+
+
+
 
 
 

@@ -18,8 +18,8 @@
  */
 
 import type { SupportedLanguage } from '../i18n';
-import type { SaveGame } from '../save/saveGame';
-import { SAVEGAME_VERSION } from '../save/saveGame';
+import type { SaveGame, SaveGameInput } from '../save/saveGame';
+import { createSaveGame } from '../save/saveGame';
 
 // =============================================================================
 // 프로필 타입 정의
@@ -330,30 +330,31 @@ export function findProfileById(profileId: string): DemoProfile | undefined {
 }
 
 // =============================================================================
-// 프로필 → SaveGame 변환
+// 프로필 → SaveGameInput 변환 (RU-004-Q1: SSOT 단일화)
 // =============================================================================
 
 /**
- * 데모 프로필을 SaveGame 형태로 변환합니다.
+ * 데모 프로필을 SaveGameInput으로 변환합니다.
+ *
+ * RU-004-Q1: SaveGame 생성은 createSaveGame(SSOT)만 수행하도록 분리.
+ * 이 함수는 "입력 변환(input adapter)" 역할만 담당합니다.
  *
  * @param profile - 데모 프로필
  * @param language - 언어 설정
  * @param t - i18n 번역 함수
- * @returns SaveGame 객체
+ * @returns SaveGameInput 객체 (createSaveGame에 전달 가능)
  */
-export function createSaveGameFromProfile(
+export function profileToSaveGameInput(
   profile: DemoProfile,
   language: SupportedLanguage,
   t: (key: string) => string,
-): SaveGame {
+): SaveGameInput {
   const now = Date.now();
 
   return {
-    version: SAVEGAME_VERSION,
-    seed: `demo-${profile.id}-${now}`,
     language,
     profileId: profile.id,
-    savedAt: new Date().toISOString(),
+    seed: `demo-${profile.id}-${now}`,
     economy: {
       signal: profile.initialState.economy.signal,
       memory_shard: profile.initialState.economy.memory_shard,
@@ -397,6 +398,25 @@ export function createSaveGameFromProfile(
       interaction_hint: t(obj.hintKey),
     })),
   };
+}
+
+/**
+ * 데모 프로필을 SaveGame 형태로 변환합니다.
+ *
+ * RU-004-Q1: createSaveGame(SSOT)를 호출하는 얇은 wrapper입니다.
+ * 기존 호출자와의 호환성을 유지합니다.
+ *
+ * @param profile - 데모 프로필
+ * @param language - 언어 설정
+ * @param t - i18n 번역 함수
+ * @returns SaveGame 객체
+ */
+export function createSaveGameFromProfile(
+  profile: DemoProfile,
+  language: SupportedLanguage,
+  t: (key: string) => string,
+): SaveGame {
+  return createSaveGame(profileToSaveGameInput(profile, language, t));
 }
 
 /**
