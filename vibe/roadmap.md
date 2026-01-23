@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 32/65 (49%) | **MVP**: 32/52 (62%) | **MMP**: 0/13 (0%)
+**전체**: 33/65 (51%) | **MVP**: 33/52 (63%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-5 | MMP D-8  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) / **최근 완료**: [RU-004-Q1](refactors/RU-004-Q1.md) (2026-01-24)
+**진행 중(현재 포커스)**: [U-016[Mvp]](unit-plans/U-016[Mvp].md) / **최근 완료**: [RU-004-S3](refactors/RU-004-S3.md) (2026-01-24)
 
 **블로커**: 없음
 
@@ -173,6 +173,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [RU-004-S3](refactors/RU-004-S3.md): 수동 검증 시나리오: “SaveGame/프로필/리셋/복원” 패키지 (2026-01-24)
 - ✅ [RU-004-Q1](refactors/RU-004-Q1.md): 리팩토링 - SaveGame 생성 경로 단일화(SSOT) (2026-01-24)
 - ✅ [RU-004-Q4](save/sessionLifecycle.ts): 모듈 설계 - 세션 초기화/복원/리셋 SSOT 단일화 (2026-01-23)
 - ✅ [U-015[Mvp]](unit-results/U-015[Mvp].md): ⚡SaveGame(local) + Reset + Demo Profiles(3종) (2026-01-19)
