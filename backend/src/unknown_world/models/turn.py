@@ -165,6 +165,24 @@ class ClickInput(BaseModel):
     box_2d: Box2D | None = Field(default=None, description="클릭 위치 바운딩 박스 (선택)")
 
 
+class DropInput(BaseModel):
+    """드롭 입력 정보 (U-012).
+
+    인벤토리 아이템을 핫스팟에 드롭할 때 전달되는 정보입니다.
+
+    Attributes:
+        item_id: 드롭한 인벤토리 아이템 ID
+        target_object_id: 드롭 대상 핫스팟 오브젝트 ID
+        target_box_2d: 드롭 대상의 바운딩 박스 (0~1000 정규화)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: str = Field(description="드롭한 인벤토리 아이템 ID")
+    target_object_id: str = Field(description="드롭 대상 핫스팟 오브젝트 ID")
+    target_box_2d: Box2D = Field(description="드롭 대상의 바운딩 박스 (0~1000 정규화)")
+
+
 class ClientInfo(BaseModel):
     """클라이언트 정보.
 
@@ -226,6 +244,7 @@ class TurnInput(BaseModel):
     text: str = Field(default="", description="사용자 자연어 입력")
     action_id: str | None = Field(default=None, description="선택한 액션 카드 ID (선택)")
     click: ClickInput | None = Field(default=None, description="오브젝트 클릭 정보 (선택)")
+    drop: DropInput | None = Field(default=None, description="아이템 드롭 정보 (선택, U-012)")
     client: ClientInfo = Field(description="클라이언트 환경 정보")
     economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
 

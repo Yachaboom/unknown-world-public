@@ -17,16 +17,22 @@ POST 요청을 받아 NDJSON(라인 단위 JSON) 스트리밍으로 턴 결과�
     - final: 최종 TurnOutput
     - error: 에러 발생 시
 
+리팩토링 (RU-005-Q4):
+    - 기존 _stream_turn_events_mock/_real을 pipeline 기반으로 통합
+    - API 레이어는 스트리밍 직렬화/전송에 집중
+    - 오케스트레이션 로직은 pipeline.py로 위임
+
 참조:
     - vibe/unit-plans/U-007[Mvp].md
     - vibe/unit-plans/U-018[Mvp].md
+    - vibe/refactors/RU-005-Q4.md
     - .cursor/rules/20-backend-orchestrator.mdc
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
+import contextlib
 import time
 from collections.abc import AsyncGenerator
 from typing import Any, cast
@@ -47,16 +53,17 @@ from unknown_world.api.turn_stream_events import (
     serialize_event,
 )
 from unknown_world.models.turn import (
-    AgentPhase,
     CurrencyAmount,
     Language,
     TurnInput,
-    ValidationBadge,
 )
 from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.mock import MockOrchestrator
-from unknown_world.orchestrator.repair_loop import MAX_REPAIR_ATTEMPTS, run_repair_loop
-from unknown_world.validation.business_rules import validate_business_rules
+from unknown_world.orchestrator.pipeline import create_pipeline_context, run_pipeline
+from unknown_world.orchestrator.repair_loop import MAX_REPAIR_ATTEMPTS
+from unknown_world.orchestrator.stages.types import (
+    PipelineEvent,
+    PipelineEventType,
+)
 
 # =============================================================================
 # 라우터 정의
@@ -64,156 +71,139 @@ from unknown_world.validation.business_rules import validate_business_rules
 
 router = APIRouter(prefix="/api", tags=["Turn"])
 
-# 단계 목록 (PRD 예시)
-ORCHESTRATOR_PHASES = [
-    AgentPhase.PARSE,
-    AgentPhase.VALIDATE,
-    AgentPhase.PLAN,
-    AgentPhase.RESOLVE,
-    AgentPhase.RENDER,
-    AgentPhase.VERIFY,
-    AgentPhase.COMMIT,
-]
 
-# 모의 단계 지연 시간 (ms) - 실제 처리 시뮬레이션
-PHASE_DELAYS_MS = {
-    AgentPhase.PARSE: 50,
-    AgentPhase.VALIDATE: 30,
-    AgentPhase.PLAN: 100,
-    AgentPhase.RESOLVE: 150,
-    AgentPhase.RENDER: 80,
-    AgentPhase.VERIFY: 40,
-    AgentPhase.COMMIT: 20,
-}
+# =============================================================================
+# Pipeline Event → Stream Event 변환
+# =============================================================================
 
 
-def _is_mock_mode() -> bool:
-    """Mock 모드 여부를 확인합니다.
+def _convert_pipeline_event(event: PipelineEvent) -> dict[str, Any] | None:
+    """파이프라인 이벤트를 스트림 이벤트로 변환합니다.
 
-    UW_MODE 환경변수가 'mock'이면 Mock 모드로 동작합니다.
-    기본값은 'mock'입니다 (MVP 단계).
+    Args:
+        event: 파이프라인 도메인 이벤트
+
+    Returns:
+        스트림 이벤트 dict (serialize_event에 전달) 또는 None
     """
-    return os.environ.get("UW_MODE", "mock").lower() == "mock"
+    if event.event_type == PipelineEventType.STAGE_START:
+        if event.phase is None:
+            return None
+        return StageEvent(
+            type=StreamEventType.STAGE,
+            name=event.phase.value,
+            status=StageStatus.START,
+        ).model_dump()
+
+    if event.event_type == PipelineEventType.STAGE_COMPLETE:
+        if event.phase is None:
+            return None
+        return StageEvent(
+            type=StreamEventType.STAGE,
+            name=event.phase.value,
+            status=StageStatus.COMPLETE,
+        ).model_dump()
+
+    if event.event_type == PipelineEventType.STAGE_FAIL:
+        if event.phase is None:
+            return None
+        return StageEvent(
+            type=StreamEventType.STAGE,
+            name=event.phase.value,
+            status=StageStatus.FAIL,
+        ).model_dump()
+
+    if event.event_type == PipelineEventType.BADGES:
+        if event.badges is None:
+            return None
+        return BadgesEvent(
+            type=StreamEventType.BADGES,
+            badges=[b.value for b in event.badges],
+        ).model_dump()
+
+    if event.event_type == PipelineEventType.REPAIR:
+        return RepairEvent(
+            type=StreamEventType.REPAIR,
+            attempt=event.repair_attempt,
+            message=event.repair_message,
+        ).model_dump()
+
+    if event.event_type == PipelineEventType.NARRATIVE_DELTA:
+        if event.text is None:
+            return None
+        return NarrativeDeltaEvent(
+            type=StreamEventType.NARRATIVE_DELTA,
+            text=event.text,
+        ).model_dump()
+
+    return None
 
 
-async def _stream_turn_events_mock(
+# =============================================================================
+# 스트리밍 생성기
+# =============================================================================
+
+
+async def _stream_turn_events(
     turn_input: TurnInput, seed: int | None = None
 ) -> AsyncGenerator[str]:
-    """Mock 모드 턴 처리 이벤트를 NDJSON 스트림으로 생성합니다.
+    """턴 처리 이벤트를 NDJSON 스트림으로 생성합니다.
 
-    MockOrchestrator를 사용하여 결정적인 결과를 반환합니다.
-    비즈니스 룰 검증도 수행합니다 (U-018).
+    Pipeline을 실행하고, 도메인 이벤트를 스트림 이벤트로 변환하여 전송합니다.
 
     Args:
         turn_input: 사용자 턴 입력
-        seed: 모의 Orchestrator 시드 (재현성 보장)
+        seed: Mock 모드 시드 (재현성 보장)
 
     Yields:
         str: NDJSON 라인
     """
-    orchestrator = MockOrchestrator(seed=seed)
-    collected_badges: list[str] = []
-    economy_snapshot = CurrencyAmount(
-        signal=turn_input.economy_snapshot.signal,
-        memory_shard=turn_input.economy_snapshot.memory_shard,
-    )
+    # 이벤트 큐 (emit 콜백에서 이벤트를 쌓고, 메인 루프에서 소비)
+    event_queue: asyncio.Queue[PipelineEvent | None] = asyncio.Queue()
 
-    # Phase 1: Parse (TTFB를 위해 즉시 시작 이벤트 전송)
-    yield serialize_event(
-        StageEvent(
-            type=StreamEventType.STAGE, name=AgentPhase.PARSE.value, status=StageStatus.START
-        ).model_dump()
-    )
+    async def emit(event: PipelineEvent) -> None:
+        """파이프라인 이벤트를 큐에 추가합니다."""
+        await event_queue.put(event)
 
-    # 각 단계별 처리 시뮬레이션
-    for phase in ORCHESTRATOR_PHASES:
-        # 단계 시작
-        if phase != AgentPhase.PARSE:  # Parse는 이미 전송함
-            yield serialize_event(
-                StageEvent(
-                    type=StreamEventType.STAGE, name=phase.value, status=StageStatus.START
-                ).model_dump()
+    # Pipeline 컨텍스트 생성
+    ctx = create_pipeline_context(turn_input, seed=seed)
+
+    # Pipeline 실행을 백그라운드 태스크로 시작
+    async def run_pipeline_task() -> None:
+        nonlocal ctx
+        try:
+            ctx = await run_pipeline(ctx, emit=emit)
+        except Exception:
+            # 예외 발생 시 폴백 (RULE-004)
+            ctx.output = create_safe_fallback(
+                language=turn_input.language,
+                economy_snapshot=ctx.economy_snapshot,
+                repair_count=ctx.repair_attempts,
             )
+            ctx.is_fallback = True
+        finally:
+            # 종료 신호
+            await event_queue.put(None)
 
-        # 모의 처리 지연
-        delay_ms = PHASE_DELAYS_MS.get(phase, 50)
-        await asyncio.sleep(delay_ms / 1000.0)
+    pipeline_task = asyncio.create_task(run_pipeline_task())
 
-        # 단계 완료
-        yield serialize_event(
-            StageEvent(
-                type=StreamEventType.STAGE, name=phase.value, status=StageStatus.COMPLETE
-            ).model_dump()
-        )
-
-    # TurnOutput 생성 + 비즈니스 룰 검증 (U-018)
-    repair_attempt = 0
-    turn_output = None
-
+    # 이벤트 소비 루프
     try:
-        while repair_attempt <= MAX_REPAIR_ATTEMPTS:
-            try:
-                # 0회차는 정상 시도, 1회차부터는 repair
-                if repair_attempt > 0:
-                    yield serialize_event(
-                        RepairEvent(
-                            type=StreamEventType.REPAIR,
-                            attempt=repair_attempt,
-                            message="검증 실패로 인해 다시 시도 중입니다..."
-                            if turn_input.language == Language.KO
-                            else "Retrying due to validation failure...",
-                        ).model_dump()
-                    )
+        while True:
+            event = await event_queue.get()
+            if event is None:
+                # Pipeline 종료
+                break
 
-                # Mock 생성
-                turn_output = orchestrator.generate_turn_output(turn_input)
+            stream_event = _convert_pipeline_event(event)
+            if stream_event is not None:
+                yield serialize_event(stream_event)
 
-                # 비즈니스 룰 검증 (U-018)
-                biz_result = validate_business_rules(turn_input, turn_output)
-                if not biz_result.is_valid:
-                    # 비즈니스 룰 실패 → 재시도
-                    repair_attempt += 1
-                    if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                        # 최종 실패 시 폴백 (RULE-004)
-                        turn_output = create_safe_fallback(
-                            language=turn_input.language,
-                            economy_snapshot=economy_snapshot,
-                            repair_count=repair_attempt,
-                        )
-                    continue
-
-                # 모든 검증 통과
-                collected_badges = [
-                    ValidationBadge.SCHEMA_OK.value,
-                    ValidationBadge.ECONOMY_OK.value,
-                    ValidationBadge.SAFETY_OK.value,
-                    ValidationBadge.CONSISTENCY_OK.value,
-                ]
-                break  # 성공 시 루프 탈출
-
-            except ValidationError:
-                repair_attempt += 1
-                if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                    # 최종 실패 시 폴백 (RULE-004)
-                    turn_output = create_safe_fallback(
-                        language=turn_input.language,
-                        economy_snapshot=economy_snapshot,
-                        repair_count=repair_attempt,
-                    )
-                    break
-                # 루프 계속 진행 (재시도)
-                continue
-
-        # 배지 전송
-        if collected_badges:
-            yield serialize_event(
-                BadgesEvent(type=StreamEventType.BADGES, badges=collected_badges).model_dump()
-            )
-
-        if turn_output:
+        # Pipeline 완료 후 내러티브 + final 전송
+        if ctx.output is not None:
             # 내러티브 델타 스트리밍 (타자 효과)
-            narrative = turn_output.narrative
-            chunk_size = 20  # 한 번에 전송할 글자 수
+            narrative = ctx.output.narrative
+            chunk_size = 20
             for i in range(0, len(narrative), chunk_size):
                 chunk = narrative[i : i + chunk_size]
                 yield serialize_event(
@@ -225,12 +215,11 @@ async def _stream_turn_events_mock(
 
             # 최종 TurnOutput 전송
             yield serialize_event(
-                FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
+                FinalEvent(type=StreamEventType.FINAL, data=ctx.output).model_dump(mode="json")
             )
 
     except Exception:
-        # RU-002-S1: 예외 발생 시 error + final(폴백) 순서로 송출
-        # (프롬프트/내부 추론 노출 금지 - RULE-007)
+        # 예외 발생 시 error + final(폴백) 순서로 송출 (RULE-004)
         yield serialize_event(
             ErrorEvent(
                 type=StreamEventType.ERROR,
@@ -240,160 +229,26 @@ async def _stream_turn_events_mock(
                 code="INTERNAL_ERROR",
             ).model_dump()
         )
-        # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
         fallback = create_safe_fallback(
             language=turn_input.language,
-            economy_snapshot=economy_snapshot,
+            economy_snapshot=ctx.economy_snapshot,
             repair_count=MAX_REPAIR_ATTEMPTS,
         )
         yield serialize_event(
             FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
         )
 
-
-async def _stream_turn_events_real(
-    turn_input: TurnInput,
-) -> AsyncGenerator[str]:
-    """Real 모드 턴 처리 이벤트를 NDJSON 스트림으로 생성합니다.
-
-    Gemini API를 호출하고 Repair loop를 사용합니다 (U-018).
-
-    Args:
-        turn_input: 사용자 턴 입력
-
-    Yields:
-        str: NDJSON 라인
-    """
-    economy_snapshot = CurrencyAmount(
-        signal=turn_input.economy_snapshot.signal,
-        memory_shard=turn_input.economy_snapshot.memory_shard,
-    )
-
-    # Phase 1: Parse (TTFB를 위해 즉시 시작 이벤트 전송)
-    yield serialize_event(
-        StageEvent(
-            type=StreamEventType.STAGE, name=AgentPhase.PARSE.value, status=StageStatus.START
-        ).model_dump()
-    )
-    yield serialize_event(
-        StageEvent(
-            type=StreamEventType.STAGE, name=AgentPhase.PARSE.value, status=StageStatus.COMPLETE
-        ).model_dump()
-    )
-
-    # Phase 2: Validate
-    yield serialize_event(
-        StageEvent(
-            type=StreamEventType.STAGE, name=AgentPhase.VALIDATE.value, status=StageStatus.START
-        ).model_dump()
-    )
-
-    try:
-        # Repair Loop 실행 (U-018 핵심)
-        result = await run_repair_loop(turn_input)
-
-        # Repair 이벤트 송출 (시도가 있었다면)
-        for i in range(result.repair_attempts):
-            message = result.error_messages[i] if i < len(result.error_messages) else ""
-            yield serialize_event(
-                RepairEvent(
-                    type=StreamEventType.REPAIR,
-                    attempt=i + 1,
-                    message=message[:100] if message else None,  # 메시지 길이 제한
-                ).model_dump()
-            )
-
-        # Validate 완료
-        yield serialize_event(
-            StageEvent(
-                type=StreamEventType.STAGE,
-                name=AgentPhase.VALIDATE.value,
-                status=StageStatus.COMPLETE,
-            ).model_dump()
-        )
-
-        # 배지 전송
-        badges = [b.value for b in result.badges]
-        yield serialize_event(BadgesEvent(type=StreamEventType.BADGES, badges=badges).model_dump())
-
-        # 나머지 단계 시뮬레이션 (Plan → Resolve → Render → Verify → Commit)
-        for phase in [
-            AgentPhase.PLAN,
-            AgentPhase.RESOLVE,
-            AgentPhase.RENDER,
-            AgentPhase.VERIFY,
-            AgentPhase.COMMIT,
-        ]:
-            yield serialize_event(
-                StageEvent(
-                    type=StreamEventType.STAGE, name=phase.value, status=StageStatus.START
-                ).model_dump()
-            )
-            await asyncio.sleep(PHASE_DELAYS_MS.get(phase, 50) / 1000.0)
-            yield serialize_event(
-                StageEvent(
-                    type=StreamEventType.STAGE, name=phase.value, status=StageStatus.COMPLETE
-                ).model_dump()
-            )
-
-        # 내러티브 델타 스트리밍 (타자 효과)
-        turn_output = result.output
-        narrative = turn_output.narrative
-        chunk_size = 20
-        for i in range(0, len(narrative), chunk_size):
-            chunk = narrative[i : i + chunk_size]
-            yield serialize_event(
-                NarrativeDeltaEvent(type=StreamEventType.NARRATIVE_DELTA, text=chunk).model_dump()
-            )
-            await asyncio.sleep(0.02)
-
-        # 최종 TurnOutput 전송
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=turn_output).model_dump(mode="json")
-        )
-
-    except Exception:
-        # 예외 발생 시 error + final(폴백) 순서로 송출
-        yield serialize_event(
-            ErrorEvent(
-                type=StreamEventType.ERROR,
-                message="처리 중 오류가 발생했습니다"
-                if turn_input.language == Language.KO
-                else "An error occurred during processing",
-                code="INTERNAL_ERROR",
-            ).model_dump()
-        )
-        # 항상 final(폴백)로 종료
-        fallback = create_safe_fallback(
-            language=turn_input.language,
-            economy_snapshot=economy_snapshot,
-            repair_count=MAX_REPAIR_ATTEMPTS,
-        )
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-        )
+    finally:
+        # Pipeline 태스크 정리
+        if not pipeline_task.done():
+            pipeline_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await pipeline_task
 
 
-async def _stream_turn_events(
-    turn_input: TurnInput, seed: int | None = None
-) -> AsyncGenerator[str]:
-    """턴 처리 이벤트를 NDJSON 스트림으로 생성합니다.
-
-    UW_MODE에 따라 Mock 또는 Real 모드로 동작합니다.
-
-    Args:
-        turn_input: 사용자 턴 입력
-        seed: 모의 Orchestrator 시드 (Mock 모드에서만 사용)
-
-    Yields:
-        str: NDJSON 라인
-    """
-    if _is_mock_mode():
-        async for event in _stream_turn_events_mock(turn_input, seed):
-            yield event
-    else:
-        async for event in _stream_turn_events_real(turn_input):
-            yield event
+# =============================================================================
+# 입력 검증
+# =============================================================================
 
 
 async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, Any]:
@@ -425,6 +280,11 @@ async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, A
             "language": "ko-KR",
             "economy_snapshot": None,
         }
+
+
+# =============================================================================
+# API 엔드포인트
+# =============================================================================
 
 
 @router.post(

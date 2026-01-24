@@ -1,5 +1,30 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 15:55] [RU-005-Q4] 모듈 설계: orchestrator pipeline을 stage 모듈 + 실행기(Option A)로 SSOT화 완료
+
+### 작업 내용
+
+- **제안서**: [RU-005-Q4] 모듈 설계: orchestrator pipeline을 stage 모듈 + 실행기(Option A)로 SSOT화
+- **개선 사항**:
+    - **파이프라인 SSOT화**: 클래스 도입 없이 함수 체인 방식(Option A)으로 오케스트레이션 단계를 `orchestrator/pipeline.py`로 단일화하여 mock/real 경로 간 동작 드리프트 원천 차단
+    - **Stage 모듈화**: `orchestrator/stages/` 하위에 7대 단계(Parse→...→Commit)를 독립된 함수로 분리하여 각 단계의 책임과 인터페이스(PipelineContext)를 명확히 정의
+    - **API 레이어 책임 정제**: `api/turn.py`가 직접 들고 있던 오케스트레이션 로직을 pipeline으로 위임하고, API는 스트리밍 직렬화 및 이벤트 변환에만 집중하도록 레이어링 강화
+    - **관측 가능성 일관성**: 모든 처리 단계에서 `emit` 콜백을 통해 Stage/Badges/Repair 이벤트를 일관되게 송출하여 UI 증거 품질 안정화
+- **영향 범위**: `backend/src/unknown_world/orchestrator/pipeline.py` (신설), `backend/src/unknown_world/orchestrator/stages/` (신설), `backend/src/unknown_world/api/turn.py` (리팩토링)
+
+### 기술적 세부사항
+
+- **Functional Pipeline**: `PipelineContext`를 입력으로 받아 변환된 컨텍스트를 반환하는 순수 함수형 파이프라인 구조 채택
+- **Decoupled Observation**: `EmitFn` 콜백을 통해 오케스트레이터가 FastAPI 엔드포인트에 직접 의존하지 않고도 도메인 이벤트를 외부로 전달할 수 있는 경계 유지
+- **Fail-safe Invariant**: 파이프라인 실행 중 예외 발생 시 `create_safe_fallback`을 통해 항상 스키마를 준수하는 결과가 반환되도록 보장 (RULE-004)
+
+### 검증
+
+- **동작 보존 확인**: 기존 mock 모드의 응답 구조 및 이벤트 순서(Stage→Badges→Narrative→Final)가 리팩토링 후에도 동일하게 유지됨을 확인.
+- **레이어링 확인**: `orchestrator/` 모듈들이 `fastapi`를 직접 import 하지 않고 순수 도메인 로직과 모델에만 의존함을 확인.
+
+---
+
 ## [2026-01-25 15:40] U-018[Mvp]: 비즈니스 룰 검증 + Repair loop + 안전 폴백 완료
 
 ### 구현 완료 항목
