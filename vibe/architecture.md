@@ -104,9 +104,11 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Pipeline SSOT**: 모든 턴 처리는 `orchestrator/pipeline.py`에 정의된 단일 함수 체인을 통과함. Mock/Real 경로 간의 동작 드리프트를 방지함.
     - **Stage Modularity**: 각 단계(Parse→Validate→Plan→Resolve→Render→Verify→Commit)는 독립된 함수로 모듈화되어 있으며, `PipelineContext`를 통해 상태를 전이함.
     - Pydantic 스키마 검증 및 비즈니스 룰 검증(`validator.py`)을 통한 이중 하드 게이트.
+    - **Badge Consistency (RU-005-S1)**: 모든 비즈니스 룰 위반(경제, 안전, 언어/좌표)은 누락 없이 각각 `ECONOMY_FAIL`, `SAFETY_BLOCKED`, `CONSISTENCY_FAIL` 배지로 매핑되어야 함.
     - 검증 실패 시 모델에게 실패 사유를 피드백으로 전달하여 스스로 수정하게 하는 **Repair Loop**(최대 2회) 실행.
 4. **Guaranteed Safe Fallback**: 
     - 모든 복구 시도 실패 또는 예외 상황 시, 입력 시점의 재화 스냅샷을 보존하고 스키마를 100% 준수하는 **안전 폴백 TurnOutput** 강제 생성 및 반환.
+    - **Synchronized Fallback Badges (RU-005-S1)**: 폴백 시 생성되는 `TurnOutput`의 배지와 스트림 송출 `badges` 이벤트의 의미는 항상 동일해야 함.
 5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 스트림 이벤트를 전수 검증함.
 6. **Decoupled Observation & Streaming Helpers (RU-005-Q3)**: 
     - **Event Translation**: 오케스트레이터는 도메인 이벤트(`PipelineEvent`)를 송출하고, API 계층(`api/turn.py`)은 이를 스트림 프로토콜(NDJSON)로 변환하는 변환기(`_convert_pipeline_event`)를 두어 transport 계층과 도메인 로직을 격리함.

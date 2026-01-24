@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 17:15] [RU-005-S1] 잠재적 오류: badges/단계 이벤트 인바리언트 정합성(Consistency 실패 포함) 완료
+
+### 작업 내용
+
+- **제안서**: [RU-005-S1] 잠재적 오류: badges/단계 이벤트 인바리언트 정합성(Consistency 실패 포함)
+- **개선 사항**:
+    - **배지 매핑 완전성 확보**: `repair_loop.py`의 배지 결정 로직을 확장하여 언어(`language_*`) 및 좌표(`box2d_*`) 관련 비즈니스 룰 위반을 `CONSISTENCY_FAIL`로 정확히 매핑 (누락 방지)
+    - **폴백 배지 동기화**: `fallback.py` 및 `validate_stage`를 수정하여 예외/폴백 발생 시에도 최종 `TurnOutput`의 배지와 스트림 송출 배지가 완벽히 일치하도록 보장
+    - **인바리언트 강화**: mock/real 모든 경로와 성공/실패 모든 시나리오에서 배지 송출이 누락되지 않도록 인바리언트 고정
+- **영향 범위**: `backend/src/unknown_world/orchestrator/repair_loop.py`, `backend/src/unknown_world/orchestrator/fallback.py`, `backend/src/unknown_world/orchestrator/stages/validate.py`
+
+### 기술적 세부사항
+
+- **Unified Badge Logic**: `add_business_badges`를 공개 함수로 전환하고, 검증 단계와 폴백 생성 시 동일한 로직을 사용하여 배지 의미론의 드리프트 차단
+- **Schema-Consistent Fallback**: 폴백 시에도 `Schema OK/Fail`, `Economy OK`, `Safety OK/Blocked`, `Consistency OK`를 모두 포함하는 완전한 배지 세트 송출
+
+### 검증
+
+- **비즈니스 룰 위반 확인**: 언어 불일치 또는 좌표 오류 유도 시 `consistency_fail` 배지가 UI에 정상적으로 표시됨을 확인.
+- **폴백 정합성 확인**: 런타임 예외 발생 시 송출되는 스트림 배지와 최종 Agent Console의 배지가 동일함을 확인.
+
+---
+
 ## [2026-01-25 16:30] [RU-005-Q3] 복잡도: `api/turn.py` 스트리밍 오케스트레이션 축소(중복 제거 + 파이프라인 위임) 완료
 
 ### 작업 내용

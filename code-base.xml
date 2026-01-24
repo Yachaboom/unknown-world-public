@@ -923,145 +923,6 @@ __all__ = [
 ]
 </file>
 
-<file path="backend/src/unknown_world/orchestrator/fallback.py">
-"""Unknown World - 안전한 폴백 TurnOutput 생성기.
-
-최종 복구 실패 시에도 UI가 빈 화면이 되지 않도록
-스키마를 만족하는 안전한 TurnOutput을 생성합니다.
-
-설계 원칙:
-    - RULE-004: 검증 실패 시 안전한 폴백 제공
-    - RULE-005: 재화 인바리언트 (비용 0, 잔액 유지)
-    - RULE-006: ko/en 언어 정책 준수
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/prd.md 8.7 (TurnOutput 스키마)
-"""
-
-from __future__ import annotations
-
-from unknown_world.models.turn import (
-    ActionCard,
-    ActionDeck,
-    AgentConsole,
-    AgentPhase,
-    CurrencyAmount,
-    EconomyOutput,
-    Language,
-    RenderOutput,
-    RiskLevel,
-    SafetyOutput,
-    TurnOutput,
-    UIOutput,
-    ValidationBadge,
-    WorldDelta,
-)
-
-# =============================================================================
-# 폴백 메시지 (i18n)
-# =============================================================================
-
-FALLBACK_MESSAGES = {
-    Language.KO: {
-        "narrative": "잠시 혼란스러운 순간이 지나갑니다. 다시 집중해봅시다.",
-        "narrative_blocked": "안전 정책에 따라 이 요청을 처리할 수 없습니다. 다른 행동을 시도해보세요.",
-        "alternative_label": "텍스트로 진행하기",
-        "alternative_desc": "이미지 생성 없이 저비용으로 진행합니다",
-    },
-    Language.EN: {
-        "narrative": "A moment of confusion passes. Let's focus again.",
-        "narrative_blocked": "This request cannot be processed due to safety policies. Please try a different action.",
-        "alternative_label": "Continue with text",
-        "alternative_desc": "Proceed at low cost without image generation",
-    },
-}
-
-
-# =============================================================================
-# 폴백 생성 함수
-# =============================================================================
-
-
-def create_safe_fallback(
-    language: Language,
-    economy_snapshot: CurrencyAmount | None = None,
-    repair_count: int = 0,
-    is_blocked: bool = False,
-) -> TurnOutput:
-    """안전한 폴백 TurnOutput을 생성합니다.
-
-    최종 복구 실패 시 사용합니다.
-    스키마를 만족하고, 비용 0으로 잔액을 유지합니다.
-
-    Args:
-        language: 응답 언어
-        economy_snapshot: 현재 재화 상태 (비용 0으로 유지)
-        repair_count: 복구 시도 횟수
-        is_blocked: 안전 정책에 의해 차단되었는지
-
-    Returns:
-        안전한 폴백 TurnOutput
-
-    Example:
-        >>> fallback = create_safe_fallback(
-        ...     language=Language.KO,
-        ...     economy_snapshot=CurrencyAmount(signal=50, memory_shard=3),
-        ...     repair_count=2,
-        ... )
-        >>> print(fallback.narrative)
-    """
-    messages = FALLBACK_MESSAGES[language]
-
-    # 내러티브 선택
-    narrative = messages["narrative_blocked"] if is_blocked else messages["narrative"]
-
-    # 재화 유지 (비용 0)
-    balance = economy_snapshot or CurrencyAmount(signal=100, memory_shard=5)
-
-    # 저비용 대안 카드 제공 (RULE-005)
-    alternative_card = ActionCard(
-        id="fallback_text_only",
-        label=messages["alternative_label"],
-        description=messages["alternative_desc"],
-        cost=CurrencyAmount(signal=1, memory_shard=0),
-        risk=RiskLevel.LOW,
-        enabled=True,
-        is_alternative=True,
-    )
-
-    # 배지 결정
-    badges: list[ValidationBadge] = []
-    if is_blocked:
-        badges.append(ValidationBadge.SAFETY_BLOCKED)
-    else:
-        badges.append(ValidationBadge.SCHEMA_FAIL)
-
-    return TurnOutput(
-        language=language,
-        narrative=narrative,
-        ui=UIOutput(
-            action_deck=ActionDeck(cards=[alternative_card]),
-            objects=[],
-        ),
-        world=WorldDelta(),
-        render=RenderOutput(image_job=None),  # 이미지 생성 안 함
-        economy=EconomyOutput(
-            cost=CurrencyAmount(signal=0, memory_shard=0),
-            balance_after=balance,
-        ),
-        safety=SafetyOutput(
-            blocked=is_blocked,
-            message=messages["narrative_blocked"] if is_blocked else None,
-        ),
-        agent_console=AgentConsole(
-            current_phase=AgentPhase.COMMIT,
-            badges=badges,
-            repair_count=repair_count,
-        ),
-    )
-</file>
-
 <file path="backend/src/unknown_world/orchestrator/generate_turn_output.py">
 """Unknown World - TurnOutput 생성 모듈 (Structured Outputs).
 
@@ -1881,312 +1742,6 @@ def clear_prompt_cache() -> None:
     logger.info("[PromptLoader] 프롬프트 캐시 초기화됨")
 </file>
 
-<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
-"""Unknown World - Repair Loop (제한된 재시도).
-
-스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
-max_repair_attempts 내에서 repair 재요청을 수행하고,
-최종 실패 시 안전한 폴백으로 종료합니다.
-
-설계 원칙:
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
-
-페어링 결정:
-    - Q1: max_repair_attempts = 2 (Option A)
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/unit-results/U-017[Mvp].md
-"""
-
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-from unknown_world.config.models import ModelLabel
-from unknown_world.models.turn import (
-    CurrencyAmount,
-    TurnInput,
-    TurnOutput,
-    ValidationBadge,
-)
-from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.generate_turn_output import (
-    GenerationResult,
-    GenerationStatus,
-    get_turn_output_generator,
-)
-from unknown_world.validation.business_rules import (
-    BusinessRuleValidationResult,
-    validate_business_rules,
-)
-
-if TYPE_CHECKING:
-    pass
-
-# =============================================================================
-# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 설정 상수
-# =============================================================================
-
-# 페어링 결정: Q1 = Option A (2회)
-MAX_REPAIR_ATTEMPTS = 2
-"""최대 복구 시도 횟수."""
-
-
-# =============================================================================
-# Repair Loop 결과 타입
-# =============================================================================
-
-
-@dataclass
-class RepairLoopResult:
-    """Repair Loop 결과.
-
-    Attributes:
-        output: 최종 TurnOutput (성공 또는 폴백)
-        total_attempts: 총 시도 횟수 (초기 시도 포함)
-        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
-        is_fallback: 폴백으로 종료되었는지
-        badges: 검증 배지 목록
-        error_messages: 각 시도의 에러 메시지 (UI 노출용)
-    """
-
-    output: TurnOutput
-    total_attempts: int = 1
-    repair_attempts: int = 0
-    is_fallback: bool = False
-    badges: list[ValidationBadge] = field(default_factory=lambda: [])
-    error_messages: list[str] = field(default_factory=lambda: [])
-
-
-# =============================================================================
-# Repair Loop 함수
-# =============================================================================
-
-
-async def run_repair_loop(
-    turn_input: TurnInput,
-    *,
-    model_label: ModelLabel | None = None,
-    world_context: str = "",
-    force_mock: bool = False,
-    max_attempts: int = MAX_REPAIR_ATTEMPTS,
-) -> RepairLoopResult:
-    """Repair Loop를 실행합니다.
-
-    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
-    최종 실패 시 안전한 폴백을 반환합니다.
-
-    Args:
-        turn_input: 사용자 턴 입력
-        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
-        world_context: 현재 세계 상태 요약 (선택)
-        force_mock: Mock 클라이언트 강제 사용 여부
-        max_attempts: 최대 복구 시도 횟수
-
-    Returns:
-        RepairLoopResult: 최종 결과 (성공 또는 폴백)
-
-    Example:
-        >>> result = await run_repair_loop(turn_input)
-        >>> if result.is_fallback:
-        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
-        >>> print(result.output.narrative)
-    """
-    generator = get_turn_output_generator(force_mock=force_mock)
-    economy_snapshot = CurrencyAmount(
-        signal=turn_input.economy_snapshot.signal,
-        memory_shard=turn_input.economy_snapshot.memory_shard,
-    )
-
-    error_messages: list[str] = []
-    badges: list[ValidationBadge] = []
-    repair_context = ""  # 재시도 시 추가할 컨텍스트
-
-    last_attempt = 0
-    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
-        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
-        last_attempt = attempt
-        is_repair = attempt > 0
-
-        # 로그 기록 (프롬프트 노출 금지)
-        logger.info(
-            "[RepairLoop] 시도",
-            extra={
-                "attempt": attempt,
-                "is_repair": is_repair,
-                "language": turn_input.language.value,
-            },
-        )
-
-        # 컨텍스트 구성 (복구 시 에러 요약 추가)
-        current_context = world_context
-        if is_repair and repair_context:
-            current_context = f"{world_context}\n\n{repair_context}"
-
-        # 생성 시도
-        gen_result = await generator.generate(
-            turn_input,
-            model_label=model_label,
-            world_context=current_context,
-        )
-
-        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
-        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            repair_context = _build_repair_context_schema(gen_result)
-            continue
-
-        # 2. API 에러
-        if gen_result.status == GenerationStatus.API_ERROR:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
-            # 하지만 일시적 오류일 수 있으므로 재시도 허용
-            repair_context = ""
-            continue
-
-        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
-        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
-            badges.append(ValidationBadge.SCHEMA_OK)
-
-            # 비즈니스 룰 검증
-            biz_result = validate_business_rules(turn_input, gen_result.output)
-
-            if biz_result.is_valid:
-                # 모든 검증 통과
-                badges.extend(
-                    [
-                        ValidationBadge.ECONOMY_OK,
-                        ValidationBadge.SAFETY_OK,
-                        ValidationBadge.CONSISTENCY_OK,
-                    ]
-                )
-
-                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
-                gen_result.output.agent_console.badges = badges
-                gen_result.output.agent_console.repair_count = attempt
-
-                logger.info(
-                    "[RepairLoop] 성공",
-                    extra={
-                        "total_attempts": attempt + 1,
-                        "repair_attempts": attempt,
-                    },
-                )
-
-                return RepairLoopResult(
-                    output=gen_result.output,
-                    total_attempts=attempt + 1,
-                    repair_attempts=attempt,
-                    is_fallback=False,
-                    badges=badges,
-                    error_messages=error_messages,
-                )
-
-            # 비즈니스 룰 실패
-            _add_business_badges(biz_result, badges)
-            error_messages.append(biz_result.error_summary)
-            repair_context = _build_repair_context_business(biz_result)
-            continue
-
-        # 4. 안전 차단
-        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
-            badges.append(ValidationBadge.SAFETY_BLOCKED)
-            # 안전 차단은 재시도 불가 → 즉시 폴백
-            logger.warning(
-                "[RepairLoop] 안전 차단으로 폴백",
-                extra={"attempt": attempt},
-            )
-            break
-
-    # 최종 실패 → 안전한 폴백 반환
-    logger.warning(
-        "[RepairLoop] 최종 폴백 반환",
-        extra={
-            "max_attempts": max_attempts,
-            "actual_attempts": last_attempt,
-        },
-    )
-
-    fallback = create_safe_fallback(
-        language=turn_input.language,
-        economy_snapshot=economy_snapshot,
-        repair_count=last_attempt,
-        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
-    )
-
-    return RepairLoopResult(
-        output=fallback,
-        total_attempts=last_attempt + 1,
-        repair_attempts=last_attempt,
-        is_fallback=True,
-        badges=badges,
-        error_messages=error_messages,
-    )
-
-
-# =============================================================================
-# 헬퍼 함수
-# =============================================================================
-
-
-def _build_repair_context_schema(gen_result: GenerationResult) -> str:
-    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
-
-    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
-    """
-    # 짧은 요약만 포함 (RULE-007/008)
-    return """
-## 이전 시도 결과
-
-응답 형식이 올바르지 않았습니다.
-TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.
-"""
-
-
-def _build_repair_context_business(biz_result: BusinessRuleValidationResult) -> str:
-    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다."""
-    return f"""
-## 이전 시도 결과
-
-{biz_result.error_summary}
-
-위 규칙을 준수하여 다시 생성하세요.
-"""
-
-
-def _add_business_badges(
-    biz_result: BusinessRuleValidationResult,
-    badges: list[ValidationBadge],
-) -> None:
-    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다."""
-    # 에러 타입별 배지 매핑
-    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
-    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
-
-    if has_economy_error:
-        badges.append(ValidationBadge.ECONOMY_FAIL)
-    else:
-        badges.append(ValidationBadge.ECONOMY_OK)
-
-    if has_safety_error:
-        badges.append(ValidationBadge.SAFETY_BLOCKED)
-    else:
-        badges.append(ValidationBadge.SAFETY_OK)
-</file>
-
 <file path="backend/src/unknown_world/orchestrator/stages/__init__.py">
 """Unknown World - Pipeline Stages 패키지.
 
@@ -2707,203 +2262,6 @@ class StageFn(Protocol):
     """
 
     async def __call__(self, ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext: ...
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/stages/validate.py">
-"""Unknown World - Validate Stage.
-
-비즈니스 룰 검증 + Repair loop 단계입니다.
-U-018의 run_repair_loop()를 호출해 output/badges/repair_count를 결정합니다.
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) + 이중 검증
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
-    - RULE-008: 단계/배지 가시화
-
-참조:
-    - vibe/refactors/RU-005-Q4.md
-    - vibe/unit-plans/U-018[Mvp].md
-"""
-
-from __future__ import annotations
-
-from unknown_world.models.turn import AgentPhase, Language, ValidationBadge
-from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.mock import MockOrchestrator
-from unknown_world.orchestrator.repair_loop import MAX_REPAIR_ATTEMPTS, run_repair_loop
-from unknown_world.orchestrator.stages.types import (
-    EmitFn,
-    PipelineContext,
-    PipelineEvent,
-    PipelineEventType,
-)
-from unknown_world.validation.business_rules import validate_business_rules
-
-
-async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
-    """Validate 단계를 실행합니다.
-
-    Mock 모드와 Real 모드를 구분하여 처리합니다.
-    - Mock: MockOrchestrator로 생성 + 비즈니스 룰 검증
-    - Real: run_repair_loop() 호출 (Gemini API + Repair loop)
-
-    Args:
-        ctx: 파이프라인 컨텍스트
-        emit: 이벤트 emit 콜백
-
-    Returns:
-        업데이트된 컨텍스트 (output, badges, repair_attempts 포함)
-    """
-    ctx.current_phase = AgentPhase.VALIDATE
-
-    # Stage 시작 이벤트
-    await emit(
-        PipelineEvent(
-            event_type=PipelineEventType.STAGE_START,
-            phase=AgentPhase.VALIDATE,
-        )
-    )
-
-    try:
-        if ctx.is_mock:
-            await _validate_mock(ctx, emit)
-        else:
-            await _validate_real(ctx, emit)
-    except Exception:
-        # 예외 발생 시 폴백 (RULE-004)
-        ctx.output = create_safe_fallback(
-            language=ctx.turn_input.language,
-            economy_snapshot=ctx.economy_snapshot,
-            repair_count=ctx.repair_attempts,
-        )
-        ctx.is_fallback = True
-        ctx.badges = [ValidationBadge.SCHEMA_FAIL]
-
-    # Stage 완료 이벤트
-    await emit(
-        PipelineEvent(
-            event_type=PipelineEventType.STAGE_COMPLETE,
-            phase=AgentPhase.VALIDATE,
-        )
-    )
-
-    # 배지 이벤트 전송
-    if ctx.badges:
-        await emit(
-            PipelineEvent(
-                event_type=PipelineEventType.BADGES,
-                badges=ctx.badges,
-            )
-        )
-
-    return ctx
-
-
-async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
-    """Mock 모드 검증을 수행합니다."""
-    orchestrator = MockOrchestrator(seed=ctx.seed)
-    repair_attempt = 0
-
-    while repair_attempt <= MAX_REPAIR_ATTEMPTS:
-        # 0회차는 정상 시도, 1회차부터는 repair
-        if repair_attempt > 0:
-            await emit(
-                PipelineEvent(
-                    event_type=PipelineEventType.REPAIR,
-                    repair_attempt=repair_attempt,
-                    repair_message=(
-                        "검증 실패로 인해 다시 시도 중입니다..."
-                        if ctx.turn_input.language == Language.KO
-                        else "Retrying due to validation failure..."
-                    ),
-                )
-            )
-            ctx.repair_messages.append(
-                "검증 실패로 인해 다시 시도 중입니다..."
-                if ctx.turn_input.language == Language.KO
-                else "Retrying due to validation failure..."
-            )
-
-        try:
-            # Mock 생성
-            turn_output = orchestrator.generate_turn_output(ctx.turn_input)
-
-            # 비즈니스 룰 검증 (U-018)
-            biz_result = validate_business_rules(ctx.turn_input, turn_output)
-            if not biz_result.is_valid:
-                # 비즈니스 룰 실패 → 재시도
-                repair_attempt += 1
-                ctx.repair_attempts = repair_attempt
-                if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                    # 최종 실패 시 폴백 (RULE-004)
-                    ctx.output = create_safe_fallback(
-                        language=ctx.turn_input.language,
-                        economy_snapshot=ctx.economy_snapshot,
-                        repair_count=repair_attempt,
-                    )
-                    ctx.is_fallback = True
-                    ctx.badges = [ValidationBadge.SCHEMA_FAIL]
-                    return
-                continue
-
-            # 모든 검증 통과
-            ctx.output = turn_output
-            ctx.badges = [
-                ValidationBadge.SCHEMA_OK,
-                ValidationBadge.ECONOMY_OK,
-                ValidationBadge.SAFETY_OK,
-                ValidationBadge.CONSISTENCY_OK,
-            ]
-            ctx.repair_attempts = repair_attempt
-            return
-
-        except Exception:
-            repair_attempt += 1
-            ctx.repair_attempts = repair_attempt
-            if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                # 최종 실패 시 폴백 (RULE-004)
-                ctx.output = create_safe_fallback(
-                    language=ctx.turn_input.language,
-                    economy_snapshot=ctx.economy_snapshot,
-                    repair_count=repair_attempt,
-                )
-                ctx.is_fallback = True
-                ctx.badges = [ValidationBadge.SCHEMA_FAIL]
-                return
-            continue
-
-    # 루프 종료 시에도 폴백
-    ctx.output = create_safe_fallback(
-        language=ctx.turn_input.language,
-        economy_snapshot=ctx.economy_snapshot,
-        repair_count=repair_attempt,
-    )
-    ctx.is_fallback = True
-    ctx.badges = [ValidationBadge.SCHEMA_FAIL]
-
-
-async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
-    """Real 모드 검증을 수행합니다 (Gemini API + Repair loop)."""
-    result = await run_repair_loop(ctx.turn_input)
-
-    # Repair 이벤트 송출 (시도가 있었다면)
-    for i in range(result.repair_attempts):
-        message = result.error_messages[i] if i < len(result.error_messages) else ""
-        await emit(
-            PipelineEvent(
-                event_type=PipelineEventType.REPAIR,
-                repair_attempt=i + 1,
-                repair_message=message[:100] if message else None,
-            )
-        )
-        if message:
-            ctx.repair_messages.append(message[:100])
-
-    ctx.output = result.output
-    ctx.badges = list(result.badges)
-    ctx.repair_attempts = result.repair_attempts
-    ctx.is_fallback = result.is_fallback
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/stages/verify.py">
@@ -7296,6 +6654,697 @@ __all__ = [
     "ErrorEvent",
     "serialize_event",
 ]
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/fallback.py">
+"""Unknown World - 안전한 폴백 TurnOutput 생성기.
+
+최종 복구 실패 시에도 UI가 빈 화면이 되지 않도록
+스키마를 만족하는 안전한 TurnOutput을 생성합니다.
+
+설계 원칙:
+    - RULE-004: 검증 실패 시 안전한 폴백 제공
+    - RULE-005: 재화 인바리언트 (비용 0, 잔액 유지)
+    - RULE-006: ko/en 언어 정책 준수
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/prd.md 8.7 (TurnOutput 스키마)
+"""
+
+from __future__ import annotations
+
+from unknown_world.models.turn import (
+    ActionCard,
+    ActionDeck,
+    AgentConsole,
+    AgentPhase,
+    CurrencyAmount,
+    EconomyOutput,
+    Language,
+    RenderOutput,
+    RiskLevel,
+    SafetyOutput,
+    TurnOutput,
+    UIOutput,
+    ValidationBadge,
+    WorldDelta,
+)
+
+# =============================================================================
+# 폴백 메시지 (i18n)
+# =============================================================================
+
+FALLBACK_MESSAGES = {
+    Language.KO: {
+        "narrative": "잠시 혼란스러운 순간이 지나갑니다. 다시 집중해봅시다.",
+        "narrative_blocked": "안전 정책에 따라 이 요청을 처리할 수 없습니다. 다른 행동을 시도해보세요.",
+        "alternative_label": "텍스트로 진행하기",
+        "alternative_desc": "이미지 생성 없이 저비용으로 진행합니다",
+    },
+    Language.EN: {
+        "narrative": "A moment of confusion passes. Let's focus again.",
+        "narrative_blocked": "This request cannot be processed due to safety policies. Please try a different action.",
+        "alternative_label": "Continue with text",
+        "alternative_desc": "Proceed at low cost without image generation",
+    },
+}
+
+
+# =============================================================================
+# 폴백 생성 함수
+# =============================================================================
+
+
+def create_safe_fallback(
+    language: Language,
+    economy_snapshot: CurrencyAmount | None = None,
+    repair_count: int = 0,
+    is_blocked: bool = False,
+) -> TurnOutput:
+    """안전한 폴백 TurnOutput을 생성합니다.
+
+    최종 복구 실패 시 사용합니다.
+    스키마를 만족하고, 비용 0으로 잔액을 유지합니다.
+
+    Args:
+        language: 응답 언어
+        economy_snapshot: 현재 재화 상태 (비용 0으로 유지)
+        repair_count: 복구 시도 횟수
+        is_blocked: 안전 정책에 의해 차단되었는지
+
+    Returns:
+        안전한 폴백 TurnOutput
+
+    Example:
+        >>> fallback = create_safe_fallback(
+        ...     language=Language.KO,
+        ...     economy_snapshot=CurrencyAmount(signal=50, memory_shard=3),
+        ...     repair_count=2,
+        ... )
+        >>> print(fallback.narrative)
+    """
+    messages = FALLBACK_MESSAGES[language]
+
+    # 내러티브 선택
+    narrative = messages["narrative_blocked"] if is_blocked else messages["narrative"]
+
+    # 재화 유지 (비용 0)
+    balance = economy_snapshot or CurrencyAmount(signal=100, memory_shard=5)
+
+    # 저비용 대안 카드 제공 (RULE-005)
+    alternative_card = ActionCard(
+        id="fallback_text_only",
+        label=messages["alternative_label"],
+        description=messages["alternative_desc"],
+        cost=CurrencyAmount(signal=1, memory_shard=0),
+        risk=RiskLevel.LOW,
+        enabled=True,
+        is_alternative=True,
+    )
+
+    # 배지 결정 (RU-005-S1: 폴백에서도 모든 카테고리의 배지를 일관되게 설정)
+    badges: list[ValidationBadge] = []
+
+    # Schema: 폴백이므로 SCHEMA_FAIL (단, 안전 차단은 스키마 문제가 아님)
+    if not is_blocked:
+        badges.append(ValidationBadge.SCHEMA_FAIL)
+    else:
+        badges.append(ValidationBadge.SCHEMA_OK)
+
+    # Economy: 폴백에서는 비용 0이므로 ECONOMY_OK
+    badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety: is_blocked에 따라 결정
+    if is_blocked:
+        badges.append(ValidationBadge.SAFETY_BLOCKED)
+    else:
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency: 폴백에서는 언어/좌표 문제가 없으므로 CONSISTENCY_OK
+    badges.append(ValidationBadge.CONSISTENCY_OK)
+
+    return TurnOutput(
+        language=language,
+        narrative=narrative,
+        ui=UIOutput(
+            action_deck=ActionDeck(cards=[alternative_card]),
+            objects=[],
+        ),
+        world=WorldDelta(),
+        render=RenderOutput(image_job=None),  # 이미지 생성 안 함
+        economy=EconomyOutput(
+            cost=CurrencyAmount(signal=0, memory_shard=0),
+            balance_after=balance,
+        ),
+        safety=SafetyOutput(
+            blocked=is_blocked,
+            message=messages["narrative_blocked"] if is_blocked else None,
+        ),
+        agent_console=AgentConsole(
+            current_phase=AgentPhase.COMMIT,
+            badges=badges,
+            repair_count=repair_count,
+        ),
+    )
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
+"""Unknown World - Repair Loop (제한된 재시도).
+
+스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
+max_repair_attempts 내에서 repair 재요청을 수행하고,
+최종 실패 시 안전한 폴백으로 종료합니다.
+
+설계 원칙:
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
+
+페어링 결정:
+    - Q1: max_repair_attempts = 2 (Option A)
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-results/U-017[Mvp].md
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from unknown_world.config.models import ModelLabel
+from unknown_world.models.turn import (
+    CurrencyAmount,
+    TurnInput,
+    TurnOutput,
+    ValidationBadge,
+)
+from unknown_world.orchestrator.fallback import create_safe_fallback
+from unknown_world.orchestrator.generate_turn_output import (
+    GenerationResult,
+    GenerationStatus,
+    get_turn_output_generator,
+)
+from unknown_world.validation.business_rules import (
+    BusinessRuleValidationResult,
+    validate_business_rules,
+)
+
+if TYPE_CHECKING:
+    pass
+
+# =============================================================================
+# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 설정 상수
+# =============================================================================
+
+# 페어링 결정: Q1 = Option A (2회)
+MAX_REPAIR_ATTEMPTS = 2
+"""최대 복구 시도 횟수."""
+
+
+# =============================================================================
+# Repair Loop 결과 타입
+# =============================================================================
+
+
+@dataclass
+class RepairLoopResult:
+    """Repair Loop 결과.
+
+    Attributes:
+        output: 최종 TurnOutput (성공 또는 폴백)
+        total_attempts: 총 시도 횟수 (초기 시도 포함)
+        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
+        is_fallback: 폴백으로 종료되었는지
+        badges: 검증 배지 목록
+        error_messages: 각 시도의 에러 메시지 (UI 노출용)
+    """
+
+    output: TurnOutput
+    total_attempts: int = 1
+    repair_attempts: int = 0
+    is_fallback: bool = False
+    badges: list[ValidationBadge] = field(default_factory=lambda: [])
+    error_messages: list[str] = field(default_factory=lambda: [])
+
+
+# =============================================================================
+# Repair Loop 함수
+# =============================================================================
+
+
+async def run_repair_loop(
+    turn_input: TurnInput,
+    *,
+    model_label: ModelLabel | None = None,
+    world_context: str = "",
+    force_mock: bool = False,
+    max_attempts: int = MAX_REPAIR_ATTEMPTS,
+) -> RepairLoopResult:
+    """Repair Loop를 실행합니다.
+
+    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
+    최종 실패 시 안전한 폴백을 반환합니다.
+
+    Args:
+        turn_input: 사용자 턴 입력
+        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
+        world_context: 현재 세계 상태 요약 (선택)
+        force_mock: Mock 클라이언트 강제 사용 여부
+        max_attempts: 최대 복구 시도 횟수
+
+    Returns:
+        RepairLoopResult: 최종 결과 (성공 또는 폴백)
+
+    Example:
+        >>> result = await run_repair_loop(turn_input)
+        >>> if result.is_fallback:
+        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
+        >>> print(result.output.narrative)
+    """
+    generator = get_turn_output_generator(force_mock=force_mock)
+    economy_snapshot = CurrencyAmount(
+        signal=turn_input.economy_snapshot.signal,
+        memory_shard=turn_input.economy_snapshot.memory_shard,
+    )
+
+    error_messages: list[str] = []
+    badges: list[ValidationBadge] = []
+    repair_context = ""  # 재시도 시 추가할 컨텍스트
+
+    last_attempt = 0
+    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
+        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
+        last_attempt = attempt
+        is_repair = attempt > 0
+
+        # 로그 기록 (프롬프트 노출 금지)
+        logger.info(
+            "[RepairLoop] 시도",
+            extra={
+                "attempt": attempt,
+                "is_repair": is_repair,
+                "language": turn_input.language.value,
+            },
+        )
+
+        # 컨텍스트 구성 (복구 시 에러 요약 추가)
+        current_context = world_context
+        if is_repair and repair_context:
+            current_context = f"{world_context}\n\n{repair_context}"
+
+        # 생성 시도
+        gen_result = await generator.generate(
+            turn_input,
+            model_label=model_label,
+            world_context=current_context,
+        )
+
+        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
+        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            repair_context = _build_repair_context_schema(gen_result)
+            continue
+
+        # 2. API 에러
+        if gen_result.status == GenerationStatus.API_ERROR:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
+            # 하지만 일시적 오류일 수 있으므로 재시도 허용
+            repair_context = ""
+            continue
+
+        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
+        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
+            badges.append(ValidationBadge.SCHEMA_OK)
+
+            # 비즈니스 룰 검증
+            biz_result = validate_business_rules(turn_input, gen_result.output)
+
+            if biz_result.is_valid:
+                # 모든 검증 통과
+                badges.extend(
+                    [
+                        ValidationBadge.ECONOMY_OK,
+                        ValidationBadge.SAFETY_OK,
+                        ValidationBadge.CONSISTENCY_OK,
+                    ]
+                )
+
+                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
+                gen_result.output.agent_console.badges = badges
+                gen_result.output.agent_console.repair_count = attempt
+
+                logger.info(
+                    "[RepairLoop] 성공",
+                    extra={
+                        "total_attempts": attempt + 1,
+                        "repair_attempts": attempt,
+                    },
+                )
+
+                return RepairLoopResult(
+                    output=gen_result.output,
+                    total_attempts=attempt + 1,
+                    repair_attempts=attempt,
+                    is_fallback=False,
+                    badges=badges,
+                    error_messages=error_messages,
+                )
+
+            # 비즈니스 룰 실패
+            add_business_badges(biz_result, badges)
+            error_messages.append(biz_result.error_summary)
+            repair_context = _build_repair_context_business(biz_result)
+            continue
+
+        # 4. 안전 차단
+        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
+            badges.append(ValidationBadge.SAFETY_BLOCKED)
+            # 안전 차단은 재시도 불가 → 즉시 폴백
+            logger.warning(
+                "[RepairLoop] 안전 차단으로 폴백",
+                extra={"attempt": attempt},
+            )
+            break
+
+    # 최종 실패 → 안전한 폴백 반환
+    logger.warning(
+        "[RepairLoop] 최종 폴백 반환",
+        extra={
+            "max_attempts": max_attempts,
+            "actual_attempts": last_attempt,
+        },
+    )
+
+    fallback = create_safe_fallback(
+        language=turn_input.language,
+        economy_snapshot=economy_snapshot,
+        repair_count=last_attempt,
+        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
+    )
+
+    return RepairLoopResult(
+        output=fallback,
+        total_attempts=last_attempt + 1,
+        repair_attempts=last_attempt,
+        is_fallback=True,
+        badges=badges,
+        error_messages=error_messages,
+    )
+
+
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
+
+
+def _build_repair_context_schema(gen_result: GenerationResult) -> str:
+    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
+    """
+    # 짧은 요약만 포함 (RULE-007/008)
+    return """
+## 이전 시도 결과
+
+응답 형식이 올바르지 않았습니다.
+TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.
+"""
+
+
+def _build_repair_context_business(biz_result: BusinessRuleValidationResult) -> str:
+    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다."""
+    return f"""
+## 이전 시도 결과
+
+{biz_result.error_summary}
+
+위 규칙을 준수하여 다시 생성하세요.
+"""
+
+
+def add_business_badges(
+    biz_result: BusinessRuleValidationResult,
+    badges: list[ValidationBadge],
+) -> None:
+    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
+
+    에러 타입 접두어 → 배지 매핑:
+        - economy_* → ECONOMY_FAIL
+        - safety_* → SAFETY_BLOCKED
+        - language_* 또는 box2d_* → CONSISTENCY_FAIL
+
+    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        badges: 배지 목록 (in-place 수정)
+    """
+    # 에러 타입별 배지 매핑 (RU-005-S1)
+    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
+    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
+    has_consistency_error = any(
+        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
+    )
+
+    # Economy 배지
+    if has_economy_error:
+        badges.append(ValidationBadge.ECONOMY_FAIL)
+    else:
+        badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety 배지
+    if has_safety_error:
+        badges.append(ValidationBadge.SAFETY_BLOCKED)
+    else:
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
+    if has_consistency_error:
+        badges.append(ValidationBadge.CONSISTENCY_FAIL)
+    else:
+        badges.append(ValidationBadge.CONSISTENCY_OK)
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/stages/validate.py">
+"""Unknown World - Validate Stage.
+
+비즈니스 룰 검증 + Repair loop 단계입니다.
+U-018의 run_repair_loop()를 호출해 output/badges/repair_count를 결정합니다.
+
+설계 원칙:
+    - RULE-003: 구조화 출력(JSON Schema) + 이중 검증
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
+    - RULE-008: 단계/배지 가시화
+
+참조:
+    - vibe/refactors/RU-005-Q4.md
+    - vibe/unit-plans/U-018[Mvp].md
+"""
+
+from __future__ import annotations
+
+from unknown_world.models.turn import AgentPhase, Language, ValidationBadge
+from unknown_world.orchestrator.fallback import create_safe_fallback
+from unknown_world.orchestrator.mock import MockOrchestrator
+from unknown_world.orchestrator.repair_loop import (
+    MAX_REPAIR_ATTEMPTS,
+    add_business_badges,
+    run_repair_loop,
+)
+from unknown_world.orchestrator.stages.types import (
+    EmitFn,
+    PipelineContext,
+    PipelineEvent,
+    PipelineEventType,
+)
+from unknown_world.validation.business_rules import validate_business_rules
+
+
+async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
+    """Validate 단계를 실행합니다.
+
+    Mock 모드와 Real 모드를 구분하여 처리합니다.
+    - Mock: MockOrchestrator로 생성 + 비즈니스 룰 검증
+    - Real: run_repair_loop() 호출 (Gemini API + Repair loop)
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        emit: 이벤트 emit 콜백
+
+    Returns:
+        업데이트된 컨텍스트 (output, badges, repair_attempts 포함)
+    """
+    ctx.current_phase = AgentPhase.VALIDATE
+
+    # Stage 시작 이벤트
+    await emit(
+        PipelineEvent(
+            event_type=PipelineEventType.STAGE_START,
+            phase=AgentPhase.VALIDATE,
+        )
+    )
+
+    try:
+        if ctx.is_mock:
+            await _validate_mock(ctx, emit)
+        else:
+            await _validate_real(ctx, emit)
+    except Exception:
+        # 예외 발생 시 폴백 (RULE-004, RU-005-S1)
+        ctx.output = create_safe_fallback(
+            language=ctx.turn_input.language,
+            economy_snapshot=ctx.economy_snapshot,
+            repair_count=ctx.repair_attempts,
+        )
+        ctx.is_fallback = True
+        # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+        ctx.badges = list(ctx.output.agent_console.badges)
+
+    # Stage 완료 이벤트
+    await emit(
+        PipelineEvent(
+            event_type=PipelineEventType.STAGE_COMPLETE,
+            phase=AgentPhase.VALIDATE,
+        )
+    )
+
+    # 배지 이벤트 전송
+    if ctx.badges:
+        await emit(
+            PipelineEvent(
+                event_type=PipelineEventType.BADGES,
+                badges=ctx.badges,
+            )
+        )
+
+    return ctx
+
+
+async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
+    """Mock 모드 검증을 수행합니다."""
+    orchestrator = MockOrchestrator(seed=ctx.seed)
+    repair_attempt = 0
+
+    while repair_attempt <= MAX_REPAIR_ATTEMPTS:
+        # 0회차는 정상 시도, 1회차부터는 repair
+        if repair_attempt > 0:
+            await emit(
+                PipelineEvent(
+                    event_type=PipelineEventType.REPAIR,
+                    repair_attempt=repair_attempt,
+                    repair_message=(
+                        "검증 실패로 인해 다시 시도 중입니다..."
+                        if ctx.turn_input.language == Language.KO
+                        else "Retrying due to validation failure..."
+                    ),
+                )
+            )
+            ctx.repair_messages.append(
+                "검증 실패로 인해 다시 시도 중입니다..."
+                if ctx.turn_input.language == Language.KO
+                else "Retrying due to validation failure..."
+            )
+
+        try:
+            # Mock 생성
+            turn_output = orchestrator.generate_turn_output(ctx.turn_input)
+
+            # 비즈니스 룰 검증 (U-018)
+            biz_result = validate_business_rules(ctx.turn_input, turn_output)
+            if not biz_result.is_valid:
+                # 비즈니스 룰 실패 → 재시도
+                repair_attempt += 1
+                ctx.repair_attempts = repair_attempt
+                if repair_attempt > MAX_REPAIR_ATTEMPTS:
+                    # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
+                    ctx.output = create_safe_fallback(
+                        language=ctx.turn_input.language,
+                        economy_snapshot=ctx.economy_snapshot,
+                        repair_count=repair_attempt,
+                    )
+                    ctx.is_fallback = True
+                    # RU-005-S1: 비즈니스 룰 실패 배지를 정확히 설정하고
+                    # output과 ctx 배지를 동기화
+                    failure_badges: list[ValidationBadge] = [ValidationBadge.SCHEMA_OK]
+                    add_business_badges(biz_result, failure_badges)
+                    ctx.output.agent_console.badges = failure_badges
+                    ctx.badges = list(failure_badges)
+                    return
+                continue
+
+            # 모든 검증 통과
+            ctx.output = turn_output
+            ctx.badges = [
+                ValidationBadge.SCHEMA_OK,
+                ValidationBadge.ECONOMY_OK,
+                ValidationBadge.SAFETY_OK,
+                ValidationBadge.CONSISTENCY_OK,
+            ]
+            ctx.repair_attempts = repair_attempt
+            return
+
+        except Exception:
+            repair_attempt += 1
+            ctx.repair_attempts = repair_attempt
+            if repair_attempt > MAX_REPAIR_ATTEMPTS:
+                # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
+                ctx.output = create_safe_fallback(
+                    language=ctx.turn_input.language,
+                    economy_snapshot=ctx.economy_snapshot,
+                    repair_count=repair_attempt,
+                )
+                ctx.is_fallback = True
+                # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+                ctx.badges = list(ctx.output.agent_console.badges)
+                return
+            continue
+
+    # 루프 종료 시에도 폴백 (RU-005-S1)
+    ctx.output = create_safe_fallback(
+        language=ctx.turn_input.language,
+        economy_snapshot=ctx.economy_snapshot,
+        repair_count=repair_attempt,
+    )
+    ctx.is_fallback = True
+    # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+    ctx.badges = list(ctx.output.agent_console.badges)
+
+
+async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
+    """Real 모드 검증을 수행합니다 (Gemini API + Repair loop)."""
+    result = await run_repair_loop(ctx.turn_input)
+
+    # Repair 이벤트 송출 (시도가 있었다면)
+    for i in range(result.repair_attempts):
+        message = result.error_messages[i] if i < len(result.error_messages) else ""
+        await emit(
+            PipelineEvent(
+                event_type=PipelineEventType.REPAIR,
+                repair_attempt=i + 1,
+                repair_message=message[:100] if message else None,
+            )
+        )
+        if message:
+            ctx.repair_messages.append(message[:100])
+
+    ctx.output = result.output
+    ctx.badges = list(result.badges)
+    ctx.repair_attempts = result.repair_attempts
+    ctx.is_fallback = result.is_fallback
 </file>
 
 <file path="backend/src/unknown_world/services/genai_client.py">

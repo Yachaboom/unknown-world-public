@@ -212,7 +212,7 @@ async def run_repair_loop(
                 )
 
             # 비즈니스 룰 실패
-            _add_business_badges(biz_result, badges)
+            add_business_badges(biz_result, badges)
             error_messages.append(biz_result.error_summary)
             repair_context = _build_repair_context_business(biz_result)
             continue
@@ -283,21 +283,44 @@ def _build_repair_context_business(biz_result: BusinessRuleValidationResult) -> 
 """
 
 
-def _add_business_badges(
+def add_business_badges(
     biz_result: BusinessRuleValidationResult,
     badges: list[ValidationBadge],
 ) -> None:
-    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다."""
-    # 에러 타입별 배지 매핑
+    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
+
+    에러 타입 접두어 → 배지 매핑:
+        - economy_* → ECONOMY_FAIL
+        - safety_* → SAFETY_BLOCKED
+        - language_* 또는 box2d_* → CONSISTENCY_FAIL
+
+    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        badges: 배지 목록 (in-place 수정)
+    """
+    # 에러 타입별 배지 매핑 (RU-005-S1)
     has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
     has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
+    has_consistency_error = any(
+        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
+    )
 
+    # Economy 배지
     if has_economy_error:
         badges.append(ValidationBadge.ECONOMY_FAIL)
     else:
         badges.append(ValidationBadge.ECONOMY_OK)
 
+    # Safety 배지
     if has_safety_error:
         badges.append(ValidationBadge.SAFETY_BLOCKED)
     else:
         badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
+    if has_consistency_error:
+        badges.append(ValidationBadge.CONSISTENCY_FAIL)
+    else:
+        badges.append(ValidationBadge.CONSISTENCY_OK)

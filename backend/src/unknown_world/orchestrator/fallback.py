@@ -104,12 +104,26 @@ def create_safe_fallback(
         is_alternative=True,
     )
 
-    # 배지 결정
+    # 배지 결정 (RU-005-S1: 폴백에서도 모든 카테고리의 배지를 일관되게 설정)
     badges: list[ValidationBadge] = []
+
+    # Schema: 폴백이므로 SCHEMA_FAIL (단, 안전 차단은 스키마 문제가 아님)
+    if not is_blocked:
+        badges.append(ValidationBadge.SCHEMA_FAIL)
+    else:
+        badges.append(ValidationBadge.SCHEMA_OK)
+
+    # Economy: 폴백에서는 비용 0이므로 ECONOMY_OK
+    badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety: is_blocked에 따라 결정
     if is_blocked:
         badges.append(ValidationBadge.SAFETY_BLOCKED)
     else:
-        badges.append(ValidationBadge.SCHEMA_FAIL)
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency: 폴백에서는 언어/좌표 문제가 없으므로 CONSISTENCY_OK
+    badges.append(ValidationBadge.CONSISTENCY_OK)
 
     return TurnOutput(
         language=language,

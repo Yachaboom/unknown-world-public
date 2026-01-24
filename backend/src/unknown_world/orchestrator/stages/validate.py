@@ -19,7 +19,11 @@ from __future__ import annotations
 from unknown_world.models.turn import AgentPhase, Language, ValidationBadge
 from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.mock import MockOrchestrator
-from unknown_world.orchestrator.repair_loop import MAX_REPAIR_ATTEMPTS, run_repair_loop
+from unknown_world.orchestrator.repair_loop import (
+    MAX_REPAIR_ATTEMPTS,
+    add_business_badges,
+    run_repair_loop,
+)
 from unknown_world.orchestrator.stages.types import (
     EmitFn,
     PipelineContext,
@@ -59,14 +63,15 @@ async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineConte
         else:
             await _validate_real(ctx, emit)
     except Exception:
-        # 예외 발생 시 폴백 (RULE-004)
+        # 예외 발생 시 폴백 (RULE-004, RU-005-S1)
         ctx.output = create_safe_fallback(
             language=ctx.turn_input.language,
             economy_snapshot=ctx.economy_snapshot,
             repair_count=ctx.repair_attempts,
         )
         ctx.is_fallback = True
-        ctx.badges = [ValidationBadge.SCHEMA_FAIL]
+        # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+        ctx.badges = list(ctx.output.agent_console.badges)
 
     # Stage 완료 이벤트
     await emit(
@@ -124,14 +129,19 @@ async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
                 repair_attempt += 1
                 ctx.repair_attempts = repair_attempt
                 if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                    # 최종 실패 시 폴백 (RULE-004)
+                    # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
                     ctx.output = create_safe_fallback(
                         language=ctx.turn_input.language,
                         economy_snapshot=ctx.economy_snapshot,
                         repair_count=repair_attempt,
                     )
                     ctx.is_fallback = True
-                    ctx.badges = [ValidationBadge.SCHEMA_FAIL]
+                    # RU-005-S1: 비즈니스 룰 실패 배지를 정확히 설정하고
+                    # output과 ctx 배지를 동기화
+                    failure_badges: list[ValidationBadge] = [ValidationBadge.SCHEMA_OK]
+                    add_business_badges(biz_result, failure_badges)
+                    ctx.output.agent_console.badges = failure_badges
+                    ctx.badges = list(failure_badges)
                     return
                 continue
 
@@ -150,25 +160,27 @@ async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
             repair_attempt += 1
             ctx.repair_attempts = repair_attempt
             if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                # 최종 실패 시 폴백 (RULE-004)
+                # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
                 ctx.output = create_safe_fallback(
                     language=ctx.turn_input.language,
                     economy_snapshot=ctx.economy_snapshot,
                     repair_count=repair_attempt,
                 )
                 ctx.is_fallback = True
-                ctx.badges = [ValidationBadge.SCHEMA_FAIL]
+                # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+                ctx.badges = list(ctx.output.agent_console.badges)
                 return
             continue
 
-    # 루프 종료 시에도 폴백
+    # 루프 종료 시에도 폴백 (RU-005-S1)
     ctx.output = create_safe_fallback(
         language=ctx.turn_input.language,
         economy_snapshot=ctx.economy_snapshot,
         repair_count=repair_attempt,
     )
     ctx.is_fallback = True
-    ctx.badges = [ValidationBadge.SCHEMA_FAIL]
+    # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+    ctx.badges = list(ctx.output.agent_console.badges)
 
 
 async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
