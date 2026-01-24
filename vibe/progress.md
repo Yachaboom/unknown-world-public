@@ -1,6 +1,38 @@
 # 프로젝트 진행 상황
 
-## [2026-01-24 17:10] U-016[Mvp]: Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정 완료
+## [2026-01-25 15:40] U-018[Mvp]: 비즈니스 룰 검증 + Repair loop + 안전 폴백 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 스키마 통과 후 비즈니스 룰(경제, 언어, 좌표, 안전) 검증 및 실패 시 자동 복구(Repair loop) 시스템 구축
+- **추가 컴포넌트**: `validator.py` (비즈니스 룰 검증기), `vibe/unit-results/U-018[Mvp].md`, `vibe/unit-runbooks/U-018-business-rules-repair-runbook.md`
+- **달성 요구사항**: [RULE-004] Repair loop + 안전 폴백, [RULE-005] 경제 인바리언트(음수 금지), [RULE-006] 언어 일관성(ko/en), [RULE-009] bbox 좌표 규약(0~1000)
+
+### 기술적 구현 세부사항
+
+**하드 게이트 아키텍처**:
+- **Business Rules Validator**: Pydantic 검증 직후 단계에서 경제(잔액), 언어(BCP-47), 공간(Box2D 순서), 안전(차단 시 대체) 규칙을 전수 조사하는 하드 게이트 구축
+- **Feedback-driven Repair Loop**: 검증 실패 시 모델에게 구체적인 실패 사유를 피드백으로 전달하여 최대 2회까지 스스로 수정 기회 제공
+- **Atomic Safe Fallback**: 모델 복구 실패 또는 런타임 예외 시, 입력 시점의 `economy_snapshot`을 기반으로 잔액을 100% 보존하고 스키마를 준수하는 폴백 `TurnOutput` 강제 생성
+
+**스트리밍 및 관측성**:
+- **Repair Event**: 복구 시도 시 `type: "repair"` 이벤트를 송출하여 Agent Console에서 복구 과정을 투명하게 노출
+- **Economy Invariant**: 폴백 상황에서도 비용(`cost`)을 0으로 처리하여 시스템 오류로 인한 유저 재화 손실 원천 차단
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── api/
+    │   └── turn.py (스트리밍 파이프라인 통합)
+    └── orchestrator/
+        ├── validator.py (신규: 비즈니스 룰 검증기)
+        └── mock.py (폴백 생성 로직 고도화)
+
+### 다음 단계
+- [RU-005[Mvp]] 리팩토링: orchestrator pipeline stages 정리
+- [CP-MVP-04] 체크포인트: 실모델 Hard Gate(스키마/경제/복구)
+
+---
 
 ### 구현 완료 항목
 

@@ -87,9 +87,10 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: `max_repair_attempts`는 MVP에서 몇으로 둘까?
+- [x] **Q1**: `max_repair_attempts`는 MVP에서 몇으로 둘까?
   - Option A: 2회(권장: 비용/지연 방지)
   - Option B: 3회(복구 성공률↑, 비용/지연↑)
+  **A1**: Option A
 
 ## 참고 자료
 

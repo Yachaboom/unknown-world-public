@@ -56,10 +56,11 @@ D:\Dev\unknown-world\
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
 │   │       ├── config/     # 모델 ID 및 라벨 SSOT (U-016)
 │   │       ├── models/     # Pydantic 데이터 모델 (U-005, U-017)
-│   │       ├── orchestrator/ # 오케스트레이션 엔진
-│   │       │   ├── prompt_loader.py (프롬프트 로더: U-017)
-│   │       │   └── generate_turn_output.py (TurnOutput 생성/검증: U-017)
-│   │       └── services/    # 외부 서비스 연동 (U-016)
+│       ├── orchestrator/ # 오케스트레이션 엔진
+│       │   ├── prompt_loader.py (프롬프트 로더: U-017)
+│       │   ├── validator.py (비즈니스 룰 검증기: U-018)
+│       │   └── generate_turn_output.py (TurnOutput 생성/검증: U-017, U-018)
+│       └── services/    # 외부 서비스 연동 (U-016)
 │   └── tests/             # 유닛/통합 테스트
 ├── vibe/                  # SSOT 문서 저장소
 │   ├── architecture.md     # 시스템 아키텍처 및 구조 가이드
@@ -97,8 +98,12 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 1. **Stateful Orchestrator**: 월드 상태(WorldState)를 유지하고 갱신하는 시스템.
 2. **Structured Turn Contract**: 엄격한 JSON Schema 기반 통신.
-3. **Resilient Pipeline**: 이중 검증과 Repair loop를 통한 LLM 출력 안정화.
-4. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 스트림 이벤트를 검증함.
+3. **Resilient Pipeline (Repair Loop)**: 
+    - Pydantic 스키마 검증 및 비즈니스 룰 검증(`validator.py`)을 통한 이중 하드 게이트.
+    - 검증 실패 시 모델에게 실패 사유를 피드백으로 전달하여 스스로 수정하게 하는 **Repair Loop**(최대 2회) 실행.
+4. **Guaranteed Safe Fallback**: 
+    - 모든 복구 시도 실패 또는 예외 상황 시, 입력 시점의 재화 스냅샷을 보존하고 스키마를 100% 준수하는 **안전 폴백 TurnOutput** 강제 생성 및 반환.
+5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 스트림 이벤트를 전수 검증함.
 
 ## 9. Economy/재화 관리 정책 (U-014[Mvp])
 

@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 36/68 (52%) | **MVP**: 36/55 (65%) | **MMP**: 0/13 (0%)
+**전체**: 37/68 (54%) | **MVP**: 37/55 (67%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-5 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-018[Mvp]](unit-plans/U-018[Mvp].md) / **최근 완료**: [U-017[Mvp]](unit-results/U-017[Mvp].md) (2026-01-24)
+**진행 중(현재 포커스)**: [RU-005[Mvp]](unit-plans/RU-005[Mvp].md) / **최근 완료**: [U-018[Mvp]](unit-results/U-018[Mvp].md) (2026-01-25)
 
 **블로커**: 없음
 
@@ -130,8 +130,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-018[Mvp]](unit-plans/U-018[Mvp].md) | ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백 | Depends=U-017 | 🚧
-ID=[RU-005[Mvp]](unit-plans/RU-005[Mvp].md) | 리팩토링: orchestrator pipeline stages 정리 | Depends=U-018 | ⏸️
+ID=[RU-005[Mvp]](unit-plans/RU-005[Mvp].md) | 리팩토링: orchestrator pipeline stages 정리 | Depends=U-018 | 🚧
 ID=[CP-MVP-04](unit-plans/CP-MVP-04.md) | **체크포인트: 실모델 Hard Gate(스키마/경제/복구)** | Depends=RU-005 | ⏸️
 
 ID=[U-019[Mvp]](unit-plans/U-019[Mvp].md) | ⚡이미지 생성 엔드포인트/잡(조건부) | Depends=U-016,U-017 | ⏸️
@@ -174,6 +173,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-018[Mvp]](unit-results/U-018[Mvp].md): ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백 (2026-01-25)
 - ✅ [U-017[Mvp]](unit-results/U-017[Mvp].md): ⚡Structured Output TurnOutput 생성 + Pydantic 검증 (2026-01-24)
 - ✅ [U-016[Mvp]](unit-results/U-016[Mvp].md): ⚡Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정 (2026-01-24)
 - ✅ [RU-004[Mvp]](unit-results/RU-004[Mvp].md): 리팩토링 - SaveGame/초기상태/데모 프로필 정리 (2026-01-24)
