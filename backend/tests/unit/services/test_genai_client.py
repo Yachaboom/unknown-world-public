@@ -242,9 +242,12 @@ def test_mock_client_is_available():
 def test_get_genai_client_invalid_mode():
     """유효하지 않은 UW_MODE일 때 기본값(REAL)으로 동작하는지 확인합니다."""
     reset_genai_client()
-    with patch.dict(os.environ, {ENV_UW_MODE: "invalid"}), patch(
-        "unknown_world.services.genai_client.GenAIClient", return_value=MagicMock()
-    ) as mock_real:
+    with (
+        patch.dict(os.environ, {ENV_UW_MODE: "invalid"}),
+        patch(
+            "unknown_world.services.genai_client.GenAIClient", return_value=MagicMock()
+        ) as mock_real,
+    ):
         get_genai_client(force_new=True)
         mock_real.assert_called_once()
 

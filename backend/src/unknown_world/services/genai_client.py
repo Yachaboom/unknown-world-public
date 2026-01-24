@@ -81,12 +81,16 @@ class GenerateRequest:
         model_label: 모델 라벨 (FAST, QUALITY 등)
         max_tokens: 최대 토큰 수 (선택)
         temperature: 온도 설정 (선택, 0.0~1.0)
+        response_mime_type: 응답 MIME 타입 (예: "application/json")
+        response_schema: 응답 JSON 스키마 (dict 또는 Pydantic 모델 타입)
     """
 
     prompt: str
     model_label: ModelLabel = ModelLabel.FAST
     max_tokens: int | None = None
     temperature: float | None = None
+    response_mime_type: str | None = None
+    response_schema: Any | None = None
 
 
 @dataclass
@@ -293,6 +297,10 @@ class GenAIClient:
             config["max_output_tokens"] = request.max_tokens
         if request.temperature is not None:
             config["temperature"] = request.temperature
+        if request.response_mime_type:
+            config["response_mime_type"] = request.response_mime_type
+        if request.response_schema:
+            config["response_schema"] = request.response_schema
 
         response = await self._client.aio.models.generate_content(
             model=model_id,
@@ -356,6 +364,10 @@ class GenAIClient:
             config["max_output_tokens"] = request.max_tokens
         if request.temperature is not None:
             config["temperature"] = request.temperature
+        if request.response_mime_type:
+            config["response_mime_type"] = request.response_mime_type
+        if request.response_schema:
+            config["response_schema"] = request.response_schema
 
         stream = await self._client.aio.models.generate_content_stream(
             model=model_id,

@@ -47,26 +47,28 @@ D:\Dev\unknown-world\
 │   ├── pyproject.toml
 │   ├── uv.lock
 │   ├── .env.example        # 환경 변수 설정 템플릿 (U-016)
+│   ├── prompts/           # 프롬프트 저장소 (U-017)
+│   │   ├── system/        # 시스템 프롬프트 (ko/en)
+│   │   └── turn/          # 출력 지침 (ko/en)
 │   ├── src/
 │   │   └── unknown_world/
 │   │       ├── main.py
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
 │   │       ├── config/     # 모델 ID 및 라벨 SSOT (U-016)
-│   │       │   ├── __init__.py
-│   │       │   └── models.py
-│   │       ├── models/     # Pydantic 데이터 모델
+│   │       ├── models/     # Pydantic 데이터 모델 (U-005, U-017)
 │   │       ├── orchestrator/ # 오케스트레이션 엔진
+│   │       │   ├── prompt_loader.py (프롬프트 로더: U-017)
+│   │       │   └── generate_turn_output.py (TurnOutput 생성/검증: U-017)
 │   │       └── services/    # 외부 서비스 연동 (U-016)
-│   │           ├── __init__.py
-│   │           └── genai_client.py (Vertex AI/google-genai 래퍼)
+│   └── tests/             # 유닛/통합 테스트
 ├── vibe/                  # SSOT 문서 저장소
 │   ├── architecture.md     # 시스템 아키텍처 및 구조 가이드
 │   ├── progress.md         # 작업 진행 이력 및 로그
 │   ├── roadmap.md          # 프로젝트 로드맵 및 백로그
 │   ├── tech-stack.md       # 기술 스택 및 버전 관리
 │   ├── unit-plans/         # 작업 단위(Unit) 개발 계획서
-│   └── unit-results/       # 작업 완료 보고서
-```
+│   ├── unit-results/       # 작업 완료 보고서 (U-017[Mvp] 등)
+│   └── unit-runbooks/      # 기능 검증 런북 (U-017 등)
 
 ### 주요 디렉토리 책임
 

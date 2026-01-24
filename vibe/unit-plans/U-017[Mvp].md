@@ -85,9 +85,10 @@ Gemini 텍스트 모델을 **Structured Outputs(JSON Schema)** 모드로 호출�
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 기본 텍스트 생성 모델 라벨은 무엇으로 둘까?
+- [x] **Q1**: 기본 텍스트 생성 모델 라벨은 무엇으로 둘까?
   - Option A: FAST 기본(권장: 데모 TTFB 우선) + 중요 장면만 QUALITY
   - Option B: QUALITY 기본(품질 우선, 비용/지연 증가)
+  **A1**: Option A
 
 ## 참고 자료
 
