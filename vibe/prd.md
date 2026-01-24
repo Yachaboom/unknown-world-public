@@ -238,7 +238,7 @@
 
 - **Backend**: FastAPI (async), **HTTP Streaming (Fetch + POST)** 기반 스트리밍(필요 시 WebSocket 확장)
 - **Frontend**: React 19 + Vite 7
-- **상태 관리**: 세션 WorldState + 요약 메모리 + 재화 원장(Economy Ledger)
+- **상태 관리**: 세션 WorldState + 요약 메모리 + 재화 거래 장부(Resource Log)
 
 ### 8.2 인증/런타임: Vertex AI 서비스 계정(✅ .gitignore 보안 설정 완료)
 
@@ -342,6 +342,7 @@
   - `safety`: `{ blocked: boolean, message?: string|null }`
 - **SaveGame (Local/Server)**:
   - `version`, `seed`, `language`, `theme`, `world_state`, `history`, `economy_ledger`, `assets`
+  - (정책) `version` 불일치 또는 WorldState/SaveGame 스키마가 확장/변경된 경우: 가능한 범위에서 **버전별 마이그레이션**을 수행하고, 불가하면 안전 리셋(텍스트-only 등 폴백) + 명시적 안내로 데모 루프를 끊지 않는다.
 
 ## 9. 프론트엔드 UX/스타일 (Frontend Style Guide 반영)
 
@@ -479,7 +480,7 @@
 - **Demo Overlay(상시 토글)**:
   - Agent Console(Plan/Queue/Badges)
   - 요청별 지표: TTFB, 전체 응답 시간, 이미지 생성 시간, 재시도 횟수, 스키마 검증 결과
-  - 재화 원장(소모/잔액) + “왜 이 비용인지” 라벨(FAST/QUALITY/CHEAP/REF)
+  - 재화 거래 장부(Resource Log)(소모/잔액) + “왜 이 비용인지” 라벨(FAST/QUALITY/CHEAP/REF)
 - **Hot controls**:
   - 언어(ko/en), 테마(dark/light), Autopilot 모드 전환
   - “이미지 생성 빈도/해상도 정책” 프리셋(예: `Story-only`, `Key Scenes`, `Every Turn`)

@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 35/65 (54%) | **MVP**: 35/52 (67%) | **MMP**: 0/13 (0%)
+**전체**: 35/68 (51%) | **MVP**: 35/55 (64%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-7  
+**예상 완료(가정)**: MVP D-5 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -79,13 +79,13 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### “채팅이 아닌” 고정 게임 UI + 핵심 인터랙션
 
 - **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 “읽을 수 있는” 수준으로 유지된다
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038
+- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
 
 - **완료 기준**: 데모프로필 3종 + 즉시 시작/리셋 + SaveGame + 엔딩 리포트 아티팩트 생성
-- **책임 Unit**: U-015, U-025
+- **책임 Unit**: U-015, U-041, U-025
 - **상태**: 🚧
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
@@ -120,7 +120,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | 이미지 생성 시간(p95)      | -    | < 12s(선택) |
 | Hard Gate 통과율(리플레이) | -    | 100%        |
 
-**기술 부채**: 0h(미추정 1건 있음) / 한도 8h  \| SSOT: `vibe/debt-log.md`
+**기술 부채**: 0h(미추정 1건 있음: U-040로 해결 예정) / 한도 8h  \| SSOT: `vibe/debt-log.md`
 
 ---
 
@@ -139,11 +139,15 @@ ID=[U-019[Mvp]](unit-plans/U-019[Mvp].md) | ⚡이미지 생성 엔드포인트/
 ID=[U-020[Mvp]](unit-plans/U-020[Mvp].md) | ⚡프론트 이미지 Lazy Render(placeholder/폴백) | Depends=U-010,U-019 | ⏸️
 ID=[U-035[Mvp]](unit-plans/U-035[Mvp].md) | 실시간 이미지 생성 시 rembg 배경 제거 통합 | Depends=U-019,U-020 | ⏸️
 ID=[U-036[Mvp]](unit-plans/U-036[Mvp].md) | 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 | Depends=U-017,U-019 | ⏸️
+ID=[U-040[Mvp]](unit-plans/U-040[Mvp].md) | 에셋 요청 스키마 정합(rembg_model 이슈) + 테스트/런북 복구 | Depends=U-034 | ⏸️
 ID=[CP-MVP-05](unit-plans/CP-MVP-05.md) | **체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)** | Depends=U-035,U-036 | ⏸️
 ID=[U-021[Mvp]](unit-plans/U-021[Mvp].md) | 이미지 이해(Scanner) 백엔드 엔드포인트 | Depends=U-016 | ⏸️
 ID=[U-022[Mvp]](unit-plans/U-022[Mvp].md) | ⚡Scanner 슬롯 UI + 업로드→아이템화 반영 | Depends=U-011,U-021 | ⏸️
 ID=[CP-MVP-06](unit-plans/CP-MVP-06.md) | **체크포인트: Scanner 업로드 게이트(안전/좌표/비용)** | Depends=U-022 | ⏸️
 ID=[RU-006[Mvp]](unit-plans/RU-006[Mvp].md) | 리팩토링: media/artifacts 스토리지 추상화 | Depends=U-022 | ⏸️
+
+ID=[U-041[Mvp]](unit-plans/U-041[Mvp].md) | SaveGame 마이그레이션: migrateSaveGame에 버전별 변환 로직 구현 | Depends=RU-004 | ⏸️
+ID=[U-042[Mvp]](unit-plans/U-042[Mvp].md) | 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 | Depends=U-014,U-039 | ⏸️
 
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
