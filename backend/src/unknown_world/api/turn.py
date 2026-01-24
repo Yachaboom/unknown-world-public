@@ -43,14 +43,16 @@ from pydantic import ValidationError
 
 from unknown_world.api.turn_stream_events import (
     BadgesEvent,
-    ErrorEvent,
-    FinalEvent,
     NarrativeDeltaEvent,
     RepairEvent,
     StageEvent,
     StageStatus,
     StreamEventType,
     serialize_event,
+)
+from unknown_world.api.turn_streaming_helpers import (
+    emit_error_with_fallback,
+    stream_output_with_narrative,
 )
 from unknown_world.models.turn import (
     CurrencyAmount,
@@ -199,44 +201,19 @@ async def _stream_turn_events(
             if stream_event is not None:
                 yield serialize_event(stream_event)
 
-        # Pipeline 완료 후 내러티브 + final 전송
+        # Pipeline 완료 후 내러티브 + final 전송 (RU-005-Q3: 헬퍼 사용)
         if ctx.output is not None:
-            # 내러티브 델타 스트리밍 (타자 효과)
-            narrative = ctx.output.narrative
-            chunk_size = 20
-            for i in range(0, len(narrative), chunk_size):
-                chunk = narrative[i : i + chunk_size]
-                yield serialize_event(
-                    NarrativeDeltaEvent(
-                        type=StreamEventType.NARRATIVE_DELTA, text=chunk
-                    ).model_dump()
-                )
-                await asyncio.sleep(0.02)  # 타자 효과 딜레이
-
-            # 최종 TurnOutput 전송
-            yield serialize_event(
-                FinalEvent(type=StreamEventType.FINAL, data=ctx.output).model_dump(mode="json")
-            )
+            async for line in stream_output_with_narrative(ctx.output):
+                yield line
 
     except Exception:
-        # 예외 발생 시 error + final(폴백) 순서로 송출 (RULE-004)
-        yield serialize_event(
-            ErrorEvent(
-                type=StreamEventType.ERROR,
-                message="처리 중 오류가 발생했습니다"
-                if turn_input.language == Language.KO
-                else "An error occurred during processing",
-                code="INTERNAL_ERROR",
-            ).model_dump()
-        )
-        fallback = create_safe_fallback(
-            language=turn_input.language,
+        # 예외 발생 시 error + final(폴백) 순서로 송출 (RULE-004, RU-005-Q3: 헬퍼 사용)
+        async for line in emit_error_with_fallback(
+            turn_input.language,
             economy_snapshot=ctx.economy_snapshot,
             repair_count=MAX_REPAIR_ATTEMPTS,
-        )
-        yield serialize_event(
-            FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-        )
+        ):
+            yield line
 
     finally:
         # Pipeline 태스크 정리
@@ -357,23 +334,15 @@ async def turn_stream(request: Request) -> StreamingResponse:
                 economy_snapshot = None
 
         async def error_stream() -> AsyncGenerator[str]:
-            # 에러 이벤트 송출
-            yield serialize_event(
-                ErrorEvent(
-                    type=StreamEventType.ERROR,
-                    message=parse_result.get("message", "Invalid input"),
-                    code="VALIDATION_ERROR",
-                ).model_dump()
-            )
-            # 항상 final(폴백)로 종료 - 스트림 종료 인바리언트 (RULE-004)
-            fallback = create_safe_fallback(
-                language=Language.KO if error_language == "ko-KR" else Language.EN,
+            # RU-005-Q3: 헬퍼를 사용하여 error + final(폴백) 송출
+            async for line in emit_error_with_fallback(
+                Language.KO if error_language == "ko-KR" else Language.EN,
+                error_message=parse_result.get("message", "Invalid input"),
+                error_code="VALIDATION_ERROR",
                 economy_snapshot=economy_snapshot,
                 repair_count=0,
-            )
-            yield serialize_event(
-                FinalEvent(type=StreamEventType.FINAL, data=fallback).model_dump(mode="json")
-            )
+            ):
+                yield line
 
         return StreamingResponse(
             error_stream(),

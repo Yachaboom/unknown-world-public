@@ -1,5 +1,29 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 16:30] [RU-005-Q3] 복잡도: `api/turn.py` 스트리밍 오케스트레이션 축소(중복 제거 + 파이프라인 위임) 완료
+
+### 작업 내용
+
+- **제안서**: [RU-005-Q3] 복잡도: `api/turn.py` 스트리밍 오케스트레이션 축소(중복 제거 + 파이프라인 위임)
+- **개선 사항**:
+    - **중복 스트리밍 로직 제거**: mock/real 경로에서 중복되던 단계(stage) 송출, 타자 효과(narrative_delta), 에러 폴백 로직을 `api/turn_streaming_helpers.py`로 추출하여 코드 응집도 향상
+    - **오케스트레이션 위임**: `api/turn.py`가 직접 관리하던 처리 루프를 `orchestrator/pipeline.py`로 전면 위임하고, API 레이어는 스트림 이벤트 변환 및 HTTP 전송에만 집중하도록 정제
+    - **이벤트 변환 레이어 도입**: 파이프라인의 도메인 이벤트를 NDJSON 스트림 프로토콜로 변환하는 `_convert_pipeline_event`를 통해 처리 로직과 전송 포맷 간의 결합도 해제
+    - **안전성 강화**: 예외 발생 시 `emit_error_with_fallback` 헬퍼를 통해 항상 `error` + `final` 이벤트를 보장하여 클라이언트 UI 멈춤 방지 (RULE-004)
+- **영향 범위**: `backend/src/unknown_world/api/turn.py`, `backend/src/unknown_world/api/turn_streaming_helpers.py` (신설), `backend/src/unknown_world/orchestrator/pipeline.py`
+
+### 기술적 세부사항
+
+- **Stream Helper Extraction**: `stream_output_with_narrative`와 `emit_error_with_fallback`을 도입하여 내러티브 스트리밍 및 에러 복구 경로의 SSOT 확보
+- **Queue-based Async Pipeline**: `asyncio.Queue`를 사용하여 파이프라인 실행과 스트림 송출을 비동기적으로 분리, TTFB 개선 및 처리 유연성 확보
+
+### 검증
+
+- **동작 일관성 확인**: 리팩토링 후에도 기존 Stage→Badges→Narrative→Final 순서가 완벽히 유지됨을 확인.
+- **에러 핸들링 확인**: 입력 오류 및 런타임 예외 시 헬퍼를 통해 안전한 폴백 데이터가 정상 송출됨을 확인.
+
+---
+
 ## [2026-01-25 15:55] [RU-005-Q4] 모듈 설계: orchestrator pipeline을 stage 모듈 + 실행기(Option A)로 SSOT화 완료
 
 ### 작업 내용

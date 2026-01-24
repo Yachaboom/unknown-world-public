@@ -108,7 +108,10 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **Guaranteed Safe Fallback**: 
     - 모든 복구 시도 실패 또는 예외 상황 시, 입력 시점의 재화 스냅샷을 보존하고 스키마를 100% 준수하는 **안전 폴백 TurnOutput** 강제 생성 및 반환.
 5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 스트림 이벤트를 전수 검증함.
-6. **Decoupled Observation**: 오케스트레이터는 `EmitFn` 콜백을 통해 도메인 이벤트를 송출하며, API 계층은 이를 스트림 프로토콜(NDJSON)로 변환함. 레이어 간 직접적인 의존성을 배제함.
+6. **Decoupled Observation & Streaming Helpers (RU-005-Q3)**: 
+    - **Event Translation**: 오케스트레이터는 도메인 이벤트(`PipelineEvent`)를 송출하고, API 계층(`api/turn.py`)은 이를 스트림 프로토콜(NDJSON)로 변환하는 변환기(`_convert_pipeline_event`)를 두어 transport 계층과 도메인 로직을 격리함.
+    - **Streaming SSOT**: 내러티브 스트리밍, 에러 송출, 폴백 생성 등 중복되는 스트리밍 로직은 `api/turn_streaming_helpers.py`로 단일화하여 전송 경로의 일관성을 보장함.
+    - **Async Queueing**: `asyncio.Queue`를 사용하여 파이프라인 처리와 네트워크 전송을 비동기적으로 분리함.
 
 ## 9. Economy/재화 관리 정책 (U-014[Mvp])
 
