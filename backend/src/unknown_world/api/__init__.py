@@ -3,6 +3,7 @@
 이 패키지는 FastAPI 라우터들을 포함합니다.
 """
 
+from unknown_world.api.image import router as image_router
 from unknown_world.api.turn import router as turn_router
 
-__all__ = ["turn_router"]
+__all__ = ["image_router", "turn_router"]

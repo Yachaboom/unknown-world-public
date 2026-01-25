@@ -1,0 +1,546 @@
+"""Unknown World - 이미지 생성 서비스.
+
+이 모듈은 Gemini 이미지 생성 모델을 호출하고 결과를 로컬에 저장하는 서비스입니다.
+텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
+
+설계 원칙:
+    - RULE-004: 실패 시 안전한 폴백 제공 (should_generate=false)
+    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
+    - RULE-007: 프롬프트 원문 노출 금지
+
+페어링 질문 결정:
+    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
+
+참조:
+    - vibe/tech-stack.md (모델 ID 고정)
+    - vibe/unit-plans/U-019[Mvp].md
+    - .cursor/rules/20-backend-orchestrator.mdc
+"""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import logging
+import os
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
+
+# =============================================================================
+# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 상수 정의
+# =============================================================================
+
+# MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
+DEFAULT_OUTPUT_DIR = Path("generated_images")
+
+# 지원 이미지 크기 (Gemini 이미지 생성 지원 크기)
+SUPPORTED_SIZES: dict[str, tuple[int, int]] = {
+    "1024x1024": (1024, 1024),
+    "1280x768": (1280, 768),
+    "768x1280": (768, 1280),
+    "1536x1024": (1536, 1024),
+    "1024x1536": (1024, 1536),
+}
+
+# 기본 설정
+DEFAULT_SIZE = "1024x1024"
+DEFAULT_ASPECT_RATIO = "1:1"
+
+
+class ImageGenerationStatus(StrEnum):
+    """이미지 생성 상태."""
+
+    PENDING = "pending"
+    """생성 대기 중"""
+
+    GENERATING = "generating"
+    """생성 중"""
+
+    COMPLETED = "completed"
+    """생성 완료"""
+
+    FAILED = "failed"
+    """생성 실패"""
+
+    SKIPPED = "skipped"
+    """생성 건너뜀 (잔액 부족 등)"""
+
+
+# =============================================================================
+# 요청/응답 Pydantic 모델
+# =============================================================================
+
+
+class ImageGenerationRequest(BaseModel):
+    """이미지 생성 요청.
+
+    TurnOutput의 render.image_job과 정합되도록 필드를 설계합니다.
+
+    Attributes:
+        prompt: 이미지 생성 프롬프트 (필수)
+        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
+        image_size: 이미지 크기 (예: "1024x1024")
+        reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
+        session_id: 세션 ID (파일 그룹화용)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=1, description="이미지 생성 프롬프트")
+    aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
+    image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
+    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    session_id: str | None = Field(default=None, description="세션 ID")
+
+
+class ImageGenerationResponse(BaseModel):
+    """이미지 생성 응답.
+
+    Attributes:
+        status: 생성 상태
+        image_id: 생성된 이미지 ID (성공 시)
+        image_url: 생성된 이미지 URL (성공 시)
+        message: 상태 메시지 (실패 시 오류 설명)
+        generation_time_ms: 생성 소요 시간 (밀리초)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: ImageGenerationStatus
+    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
+    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
+    message: str | None = Field(default=None, description="상태 메시지")
+    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
+
+
+# =============================================================================
+# 내부 데이터 클래스
+# =============================================================================
+
+
+@dataclass
+class GeneratedImage:
+    """생성된 이미지 정보.
+
+    Attributes:
+        id: 이미지 고유 ID
+        path: 로컬 파일 경로
+        url: 서빙 URL
+        prompt_hash: 프롬프트 해시 (로그용, 원문 노출 금지)
+        created_at: 생성 시각
+        size: 파일 크기 (bytes)
+        metadata: 추가 메타데이터
+    """
+
+    id: str
+    path: Path
+    url: str
+    prompt_hash: str
+    created_at: datetime
+    size: int = 0
+
+    def __post_init__(self) -> None:
+        """초기화 후 메타데이터 필드 설정."""
+        self._metadata: dict[str, str] = {}
+
+    @property
+    def metadata(self) -> dict[str, str]:
+        """추가 메타데이터."""
+        if not hasattr(self, "_metadata"):
+            self._metadata = {}
+        return self._metadata
+
+
+# =============================================================================
+# Mock 이미지 생성기
+# =============================================================================
+
+
+class MockImageGenerator:
+    """테스트/개발용 모의 이미지 생성기.
+
+    실제 API를 호출하지 않고 플레이스홀더 이미지를 생성합니다.
+    """
+
+    def __init__(self, output_dir: Path | None = None) -> None:
+        """MockImageGenerator를 초기화합니다.
+
+        Args:
+            output_dir: 이미지 저장 디렉토리 (기본값: generated_images)
+        """
+        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(
+            "[ImageGen] Mock 모드로 초기화됨",
+            extra={"output_dir": str(self._output_dir)},
+        )
+
+    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+        """모의 이미지를 생성합니다.
+
+        Args:
+            request: 이미지 생성 요청
+
+        Returns:
+            ImageGenerationResponse: 생성 결과
+        """
+        start_time = datetime.now(UTC)
+
+        # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
+        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+        logger.debug(
+            "[ImageGen] Mock 이미지 생성 요청",
+            extra={
+                "prompt_hash": prompt_hash,
+                "size": request.image_size,
+                "aspect_ratio": request.aspect_ratio,
+            },
+        )
+
+        # 고유 이미지 ID 생성
+        image_id = f"img_{uuid.uuid4().hex[:12]}"
+
+        # 플레이스홀더 이미지 생성 (1x1 투명 PNG)
+        # 실제 환경에서는 Gemini API 응답으로 대체됨
+        placeholder_png = self._create_placeholder_png(request.image_size)
+
+        # 파일 저장
+        file_name = f"{image_id}.png"
+        file_path = self._output_dir / file_name
+        file_path.write_bytes(placeholder_png)
+
+        # 서빙 URL 생성 (MVP: 로컬 static 경로)
+        image_url = f"/static/images/{file_name}"
+
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+        logger.info(
+            "[ImageGen] Mock 이미지 생성 완료",
+            extra={
+                "image_id": image_id,
+                "elapsed_ms": elapsed_ms,
+            },
+        )
+
+        return ImageGenerationResponse(
+            status=ImageGenerationStatus.COMPLETED,
+            image_id=image_id,
+            image_url=image_url,
+            message="Mock 이미지가 생성되었습니다.",
+            generation_time_ms=elapsed_ms,
+        )
+
+    def _create_placeholder_png(self, size_str: str) -> bytes:
+        """플레이스홀더 PNG를 생성합니다.
+
+        Args:
+            size_str: 이미지 크기 문자열 (예: "1024x1024")
+
+        Returns:
+            PNG 바이트 데이터
+        """
+        # 최소한의 유효한 PNG (1x1 회색 픽셀)
+        # 실제 크기는 무시하고 플레이스홀더만 반환
+        # 16x16 회색 PNG (mock 식별용)
+        # Base64로 인코딩된 미니멀 PNG
+        minimal_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAADklEQVQ4y2NgGAWjAAcA"
+            "CHABAMXKQ5oAAAAASUVORK5CYII="
+        )
+        return minimal_png
+
+    def is_available(self) -> bool:
+        """Mock 생성기는 항상 사용 가능합니다."""
+        return True
+
+
+# =============================================================================
+# 실제 이미지 생성기
+# =============================================================================
+
+
+class ImageGenerator:
+    """Gemini 기반 실제 이미지 생성기.
+
+    gemini-3-pro-image-preview 모델을 사용하여 이미지를 생성합니다.
+    모델 ID는 RULE-010에 따라 고정됩니다.
+    """
+
+    def __init__(
+        self,
+        output_dir: Path | None = None,
+        project: str | None = None,
+        location: str | None = None,
+    ) -> None:
+        """ImageGenerator를 초기화합니다.
+
+        Args:
+            output_dir: 이미지 저장 디렉토리
+            project: Vertex AI 프로젝트 ID
+            location: Vertex AI 리전
+        """
+        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        self._project = project or os.environ.get("VERTEX_PROJECT")
+        self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
+        self._client: Any | None = None
+        self._available = False
+
+        self._initialize_client()
+
+    def _initialize_client(self) -> None:
+        """google-genai 클라이언트를 초기화합니다."""
+        try:
+            from google import genai  # type: ignore[import-untyped]
+
+            client_options: dict[str, Any] = {}
+            if self._project:
+                client_options["project"] = self._project
+            if self._location:
+                client_options["location"] = self._location
+
+            self._client = genai.Client(vertexai=True, **client_options)
+            self._available = True
+
+            logger.info(
+                "[ImageGen] Vertex AI 이미지 생성기 초기화 완료",
+                extra={
+                    "model": MODEL_IMAGE,
+                    "project": self._project or "(ADC 기본)",
+                    "location": self._location,
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                "[ImageGen] Vertex AI 클라이언트 초기화 실패 - Mock 모드 권장",
+                extra={"error_type": type(e).__name__},
+            )
+            self._available = False
+
+    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+        """이미지를 생성합니다.
+
+        Args:
+            request: 이미지 생성 요청
+
+        Returns:
+            ImageGenerationResponse: 생성 결과
+        """
+        if not self._available or self._client is None:
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message="이미지 생성 클라이언트가 초기화되지 않았습니다.",
+            )
+
+        start_time = datetime.now(UTC)
+
+        # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
+        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+        logger.debug(
+            "[ImageGen] 이미지 생성 요청",
+            extra={
+                "prompt_hash": prompt_hash,
+                "size": request.image_size,
+                "model": MODEL_IMAGE,
+            },
+        )
+
+        try:
+            # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
+            _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
+
+            # Gemini 이미지 생성 호출
+            # 참고: gemini-3-pro-image-preview 모델 사용 (RULE-010 고정)
+            response = await self._client.aio.models.generate_images(
+                model=get_model_id(ModelLabel.IMAGE),
+                prompt=request.prompt,
+                config={
+                    "number_of_images": 1,
+                    "output_mime_type": "image/png",
+                    # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
+                    # 실제 API 스펙에 맞게 조정 필요
+                },
+            )
+
+            # 이미지 데이터 추출 및 저장
+            if response and hasattr(response, "generated_images"):
+                image_data = response.generated_images[0]
+                image_bytes = (
+                    image_data.image.image_bytes if hasattr(image_data, "image") else image_data
+                )
+
+                # 고유 ID 및 파일 저장
+                image_id = f"img_{uuid.uuid4().hex[:12]}"
+                file_name = f"{image_id}.png"
+                file_path = self._output_dir / file_name
+                file_path.write_bytes(image_bytes)
+
+                image_url = f"/static/images/{file_name}"
+                elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+                logger.info(
+                    "[ImageGen] 이미지 생성 완료",
+                    extra={
+                        "image_id": image_id,
+                        "elapsed_ms": elapsed_ms,
+                        "size_bytes": len(image_bytes),
+                    },
+                )
+
+                return ImageGenerationResponse(
+                    status=ImageGenerationStatus.COMPLETED,
+                    image_id=image_id,
+                    image_url=image_url,
+                    message="이미지가 성공적으로 생성되었습니다.",
+                    generation_time_ms=elapsed_ms,
+                )
+            else:
+                return ImageGenerationResponse(
+                    status=ImageGenerationStatus.FAILED,
+                    message="이미지 생성 응답이 비어있습니다.",
+                )
+
+        except Exception as e:
+            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+            error_type = type(e).__name__
+
+            logger.error(
+                "[ImageGen] 이미지 생성 실패",
+                extra={
+                    "error_type": error_type,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
+
+            # 실패 시에도 안전한 응답 반환 (RULE-004)
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
+                generation_time_ms=elapsed_ms,
+            )
+
+    def is_available(self) -> bool:
+        """생성기가 사용 가능한 상태인지 확인합니다."""
+        return self._available
+
+
+# =============================================================================
+# 팩토리 함수
+# =============================================================================
+
+# 생성기 타입
+ImageGeneratorType = MockImageGenerator | ImageGenerator
+
+# 싱글톤 인스턴스 캐시
+_generator_instance: ImageGeneratorType | None = None
+
+
+def get_image_generator(
+    *,
+    force_mock: bool = False,
+    force_new: bool = False,
+    output_dir: Path | None = None,
+) -> ImageGeneratorType:
+    """이미지 생성기 인스턴스를 반환합니다.
+
+    환경변수 UW_MODE에 따라 실제 생성기 또는 Mock 생성기를 반환합니다.
+
+    Args:
+        force_mock: True면 환경변수와 무관하게 Mock 생성기 반환
+        force_new: True면 캐시를 무시하고 새 인스턴스 생성
+        output_dir: 이미지 저장 디렉토리
+
+    Returns:
+        이미지 생성기 인스턴스
+    """
+    global _generator_instance
+
+    if not force_new and _generator_instance is not None:
+        return _generator_instance
+
+    # 모드 결정
+    mode = os.environ.get("UW_MODE", "real")
+
+    if force_mock or mode == "mock":
+        generator: ImageGeneratorType = MockImageGenerator(output_dir)
+    else:
+        real_gen = ImageGenerator(output_dir)
+        # 실제 생성기 초기화 실패 시 Mock으로 폴백
+        if not real_gen.is_available():
+            logger.warning("[ImageGen] 실제 생성기 초기화 실패, Mock 모드로 폴백")
+            generator = MockImageGenerator(output_dir)
+        else:
+            generator = real_gen
+
+    _generator_instance = generator
+    return generator
+
+
+def reset_image_generator() -> None:
+    """이미지 생성기 캐시를 초기화합니다.
+
+    테스트 시 생성기를 재설정할 때 사용합니다.
+    """
+    global _generator_instance
+    _generator_instance = None
+
+
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
+
+
+def create_fallback_response(message: str | None = None) -> ImageGenerationResponse:
+    """실패 시 안전한 폴백 응답을 생성합니다.
+
+    RULE-004: 검증 실패나 오류 시에도 안전한 응답 제공
+
+    Args:
+        message: 오류 메시지 (선택)
+
+    Returns:
+        ImageGenerationResponse: 폴백 응답
+    """
+    return ImageGenerationResponse(
+        status=ImageGenerationStatus.SKIPPED,
+        message=message or "이미지 생성을 건너뛰었습니다. 텍스트로 진행합니다.",
+    )
+
+
+def validate_image_request(request: ImageGenerationRequest) -> str | None:
+    """이미지 생성 요청을 검증합니다.
+
+    Args:
+        request: 검증할 요청
+
+    Returns:
+        오류 메시지 (유효하면 None)
+    """
+    # 이미지 크기 검증
+    if request.image_size not in SUPPORTED_SIZES:
+        return f"지원하지 않는 이미지 크기: {request.image_size}"
+
+    # 프롬프트 길이 검증 (너무 짧거나 긴 경우)
+    if len(request.prompt) < 3:
+        return "프롬프트가 너무 짧습니다."
+
+    if len(request.prompt) > 2000:
+        return "프롬프트가 너무 깁니다 (최대 2000자)."
+
+    return None

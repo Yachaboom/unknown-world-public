@@ -18,10 +18,12 @@ from typing import Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from unknown_world import __version__
-from unknown_world.api import turn_router
+from unknown_world.api import image_router, turn_router
+from unknown_world.services.image_generation import DEFAULT_OUTPUT_DIR
 
 # =============================================================================
 # FastAPI 앱 인스턴스
@@ -34,6 +36,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# =============================================================================
+# 정적 파일 서빙 (U-019)
+# =============================================================================
+# 생성된 이미지를 /static/images 경로로 서빙합니다.
+DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static/images", StaticFiles(directory=str(DEFAULT_OUTPUT_DIR)), name="images")
 
 # =============================================================================
 # CORS 설정 (개발 환경용)
@@ -62,6 +71,9 @@ app.add_middleware(
 
 # U-007: /api/turn HTTP Streaming 엔드포인트
 app.include_router(turn_router)
+
+# U-019: /api/image 이미지 생성 엔드포인트
+app.include_router(image_router)
 
 
 # =============================================================================

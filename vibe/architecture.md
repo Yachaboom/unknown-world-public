@@ -11,9 +11,11 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ```text
 D:\Dev\unknown-world\
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
+│   ├── generated_images/  # 생성된 이미지 로컬 저장소 (U-019)
 │   ├── src/
 │   │   └── unknown_world/
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
+│   │       │   ├── image.py (이미지 생성 API, U-019)
 │   │       │   ├── turn.py
 │   │       │   ├── turn_stream_events.py
 │   │       │   └── turn_streaming_helpers.py
@@ -30,7 +32,8 @@ D:\Dev\unknown-world\
 │   │       │   ├── repair_loop.py
 │   │       │   └── validator.py (U-018)
 │   │       ├── services/   # 외부 서비스 연동 (U-016)
-│   │       │   └── genai_client.py
+│   │       │   ├── genai_client.py
+│   │       │   └── image_generation.py (Gemini 3 Pro Image 연동, U-019)
 │   │       └── validation/ # 비즈니스 룰 검증 로직
 │   │           └── business_rules.py
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
@@ -259,6 +262,19 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **보안 및 개인정보 보호 (RULE-007/008)**:
     - **프롬프트 은닉**: 로그 및 UI에는 프롬프트 원문이나 내부 추론(CoT)을 노출하지 않고 메타데이터(라벨, 버전, 사용량)만 기록함.
     - **비밀정보 보호**: 인증 키 파일 및 민감한 환경변수가 코드 저장소에 커밋되지 않도록 `.gitignore` 및 보안 가이드라인을 철저히 준수함.
+
+## 13. 멀티모달 및 이미지 정책 (U-019[Mvp])
+
+1. **텍스트 우선 + Lazy 이미지 (RULE-008)**:
+    - 텍스트 턴 응답(`TurnOutput`)에 포함된 `ImageJob` 정보를 바탕으로, 클라이언트가 별도의 엔드포인트(`/api/image/generate`)를 호출하여 이미지를 비동기적으로 생성함.
+    - 이를 통해 이미지 생성 지연이 전체 게임의 첫 응답 시간(TTFB)을 저해하지 않도록 함.
+2. **이미지 모델 고정 (RULE-010)**:
+    - 모든 이미지 생성 및 편집 작업은 `gemini-3-pro-image-preview` 모델로 고정하여 비주얼 일관성을 유지함.
+3. **아티팩트 저장 및 서빙 (Option A)**:
+    - MVP에서는 생성된 이미지를 백엔드의 `generated_images/` 디렉토리에 로컬 PNG 파일로 저장함.
+    - FastAPI의 `StaticFiles`를 통해 `/static/images/` 경로로 브라우저에 직접 서빙함.
+4. **안전 폴백 (RULE-004)**:
+    - 이미지 생성 실패(모델 오류, 정책 차단, 잔액 부족 등) 시에도 텍스트-only로 게임을 계속 진행할 수 있도록 `ImageGenerationStatus.FAILED` 또는 `SKIPPED` 상태와 함께 적절한 메시지를 반환함.
 
 ---
 

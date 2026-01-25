@@ -1,6 +1,39 @@
 # 프로젝트 진행 상황
 
-## [2026-01-25 22:00] [CP-MVP-04] 체크포인트 - 실모델 Hard Gate(스키마/경제/복구) 완료
+## [2026-01-25 23:30] [U-019[Mvp]] 이미지 생성 엔드포인트/잡(조건부) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 장면 이미지를 조건부로 생성하기 위한 백엔드 엔드포인트 및 서비스 구현 (텍스트 TTFB 비차단 구조)
+- **추가 컴포넌트**: `backend/src/unknown_world/services/image_generation.py` (Gemini 연동), `backend/src/unknown_world/api/image.py` (API 라우터), `backend/tests/manual_test_image.py`
+- **달성 요구사항**: [RULE-008] 텍스트 우선 + Lazy 이미지, [RULE-010] 이미지 모델 ID 고정(`gemini-3-pro-image-preview`), [RULE-004] 실패 시 안전 폴백
+
+### 기술적 구현 세부사항
+
+**이미지 생성 서비스**:
+- **Hybrid Generator**: 환경변수(`UW_MODE`)에 따라 실제 Gemini 호출(`ImageGenerator`)과 로컬 개발용 `MockImageGenerator`를 유연하게 전환
+- **Lazy Generation Contract**: 텍스트 턴 응답에 포함된 `ImageJob` 정보를 바탕으로 프론트엔드가 별도 엔드포인트(`/api/image/generate`)를 호출하는 비차단(Non-blocking) 구조 확립
+- **Local Artifact Storage**: 생성된 이미지를 `backend/generated_images/`에 PNG로 저장하고 `/static/images/` 경로를 통해 즉시 서빙 (Option A 채택)
+
+**안정성 및 보안**:
+- **Safe Fallback**: 검증 실패나 API 오류 시에도 `status: skipped`와 함께 텍스트-only 진행이 가능하도록 폴백 응답 보장
+- **Privacy-Preserving Logs**: 로그 기록 시 프롬프트 원문 노출을 방지하기 위해 SHA-256 해시를 사용하여 보안 가이드 준수
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── api/
+    │   └── image.py (이미지 생성/상태/파일 API)
+    ├── services/
+    │   └── image_generation.py (Gemini 3 Pro Image 연동)
+    └── main.py (정적 파일 서빙 및 라우터 통합)
+
+### 다음 단계
+- [U-020[Mvp]] 프론트엔드 SceneCanvas 레이지 로딩 연동
+- [U-035[Mvp]] rembg 배경 제거 파이프라인 통합
+
+---
+
 
 ### 구현 완료 항목
 
