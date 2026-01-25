@@ -381,6 +381,8 @@ export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
 /**
  * 이미지 생성 작업.
  * 조건부 이미지 생성/편집 요청입니다.
+ *
+ * U-035: remove_background, image_type_hint 필드 추가 (rembg 배경 제거)
  */
 export const ImageJobSchema = z
   .object({
@@ -390,6 +392,12 @@ export const ImageJobSchema = z
     aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
     image_size: z.string().default('1024x1024').describe('이미지 크기'),
     reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
+    remove_background: z.boolean().default(false).describe('배경 제거 여부 (U-035, rembg 사용)'),
+    image_type_hint: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)'),
   })
   .strict();
 export type ImageJob = z.infer<typeof ImageJobSchema>;

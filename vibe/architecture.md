@@ -31,11 +31,11 @@ D:\Dev\unknown-world\
 │   │       │   ├── prompt_loader.py (U-017)
 │   │       │   ├── repair_loop.py
 │   │       │   └── validator.py (U-018)
-│   │       ├── services/   # 외부 서비스 연동 (U-016)
-│   │       │   ├── genai_client.py
-│   │       │   └── image_generation.py (Gemini 3 Pro Image 연동, U-019)
-│   │       └── validation/ # 비즈니스 룰 검증 로직
-│   │           └── business_rules.py
+│       ├── services/   # 외부 서비스 연동 (U-016)
+│       │   ├── genai_client.py
+│       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
+│       │   └── image_postprocess.py (rembg 배경 제거, U-035)
+│       └── validation/ # 비즈니스 룰 검증 로직
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
 │   │   ├── api/            # HTTP Streaming 클라이언트
@@ -276,14 +276,18 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **프롬프트 은닉**: 로그 및 UI에는 프롬프트 원문이나 내부 추론(CoT)을 노출하지 않고 메타데이터(라벨, 버전, 사용량)만 기록함.
     - **비밀정보 보호**: 인증 키 파일 및 민감한 환경변수가 코드 저장소에 커밋되지 않도록 `.gitignore` 및 보안 가이드라인을 철저히 준수함.
 
-## 13. 멀티모달 및 이미지 정책 (U-019[Mvp])
+## 13. 멀티모달 및 이미지 정책 (U-019[Mvp], U-035[Mvp])
 
 1. **텍스트 우선 + Lazy 이미지 (RULE-008)**:
     - 텍스트 턴 응답(`TurnOutput`)에 포함된 `ImageJob` 정보를 바탕으로, 클라이언트가 별도의 엔드포인트(`/api/image/generate`)를 호출하여 이미지를 비동기적으로 생성함.
     - 이를 통해 이미지 생성 지연이 전체 게임의 첫 응답 시간(TTFB)을 저해하지 않도록 함.
 2. **이미지 모델 고정 (RULE-010)**:
     - 모든 이미지 생성 및 편집 작업은 `gemini-3-pro-image-preview` 모델로 고정하여 비주얼 일관성을 유지함.
-3. **아티팩트 저장 및 서빙 (Option A)**:
+3. **오브젝트 이미지 배경 제거 (rembg 후처리, U-035[Mvp])**:
+    - **자동 모델 선택 (Option B)**: 이미지 유형 힌트(`icon`, `character`, `portrait` 등)에 따라 `birefnet-general`, `isnet-anime` 등 최적의 `rembg` 모델을 자동으로 선택하여 후처리 품질을 극대화함.
+    - **안전 폴백 (RULE-004)**: `rembg` 처리 중 오류나 타임아웃 발생 시 원본 이미지를 그대로 사용하여 사용자 경험 중단을 방지함.
+    - **조건부 실행**: `ImageJob.remove_background` 플래그가 true인 경우에만 후처리 파이프라인이 동작함.
+4. **아티팩트 저장 및 서빙 (Option A)**:
     - MVP에서는 생성된 이미지를 백엔드의 `generated_images/` 디렉토리에 로컬 PNG 파일로 저장함.
     - FastAPI의 `StaticFiles`를 통해 `/static/images/` 경로로 브라우저에 직접 서빙함.
 4. **안전 폴백 (RULE-004)**:

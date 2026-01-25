@@ -457,6 +457,8 @@ class ImageJob(BaseModel):
         aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
         image_size: 이미지 크기 (예: "1024x1024")
         reference_image_ids: 참조 이미지 ID 목록 (선택)
+        remove_background: 배경 제거 여부 (U-035, rembg 사용)
+        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -467,6 +469,11 @@ class ImageJob(BaseModel):
     aspect_ratio: str = Field(default="16:9", description="가로세로 비율")
     image_size: str = Field(default="1024x1024", description="이미지 크기")
     reference_image_ids: list[str] = Field(default=[], description="참조 이미지 ID 목록 (선택)")
+    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
+    image_type_hint: str | None = Field(
+        default=None,
+        description="이미지 유형 힌트 (object/character/icon/portrait 등, rembg 모델 자동 선택용)",
+    )
 
 
 class RenderOutput(BaseModel):

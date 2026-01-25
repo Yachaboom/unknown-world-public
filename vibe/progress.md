@@ -1,6 +1,38 @@
 # 프로젝트 진행 상황
 
-## [2026-01-25 23:55] [U-020[Mvp]] 프론트 이미지 Lazy Render(placeholder/폴백) 완료
+## [2026-01-25 15:40] [U-035[Mvp]] 실시간 이미지 생성 시 rembg 배경 제거 통합 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 생성된 이미지의 배경을 자동으로 제거하는 `rembg` 후처리 파이프라인 구축 및 실시간 이미지 생성 서비스 통합
+- **추가 컴포넌트**: `backend/src/unknown_world/services/image_postprocess.py` (배경 제거 서비스), `vibe/unit-results/U-035[Mvp].md` (개발 완료 보고서)
+- **달성 요구사항**: [RULE-004] 실패 시 안전 폴백(원본 유지), [RULE-008] 텍스트 우선(이미지 생성 서비스 비차단 구조 내 통합), [RULE-007] 에셋 파이프라인 규칙 준수
+
+### 기술적 구현 세부사항
+
+**배경 제거 파이프라인**:
+- **Auto-Model Selection**: 이미지 유형 힌트(`icon`, `character`, `portrait` 등)를 분석하여 `birefnet-general`, `isnet-anime` 등 최적의 `rembg` 모델을 자동으로 선택하여 후처리 품질 극대화
+- **Safe Fallback Invariant**: `rembg` 미설치, 실행 오류, 타임아웃 발생 시 원본 이미지를 결과 경로로 복사하여 반환함으로써 시스템 중단 없이 턴 진행 보장
+- **Schema Synchronization**: `TurnOutput`의 `ImageJob` 스키마에 `remove_background` 및 `image_type_hint` 필드를 추가하여 프론트엔드와 배경 제거 계약 동기화
+
+**성능 및 운영**:
+- **Efficient Postprocessing**: 이미지 생성 엔드포인트 내에서 동기적으로 처리하되, 텍스트 턴과는 분리된 경로를 사용하여 메인 오케스트레이션 TTFB에 영향을 주지 않도록 설계
+- **Privacy-Preserving Logs**: 후처리 대상 이미지의 경로 대신 SHA-256 해시를 로그에 기록하여 보안 가이드 준수
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── services/
+    │   ├── image_postprocess.py (신규: rembg 래퍼 서비스)
+    │   └── image_generation.py (배경 제거 로직 통합)
+    └── models/
+        └── turn.py (ImageJob 스키마 확장)
+
+### 다음 단계
+- [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+- [U-022[Mvp]] Scanner 슬롯 UI + 업로드→아이템화(rembg 연동) 반영
+
+---
 
 ### 구현 완료 항목
 

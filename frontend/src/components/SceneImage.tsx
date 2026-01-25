@@ -88,7 +88,7 @@ export function SceneImage({ status, imageUrl, message, className = '' }: SceneI
     }
 
     // 2. 새 이미지 프리로드 시작
-     
+
     setImageError(false);
 
     let isMounted = true;
