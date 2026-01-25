@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 20:15] [RU-005-S3] RU-005 이후 “/api/turn stage pipeline” 수동 검증 시나리오 패키지 완료
+
+### 작업 내용
+
+- **제안서**: [RU-005-S3] RU-005 이후 “/api/turn stage pipeline” 수동 검증 시나리오 패키지
+- **개선 사항**:
+    - **파이프라인 UX 게이트 구축**: RU-005 리팩토링으로 재구조화된 오케스트레이터 파이프라인의 스트리밍 계약(Stage, Badges, Repair, Final)이 UX 측면에서 깨지지 않았는지 확인하는 6대 핵심 수동 검증 시나리오 확정
+    - **인바리언트 검증 체계**: 정상 경로(Stage 순서), 비즈니스 룰 실패(Repair), 입력 오류(Error), i18n 일관성, Real/Mock 모드 호환성 등 파이프라인 전반의 종료 인바리언트 검증 절차 명세화
+    - **데모 품질 보장**: Agent Console에 표시되는 시스템 "증거(Evidence)"들이 멈춤 없이 정확한 순서로 전달됨을 보장하여 데모 및 심사 품질 안정화
+- **영향 범위**: `vibe/unit-runbooks/RU-005-S3-runbook.md` (신설), `backend/src/unknown_world/api/turn.py`, `orchestrator/*` 관련 검증
+
+### 기술적 세부사항
+
+- **Scenario-based Validation**: 단순 유닛 테스트를 넘어, `curl`을 이용한 실제 스트리밍 이벤트를 직접 관찰하여 `Parse → ... → Commit` 단계와 `badges` 배출 정합성을 수동으로 전수 조사
+- **Hard Gate Alignment**: PRD 6.8(관측 가능성) 및 8.4(Structured outputs)의 하드 게이트 조건을 만족하는지 최종 확인
+
+### 검증
+
+- **시나리오 패키지 확정**: RU-005 리팩토링 결과물에 대해 정의된 6가지 시나리오를 적용하여 파이프라인 안정성 및 관측 품질 확보 확인.
+- **런북 참조**: `vibe/unit-runbooks/RU-005-S3-runbook.md`
+
+---
+
 ## [2026-01-25 19:30] [RU-005-S2] 엣지 케이스: Cancel/예외/언어(i18n) 경로에서 stage·repair·final 정책을 일관되게 완료
 
 ### 작업 내용
