@@ -17,33 +17,36 @@ D:\Dev\unknown-world\
 │   │       │   ├── turn.py
 │   │       │   ├── turn_stream_events.py
 │   │       │   └── turn_streaming_helpers.py
+│   │       ├── config/     # 모델 및 시스템 설정 (U-016)
+│   │       │   └── models.py
 │   │       ├── orchestrator/ # 오케스트레이션 엔진
 │   │       │   ├── pipeline.py (파이프라인 실행기)
 │   │       │   ├── stages/    # 단계별 모듈 (RU-005)
-│   │       │   │   ├── commit.py
-│   │       │   │   ├── parse.py
-│   │       │   │   ├── plan.py
-│   │       │   │   ├── render.py
-│   │       │   │   ├── resolve.py
 │   │       │   │   ├── types.py
-│   │       │   │   ├── validate.py
-│   │       │   │   └── verify.py
+│   │       │   │   ├── parse.py
+│   │       │   │   └── ... (7대 단계 모듈)
 │   │       │   ├── fallback.py
-│   │       │   ├── mock.py
-│   │       │   ├── prompt_loader.py
+│   │       │   ├── prompt_loader.py (U-017)
 │   │       │   ├── repair_loop.py
-│   │       │   └── validator.py
-│   │       └── ...
+│   │       │   └── validator.py (U-018)
+│   │       ├── services/   # 외부 서비스 연동 (U-016)
+│   │       │   └── genai_client.py
+│   │       └── validation/ # 비즈니스 룰 검증 로직
+│   │           └── business_rules.py
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
 │   │   ├── api/            # HTTP Streaming 클라이언트
 │   │   ├── components/     # 게임 UI 컴포넌트
+│   │   ├── save/           # 세이브/로드 및 세션 관리 (RU-004)
 │   │   ├── stores/         # 상태 관리 (Zustand)
 │   │   ├── turn/           # Turn Runner 모듈
 │   │   └── ...
 ├── shared/                # 공유 리소스 (SSOT)
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
+    ├── unit-plans/        # 개발 계획서 (CP-MVP-04 포함)
+    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-04 포함)
+    └── unit-runbooks/     # 검증 런북 (CP-MVP-04 포함)
 ```
 
 ### 주요 디렉토리 책임

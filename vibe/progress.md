@@ -1,5 +1,38 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 22:00] [CP-MVP-04] 체크포인트 - 실모델 Hard Gate(스키마/경제/복구) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 실모델(Vertex AI) 환경에서 7단계 파이프라인 및 Hard Gate(스키마/경제/안전/일관성) 인바리언트 전수 검증 완료
+- **추가 컴포넌트**: `vibe/unit-runbooks/CP-MVP-04.md` (검증 런북), `vibe/unit-results/CP-MVP-04.md` (결과 보고서)
+- **달성 요구사항**: [RULE-003] 구조화 출력 우선, [RULE-004] Repair loop + 안전 폴백, [RULE-005] 경제 인바리언트, [RULE-006] 언어 일관성, [RULE-009] bbox 좌표 규약
+
+### 기술적 구현 세부사항
+
+**실모델 Hard Gate 인바리언트**:
+- **Schema & Validation**: Pydantic(서버) 및 Zod(클라이언트) 스키마 검증이 실모델 응답에서도 100% 동작함을 확인
+- **Recovery & Fallback**: 비즈니스 룰 위반 시 Repair loop를 통한 자동 복구 및 최종 Safe Fallback 수렴 프로세스 안정성 확인
+- **Economy Preservation**: 폴백 및 복구 상황에서도 사용자 재화 잔액이 입력 스냅샷 기준으로 정확히 보존됨을 검증
+
+**관측 가능성 및 보안**:
+- **Stage Streaming**: Parse부터 Commit까지의 7단계 도메인 이벤트가 Agent Console에 정상 가시화됨
+- **Secret Masking**: 서비스 계정 인증 및 프롬프트 은닉 원칙이 로그 및 문서 수준에서 엄격히 준수됨
+
+### 코드 구조
+repo-root/
+└── vibe/
+    ├── unit-runbooks/
+    │   └── CP-MVP-04.md (실모델 검증 시나리오)
+    └── unit-results/
+        └── CP-MVP-04.md (체크포인트 보고서)
+
+### 다음 단계
+- [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+- [U-019[Mvp]] 이미지 생성 엔드포인트/잡(조건부) 연동
+
+---
+
 ## [2026-01-25 21:30] [RU-005[Mvp]] 리팩토링 - orchestrator pipeline stages 정리 완료
 
 ### 구현 완료 항목

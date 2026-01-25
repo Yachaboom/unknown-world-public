@@ -92,9 +92,10 @@ Mock(모의) 기반 턴 실행을 “실모델( Vertex 서비스 계정 + google
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 실모델 Hard Gate에서 “실패로 간주할 기준선”은 어디까지 둘까?
+- [x] **Q1**: 실모델 Hard Gate에서 “실패로 간주할 기준선”은 어디까지 둘까?
   - Option A: `Schema/Economy/Safety/Consistency` 배지 실패는 즉시 fail(필수), TTFB는 관측만(권장)
   - Option B: TTFB(예: 2s)도 Hard Gate로 포함(체감 품질은 좋아지나 개발 속도 저하)
+  **A1**: Option A
 
 ## 참고 자료
 
