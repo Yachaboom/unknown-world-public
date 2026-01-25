@@ -175,6 +175,10 @@ async def _stream_turn_events(
         nonlocal ctx
         try:
             ctx = await run_pipeline(ctx, emit=emit)
+        except asyncio.CancelledError:
+            # RU-005-S2: 클라이언트 Abort 시 태스크도 취소됨
+            # - 폴백 생성 없이 즉시 종료 (프론트 정책과 맞춤)
+            raise  # finally 블록은 실행, 종료 신호만 보냄
         except Exception:
             # 예외 발생 시 폴백 (RULE-004)
             ctx.output = create_safe_fallback(
@@ -184,7 +188,7 @@ async def _stream_turn_events(
             )
             ctx.is_fallback = True
         finally:
-            # 종료 신호
+            # 종료 신호 (CancelledError 포함 모든 경우에 전송)
             await event_queue.put(None)
 
     pipeline_task = asyncio.create_task(run_pipeline_task())
@@ -205,6 +209,12 @@ async def _stream_turn_events(
         if ctx.output is not None:
             async for line in stream_output_with_narrative(ctx.output):
                 yield line
+
+    except asyncio.CancelledError:
+        # RU-005-S2: 클라이언트 Abort(연결 취소) 시 조용히 종료
+        # - 추가 이벤트(error/final) 송출하지 않음
+        # - 로그도 noisy하지 않게 남기지 않음 (프론트 정책과 맞춤)
+        pass
 
     except Exception:
         # 예외 발생 시 error + final(폴백) 순서로 송출 (RULE-004, RU-005-Q3: 헬퍼 사용)

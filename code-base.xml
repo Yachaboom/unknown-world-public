@@ -1893,306 +1893,6 @@ __all__ = [
 ]
 </file>
 
-<file path="backend/src/unknown_world/validation/business_rules.py">
-"""Unknown World - 비즈니스 룰 검증기 (Hard Gate).
-
-스키마 검증 이후에도 남는 "의미적 실패"를 검증합니다:
-- Economy: cost/balance_after 일관성, 잔액 음수 금지
-- Language: TurnInput.language와 TurnOutput.language 불일치 차단
-- Box2D: 0~1000 범위 + [ymin,xmin,ymax,xmax] 순서 검증
-- Safety: blocked 시 안전한 대체 결과 제공 확인
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
-    - RULE-006: ko/en 언어 정책 준수
-    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/unit-results/U-017[Mvp].md
-"""
-
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from unknown_world.models.turn import TurnInput, TurnOutput
-
-# =============================================================================
-# 로거 설정
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 에러 타입
-# =============================================================================
-
-
-class BusinessRuleError(StrEnum):
-    """비즈니스 룰 위반 타입."""
-
-    # Economy 규칙 (RULE-005)
-    ECONOMY_NEGATIVE_BALANCE = "economy_negative_balance"
-    """잔액이 음수입니다 (금지)"""
-
-    ECONOMY_COST_MISMATCH = "economy_cost_mismatch"
-    """비용과 잔액 변화가 일치하지 않습니다"""
-
-    ECONOMY_COST_MISSING = "economy_cost_missing"
-    """비용 정보가 누락되었습니다"""
-
-    # Language 규칙 (RULE-006)
-    LANGUAGE_MISMATCH = "language_mismatch"
-    """입력과 출력 언어가 일치하지 않습니다"""
-
-    # Box2D 규칙 (RULE-009)
-    BOX2D_OUT_OF_RANGE = "box2d_out_of_range"
-    """좌표가 0~1000 범위를 벗어났습니다"""
-
-    BOX2D_INVALID_ORDER = "box2d_invalid_order"
-    """bbox 순서가 올바르지 않습니다 (ymin < ymax, xmin < xmax 필요)"""
-
-    # Safety 규칙
-    SAFETY_BLOCKED_NO_FALLBACK = "safety_blocked_no_fallback"
-    """차단되었지만 안전한 대체 결과가 제공되지 않았습니다"""
-
-
-# =============================================================================
-# 검증 결과 타입
-# =============================================================================
-
-
-@dataclass
-class BusinessRuleValidationResult:
-    """비즈니스 룰 검증 결과.
-
-    Attributes:
-        is_valid: 모든 검증 통과 여부
-        errors: 발견된 위반 목록
-        error_summary: 에러 요약 (Repair 프롬프트용)
-    """
-
-    is_valid: bool = True
-    errors: list[dict[str, str]] = field(default_factory=lambda: [])
-    error_summary: str = ""
-
-    def add_error(self, error_type: BusinessRuleError, message: str) -> None:
-        """에러를 추가합니다."""
-        self.is_valid = False
-        self.errors.append({"type": error_type.value, "message": message})
-
-    def build_summary(self) -> str:
-        """에러 요약을 생성합니다 (Repair 프롬프트용)."""
-        if not self.errors:
-            self.error_summary = ""
-            return ""
-
-        summary_lines = ["다음 비즈니스 룰을 위반했습니다:"]
-        for err in self.errors:
-            summary_lines.append(f"- {err['message']}")
-
-        self.error_summary = "\n".join(summary_lines)
-        return self.error_summary
-
-
-# =============================================================================
-# 개별 검증 함수
-# =============================================================================
-
-
-def _validate_economy(
-    turn_input: TurnInput,
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Economy 규칙을 검증합니다 (RULE-005).
-
-    검증 항목:
-    - 잔액 음수 금지
-    - snapshot 대비 과도한 비용 청구 금지
-    - cost와 balance_after 일관성
-    """
-    economy = turn_output.economy
-    snapshot = turn_input.economy_snapshot
-
-    # 1. 과도한 비용 청구 금지 (snapshot < cost)
-    if snapshot.signal < economy.cost.signal:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Signal 재화가 부족합니다: 보유 {snapshot.signal}, 필요 {economy.cost.signal}",
-        )
-
-    if snapshot.memory_shard < economy.cost.memory_shard:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Memory Shard 재화가 부족합니다: 보유 {snapshot.memory_shard}, 필요 {economy.cost.memory_shard}",
-        )
-
-    # 2. 잔액 음수 금지 (이미 필드 수준 ge=0 검증이 있지만, 비즈니스 룰에서도 명시)
-    if economy.balance_after.signal < 0:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Signal 잔액이 음수입니다: {economy.balance_after.signal}",
-        )
-
-    if economy.balance_after.memory_shard < 0:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Memory Shard 잔액이 음수입니다: {economy.balance_after.memory_shard}",
-        )
-
-    # 3. cost와 balance_after 일관성 검증
-    # balance_after = snapshot - cost 여야 함
-    expected_signal = snapshot.signal - economy.cost.signal
-    expected_shard = snapshot.memory_shard - economy.cost.memory_shard
-
-    # 이미 위에서 snapshot < cost 체크를 했으므로,
-    # 여기서는 단순 일치 여부만 확인 (음수 결과는 위에서 차단됨)
-    if economy.balance_after.signal != expected_signal:
-        result.add_error(
-            BusinessRuleError.ECONOMY_COST_MISMATCH,
-            f"Signal 잔액 불일치: 예상 {expected_signal}, 실제 {economy.balance_after.signal}",
-        )
-
-    if economy.balance_after.memory_shard != expected_shard:
-        result.add_error(
-            BusinessRuleError.ECONOMY_COST_MISMATCH,
-            f"Memory Shard 잔액 불일치: 예상 {expected_shard}, 실제 {economy.balance_after.memory_shard}",
-        )
-
-
-def _validate_language(
-    turn_input: TurnInput,
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Language 규칙을 검증합니다 (RULE-006).
-
-    검증 항목:
-    - TurnInput.language와 TurnOutput.language 일치
-    """
-    if turn_input.language != turn_output.language:
-        result.add_error(
-            BusinessRuleError.LANGUAGE_MISMATCH,
-            f"언어 불일치: 입력 {turn_input.language.value}, 출력 {turn_output.language.value}",
-        )
-
-
-def _validate_box2d(
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Box2D 좌표 규칙을 검증합니다 (RULE-009).
-
-    검증 항목:
-    - 0~1000 범위
-    - ymin < ymax, xmin < xmax 순서
-    """
-    # UI 오브젝트의 box2d 검증
-    for obj in turn_output.ui.objects:
-        box = obj.box_2d
-
-        # 범위 검증 (0~1000)
-        coords = [box.ymin, box.xmin, box.ymax, box.xmax]
-        for coord in coords:
-            if coord < 0 or coord > 1000:
-                result.add_error(
-                    BusinessRuleError.BOX2D_OUT_OF_RANGE,
-                    f"오브젝트 '{obj.id}'의 좌표가 범위를 벗어남: {coord}",
-                )
-                break  # 한 오브젝트에 대해 한 번만 보고
-
-        # 순서 검증 (ymin < ymax, xmin < xmax)
-        if box.ymin >= box.ymax:
-            result.add_error(
-                BusinessRuleError.BOX2D_INVALID_ORDER,
-                f"오브젝트 '{obj.id}'의 ymin({box.ymin}) >= ymax({box.ymax})",
-            )
-
-        if box.xmin >= box.xmax:
-            result.add_error(
-                BusinessRuleError.BOX2D_INVALID_ORDER,
-                f"오브젝트 '{obj.id}'의 xmin({box.xmin}) >= xmax({box.xmax})",
-            )
-
-
-def _validate_safety(
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Safety 규칙을 검증합니다.
-
-    검증 항목:
-    - blocked 시 안전한 대체 결과(narrative) 제공 확인
-    """
-    safety = turn_output.safety
-
-    # 차단 시에도 narrative가 있어야 함 (안전한 대체 결과)
-    if safety.blocked and (not turn_output.narrative or len(turn_output.narrative.strip()) == 0):
-        result.add_error(
-            BusinessRuleError.SAFETY_BLOCKED_NO_FALLBACK,
-            "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
-        )
-
-
-# =============================================================================
-# 메인 검증 함수
-# =============================================================================
-
-
-def validate_business_rules(
-    turn_input: TurnInput,
-    turn_output: TurnOutput,
-) -> BusinessRuleValidationResult:
-    """비즈니스 룰을 검증합니다.
-
-    스키마 검증 이후 호출되며, 의미적 규칙을 검증합니다.
-
-    Args:
-        turn_input: 사용자 턴 입력
-        turn_output: 생성된 턴 출력
-
-    Returns:
-        BusinessRuleValidationResult: 검증 결과
-
-    Example:
-        >>> result = validate_business_rules(turn_input, turn_output)
-        >>> if not result.is_valid:
-        ...     print(result.build_summary())
-    """
-    result = BusinessRuleValidationResult()
-
-    # 1. Economy 검증 (RULE-005)
-    _validate_economy(turn_input, turn_output, result)
-
-    # 2. Language 검증 (RULE-006)
-    _validate_language(turn_input, turn_output, result)
-
-    # 3. Box2D 검증 (RULE-009)
-    _validate_box2d(turn_output, result)
-
-    # 4. Safety 검증
-    _validate_safety(turn_output, result)
-
-    # 에러 요약 생성
-    if not result.is_valid:
-        result.build_summary()
-        logger.warning(
-            "[BusinessRules] 검증 실패",
-            extra={"error_count": len(result.errors)},
-        )
-
-    return result
-</file>
-
 <file path="backend/tests/integration/test_api.py">
 from fastapi.testclient import TestClient
 
@@ -6788,335 +6488,6 @@ async def generate_turn_output(
     )
 </file>
 
-<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
-"""Unknown World - Repair Loop (제한된 재시도).
-
-스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
-max_repair_attempts 내에서 repair 재요청을 수행하고,
-최종 실패 시 안전한 폴백으로 종료합니다.
-
-설계 원칙:
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
-
-페어링 결정:
-    - Q1: max_repair_attempts = 2 (Option A)
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/unit-results/U-017[Mvp].md
-"""
-
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-from unknown_world.config.models import ModelLabel
-from unknown_world.models.turn import (
-    CurrencyAmount,
-    TurnInput,
-    TurnOutput,
-    ValidationBadge,
-)
-from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.generate_turn_output import (
-    GenerationResult,
-    GenerationStatus,
-    get_turn_output_generator,
-)
-from unknown_world.validation.business_rules import (
-    BusinessRuleValidationResult,
-    validate_business_rules,
-)
-
-if TYPE_CHECKING:
-    pass
-
-# =============================================================================
-# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 설정 상수
-# =============================================================================
-
-# 페어링 결정: Q1 = Option A (2회)
-MAX_REPAIR_ATTEMPTS = 2
-"""최대 복구 시도 횟수."""
-
-
-# =============================================================================
-# Repair Loop 결과 타입
-# =============================================================================
-
-
-@dataclass
-class RepairLoopResult:
-    """Repair Loop 결과.
-
-    Attributes:
-        output: 최종 TurnOutput (성공 또는 폴백)
-        total_attempts: 총 시도 횟수 (초기 시도 포함)
-        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
-        is_fallback: 폴백으로 종료되었는지
-        badges: 검증 배지 목록
-        error_messages: 각 시도의 에러 메시지 (UI 노출용)
-    """
-
-    output: TurnOutput
-    total_attempts: int = 1
-    repair_attempts: int = 0
-    is_fallback: bool = False
-    badges: list[ValidationBadge] = field(default_factory=lambda: [])
-    error_messages: list[str] = field(default_factory=lambda: [])
-
-
-# =============================================================================
-# Repair Loop 함수
-# =============================================================================
-
-
-async def run_repair_loop(
-    turn_input: TurnInput,
-    *,
-    model_label: ModelLabel | None = None,
-    world_context: str = "",
-    force_mock: bool = False,
-    max_attempts: int = MAX_REPAIR_ATTEMPTS,
-) -> RepairLoopResult:
-    """Repair Loop를 실행합니다.
-
-    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
-    최종 실패 시 안전한 폴백을 반환합니다.
-
-    Args:
-        turn_input: 사용자 턴 입력
-        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
-        world_context: 현재 세계 상태 요약 (선택)
-        force_mock: Mock 클라이언트 강제 사용 여부
-        max_attempts: 최대 복구 시도 횟수
-
-    Returns:
-        RepairLoopResult: 최종 결과 (성공 또는 폴백)
-
-    Example:
-        >>> result = await run_repair_loop(turn_input)
-        >>> if result.is_fallback:
-        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
-        >>> print(result.output.narrative)
-    """
-    generator = get_turn_output_generator(force_mock=force_mock)
-    economy_snapshot = CurrencyAmount(
-        signal=turn_input.economy_snapshot.signal,
-        memory_shard=turn_input.economy_snapshot.memory_shard,
-    )
-
-    error_messages: list[str] = []
-    badges: list[ValidationBadge] = []
-    repair_context = ""  # 재시도 시 추가할 컨텍스트
-
-    last_attempt = 0
-    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
-        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
-        last_attempt = attempt
-        is_repair = attempt > 0
-
-        # 로그 기록 (프롬프트 노출 금지)
-        logger.info(
-            "[RepairLoop] 시도",
-            extra={
-                "attempt": attempt,
-                "is_repair": is_repair,
-                "language": turn_input.language.value,
-            },
-        )
-
-        # 컨텍스트 구성 (복구 시 에러 요약 추가)
-        current_context = world_context
-        if is_repair and repair_context:
-            current_context = f"{world_context}\n\n{repair_context}"
-
-        # 생성 시도
-        gen_result = await generator.generate(
-            turn_input,
-            model_label=model_label,
-            world_context=current_context,
-        )
-
-        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
-        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            repair_context = _build_repair_context_schema(gen_result)
-            continue
-
-        # 2. API 에러
-        if gen_result.status == GenerationStatus.API_ERROR:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
-            # 하지만 일시적 오류일 수 있으므로 재시도 허용
-            repair_context = ""
-            continue
-
-        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
-        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
-            badges.append(ValidationBadge.SCHEMA_OK)
-
-            # 비즈니스 룰 검증
-            biz_result = validate_business_rules(turn_input, gen_result.output)
-
-            if biz_result.is_valid:
-                # 모든 검증 통과
-                badges.extend(
-                    [
-                        ValidationBadge.ECONOMY_OK,
-                        ValidationBadge.SAFETY_OK,
-                        ValidationBadge.CONSISTENCY_OK,
-                    ]
-                )
-
-                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
-                gen_result.output.agent_console.badges = badges
-                gen_result.output.agent_console.repair_count = attempt
-
-                logger.info(
-                    "[RepairLoop] 성공",
-                    extra={
-                        "total_attempts": attempt + 1,
-                        "repair_attempts": attempt,
-                    },
-                )
-
-                return RepairLoopResult(
-                    output=gen_result.output,
-                    total_attempts=attempt + 1,
-                    repair_attempts=attempt,
-                    is_fallback=False,
-                    badges=badges,
-                    error_messages=error_messages,
-                )
-
-            # 비즈니스 룰 실패
-            add_business_badges(biz_result, badges)
-            error_messages.append(biz_result.error_summary)
-            repair_context = _build_repair_context_business(biz_result)
-            continue
-
-        # 4. 안전 차단
-        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
-            badges.append(ValidationBadge.SAFETY_BLOCKED)
-            # 안전 차단은 재시도 불가 → 즉시 폴백
-            logger.warning(
-                "[RepairLoop] 안전 차단으로 폴백",
-                extra={"attempt": attempt},
-            )
-            break
-
-    # 최종 실패 → 안전한 폴백 반환
-    logger.warning(
-        "[RepairLoop] 최종 폴백 반환",
-        extra={
-            "max_attempts": max_attempts,
-            "actual_attempts": last_attempt,
-        },
-    )
-
-    fallback = create_safe_fallback(
-        language=turn_input.language,
-        economy_snapshot=economy_snapshot,
-        repair_count=last_attempt,
-        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
-    )
-
-    return RepairLoopResult(
-        output=fallback,
-        total_attempts=last_attempt + 1,
-        repair_attempts=last_attempt,
-        is_fallback=True,
-        badges=badges,
-        error_messages=error_messages,
-    )
-
-
-# =============================================================================
-# 헬퍼 함수
-# =============================================================================
-
-
-def _build_repair_context_schema(gen_result: GenerationResult) -> str:
-    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
-
-    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
-    """
-    # 짧은 요약만 포함 (RULE-007/008)
-    return """
-## 이전 시도 결과
-
-응답 형식이 올바르지 않았습니다.
-TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.
-"""
-
-
-def _build_repair_context_business(biz_result: BusinessRuleValidationResult) -> str:
-    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다."""
-    return f"""
-## 이전 시도 결과
-
-{biz_result.error_summary}
-
-위 규칙을 준수하여 다시 생성하세요.
-"""
-
-
-def add_business_badges(
-    biz_result: BusinessRuleValidationResult,
-    badges: list[ValidationBadge],
-) -> None:
-    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
-
-    에러 타입 접두어 → 배지 매핑:
-        - economy_* → ECONOMY_FAIL
-        - safety_* → SAFETY_BLOCKED
-        - language_* 또는 box2d_* → CONSISTENCY_FAIL
-
-    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
-
-    Args:
-        biz_result: 비즈니스 룰 검증 결과
-        badges: 배지 목록 (in-place 수정)
-    """
-    # 에러 타입별 배지 매핑 (RU-005-S1)
-    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
-    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
-    has_consistency_error = any(
-        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
-    )
-
-    # Economy 배지
-    if has_economy_error:
-        badges.append(ValidationBadge.ECONOMY_FAIL)
-    else:
-        badges.append(ValidationBadge.ECONOMY_OK)
-
-    # Safety 배지
-    if has_safety_error:
-        badges.append(ValidationBadge.SAFETY_BLOCKED)
-    else:
-        badges.append(ValidationBadge.SAFETY_OK)
-
-    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
-    if has_consistency_error:
-        badges.append(ValidationBadge.CONSISTENCY_FAIL)
-    else:
-        badges.append(ValidationBadge.CONSISTENCY_OK)
-</file>
-
 <file path="backend/src/unknown_world/orchestrator/stages/validate.py">
 """Unknown World - Validate Stage.
 
@@ -7782,6 +7153,370 @@ def reset_genai_client() -> None:
     """
     global _client_instance
     _client_instance = None
+</file>
+
+<file path="backend/src/unknown_world/validation/business_rules.py">
+"""Unknown World - 비즈니스 룰 검증기 (Hard Gate).
+
+스키마 검증 이후에도 남는 "의미적 실패"를 검증합니다:
+- Economy: cost/balance_after 일관성, 잔액 음수 금지
+- Language: TurnInput.language와 TurnOutput.language 불일치 차단
+- Box2D: 0~1000 범위 + [ymin,xmin,ymax,xmax] 순서 검증
+- Safety: blocked 시 안전한 대체 결과 제공 확인
+
+설계 원칙:
+    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
+    - RULE-006: ko/en 언어 정책 준수
+    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-results/U-017[Mvp].md
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import TYPE_CHECKING
+
+from unknown_world.models.turn import Language
+
+if TYPE_CHECKING:
+    from unknown_world.models.turn import TurnInput, TurnOutput
+
+# =============================================================================
+# 로거 설정
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# i18n 에러 메시지 (RULE-006: ko/en 언어 정책 준수)
+# =============================================================================
+
+BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "summary_header": "다음 비즈니스 룰을 위반했습니다:",
+        "signal_insufficient": "Signal 재화가 부족합니다: 보유 {have}, 필요 {need}",
+        "memory_shard_insufficient": "Memory Shard 재화가 부족합니다: 보유 {have}, 필요 {need}",
+        "signal_negative": "Signal 잔액이 음수입니다: {value}",
+        "memory_shard_negative": "Memory Shard 잔액이 음수입니다: {value}",
+        "signal_mismatch": "Signal 잔액 불일치: 예상 {expected}, 실제 {actual}",
+        "memory_shard_mismatch": "Memory Shard 잔액 불일치: 예상 {expected}, 실제 {actual}",
+        "language_mismatch": "언어 불일치: 입력 {input_lang}, 출력 {output_lang}",
+        "box2d_out_of_range": "오브젝트 '{obj_id}'의 좌표가 범위를 벗어남: {coord}",
+        "box2d_invalid_yorder": "오브젝트 '{obj_id}'의 ymin({ymin}) >= ymax({ymax})",
+        "box2d_invalid_xorder": "오브젝트 '{obj_id}'의 xmin({xmin}) >= xmax({xmax})",
+        "safety_blocked_no_fallback": "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
+    },
+    Language.EN: {
+        "summary_header": "The following business rules were violated:",
+        "signal_insufficient": "Insufficient Signal: have {have}, need {need}",
+        "memory_shard_insufficient": "Insufficient Memory Shard: have {have}, need {need}",
+        "signal_negative": "Signal balance is negative: {value}",
+        "memory_shard_negative": "Memory Shard balance is negative: {value}",
+        "signal_mismatch": "Signal balance mismatch: expected {expected}, actual {actual}",
+        "memory_shard_mismatch": "Memory Shard balance mismatch: expected {expected}, actual {actual}",
+        "language_mismatch": "Language mismatch: input {input_lang}, output {output_lang}",
+        "box2d_out_of_range": "Object '{obj_id}' coordinate out of range: {coord}",
+        "box2d_invalid_yorder": "Object '{obj_id}' ymin({ymin}) >= ymax({ymax})",
+        "box2d_invalid_xorder": "Object '{obj_id}' xmin({xmin}) >= xmax({xmax})",
+        "safety_blocked_no_fallback": "Blocked by safety policy but no fallback text provided",
+    },
+}
+
+
+# =============================================================================
+# 에러 타입
+# =============================================================================
+
+
+class BusinessRuleError(StrEnum):
+    """비즈니스 룰 위반 타입."""
+
+    # Economy 규칙 (RULE-005)
+    ECONOMY_NEGATIVE_BALANCE = "economy_negative_balance"
+    """잔액이 음수입니다 (금지)"""
+
+    ECONOMY_COST_MISMATCH = "economy_cost_mismatch"
+    """비용과 잔액 변화가 일치하지 않습니다"""
+
+    ECONOMY_COST_MISSING = "economy_cost_missing"
+    """비용 정보가 누락되었습니다"""
+
+    # Language 규칙 (RULE-006)
+    LANGUAGE_MISMATCH = "language_mismatch"
+    """입력과 출력 언어가 일치하지 않습니다"""
+
+    # Box2D 규칙 (RULE-009)
+    BOX2D_OUT_OF_RANGE = "box2d_out_of_range"
+    """좌표가 0~1000 범위를 벗어났습니다"""
+
+    BOX2D_INVALID_ORDER = "box2d_invalid_order"
+    """bbox 순서가 올바르지 않습니다 (ymin < ymax, xmin < xmax 필요)"""
+
+    # Safety 규칙
+    SAFETY_BLOCKED_NO_FALLBACK = "safety_blocked_no_fallback"
+    """차단되었지만 안전한 대체 결과가 제공되지 않았습니다"""
+
+
+# =============================================================================
+# 검증 결과 타입
+# =============================================================================
+
+
+@dataclass
+class BusinessRuleValidationResult:
+    """비즈니스 룰 검증 결과.
+
+    Attributes:
+        is_valid: 모든 검증 통과 여부
+        errors: 발견된 위반 목록
+        error_summary: 에러 요약 (Repair 프롬프트용)
+        language: 응답 언어 (RULE-006)
+    """
+
+    is_valid: bool = True
+    errors: list[dict[str, str]] = field(default_factory=lambda: [])
+    error_summary: str = ""
+    language: Language = Language.KO
+
+    def add_error(self, error_type: BusinessRuleError, message: str) -> None:
+        """에러를 추가합니다."""
+        self.is_valid = False
+        self.errors.append({"type": error_type.value, "message": message})
+
+    def build_summary(self) -> str:
+        """에러 요약을 생성합니다 (Repair 프롬프트용).
+
+        언어에 따라 헤더 메시지를 분기합니다 (RULE-006).
+        """
+        if not self.errors:
+            self.error_summary = ""
+            return ""
+
+        messages = BUSINESS_RULE_MESSAGES[self.language]
+        summary_lines = [messages["summary_header"]]
+        for err in self.errors:
+            summary_lines.append(f"- {err['message']}")
+
+        self.error_summary = "\n".join(summary_lines)
+        return self.error_summary
+
+
+# =============================================================================
+# 개별 검증 함수
+# =============================================================================
+
+
+def _validate_economy(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Economy 규칙을 검증합니다 (RULE-005).
+
+    검증 항목:
+    - 잔액 음수 금지
+    - snapshot 대비 과도한 비용 청구 금지
+    - cost와 balance_after 일관성
+    """
+    economy = turn_output.economy
+    snapshot = turn_input.economy_snapshot
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # 1. 과도한 비용 청구 금지 (snapshot < cost)
+    if snapshot.signal < economy.cost.signal:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["signal_insufficient"].format(have=snapshot.signal, need=economy.cost.signal),
+        )
+
+    if snapshot.memory_shard < economy.cost.memory_shard:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["memory_shard_insufficient"].format(
+                have=snapshot.memory_shard, need=economy.cost.memory_shard
+            ),
+        )
+
+    # 2. 잔액 음수 금지 (이미 필드 수준 ge=0 검증이 있지만, 비즈니스 룰에서도 명시)
+    if economy.balance_after.signal < 0:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["signal_negative"].format(value=economy.balance_after.signal),
+        )
+
+    if economy.balance_after.memory_shard < 0:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["memory_shard_negative"].format(value=economy.balance_after.memory_shard),
+        )
+
+    # 3. cost와 balance_after 일관성 검증
+    # balance_after = snapshot - cost 여야 함
+    expected_signal = snapshot.signal - economy.cost.signal
+    expected_shard = snapshot.memory_shard - economy.cost.memory_shard
+
+    # 이미 위에서 snapshot < cost 체크를 했으므로,
+    # 여기서는 단순 일치 여부만 확인 (음수 결과는 위에서 차단됨)
+    if economy.balance_after.signal != expected_signal:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            messages["signal_mismatch"].format(
+                expected=expected_signal, actual=economy.balance_after.signal
+            ),
+        )
+
+    if economy.balance_after.memory_shard != expected_shard:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            messages["memory_shard_mismatch"].format(
+                expected=expected_shard, actual=economy.balance_after.memory_shard
+            ),
+        )
+
+
+def _validate_language(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Language 규칙을 검증합니다 (RULE-006).
+
+    검증 항목:
+    - TurnInput.language와 TurnOutput.language 일치
+    """
+    if turn_input.language != turn_output.language:
+        messages = BUSINESS_RULE_MESSAGES[result.language]
+        result.add_error(
+            BusinessRuleError.LANGUAGE_MISMATCH,
+            messages["language_mismatch"].format(
+                input_lang=turn_input.language.value,
+                output_lang=turn_output.language.value,
+            ),
+        )
+
+
+def _validate_box2d(
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Box2D 좌표 규칙을 검증합니다 (RULE-009).
+
+    검증 항목:
+    - 0~1000 범위
+    - ymin < ymax, xmin < xmax 순서
+    """
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # UI 오브젝트의 box2d 검증
+    for obj in turn_output.ui.objects:
+        box = obj.box_2d
+
+        # 범위 검증 (0~1000)
+        coords = [box.ymin, box.xmin, box.ymax, box.xmax]
+        for coord in coords:
+            if coord < 0 or coord > 1000:
+                result.add_error(
+                    BusinessRuleError.BOX2D_OUT_OF_RANGE,
+                    messages["box2d_out_of_range"].format(obj_id=obj.id, coord=coord),
+                )
+                break  # 한 오브젝트에 대해 한 번만 보고
+
+        # 순서 검증 (ymin < ymax, xmin < xmax)
+        if box.ymin >= box.ymax:
+            result.add_error(
+                BusinessRuleError.BOX2D_INVALID_ORDER,
+                messages["box2d_invalid_yorder"].format(
+                    obj_id=obj.id, ymin=box.ymin, ymax=box.ymax
+                ),
+            )
+
+        if box.xmin >= box.xmax:
+            result.add_error(
+                BusinessRuleError.BOX2D_INVALID_ORDER,
+                messages["box2d_invalid_xorder"].format(
+                    obj_id=obj.id, xmin=box.xmin, xmax=box.xmax
+                ),
+            )
+
+
+def _validate_safety(
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Safety 규칙을 검증합니다.
+
+    검증 항목:
+    - blocked 시 안전한 대체 결과(narrative) 제공 확인
+    """
+    safety = turn_output.safety
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # 차단 시에도 narrative가 있어야 함 (안전한 대체 결과)
+    if safety.blocked and (not turn_output.narrative or len(turn_output.narrative.strip()) == 0):
+        result.add_error(
+            BusinessRuleError.SAFETY_BLOCKED_NO_FALLBACK,
+            messages["safety_blocked_no_fallback"],
+        )
+
+
+# =============================================================================
+# 메인 검증 함수
+# =============================================================================
+
+
+def validate_business_rules(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+) -> BusinessRuleValidationResult:
+    """비즈니스 룰을 검증합니다.
+
+    스키마 검증 이후 호출되며, 의미적 규칙을 검증합니다.
+    에러 메시지는 turn_input.language에 따라 분기됩니다 (RULE-006).
+
+    Args:
+        turn_input: 사용자 턴 입력
+        turn_output: 생성된 턴 출력
+
+    Returns:
+        BusinessRuleValidationResult: 검증 결과
+
+    Example:
+        >>> result = validate_business_rules(turn_input, turn_output)
+        >>> if not result.is_valid:
+        ...     print(result.build_summary())
+    """
+    # RU-005-S2: turn_input.language에 따라 에러 메시지 i18n 분기
+    result = BusinessRuleValidationResult(language=turn_input.language)
+
+    # 1. Economy 검증 (RULE-005)
+    _validate_economy(turn_input, turn_output, result)
+
+    # 2. Language 검증 (RULE-006)
+    _validate_language(turn_input, turn_output, result)
+
+    # 3. Box2D 검증 (RULE-009)
+    _validate_box2d(turn_output, result)
+
+    # 4. Safety 검증
+    _validate_safety(turn_output, result)
+
+    # 에러 요약 생성
+    if not result.is_valid:
+        result.build_summary()
+        logger.warning(
+            "[BusinessRules] 검증 실패",
+            extra={"error_count": len(result.errors)},
+        )
+
+    return result
 </file>
 
 <file path="backend/tests/unit/services/test_genai_client.py">
@@ -10959,6 +10694,376 @@ __all__ = [
     "load_system_prompt",
     "load_turn_instructions",
 ]
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
+"""Unknown World - Repair Loop (제한된 재시도).
+
+스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
+max_repair_attempts 내에서 repair 재요청을 수행하고,
+최종 실패 시 안전한 폴백으로 종료합니다.
+
+설계 원칙:
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
+
+페어링 결정:
+    - Q1: max_repair_attempts = 2 (Option A)
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-results/U-017[Mvp].md
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from unknown_world.config.models import ModelLabel
+from unknown_world.models.turn import (
+    CurrencyAmount,
+    Language,
+    TurnInput,
+    TurnOutput,
+    ValidationBadge,
+)
+from unknown_world.orchestrator.fallback import create_safe_fallback
+from unknown_world.orchestrator.generate_turn_output import (
+    GenerationResult,
+    GenerationStatus,
+    get_turn_output_generator,
+)
+from unknown_world.validation.business_rules import (
+    BusinessRuleValidationResult,
+    validate_business_rules,
+)
+
+if TYPE_CHECKING:
+    pass
+
+# =============================================================================
+# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 설정 상수
+# =============================================================================
+
+# 페어링 결정: Q1 = Option A (2회)
+MAX_REPAIR_ATTEMPTS = 2
+"""최대 복구 시도 횟수."""
+
+
+# =============================================================================
+# i18n Repair 컨텍스트 메시지 (RULE-006, RU-005-S2)
+# =============================================================================
+
+REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "schema_header": "## 이전 시도 결과",
+        "schema_error": "응답 형식이 올바르지 않았습니다.",
+        "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
+        "business_header": "## 이전 시도 결과",
+        "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
+    },
+    Language.EN: {
+        "schema_header": "## Previous Attempt Result",
+        "schema_error": "The response format was invalid.",
+        "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
+        "business_header": "## Previous Attempt Result",
+        "business_instruction": "Please regenerate following the rules above.",
+    },
+}
+
+
+# =============================================================================
+# Repair Loop 결과 타입
+# =============================================================================
+
+
+@dataclass
+class RepairLoopResult:
+    """Repair Loop 결과.
+
+    Attributes:
+        output: 최종 TurnOutput (성공 또는 폴백)
+        total_attempts: 총 시도 횟수 (초기 시도 포함)
+        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
+        is_fallback: 폴백으로 종료되었는지
+        badges: 검증 배지 목록
+        error_messages: 각 시도의 에러 메시지 (UI 노출용)
+    """
+
+    output: TurnOutput
+    total_attempts: int = 1
+    repair_attempts: int = 0
+    is_fallback: bool = False
+    badges: list[ValidationBadge] = field(default_factory=lambda: [])
+    error_messages: list[str] = field(default_factory=lambda: [])
+
+
+# =============================================================================
+# Repair Loop 함수
+# =============================================================================
+
+
+async def run_repair_loop(
+    turn_input: TurnInput,
+    *,
+    model_label: ModelLabel | None = None,
+    world_context: str = "",
+    force_mock: bool = False,
+    max_attempts: int = MAX_REPAIR_ATTEMPTS,
+) -> RepairLoopResult:
+    """Repair Loop를 실행합니다.
+
+    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
+    최종 실패 시 안전한 폴백을 반환합니다.
+
+    Args:
+        turn_input: 사용자 턴 입력
+        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
+        world_context: 현재 세계 상태 요약 (선택)
+        force_mock: Mock 클라이언트 강제 사용 여부
+        max_attempts: 최대 복구 시도 횟수
+
+    Returns:
+        RepairLoopResult: 최종 결과 (성공 또는 폴백)
+
+    Example:
+        >>> result = await run_repair_loop(turn_input)
+        >>> if result.is_fallback:
+        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
+        >>> print(result.output.narrative)
+    """
+    generator = get_turn_output_generator(force_mock=force_mock)
+    economy_snapshot = CurrencyAmount(
+        signal=turn_input.economy_snapshot.signal,
+        memory_shard=turn_input.economy_snapshot.memory_shard,
+    )
+
+    error_messages: list[str] = []
+    badges: list[ValidationBadge] = []
+    repair_context = ""  # 재시도 시 추가할 컨텍스트
+
+    last_attempt = 0
+    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
+        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
+        last_attempt = attempt
+        is_repair = attempt > 0
+
+        # 로그 기록 (프롬프트 노출 금지)
+        logger.info(
+            "[RepairLoop] 시도",
+            extra={
+                "attempt": attempt,
+                "is_repair": is_repair,
+                "language": turn_input.language.value,
+            },
+        )
+
+        # 컨텍스트 구성 (복구 시 에러 요약 추가)
+        current_context = world_context
+        if is_repair and repair_context:
+            current_context = f"{world_context}\n\n{repair_context}"
+
+        # 생성 시도
+        gen_result = await generator.generate(
+            turn_input,
+            model_label=model_label,
+            world_context=current_context,
+        )
+
+        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
+        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_schema(gen_result, turn_input.language)
+            continue
+
+        # 2. API 에러
+        if gen_result.status == GenerationStatus.API_ERROR:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
+            # 하지만 일시적 오류일 수 있으므로 재시도 허용
+            repair_context = ""
+            continue
+
+        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
+        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
+            badges.append(ValidationBadge.SCHEMA_OK)
+
+            # 비즈니스 룰 검증
+            biz_result = validate_business_rules(turn_input, gen_result.output)
+
+            if biz_result.is_valid:
+                # 모든 검증 통과
+                badges.extend(
+                    [
+                        ValidationBadge.ECONOMY_OK,
+                        ValidationBadge.SAFETY_OK,
+                        ValidationBadge.CONSISTENCY_OK,
+                    ]
+                )
+
+                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
+                gen_result.output.agent_console.badges = badges
+                gen_result.output.agent_console.repair_count = attempt
+
+                logger.info(
+                    "[RepairLoop] 성공",
+                    extra={
+                        "total_attempts": attempt + 1,
+                        "repair_attempts": attempt,
+                    },
+                )
+
+                return RepairLoopResult(
+                    output=gen_result.output,
+                    total_attempts=attempt + 1,
+                    repair_attempts=attempt,
+                    is_fallback=False,
+                    badges=badges,
+                    error_messages=error_messages,
+                )
+
+            # 비즈니스 룰 실패
+            add_business_badges(biz_result, badges)
+            error_messages.append(biz_result.error_summary)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_business(biz_result, turn_input.language)
+            continue
+
+        # 4. 안전 차단
+        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
+            badges.append(ValidationBadge.SAFETY_BLOCKED)
+            # 안전 차단은 재시도 불가 → 즉시 폴백
+            logger.warning(
+                "[RepairLoop] 안전 차단으로 폴백",
+                extra={"attempt": attempt},
+            )
+            break
+
+    # 최종 실패 → 안전한 폴백 반환
+    logger.warning(
+        "[RepairLoop] 최종 폴백 반환",
+        extra={
+            "max_attempts": max_attempts,
+            "actual_attempts": last_attempt,
+        },
+    )
+
+    fallback = create_safe_fallback(
+        language=turn_input.language,
+        economy_snapshot=economy_snapshot,
+        repair_count=last_attempt,
+        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
+    )
+
+    return RepairLoopResult(
+        output=fallback,
+        total_attempts=last_attempt + 1,
+        repair_attempts=last_attempt,
+        is_fallback=True,
+        badges=badges,
+        error_messages=error_messages,
+    )
+
+
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
+
+
+def _build_repair_context_schema(gen_result: GenerationResult, language: Language) -> str:
+    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+
+    Args:
+        gen_result: 생성 결과
+        language: 응답 언어
+    """
+    # 짧은 요약만 포함 (RULE-007/008)
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+    return f"""
+{messages["schema_header"]}
+
+{messages["schema_error"]}
+{messages["schema_instruction"]}
+"""
+
+
+def _build_repair_context_business(
+    biz_result: BusinessRuleValidationResult, language: Language
+) -> str:
+    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        language: 응답 언어
+    """
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+    return f"""
+{messages["business_header"]}
+
+{biz_result.error_summary}
+
+{messages["business_instruction"]}
+"""
+
+
+def add_business_badges(
+    biz_result: BusinessRuleValidationResult,
+    badges: list[ValidationBadge],
+) -> None:
+    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
+
+    에러 타입 접두어 → 배지 매핑:
+        - economy_* → ECONOMY_FAIL
+        - safety_* → SAFETY_BLOCKED
+        - language_* 또는 box2d_* → CONSISTENCY_FAIL
+
+    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        badges: 배지 목록 (in-place 수정)
+    """
+    # 에러 타입별 배지 매핑 (RU-005-S1)
+    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
+    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
+    has_consistency_error = any(
+        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
+    )
+
+    # Economy 배지
+    if has_economy_error:
+        badges.append(ValidationBadge.ECONOMY_FAIL)
+    else:
+        badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety 배지
+    if has_safety_error:
+        badges.append(ValidationBadge.SAFETY_BLOCKED)
+    else:
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
+    if has_consistency_error:
+        badges.append(ValidationBadge.CONSISTENCY_FAIL)
+    else:
+        badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
 <file path="backend/tests/integration/test_turn_streaming.py">
@@ -16371,6 +16476,67 @@ export const selectCompletedQuests = (state: WorldStore) =>
 }
 </file>
 
+<file path="frontend/package.json">
+{
+  "name": "unknown-world-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "i18next": "25.7.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-i18next": "16.5.1",
+    "zod": "4.3.4",
+    "zustand": "5.0.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "globals": "16.5.0",
+    "jsdom": "^27.4.0",
+    "prettier": "3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.51.0",
+    "vite": "7.3.0",
+    "vitest": "^4.0.16"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
+</file>
+
 <file path="backend/src/unknown_world/api/turn.py">
 """Unknown World - /api/turn HTTP Streaming 엔드포인트.
 
@@ -16549,6 +16715,10 @@ async def _stream_turn_events(
         nonlocal ctx
         try:
             ctx = await run_pipeline(ctx, emit=emit)
+        except asyncio.CancelledError:
+            # RU-005-S2: 클라이언트 Abort 시 태스크도 취소됨
+            # - 폴백 생성 없이 즉시 종료 (프론트 정책과 맞춤)
+            raise  # finally 블록은 실행, 종료 신호만 보냄
         except Exception:
             # 예외 발생 시 폴백 (RULE-004)
             ctx.output = create_safe_fallback(
@@ -16558,7 +16728,7 @@ async def _stream_turn_events(
             )
             ctx.is_fallback = True
         finally:
-            # 종료 신호
+            # 종료 신호 (CancelledError 포함 모든 경우에 전송)
             await event_queue.put(None)
 
     pipeline_task = asyncio.create_task(run_pipeline_task())
@@ -16579,6 +16749,12 @@ async def _stream_turn_events(
         if ctx.output is not None:
             async for line in stream_output_with_narrative(ctx.output):
                 yield line
+
+    except asyncio.CancelledError:
+        # RU-005-S2: 클라이언트 Abort(연결 취소) 시 조용히 종료
+        # - 추가 이벤트(error/final) 송출하지 않음
+        # - 로그도 noisy하지 않게 남기지 않음 (프론트 정책과 맞춤)
+        pass
 
     except Exception:
         # 예외 발생 시 error + final(폴백) 순서로 송출 (RULE-004, RU-005-Q3: 헬퍼 사용)
@@ -16743,67 +16919,6 @@ async def turn_stream(request: Request) -> StreamingResponse:
             "X-Request-Time": str(int(time.time() * 1000)),
         },
     )
-</file>
-
-<file path="frontend/package.json">
-{
-  "name": "unknown-world-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "packageManager": "pnpm@10.27.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "6.3.1",
-    "@dnd-kit/sortable": "10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "i18next": "25.7.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-i18next": "16.5.1",
-    "zod": "4.3.4",
-    "zustand": "5.0.9"
-  },
-  "devDependencies": {
-    "@eslint/js": "9.39.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@types/node": "25.0.3",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "9.39.2",
-    "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-unused-imports": "4.3.0",
-    "globals": "16.5.0",
-    "jsdom": "^27.4.0",
-    "prettier": "3.7.4",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.51.0",
-    "vite": "7.3.0",
-    "vitest": "^4.0.16"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  }
-}
 </file>
 
 <file path="frontend/src/api/turnStream.ts">

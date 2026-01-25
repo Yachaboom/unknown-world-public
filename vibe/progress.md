@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 19:30] [RU-005-S2] 엣지 케이스: Cancel/예외/언어(i18n) 경로에서 stage·repair·final 정책을 일관되게 완료
+
+### 작업 내용
+
+- **제안서**: [RU-005-S2] 엣지 케이스: Cancel/예외/언어(i18n) 경로에서 stage·repair·final 정책을 일관되게
+- **개선 사항**:
+    - **i18n 인바리언트 강화(RULE-006)**: 비즈니스 룰 위반 메시지 및 Repair 루프의 시스템 지시문을 ko-KR/en-US 언어별로 분기 처리하여, 영어 요청 시 한국어 메시지가 섞여 나오는 현상을 원천 차단
+    - **Cancel 처리 정책 명시**: 클라이언트 연결 중단(`asyncio.CancelledError`) 시 서버가 추가 이벤트(error/final)를 송출하지 않고 조용히 종료되도록 하여 스트림 종료 동작의 예측 가능성 확보
+    - **관측 품질 안정화**: 예외 발생 시에도 파이프라인 단계별 실패 상태가 전달될 수 있도록 예외 처리 정책을 정비하고 최종 `final`(폴백) 수렴 보장
+- **영향 범위**: `backend/src/unknown_world/api/turn.py`, `backend/src/unknown_world/orchestrator/repair_loop.py`, `backend/src/unknown_world/validation/business_rules.py`, `backend/src/unknown_world/orchestrator/fallback.py`
+
+### 기술적 세부사항
+
+- **Localized Feedback Maps**: `BUSINESS_RULE_MESSAGES` 및 `REPAIR_CONTEXT_MESSAGES`를 도입하여 도메인 로직 내 메시지 생성을 언어별 SSOT로 관리
+- **Graceful Task Cancellation**: 스트리밍 루프 내에서 `CancelledError`를 명시적으로 포착하여 로그 노이즈를 줄이고 클라이언트 Abort 정책과 정렬
+
+### 검증
+
+- **i18n 일관성 확인**: `en-US` 요청 시 비즈니스 룰 실패 요약 및 Repair 피드백이 모두 영어로 출력됨을 확인.
+- **Abort 동작 확인**: 요청 도중 클라이언트 연결 취소 시 서버 태스크가 조용히 중단되고 불필요한 폴백 이벤트가 발생하지 않음을 확인.
+
+---
+
 ## [2026-01-25 18:15] [RU-005-Q1] 코드 중복: fallback/phase/repair 로직의 중복 제거로 드리프트 방지 완료
 
 ### 작업 내용

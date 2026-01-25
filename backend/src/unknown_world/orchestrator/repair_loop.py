@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 from unknown_world.config.models import ModelLabel
 from unknown_world.models.turn import (
     CurrencyAmount,
+    Language,
     TurnInput,
     TurnOutput,
     ValidationBadge,
@@ -57,6 +58,28 @@ logger = logging.getLogger(__name__)
 # 페어링 결정: Q1 = Option A (2회)
 MAX_REPAIR_ATTEMPTS = 2
 """최대 복구 시도 횟수."""
+
+
+# =============================================================================
+# i18n Repair 컨텍스트 메시지 (RULE-006, RU-005-S2)
+# =============================================================================
+
+REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "schema_header": "## 이전 시도 결과",
+        "schema_error": "응답 형식이 올바르지 않았습니다.",
+        "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
+        "business_header": "## 이전 시도 결과",
+        "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
+    },
+    Language.EN: {
+        "schema_header": "## Previous Attempt Result",
+        "schema_error": "The response format was invalid.",
+        "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
+        "business_header": "## Previous Attempt Result",
+        "business_instruction": "Please regenerate following the rules above.",
+    },
+}
 
 
 # =============================================================================
@@ -161,7 +184,8 @@ async def run_repair_loop(
         if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
             badges.append(ValidationBadge.SCHEMA_FAIL)
             error_messages.append(gen_result.error_message)
-            repair_context = _build_repair_context_schema(gen_result)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_schema(gen_result, turn_input.language)
             continue
 
         # 2. API 에러
@@ -214,7 +238,8 @@ async def run_repair_loop(
             # 비즈니스 룰 실패
             add_business_badges(biz_result, badges)
             error_messages.append(biz_result.error_summary)
-            repair_context = _build_repair_context_business(biz_result)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_business(biz_result, turn_input.language)
             continue
 
         # 4. 안전 차단
@@ -258,28 +283,44 @@ async def run_repair_loop(
 # =============================================================================
 
 
-def _build_repair_context_schema(gen_result: GenerationResult) -> str:
+def _build_repair_context_schema(gen_result: GenerationResult, language: Language) -> str:
     """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
 
     프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+
+    Args:
+        gen_result: 생성 결과
+        language: 응답 언어
     """
     # 짧은 요약만 포함 (RULE-007/008)
-    return """
-## 이전 시도 결과
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+    return f"""
+{messages["schema_header"]}
 
-응답 형식이 올바르지 않았습니다.
-TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.
+{messages["schema_error"]}
+{messages["schema_instruction"]}
 """
 
 
-def _build_repair_context_business(biz_result: BusinessRuleValidationResult) -> str:
-    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다."""
+def _build_repair_context_business(
+    biz_result: BusinessRuleValidationResult, language: Language
+) -> str:
+    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        language: 응답 언어
+    """
+    messages = REPAIR_CONTEXT_MESSAGES[language]
     return f"""
-## 이전 시도 결과
+{messages["business_header"]}
 
 {biz_result.error_summary}
 
-위 규칙을 준수하여 다시 생성하세요.
+{messages["business_instruction"]}
 """
 
 

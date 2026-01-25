@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from unknown_world.models.turn import Language
+
 if TYPE_CHECKING:
     from unknown_world.models.turn import TurnInput, TurnOutput
 
@@ -33,6 +35,42 @@ if TYPE_CHECKING:
 # =============================================================================
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# i18n 에러 메시지 (RULE-006: ko/en 언어 정책 준수)
+# =============================================================================
+
+BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "summary_header": "다음 비즈니스 룰을 위반했습니다:",
+        "signal_insufficient": "Signal 재화가 부족합니다: 보유 {have}, 필요 {need}",
+        "memory_shard_insufficient": "Memory Shard 재화가 부족합니다: 보유 {have}, 필요 {need}",
+        "signal_negative": "Signal 잔액이 음수입니다: {value}",
+        "memory_shard_negative": "Memory Shard 잔액이 음수입니다: {value}",
+        "signal_mismatch": "Signal 잔액 불일치: 예상 {expected}, 실제 {actual}",
+        "memory_shard_mismatch": "Memory Shard 잔액 불일치: 예상 {expected}, 실제 {actual}",
+        "language_mismatch": "언어 불일치: 입력 {input_lang}, 출력 {output_lang}",
+        "box2d_out_of_range": "오브젝트 '{obj_id}'의 좌표가 범위를 벗어남: {coord}",
+        "box2d_invalid_yorder": "오브젝트 '{obj_id}'의 ymin({ymin}) >= ymax({ymax})",
+        "box2d_invalid_xorder": "오브젝트 '{obj_id}'의 xmin({xmin}) >= xmax({xmax})",
+        "safety_blocked_no_fallback": "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
+    },
+    Language.EN: {
+        "summary_header": "The following business rules were violated:",
+        "signal_insufficient": "Insufficient Signal: have {have}, need {need}",
+        "memory_shard_insufficient": "Insufficient Memory Shard: have {have}, need {need}",
+        "signal_negative": "Signal balance is negative: {value}",
+        "memory_shard_negative": "Memory Shard balance is negative: {value}",
+        "signal_mismatch": "Signal balance mismatch: expected {expected}, actual {actual}",
+        "memory_shard_mismatch": "Memory Shard balance mismatch: expected {expected}, actual {actual}",
+        "language_mismatch": "Language mismatch: input {input_lang}, output {output_lang}",
+        "box2d_out_of_range": "Object '{obj_id}' coordinate out of range: {coord}",
+        "box2d_invalid_yorder": "Object '{obj_id}' ymin({ymin}) >= ymax({ymax})",
+        "box2d_invalid_xorder": "Object '{obj_id}' xmin({xmin}) >= xmax({xmax})",
+        "safety_blocked_no_fallback": "Blocked by safety policy but no fallback text provided",
+    },
+}
 
 
 # =============================================================================
@@ -82,11 +120,13 @@ class BusinessRuleValidationResult:
         is_valid: 모든 검증 통과 여부
         errors: 발견된 위반 목록
         error_summary: 에러 요약 (Repair 프롬프트용)
+        language: 응답 언어 (RULE-006)
     """
 
     is_valid: bool = True
     errors: list[dict[str, str]] = field(default_factory=lambda: [])
     error_summary: str = ""
+    language: Language = Language.KO
 
     def add_error(self, error_type: BusinessRuleError, message: str) -> None:
         """에러를 추가합니다."""
@@ -94,12 +134,16 @@ class BusinessRuleValidationResult:
         self.errors.append({"type": error_type.value, "message": message})
 
     def build_summary(self) -> str:
-        """에러 요약을 생성합니다 (Repair 프롬프트용)."""
+        """에러 요약을 생성합니다 (Repair 프롬프트용).
+
+        언어에 따라 헤더 메시지를 분기합니다 (RULE-006).
+        """
         if not self.errors:
             self.error_summary = ""
             return ""
 
-        summary_lines = ["다음 비즈니스 룰을 위반했습니다:"]
+        messages = BUSINESS_RULE_MESSAGES[self.language]
+        summary_lines = [messages["summary_header"]]
         for err in self.errors:
             summary_lines.append(f"- {err['message']}")
 
@@ -126,31 +170,34 @@ def _validate_economy(
     """
     economy = turn_output.economy
     snapshot = turn_input.economy_snapshot
+    messages = BUSINESS_RULE_MESSAGES[result.language]
 
     # 1. 과도한 비용 청구 금지 (snapshot < cost)
     if snapshot.signal < economy.cost.signal:
         result.add_error(
             BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Signal 재화가 부족합니다: 보유 {snapshot.signal}, 필요 {economy.cost.signal}",
+            messages["signal_insufficient"].format(have=snapshot.signal, need=economy.cost.signal),
         )
 
     if snapshot.memory_shard < economy.cost.memory_shard:
         result.add_error(
             BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Memory Shard 재화가 부족합니다: 보유 {snapshot.memory_shard}, 필요 {economy.cost.memory_shard}",
+            messages["memory_shard_insufficient"].format(
+                have=snapshot.memory_shard, need=economy.cost.memory_shard
+            ),
         )
 
     # 2. 잔액 음수 금지 (이미 필드 수준 ge=0 검증이 있지만, 비즈니스 룰에서도 명시)
     if economy.balance_after.signal < 0:
         result.add_error(
             BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Signal 잔액이 음수입니다: {economy.balance_after.signal}",
+            messages["signal_negative"].format(value=economy.balance_after.signal),
         )
 
     if economy.balance_after.memory_shard < 0:
         result.add_error(
             BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            f"Memory Shard 잔액이 음수입니다: {economy.balance_after.memory_shard}",
+            messages["memory_shard_negative"].format(value=economy.balance_after.memory_shard),
         )
 
     # 3. cost와 balance_after 일관성 검증
@@ -163,13 +210,17 @@ def _validate_economy(
     if economy.balance_after.signal != expected_signal:
         result.add_error(
             BusinessRuleError.ECONOMY_COST_MISMATCH,
-            f"Signal 잔액 불일치: 예상 {expected_signal}, 실제 {economy.balance_after.signal}",
+            messages["signal_mismatch"].format(
+                expected=expected_signal, actual=economy.balance_after.signal
+            ),
         )
 
     if economy.balance_after.memory_shard != expected_shard:
         result.add_error(
             BusinessRuleError.ECONOMY_COST_MISMATCH,
-            f"Memory Shard 잔액 불일치: 예상 {expected_shard}, 실제 {economy.balance_after.memory_shard}",
+            messages["memory_shard_mismatch"].format(
+                expected=expected_shard, actual=economy.balance_after.memory_shard
+            ),
         )
 
 
@@ -184,9 +235,13 @@ def _validate_language(
     - TurnInput.language와 TurnOutput.language 일치
     """
     if turn_input.language != turn_output.language:
+        messages = BUSINESS_RULE_MESSAGES[result.language]
         result.add_error(
             BusinessRuleError.LANGUAGE_MISMATCH,
-            f"언어 불일치: 입력 {turn_input.language.value}, 출력 {turn_output.language.value}",
+            messages["language_mismatch"].format(
+                input_lang=turn_input.language.value,
+                output_lang=turn_output.language.value,
+            ),
         )
 
 
@@ -200,6 +255,8 @@ def _validate_box2d(
     - 0~1000 범위
     - ymin < ymax, xmin < xmax 순서
     """
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
     # UI 오브젝트의 box2d 검증
     for obj in turn_output.ui.objects:
         box = obj.box_2d
@@ -210,7 +267,7 @@ def _validate_box2d(
             if coord < 0 or coord > 1000:
                 result.add_error(
                     BusinessRuleError.BOX2D_OUT_OF_RANGE,
-                    f"오브젝트 '{obj.id}'의 좌표가 범위를 벗어남: {coord}",
+                    messages["box2d_out_of_range"].format(obj_id=obj.id, coord=coord),
                 )
                 break  # 한 오브젝트에 대해 한 번만 보고
 
@@ -218,13 +275,17 @@ def _validate_box2d(
         if box.ymin >= box.ymax:
             result.add_error(
                 BusinessRuleError.BOX2D_INVALID_ORDER,
-                f"오브젝트 '{obj.id}'의 ymin({box.ymin}) >= ymax({box.ymax})",
+                messages["box2d_invalid_yorder"].format(
+                    obj_id=obj.id, ymin=box.ymin, ymax=box.ymax
+                ),
             )
 
         if box.xmin >= box.xmax:
             result.add_error(
                 BusinessRuleError.BOX2D_INVALID_ORDER,
-                f"오브젝트 '{obj.id}'의 xmin({box.xmin}) >= xmax({box.xmax})",
+                messages["box2d_invalid_xorder"].format(
+                    obj_id=obj.id, xmin=box.xmin, xmax=box.xmax
+                ),
             )
 
 
@@ -238,12 +299,13 @@ def _validate_safety(
     - blocked 시 안전한 대체 결과(narrative) 제공 확인
     """
     safety = turn_output.safety
+    messages = BUSINESS_RULE_MESSAGES[result.language]
 
     # 차단 시에도 narrative가 있어야 함 (안전한 대체 결과)
     if safety.blocked and (not turn_output.narrative or len(turn_output.narrative.strip()) == 0):
         result.add_error(
             BusinessRuleError.SAFETY_BLOCKED_NO_FALLBACK,
-            "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
+            messages["safety_blocked_no_fallback"],
         )
 
 
@@ -259,6 +321,7 @@ def validate_business_rules(
     """비즈니스 룰을 검증합니다.
 
     스키마 검증 이후 호출되며, 의미적 규칙을 검증합니다.
+    에러 메시지는 turn_input.language에 따라 분기됩니다 (RULE-006).
 
     Args:
         turn_input: 사용자 턴 입력
@@ -272,7 +335,8 @@ def validate_business_rules(
         >>> if not result.is_valid:
         ...     print(result.build_summary())
     """
-    result = BusinessRuleValidationResult()
+    # RU-005-S2: turn_input.language에 따라 에러 메시지 i18n 분기
+    result = BusinessRuleValidationResult(language=turn_input.language)
 
     # 1. Economy 검증 (RULE-005)
     _validate_economy(turn_input, turn_output, result)
