@@ -7,7 +7,7 @@
 | Unit ID   | CP-MVP-05        |
 | Phase     | MVP              |
 | 예상 소요 | 60분             |
-| 의존성    | U-035[Mvp],U-036[Mvp] |
+| 의존성    | U-035[Mvp],U-036[Mvp],U-043[Mvp],U-044[Mvp],U-045[Mvp] |
 | 우선순위  | ⚡ Critical      |
 
 ## 작업 목표
@@ -22,7 +22,9 @@
 - 이미지 생성이 트리거된 경우, UI는 **placeholder → 이미지(성공)** 또는 **placeholder → 텍스트 폴백(실패)** 로 안정적으로 전이한다. (RULE-004)
 - 비용/지연이 통제된다: 행동 전 **예상 비용(최소/최대)** 가 노출되고, 부족 시 텍스트-only 등 대체 행동이 제안된다. (RULE-005)
 - 프롬프트 파일(ko/en)이 분리/로드되며, 언어 혼합 출력이 발생하지 않는다. 프롬프트 원문/내부 추론은 노출되지 않는다. (RULE-006/008)
+- 언어 전환(ko/en)은 “기존 상태 번역”이 아니라 **세션 리셋/새 세션** 정책으로 안전하게 처리되어, 한 화면에 ko/en 혼합이 남지 않는다. (U-044)
 - 실시간 이미지 생성 결과에 대해 (조건부) rembg 배경 제거가 적용되거나, 실패해도 안전 폴백으로 종료된다. (U-035)
+- rembg는 서버 부팅 시 preflight로 모델을 사전 점검/다운로드하여 “첫 실행 다운로드 지연”이 턴 UX를 흔들지 않는다(실패 시 degraded + 원본 유지). (U-045)
 - 발견된 결함/임시 대응은 `vibe/debt-log.md`에 기록된다.
 
 ## 영향받는 파일
@@ -40,6 +42,8 @@
 
 - `vibe/prd.md` - 6.3(멀티모달), 8.5(이미지), 10장(Replay/게이트)
 - `vibe/tech-stack.md` - 이미지 모델(`gemini-3-pro-image-preview`) 및 정책(FAST/QUALITY/REF)
+- `vibe/ref/en-ko-issue.png` - ko/en 혼합 출력 재현 예시(언어 인바리언트 검증 포인트)
+- `vibe/ref/rembg-guide.md` - rembg 모델 다운로드/선택(SSOT)
 - `.cursor/rules/00-core-critical.mdc` - RULE-004/005/006/008
 - `.cursor/rules/10-frontend-game-ui.mdc` - placeholder/폴백/게임 UI 규칙
 
@@ -71,6 +75,9 @@
 
 - **계획서**: [U-035[Mvp]](U-035[Mvp].md) - rembg 배경 제거 통합(조건부)
 - **계획서**: [U-036[Mvp]](U-036[Mvp].md) - 프롬프트 파일 분리(ko/en) + 핫리로드
+- **계획서**: [U-043[Mvp]](U-043[Mvp].md) - 언어 혼합 게이트(서버 검증+Repair)
+- **계획서**: [U-044[Mvp]](U-044[Mvp].md) - 세션 언어 SSOT(토글=리셋) + 클라 폴백 혼합 제거
+- **계획서**: [U-045[Mvp]](U-045[Mvp].md) - rembg/모델 preflight(부팅 시 사전 점검)
 - **계획서**: [U-020[Mvp]](U-020[Mvp].md) - 프론트 이미지 Lazy Render/placeholder/폴백
 
 **다음 작업에 전달할 것**:

@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 48/70 (68%) | **MVP**: 48/57 (84%) | **MMP**: 0/13 (0%)
+**전체**: 48/73 (66%) | **MVP**: 48/60 (80%) | **MMP**: 0/13 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-7  
+**예상 완료(가정)**: MVP D-5 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -18,6 +18,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **추가 메모**:
 - 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
 - M3 통합 구간에서 “나중에 한 번에 붙이기”로 인한 기술 부채/회귀를 줄이기 위해, 중간 체크포인트(CP-MVP-04~06)를 추가했다(실모델 Hard Gate / 멀티모달 이미지 게이트 / Scanner 업로드 게이트). **ID는 유지**하되, 목표일/Depends 기준으로 실행 순서를 정렬한다.
+- ko/en 혼합 출력 사례: `vibe/ref/en-ko-issue.png` (현상/원인 분류 및 수정 계획은 U-043/U-044에서 정리)
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -91,7 +92,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
 - **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원
-- **책임 Unit**: U-019 ~ U-022, U-035, U-036, CP-MVP-05, CP-MVP-06
+- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, CP-MVP-05, CP-MVP-06
 - **상태**: 🚧 (백엔드 엔드포인트 완료)
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
@@ -110,6 +111,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | R-004 | 작은 글씨/CRT 튜닝으로 가독성·정체성 균형 붕괴 | Medium | 25% | UI 스케일 + 중요도(critical/ambient) 기반 효과 분리 + 대비/라인하이트 가이드 + reduced-motion 가드 |
 | R-005 | 에셋 난립/용량 비대화/스타일 불일치  | Medium | 25% | nanobanana mcp 에셋 SSOT + 매니페스트/QA + 예산 상한 + (필요 시) rembg 배경 제거 |
 | R-006 | 통합 구간(M3)에서 체크포인트 부족으로 기술 부채/회귀 누적 | Medium | 30% | 중간 CP 추가(CP-MVP-04~06) + debt-log 기록 + 리플레이로 Hard Gate 회귀 확인 |
+| R-007 | ko/en 혼합 출력(내러티브/룰/퀘스트/UI)이 한 화면에 노출되어 데모 신뢰도 붕괴 | High | 20% | 세션 언어 SSOT(언어 전환=리셋) + 언어 게이트/Repair + i18n/폴백/하드코딩 정리 |
 
 ## 메트릭
 
@@ -120,7 +122,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | 이미지 생성 시간(p95)      | -    | < 12s(선택) |
 | Hard Gate 통과율(리플레이) | -    | 100%        |
 
-**기술 부채**: 0h(미추정 1건 있음: U-040로 해결 예정) / 한도 8h  \| SSOT: `vibe/debt-log.md`
+**기술 부채**: 0h(미추정 2건 있음: U-040, U-043/U-044로 해결 예정) / 한도 8h  \| SSOT: `vibe/debt-log.md`
 
 ---
 
@@ -131,8 +133,11 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### MVP
 
 ID=[U-036[Mvp]](unit-plans/U-036[Mvp].md) | 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 | Depends=U-017,U-019 | ⏸️
+ID=[U-043[Mvp]](unit-plans/U-043[Mvp].md) | ko/en 혼합 출력 게이트(언어 검증+Repair) | Depends=U-018,U-036 | ⏸️
+ID=[U-044[Mvp]](unit-plans/U-044[Mvp].md) | 세션 언어 SSOT(토글=리셋) + 혼합 출력(상태/시스템) 제거 | Depends=U-015,U-039,U-043 | ⏸️
+ID=[U-045[Mvp]](unit-plans/U-045[Mvp].md) | Backend 시작 시 rembg/모델 사전 점검 + 다운로드(preflight) | Depends=U-035 | ⏸️
 ID=[U-040[Mvp]](unit-plans/U-040[Mvp].md) | 에셋 요청 스키마 정합(rembg_model 이슈) + 테스트/런북 복구 | Depends=U-034 | ⏸️
-ID=[CP-MVP-05](unit-plans/CP-MVP-05.md) | **체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)** | Depends=U-035,U-036 | 🚧
+ID=[CP-MVP-05](unit-plans/CP-MVP-05.md) | **체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)** | Depends=U-035,U-036,U-043,U-044,U-045 | 🚧
 ID=[U-021[Mvp]](unit-plans/U-021[Mvp].md) | 이미지 이해(Scanner) 백엔드 엔드포인트 | Depends=U-016 | ⏸️
 ID=[U-022[Mvp]](unit-plans/U-022[Mvp].md) | ⚡Scanner 슬롯 UI + 업로드→아이템화 반영 | Depends=U-011,U-021 | ⏸️
 ID=[CP-MVP-06](unit-plans/CP-MVP-06.md) | **체크포인트: Scanner 업로드 게이트(안전/좌표/비용)** | Depends=U-022 | ⏸️
@@ -231,7 +236,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-018[Mvp]](unit-plans/U-018[Mvp].md) - ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백
+**현재 작업**: [U-036[Mvp]](unit-plans/U-036[Mvp].md) - 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
