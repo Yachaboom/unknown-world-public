@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SCENE_PLACEHOLDERS } from './SceneCanvas';
+import { SCENE_PLACEHOLDERS } from './SceneImage';
 
 describe('SCENE_PLACEHOLDERS', () => {
   it('should have all required statuses', () => {

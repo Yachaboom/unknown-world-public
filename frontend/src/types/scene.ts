@@ -1,5 +1,5 @@
 /**
- * Scene Canvas 관련 타입 정의 (U-031: Placeholder Pack)
+ * Scene Canvas 관련 타입 정의 (U-031: Placeholder Pack, U-020: Lazy Render)
  */
 
 /**
@@ -20,12 +20,29 @@ export type SceneCanvasStatus =
   | 'scene';
 
 /**
+ * 이미지 로딩 상태 (U-020: Lazy Render)
+ * - idle: 이미지 없음/대기
+ * - loading: 이미지 로딩 중
+ * - loaded: 이미지 로드 완료
+ * - error: 이미지 로드 실패
+ */
+export type ImageLoadingState = 'idle' | 'loading' | 'loaded' | 'error';
+
+/**
  * Scene Canvas 상태 데이터 구조
+ *
+ * U-020[Mvp] 확장:
+ * - imageLoading: 이미지 로딩 상태 플래그 (로딩 인디케이터 표시용)
+ * - previousImageUrl: 이전 이미지 URL (Option A: 이전 이미지 유지)
  */
 export interface SceneCanvasState {
   status: SceneCanvasStatus;
   imageUrl?: string;
   message?: string;
+  /** U-020: 이미지 로딩 중 여부 (로딩 인디케이터 표시용) */
+  imageLoading?: boolean;
+  /** U-020: 이전 이미지 URL (새 이미지 로딩 중 표시용) */
+  previousImageUrl?: string;
 }
 
 /**

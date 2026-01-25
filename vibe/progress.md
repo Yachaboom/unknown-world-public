@@ -1,6 +1,39 @@
 # 프로젝트 진행 상황
 
-## [2026-01-25 23:30] [U-019[Mvp]] 이미지 생성 엔드포인트/잡(조건부) 완료
+## [2026-01-25 23:55] [U-020[Mvp]] 프론트 이미지 Lazy Render(placeholder/폴백) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Scene Canvas 이미지 Lazy 로딩 및 이전 이미지 유지(Option A) 로직 구현으로 시각적 깜빡임 제거
+- **추가 컴포넌트**: `frontend/src/components/SceneImage.tsx` (모듈 분리), `frontend/src/components/SceneImage.test.tsx` (단위 테스트)
+- **달성 요구사항**: [RULE-008] 텍스트 우선 + Lazy 이미지, [RULE-004] 이미지 실패 시 안전 폴백, [RULE-009] 이미지 유무와 상관없는 핫스팟 상호작용 유지
+
+### 기술적 구현 세부사항
+
+**Lazy Render 파이프라인**:
+- **Option A (Persistent Context)**: 새로운 이미지가 로드되는 동안 이전 장면을 유지하여 "빈 화면" 노출 방지. 로드 완료 시 0.3s 페이드인 효과로 부드럽게 전환.
+- **Loading Observer**: `Image()` 객체 이벤트를 추적하여 로딩 인디케이터(`scene-loading-indicator`) 및 프로그레스 바 애니메이션을 선언적으로 표시.
+- **Strict Schema Patch**: 백엔드 `UIOutput`의 `scene` 필드 null 허용 정책을 프론트엔드 Zod 스키마(`nullish()`)에 반영하여 타입 안정성 확보.
+
+**안정성 및 UX**:
+- **Non-blocking Interaction**: 이미지가 로드 중이거나 실패하더라도 핫스팟 레이어는 0~1000 정규화 좌표계로 즉시 렌더링되어 유저 조작(클릭/드롭)을 차단하지 않음.
+- **Error Resilience**: 이미지 404/Timeout 발생 시 에러 배지를 노출하고 `U-031` 플레이스홀더 상태로 안전하게 수렴.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── SceneCanvas.tsx (핫스팟 레이어 전담)
+    │   └── SceneImage.tsx (이미지 렌더링/로딩 전담)
+    ├── schemas/
+    │   └── turn.ts (UIOutput.scene 스키마 보완)
+    └── style.css (로딩/에러/애니메이션 스타일 추가)
+
+### 다음 단계
+- [U-035[Mvp]] 실시간 이미지 생성 시 rembg 배경 제거 통합
+- [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+
+---
 
 ### 구현 완료 항목
 

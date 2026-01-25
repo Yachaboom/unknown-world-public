@@ -290,19 +290,27 @@ export const SceneOutputSchema = z
 export type SceneOutput = z.infer<typeof SceneOutputSchema>;
 
 /**
+ * Scene 기본값 (null 대응).
+ */
+const DEFAULT_SCENE_OUTPUT: SceneOutput = { image_url: null, alt_text: null };
+
+/**
  * UI 출력 데이터.
  * AI가 생성한 UI 요소들입니다.
  * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
  *
  * RU-003-T1: scene 필드 추가 - Scene Canvas의 이미지 표시 정보 SSOT.
+ *
+ * 수정: scene 필드는 백엔드에서 null로 올 수 있으므로 nullish()를 사용하여
+ * null/undefined 시 기본값으로 변환합니다.
  */
 export const UIOutputSchema = z
   .object({
     action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
     objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
-    scene: SceneOutputSchema.default({ image_url: null, alt_text: null }).describe(
-      'Scene 표시 정보 (RU-003-T1)',
-    ),
+    scene: SceneOutputSchema.nullish()
+      .transform((val) => val ?? DEFAULT_SCENE_OUTPUT)
+      .describe('Scene 표시 정보 (RU-003-T1, null 허용)'),
   })
   .strict();
 export type UIOutput = z.infer<typeof UIOutputSchema>;

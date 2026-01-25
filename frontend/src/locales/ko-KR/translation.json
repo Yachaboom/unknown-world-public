@@ -177,6 +177,8 @@
       "blocked": "접근 제한됨",
       "low_signal": "신호 약함",
       "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "image_loading": "장면 이미지 로딩 중...",
+      "image_generating": "새 장면 생성 중...",
       "initial_sync": "전역 데이터 동기화 대기 중...",
       "syncing": "데이터 동기화 중...",
       "alt": "장면 이미지"

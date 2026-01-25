@@ -14,13 +14,17 @@
  * - 드래그 오버 시 하이라이트 강화
  * - 드롭 성공/실패 즉시 시각화
  *
+ * U-020[Mvp]: 이미지 Lazy Render (placeholder/폴백)
+ * - RULE-004/008 준수: 텍스트 우선 + Lazy 이미지 정책
+ * - Q1 Option A: 이전 이미지 유지 + 로딩 인디케이터 표시
+ * - 이미지 실패 시에도 핫스팟/패널/로그는 계속 동작 (텍스트-only 진행)
+ *
  * @module components/SceneCanvas
  */
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDroppable } from '@dnd-kit/core';
-import type { SceneCanvasStatus, PlaceholderInfo } from '../types/scene';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
 import {
@@ -31,42 +35,7 @@ import {
 } from '../dnd/types';
 import { useWorldStore } from '../stores/worldStore';
 import { useAgentStore } from '../stores/agentStore';
-
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/**
- * 상태별 placeholder 정보 (U-031: Placeholder Pack)
- * labelKey는 i18n 번역 키로 사용됩니다.
- */
-export const SCENE_PLACEHOLDERS: Record<Exclude<SceneCanvasStatus, 'scene'>, PlaceholderInfo> = {
-  default: {
-    imagePath: '/ui/placeholders/scene-placeholder-default.png',
-    fallbackEmoji: '📡',
-    labelKey: 'scene.status.default',
-  },
-  loading: {
-    imagePath: '/ui/placeholders/scene-loading.webp',
-    fallbackEmoji: '⏳',
-    labelKey: 'scene.status.loading',
-  },
-  offline: {
-    imagePath: '/ui/placeholders/scene-offline.webp',
-    fallbackEmoji: '🔌',
-    labelKey: 'scene.status.offline',
-  },
-  blocked: {
-    imagePath: '/ui/placeholders/scene-blocked.webp',
-    fallbackEmoji: '🚫',
-    labelKey: 'scene.status.blocked',
-  },
-  low_signal: {
-    imagePath: '/ui/placeholders/scene-low-signal.webp',
-    fallbackEmoji: '📉',
-    labelKey: 'scene.status.low_signal',
-  },
-};
+import { SceneImage } from './SceneImage';
 
 // =============================================================================
 // 타입 정의
@@ -216,10 +185,12 @@ function HotspotOverlay({
  * Scene Canvas 컴포넌트
  *
  * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * U-020[Mvp]: Lazy Render (placeholder/폴백)
  * U-031[Mvp]: Placeholder Pack
  *
  * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
  * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
+ * - U-020: Q1 Option A - 이전 이미지 유지 + 로딩 인디케이터 표시
  * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
  */
 export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCanvasProps) {
@@ -233,7 +204,7 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
   const disabled = propsDisabled ?? isStreaming;
 
   const { status, imageUrl, message } = state;
-  const [imageError, setImageError] = useState(false);
+
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -289,25 +260,15 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
     [onHotspotClick],
   );
 
-  // 정상 장면 표시 중이거나 이미지 에러가 발생한 경우
-  const isSceneActive = status === 'scene' && imageUrl && !imageError;
-
-  // placeholder 정보 결정 (scene 상태에서 에러 시 default로 폴백)
-  const effectiveStatus = status === 'scene' && imageError ? 'default' : status;
-  const isPlaceholderVisible = effectiveStatus !== 'scene';
-
-  const placeholder = isPlaceholderVisible
-    ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
-    : null;
-
   // RU-003-S2 Step 1: 핫스팟 렌더링 조건을 SSOT로 고정
   // - isHotspotInteractionAllowed()로 허용 상태 검사 (scene, default)
   // - objects 존재 + 캔버스 크기 확보
+  // U-020: 이미지 유무와 무관하게 핫스팟은 동작 (RULE-004)
   const isInteractionAllowed = isHotspotInteractionAllowed(status);
   const shouldRenderHotspots = isInteractionAllowed && objects.length > 0 && canvasSize.width > 0;
 
   // RU-003-S2: 데모 상태 여부 (시각적 힌트 필요)
-  const isDemoState = status === 'default' && !isSceneActive;
+  const isDemoState = status === 'default';
 
   // RU-003-S2 Step 2: 핫스팟을 면적 기준으로 정렬 (작은 것이 뒤에 = 높은 z-index)
   const sortedObjects = useMemo(() => {
@@ -316,38 +277,12 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
   }, [objects]);
 
   return (
-    <div
-      ref={canvasRef}
-      className={`scene-canvas ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`} ${shouldRenderHotspots ? 'has-hotspots' : ''}`}
-      style={placeholder ? { backgroundImage: `url('${placeholder.imagePath}')` } : {}}
-    >
-      {isSceneActive && (
-        <img
-          src={imageUrl}
-          alt={t('scene.status.alt')}
-          className="scene-image"
-          onError={() => setImageError(true)}
-        />
-      )}
-
-      {isPlaceholderVisible && placeholder && (
-        <div className="scene-placeholder">
-          {/* 텍스트 폴백 (이미지 로드 실패 시에도 표시) */}
-          <p className="text-glow scene-status-label">
-            <span className="scene-status-emoji" aria-hidden="true">
-              {placeholder.fallbackEmoji}
-            </span>{' '}
-            {t(placeholder.labelKey)}
-          </p>
-          {(message || (status === 'scene' && imageError)) && (
-            <p className="scene-status-message">
-              {message || (imageError ? t('scene.status.image_error') : '')}
-            </p>
-          )}
-        </div>
-      )}
+    <div ref={canvasRef} className="scene-canvas">
+      {/* U-020: 장면 이미지 (Lazy loading + placeholder/폴백 포함) */}
+      <SceneImage status={status} imageUrl={imageUrl} message={message} />
 
       {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
+      {/* U-020: 이미지 유무와 무관하게 핫스팟은 항상 렌더 (RULE-004) */}
       {shouldRenderHotspots && (
         <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
           {sortedObjects.map((obj, index) => (

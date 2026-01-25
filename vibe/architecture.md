@@ -40,7 +40,9 @@ D:\Dev\unknown-world\
 │   ├── src/
 │   │   ├── api/            # HTTP Streaming 클라이언트
 │   │   ├── components/     # 게임 UI 컴포넌트
-│   │   ├── save/           # 세이브/로드 및 세션 관리 (RU-004)
+│   │   │   ├── SceneCanvas.tsx (핫스팟 레이어)
+│   │   │   ├── SceneImage.tsx (Lazy 로딩 및 상태 표시, U-020)
+│   │   │   └── ...
 │   │   ├── stores/         # 상태 관리 (Zustand)
 │   │   ├── turn/           # Turn Runner 모듈
 │   │   └── ...
@@ -123,6 +125,17 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 - **Abort(취소) 정책 (RU-003-S1)**:
     - 취소(Abort) 시에는 `onComplete`를 호출하지 않음 (Option B).
     - 호출자(Turn Runner/App)가 취소 의도를 파악하고 직접 UI를 스트리밍 종료 상태로 복구해야 함.
+
+## 14. 이미지 Lazy Render 정책 (U-020[Mvp])
+
+1. **Lazy Loading + Option A (Persistent Image)**:
+    - 새로운 장면 정보 수신 시, 이미지가 완전히 로드될 때까지 이전 장면 이미지를 유지(Option A)하여 화면 깜빡임을 방지함.
+    - 백그라운드에서 `Image` 객체를 통해 프리로드를 수행하며, 완료 시 0.3s 페이드인 효과와 함께 교체함.
+2. **로딩 및 에러 가시성 (RULE-008/004)**:
+    - 이미지 로딩 중에는 `scene-loading-indicator`와 프로그레스 바 애니메이션을 노출하여 진행 상황을 알림.
+    - 로드 실패 시 에러 배지를 노출하되, 텍스트 정보와 핫스팟 상호작용은 유지하여 게임 진행이 중단되지 않도록 함.
+3. **스키마 유연성**:
+    - 백엔드의 `scene` 정보가 null로 올 수 있는 케이스를 프론트엔드 Zod 스키마에서 안전하게 처리(`nullish().transform()`)하여 런타임 크래시를 방지함.
 
 ## 6. 인터랙션 및 레이아웃 안정화 정책 (RU-003-S2)
 

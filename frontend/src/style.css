@@ -358,15 +358,27 @@ body {
   flex: 1;
   border: 1px solid var(--border-color);
   background-color: var(--panel-bg);
-  background-image: url('/ui/placeholders/scene-placeholder-default.png');
-  background-size: cover;
-  background-position: center;
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   min-height: 200px;
+  overflow: hidden; /* 내부 이미지 넘침 방지 */
+}
+
+/* U-020: Scene Image 컨테이너 스타일 */
+.scene-image-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .scene-placeholder {
@@ -399,19 +411,19 @@ body {
   font-size: var(--font-size-sm);
 }
 
-/* 상태별 배경 이미지 적용 */
-.scene-canvas.scene-status-loading,
-.scene-canvas.scene-status-offline,
-.scene-canvas.scene-status-blocked,
-.scene-canvas.scene-status-low_signal,
-.scene-canvas.scene-status-default {
+/* 상태별 배경 이미지 적용 (container로 이동) */
+.scene-image-container.scene-status-loading,
+.scene-image-container.scene-status-offline,
+.scene-image-container.scene-status-blocked,
+.scene-image-container.scene-status-low_signal,
+.scene-image-container.scene-status-default {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 /* 로딩 상태: 펄스 애니메이션 */
-.scene-canvas.scene-status-loading .scene-placeholder {
+.scene-image-container.scene-status-loading .scene-placeholder {
   animation: loading-pulse 2s ease-in-out infinite;
 }
 
@@ -426,11 +438,11 @@ body {
 }
 
 /* 오프라인 상태: 정적 노이즈 효과 */
-.scene-canvas.scene-status-offline {
+.scene-image-container.scene-status-offline {
   position: relative;
 }
 
-.scene-canvas.scene-status-offline::before {
+.scene-image-container.scene-status-offline::before {
   content: '';
   position: absolute;
   top: 0;
@@ -459,33 +471,192 @@ body {
 }
 
 /* 차단 상태: 경고색 테두리 */
-.scene-canvas.scene-status-blocked {
+.scene-image-container.scene-status-blocked {
   border-color: var(--warning-color);
   box-shadow: inset 0 0 30px rgba(255, 170, 0, 0.2);
 }
 
-.scene-canvas.scene-status-blocked .scene-status-label {
+.scene-image-container.scene-status-blocked .scene-status-label {
   color: var(--warning-color);
 }
 
 /* 저신호 상태: 희미한 표시 */
-.scene-canvas.scene-status-low_signal .scene-placeholder {
+.scene-image-container.scene-status-low_signal .scene-placeholder {
   opacity: 0.8;
 }
 
-.scene-canvas.scene-status-low_signal .scene-status-label {
+.scene-image-container.scene-status-low_signal .scene-status-label {
   color: var(--text-dim);
 }
 
 /* 정상 장면 표시 */
-.scene-canvas.scene-active {
+.scene-image-container.scene-active {
   background-color: transparent;
 }
 
-.scene-canvas .scene-image {
+.scene-image-container .scene-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* U-020: 페이드 인 효과 */
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* U-020: 이미지 로드 완료 시 표시 */
+.scene-image-container .scene-image.scene-image-loaded {
+  opacity: 1;
+}
+
+/* ============================================
+   8.0.1 이미지 로딩 인디케이터 (U-020)
+   - RULE-008: 텍스트 우선 + Lazy 이미지 정책
+   - Q1 Option A: 이전 이미지 유지 + 로딩 상태 표시
+   ============================================ */
+
+/* 로딩 인디케이터 컨테이너 */
+.scene-loading-indicator {
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: rgba(0, 20, 0, 0.9);
+  border: 1px solid var(--accent-color);
+  border-radius: 2px;
+  z-index: 15;
+  animation: loading-fade-in 0.2s ease-out;
+}
+
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 로딩 스피너 */
+.scene-loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-dim);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 로딩 텍스트 */
+.scene-loading-text {
+  font-size: var(--font-size-xs);
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 이미지 로딩 중 캔버스 상태 */
+.scene-image-container.image-loading {
+  /* 약간의 시각적 힌트 */
+}
+
+.scene-image-container.image-loading::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent-color) 50%, transparent 100%);
+  animation: loading-bar 1.5s ease-in-out infinite;
+  z-index: 20;
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ============================================
+   8.0.2 이미지 에러 배지 (U-020)
+   - RULE-004: 실패 시 안전한 폴백
+   ============================================ */
+
+.scene-error-badge {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: rgba(40, 0, 0, 0.9);
+  border: 1px solid var(--warning-color);
+  border-radius: 2px;
+  z-index: 15;
+  animation: error-shake 0.3s ease-out;
+}
+
+@keyframes error-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+.scene-error-icon {
+  font-size: 0.875rem;
+}
+
+.scene-error-text {
+  font-size: var(--font-size-xs);
+  color: var(--warning-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* reduced-motion: 로딩/에러 애니메이션 완화 */
+@media (prefers-reduced-motion: reduce) {
+  .scene-loading-indicator {
+    animation: none;
+  }
+
+  .scene-loading-spinner {
+    animation: none;
+    border-color: var(--accent-color);
+  }
+
+  .scene-canvas.image-loading::before {
+    animation: none;
+    transform: none;
+  }
+
+  .scene-error-badge {
+    animation: none;
+  }
+
+  .scene-canvas .scene-image {
+    transition: none;
+    opacity: 1;
+  }
+
+  .scene-canvas .scene-image.scene-image-loaded {
+    opacity: 1;
+  }
 }
 
 /* ============================================

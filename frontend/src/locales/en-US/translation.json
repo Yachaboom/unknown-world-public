@@ -177,6 +177,8 @@
       "blocked": "ACCESS RESTRICTED",
       "low_signal": "LOW SIGNAL",
       "image_error": "Unable to load scene image.",
+      "image_loading": "Loading scene image...",
+      "image_generating": "Generating new scene...",
       "initial_sync": "Awaiting global data synchronization...",
       "syncing": "Synchronizing data...",
       "alt": "Scene Image"
