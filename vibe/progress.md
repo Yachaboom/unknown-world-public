@@ -1,5 +1,41 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 21:30] [RU-005[Mvp]] 리팩토링 - orchestrator pipeline stages 정리 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 오케스트레이터 전체를 7대 단계(`Parse` → `Validate` → `Plan` → `Resolve` → `Render` → `Verify` → `Commit`) 기반의 비동기 함수 체인 파이프라인으로 리팩토링 완료
+- **추가 컴포넌트**: `orchestrator/pipeline.py` (엔진), `orchestrator/stages/` (단계별 모듈), `api/turn_streaming_helpers.py` (스트리밍 헬퍼), `vibe/unit-results/RU-005[Mvp].md`
+- **달성 요구사항**: [RULE-008] 단계/배지 가시화(관측 가능성), [RULE-004] 안전 폴백 인바리언트, [RU-005] 오케스트레이터 모듈화 및 책임 분리
+
+### 기술적 구현 세부사항
+
+**오케스트레이터 아키텍처 (Option A)**:
+- **Functional Pipeline**: `PipelineContext`와 `EmitFn`을 기반으로 한 함수 체인 방식을 채택하여 모의(Mock)와 실제(Real) 모델 경로를 단일 파이프라인으로 통합
+- **Modular Stages**: 각 단계를 독립된 파일로 분리하여 입력/출력 인터페이스를 명확히 하고, 개별 단계에 대한 테스트 및 확장성 확보
+- **Decoupled Observation**: 오케스트레이터 내부 로직이 FastAPI에 직접 의존하지 않도록 `EmitFn` 콜백을 통해 도메인 이벤트를 외부로 전달
+
+**안정성 및 관측성**:
+- **Atomic Event Streaming**: 파이프라인의 각 단계 시작/완료, 배지 수집, 복구 시도 이벤트를 정형화된 스트림 이벤트로 변환하여 Agent Console에 가시화
+- **Fail-safe Convergence**: 모든 파이프라인 실행은 예외 발생 시에도 `create_safe_fallback`을 통해 스키마를 준수하는 최종 결과(`final`)로 수렴함을 보장
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── api/
+    │   ├── turn.py (파이프라인 연동)
+    │   └── turn_streaming_helpers.py (스트리밍 추상화)
+    └── orchestrator/
+        ├── pipeline.py (파이프라인 실행기)
+        ├── stages/ (7대 단계별 모듈)
+        └── fallback.py (폴백 SSOT)
+
+### 다음 단계
+- [U-019[Mvp]] 단계 기반 파이프라인에 이미지 생성(Render/Verify) 기능 통합
+- [U-024[Mvp]] Autopilot 전략 로직의 Plan/Resolve stage 통합
+
+---
+
 ## [2026-01-25 20:15] [RU-005-S3] RU-005 이후 “/api/turn stage pipeline” 수동 검증 시나리오 패키지 완료
 
 ### 작업 내용

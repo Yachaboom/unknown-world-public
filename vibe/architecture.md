@@ -10,68 +10,41 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 
 ```text
 D:\Dev\unknown-world\
-├── .gitattributes         # Git 줄 끝 처리 및 속성 설정
-├── .gitignore             # 비밀정보 및 빌드 결과물 제외
-├── package.json           # 루트 개발 스크립트 및 프로세스 제어
-├── code-base.xml          # 프로젝트 스냅샷 (Repomix)
-├── shared/                # 공유 리소스 (SSOT)
-│   └── schemas/
-│       └── turn/           # JSON Schema SSOT (Input/Output)
-├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
-│   ├── index.html
-│   ├── public/             # 정적 에셋
-│   │   └── ui/             # UI 이미지 에셋 SSOT
-│   │       ├── manifest.json
-│   │       ├── chrome/
-│   │       ├── icons/
-│   │       └── placeholders/
-│   ├── src/
-│   │   ├── App.tsx         # 레이아웃 통합 및 세션 이벤트 라우팅
-│   │   ├── style.css       # 단일 CSS SSOT
-│   │   ├── i18n.ts         # 다국어 설정 SSOT
-│   │   ├── api/            # HTTP Streaming 클라이언트
-│   │   ├── components/     # 게임 UI 컴포넌트 (ActionDeck, Canvas 등)
-│   │   ├── data/           # 데모 프로필 및 정적 데이터 (demoProfiles.ts)
-│   │   ├── demo/           # 데모용 Mock 데이터 및 피처
-│   │   ├── dnd/            # DnD 데이터 계약 및 타입 SSOT
-│   │   ├── save/           # 세이브/로드 및 세션 관리 시스템 (RU-004)
-│   │   │   ├── constants.ts    # 정책 상수 SSOT (RU-004-Q5)
-│   │   │   ├── saveGame.ts     # 생성/검증 단일화 (RU-004-Q1)
-│   │   │   └── sessionLifecycle.ts # 세션 생명주기 SSOT (RU-004-Q4)
-│   │   ├── schemas/        # 클라이언트 측 스키마 및 검증 (Zod)
-│   │   ├── stores/         # 상태 관리 (world, economy, inventory 등)
-│   │   ├── turn/           # Turn Runner 모듈
-│   │   ├── types/          # 공통 타입 정의
-│   │   └── utils/          # 공통 유틸리티 (box2d.ts)
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
-│   ├── pyproject.toml
-│   ├── uv.lock
-│   ├── .env.example        # 환경 변수 설정 템플릿 (U-016)
-│   ├── prompts/           # 프롬프트 저장소 (U-017)
-│   │   ├── system/        # 시스템 프롬프트 (ko/en)
-│   │   └── turn/          # 출력 지침 (ko/en)
 │   ├── src/
 │   │   └── unknown_world/
-│   │       ├── main.py
-│       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
-│       ├── config/     # 모델 ID 및 라벨 SSOT (U-016)
-│       ├── models/     # Pydantic 데이터 모델 (U-005, U-017)
-│       ├── orchestrator/ # 오케스트레이션 엔진
-│       │   ├── pipeline.py (신규: 파이프라인 실행기 RU-005)
-│       │   ├── stages/    # 신규: 단계별 모듈 (parse, validate, plan, resolve, render, verify, commit)
-│       │   ├── prompt_loader.py (프롬프트 로더: U-017)
-│       │   ├── validator.py (비즈니스 룰 검증기: U-018)
-│       │   └── generate_turn_output.py (TurnOutput 생성/검증: U-017, U-018)
-│       └── services/    # 외부 서비스 연동 (U-016)
-│   └── tests/             # 유닛/통합 테스트
-├── vibe/                  # SSOT 문서 저장소
-│   ├── architecture.md     # 시스템 아키텍처 및 구조 가이드
-│   ├── progress.md         # 작업 진행 이력 및 로그
-│   ├── roadmap.md          # 프로젝트 로드맵 및 백로그
-│   ├── tech-stack.md       # 기술 스택 및 버전 관리
-│   ├── unit-plans/         # 작업 단위(Unit) 개발 계획서
-│   ├── unit-results/       # 작업 완료 보고서 (U-017[Mvp] 등)
-│   └── unit-runbooks/      # 기능 검증 런북 (U-017 등)
+│   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
+│   │       │   ├── turn.py
+│   │       │   ├── turn_stream_events.py
+│   │       │   └── turn_streaming_helpers.py
+│   │       ├── orchestrator/ # 오케스트레이션 엔진
+│   │       │   ├── pipeline.py (파이프라인 실행기)
+│   │       │   ├── stages/    # 단계별 모듈 (RU-005)
+│   │       │   │   ├── commit.py
+│   │       │   │   ├── parse.py
+│   │       │   │   ├── plan.py
+│   │       │   │   ├── render.py
+│   │       │   │   ├── resolve.py
+│   │       │   │   ├── types.py
+│   │       │   │   ├── validate.py
+│   │       │   │   └── verify.py
+│   │       │   ├── fallback.py
+│   │       │   ├── mock.py
+│   │       │   ├── prompt_loader.py
+│   │       │   ├── repair_loop.py
+│   │       │   └── validator.py
+│   │       └── ...
+├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
+│   ├── src/
+│   │   ├── api/            # HTTP Streaming 클라이언트
+│   │   ├── components/     # 게임 UI 컴포넌트
+│   │   ├── stores/         # 상태 관리 (Zustand)
+│   │   ├── turn/           # Turn Runner 모듈
+│   │   └── ...
+├── shared/                # 공유 리소스 (SSOT)
+│   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
+└── vibe/                  # SSOT 문서 저장소
+```
 
 ### 주요 디렉토리 책임
 
