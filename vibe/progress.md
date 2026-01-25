@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-25 18:15] [RU-005-Q1] 코드 중복: fallback/phase/repair 로직의 중복 제거로 드리프트 방지 완료
+
+### 작업 내용
+
+- **제안서**: [RU-005-Q1] 코드 중복: fallback/phase/repair 로직의 중복 제거로 드리프트 방지
+- **개선 사항**:
+    - **폴백 로직 SSOT 단일화**: `TurnOutputGenerator` 및 `MockOrchestrator`에 산재하던 폴백 생성 로직을 제거하고 `orchestrator/fallback.py:create_safe_fallback`으로 일원화하여 정책 드리프트 차단
+    - **단계(Phase) 목록 SSOT 고정**: API와 Mock이 각자 들고 있던 단계 리스트를 `orchestrator/pipeline.py:DEFAULT_STAGES`로 통합하여 처리 순서의 일관성 확보
+    - **Mock Repair Loop 구조 정비**: `MockOrchestrator` 역시 통합된 폴백 생성기를 사용하도록 수정하여 real/mock 경로 간의 폴백 응답 품질 동기화
+- **영향 범위**: `backend/src/unknown_world/orchestrator/generate_turn_output.py`, `backend/src/unknown_world/orchestrator/mock.py`, `backend/src/unknown_world/orchestrator/fallback.py`, `backend/src/unknown_world/orchestrator/pipeline.py`
+
+### 기술적 세부사항
+
+- **Delegation Pattern**: 기존 클래스 내부의 폴백 생성 메서드를 유지하되 내부적으로 SSOT 함수를 호출하도록 위임하여 인터페이스 호환성 유지 및 중복 제거 달성
+- **Centralized Sequence**: `AgentPhase` enum 순서와 실제 파이프라인 실행 순서가 `DEFAULT_STAGES`를 통해 명시적으로 관리됨으로써 관측 가능성 증거의 신뢰도 향상
+
+### 검증
+
+- **폴백 일관성 확인**: Mock 모드와 실모델 모드에서 동일한 구조의 폴백 데이터(재화 보존, 대안 카드 포함)가 생성됨을 확인.
+- **통합 테스트 통과**: `test_turn_streaming.py`를 통해 리팩토링 후에도 스트리밍 및 폴백 시퀀스가 정상 작동함을 확인.
+
+---
+
 ## [2026-01-25 17:15] [RU-005-S1] 잠재적 오류: badges/단계 이벤트 인바리언트 정합성(Consistency 실패 포함) 완료
 
 ### 작업 내용

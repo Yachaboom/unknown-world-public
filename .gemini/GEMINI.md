@@ -29,6 +29,7 @@ Unknown World는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**
 
 <general_rules>
 
+- **IMPORTANT**: Never use shell operators (&&, ||, ;, |) in commands. Always execute commands separately one by one.
 - **SSOT 우선순위**: `vibe/prd.md` > `vibe/tech-stack.md` > `vibe/ref/*` > (그 외 문서/규칙). 충돌 시 추측하지 말고 상위 문서 기준으로 정리한다.
 - **모델/버전 고정**: 모델 ID/의존성 버전은 `vibe/tech-stack.md` 기준으로 고정한다(변경 필요 시 문서도 동기화).
 - **하드 게이트 불변조건 유지**: `Schema OK`, `Economy OK`, `Safety OK`, `Consistency OK`를 항상 만족하도록 설계한다.

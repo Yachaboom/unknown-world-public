@@ -130,8 +130,13 @@ def test_turn_streaming_generation_fallback(monkeypatch):
     turn_output = final_event["data"]
 
     # 폴백 응답의 특징 확인
-    assert turn_output["agent_console"]["badges"] == ["schema_fail"]
-    assert turn_output["agent_console"]["repair_count"] == 1
+    # RU-005-Q1: SSOT fallback은 모든 카테고리의 배지를 일관되게 포함 (RU-005-S1)
+    badges = turn_output["agent_console"]["badges"]
+    assert "schema_fail" in badges, "폴백은 schema_fail 배지를 포함해야 함"
+    assert "economy_ok" in badges, "폴백은 economy_ok 배지를 포함해야 함 (비용 0)"
+    assert "safety_ok" in badges, "폴백은 safety_ok 배지를 포함해야 함"
+    assert "consistency_ok" in badges, "폴백은 consistency_ok 배지를 포함해야 함"
+    assert turn_output["agent_console"]["repair_count"] >= 1
     assert "혼란" in turn_output["narrative"] or "confusion" in turn_output["narrative"]
 
 

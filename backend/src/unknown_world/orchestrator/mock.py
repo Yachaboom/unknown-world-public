@@ -40,6 +40,9 @@ from unknown_world.models.turn import (
     WorldDelta,
     WorldRule,
 )
+from unknown_world.orchestrator.fallback import (
+    create_safe_fallback as _create_safe_fallback,
+)
 
 # =============================================================================
 # 모의 데이터 생성 헬퍼
@@ -122,6 +125,9 @@ class MockOrchestrator:
     실모델(Gemini) 없이 TurnOutput을 생성하는 모의 오케스트레이터입니다.
     seed 기반으로 결정적(재현 가능)인 결과를 생성합니다.
 
+    Note:
+        Phase 순서는 pipeline.py의 DEFAULT_STAGES가 SSOT입니다 (RU-005-Q1).
+
     Attributes:
         seed: 랜덤 시드 (재현성 보장)
 
@@ -135,17 +141,6 @@ class MockOrchestrator:
         ... )
         >>> output = orchestrator.generate_turn_output(turn_input)
     """
-
-    # 단계 목록 (PRD 예시)
-    PHASES = [
-        AgentPhase.PARSE,
-        AgentPhase.VALIDATE,
-        AgentPhase.PLAN,
-        AgentPhase.RESOLVE,
-        AgentPhase.RENDER,
-        AgentPhase.VERIFY,
-        AgentPhase.COMMIT,
-    ]
 
     def __init__(self, seed: int | None = None) -> None:
         """MockOrchestrator 초기화.
@@ -344,7 +339,7 @@ class MockOrchestrator:
     def create_safe_fallback(
         self,
         language: Language,
-        error_message: str | None = None,
+        error_message: str | None = None,  # noqa: ARG002 - 하위 호환용 (실제로 사용하지 않음)
         economy_snapshot: CurrencyAmount | None = None,
     ) -> TurnOutput:
         """안전한 폴백 TurnOutput 생성 (RULE-004, RU-002-S1).
@@ -352,43 +347,21 @@ class MockOrchestrator:
         스키마 검증 실패 시 반환할 안전한 기본 응답입니다.
         폴백 시 economy.balance_after는 입력 스냅샷을 그대로 유지합니다 (비용 0, 잔액 변화 없음).
 
+        Note:
+            이 메서드는 fallback.create_safe_fallback SSOT로 위임합니다 (RU-005-Q1).
+
         Args:
             language: 응답 언어
-            error_message: 에러 메시지 (내부용, UI에 노출하지 않음)
+            error_message: 에러 메시지 (하위 호환용, 실제 미사용)
             economy_snapshot: 요청 직전 재화 스냅샷 (폴백 시 잔액 유지용)
 
         Returns:
             TurnOutput: 안전한 폴백 응답
         """
-        is_korean = language == Language.KO
-
-        narrative = (
-            "잠시 혼란이 있었습니다. 다시 시도해주세요."
-            if is_korean
-            else "There was a momentary confusion. Please try again."
-        )
-
-        # RU-002-S1: 폴백 시 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
-        balance_after = (
-            economy_snapshot
-            if economy_snapshot is not None
-            else CurrencyAmount(signal=100, memory_shard=5)  # 기본값 (스냅샷 없을 때만)
-        )
-
-        return TurnOutput(
+        # RU-005-Q1: fallback SSOT로 위임
+        return _create_safe_fallback(
             language=language,
-            narrative=narrative,
-            ui=UIOutput(action_deck=ActionDeck(cards=[]), objects=[]),
-            world=WorldDelta(),
-            render=RenderOutput(image_job=None),
-            economy=EconomyOutput(
-                cost=CurrencyAmount(signal=0, memory_shard=0),
-                balance_after=balance_after,
-            ),
-            safety=SafetyOutput(blocked=False, message=None),
-            agent_console=AgentConsole(
-                current_phase=AgentPhase.COMMIT,
-                badges=[ValidationBadge.SCHEMA_FAIL],  # 실패 표시
-                repair_count=1,  # 복구 시도 횟수
-            ),
+            economy_snapshot=economy_snapshot,
+            repair_count=1,  # Mock에서는 기본 복구 시도 1회로 표시
+            is_blocked=False,
         )

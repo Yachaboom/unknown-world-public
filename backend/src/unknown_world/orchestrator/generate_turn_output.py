@@ -32,16 +32,12 @@ from pydantic import ValidationError
 
 from unknown_world.config.models import ModelLabel
 from unknown_world.models.turn import (
-    AgentConsole,
-    AgentPhase,
     CurrencyAmount,
-    EconomyOutput,
     Language,
-    SafetyOutput,
     TurnInput,
     TurnOutput,
-    ValidationBadge,
 )
+from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.prompt_loader import (
     load_system_prompt,
     load_turn_instructions,
@@ -378,7 +374,7 @@ class TurnOutputGenerator:
     def create_safe_fallback(
         self,
         language: Language,
-        error_message: str,
+        error_message: str,  # noqa: ARG002 - 하위 호환용 (실제로 사용하지 않음)
         economy_snapshot: CurrencyAmount | None = None,
     ) -> TurnOutput:
         """안전한 폴백 TurnOutput을 생성합니다.
@@ -386,40 +382,23 @@ class TurnOutputGenerator:
         검증 실패 또는 에러 발생 시 사용합니다.
         (RULE-004: 안전한 폴백 제공)
 
+        Note:
+            이 메서드는 fallback.create_safe_fallback SSOT로 위임합니다 (RU-005-Q1).
+
         Args:
             language: 언어
-            error_message: 에러 메시지 (내부용)
+            error_message: 에러 메시지 (하위 호환용, 실제 미사용)
             economy_snapshot: 현재 재화 상태 (비용 0으로 유지)
 
         Returns:
             안전한 폴백 TurnOutput
         """
-        # 기본 재화 (변동 없음)
-        balance = economy_snapshot or CurrencyAmount(signal=100, memory_shard=5)
-
-        # 언어별 폴백 메시지
-        if language == Language.KO:
-            narrative = "잠시 혼란스러운 순간이 지나갑니다. 다시 집중해봅시다."
-        else:
-            narrative = "A moment of confusion passes. Let's focus again."
-
-        return TurnOutput(
+        # RU-005-Q1: fallback SSOT로 위임
+        return create_safe_fallback(
             language=language,
-            narrative=narrative,
-            economy=EconomyOutput(
-                cost=CurrencyAmount(signal=0, memory_shard=0),
-                balance_after=balance,
-            ),
-            safety=SafetyOutput(blocked=False),
-            agent_console=AgentConsole(
-                current_phase=AgentPhase.COMMIT,
-                badges=[
-                    ValidationBadge.SCHEMA_OK,
-                    ValidationBadge.ECONOMY_OK,
-                    ValidationBadge.SAFETY_OK,
-                ],
-                repair_count=0,
-            ),
+            economy_snapshot=economy_snapshot,
+            repair_count=0,
+            is_blocked=False,
         )
 
 
