@@ -50,11 +50,37 @@ game_master.md (한 파일에서 ko/en을 섞어 쓰고, 규칙이 자주 어긋
 
 ---
 
-### 규칙 2: 프롬프트 파일 상단에 “목적/입력/출력 계약/버전”을 명시한다
+### 규칙 2: 프롬프트 파일 상단에 “목적/입력/출력 계약/버전”을 **XML 태그로 통일**해 명시한다
 
 **설명**: 프롬프트는 장기 운영/핫리로드를 전제하므로 메타데이터가 필요합니다.
+- (마이그레이션) 기존 로더/테스트가 `- key: value` 포맷을 사용 중이면, U-046 완료 전까지는 레거시 포맷을 유지하고 이후 XML 태그 표준으로 전환합니다.
 
-**올바른 예시**:
+**올바른 예시 (권장: 신규 표준)**:
+
+```markdown
+<prompt_meta>
+  <prompt_id>game_master_system</prompt_id>
+  <language>ko-KR</language>
+  <version>0.1.0</version>
+  <last_updated>YYYY-MM-DD</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+- 에이전트형 Game Master로서 TurnOutput(JSON)을 생성한다.
+
+## 입력
+- TurnInput(language, text, click, client, economy_snapshot)
+- WorldState(요약/핀/룰/인벤토리/히스토리)
+
+## 출력 계약(요약)
+- 반드시 JSON Schema를 만족하는 TurnOutput만 출력한다.
+- language는 입력과 동일하게 고정한다.
+</prompt_body>
+```
+
+**올바른 예시 (레거시: 현재 구현 호환)**:
 
 ```markdown
 # [Prompt] Game Master System (ko-KR)

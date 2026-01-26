@@ -236,53 +236,8 @@ print(f'ko/en 메타데이터 구분: {\"OK\" if ko_data.metadata.get(\"language
 
 ---
 
-### 시나리오 D: JSON 형태 프롬프트 반환
-
-**목적**: 프롬프트를 JSON 형태로 반환하여 모델 입력으로 전달할 수 있는지 확인
-
-**실행**:
-
-```bash
-cd backend
-uv run python -c "
-import json
-from unknown_world.orchestrator.prompt_loader import load_prompt_as_json
-from unknown_world.models.turn import Language
-
-# JSON 형태로 로드
-prompt_json = load_prompt_as_json('image', 'scene_prompt', Language.KO)
-
-print('=== JSON 형태 프롬프트 ===')
-print(json.dumps(prompt_json, indent=2, ensure_ascii=False)[:500])
-print('...')
-print()
-print(f'content 키 존재: {\"content\" in prompt_json}')
-print(f'metadata 키 존재: {\"metadata\" in prompt_json}')
-print(f'메타데이터 prompt_id: {prompt_json.get(\"metadata\", {}).get(\"prompt_id\")}')"
-```
-
-**기대 결과**:
-
-```json
-{
-  "content": "# [Prompt] Scene Image Generation...",
-  "metadata": {
-    "prompt_id": "scene_image_generation",
-    "language": "ko-KR",
-    "version": "0.1.0",
-    ...
-  }
-}
-```
-
-**확인 포인트**:
-
-- ✅ JSON 직렬화 성공
-- ✅ content 키 존재
-- ✅ metadata 키 존재
-- ✅ 메타데이터 필드 정확
-
----
+> 참고: “분리 프롬프트를 JSON 포맷으로 전환/반환”하는 검증 시나리오는 제거했습니다.  
+> 프롬프트 파일은 `.md`를 유지하며, 포맷 표준화는 **XML 태그 규격 통일(U-046)** 로 진행합니다.
 
 ## 4. 실행 결과 확인
 
@@ -303,7 +258,6 @@ print(f'메타데이터 prompt_id: {prompt_json.get(\"metadata\", {}).get(\"prom
 - ✅ 프론트매터 메타데이터가 올바르게 파싱됨
 - ✅ 개발 모드에서 핫리로드가 동작함
 - ✅ 운영 모드에서 캐싱이 동작함
-- ✅ JSON 형태로 프롬프트를 반환할 수 있음
 
 **실패 시 확인**:
 
