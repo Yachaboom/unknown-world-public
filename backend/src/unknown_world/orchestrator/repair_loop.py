@@ -71,6 +71,14 @@ REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
         "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
         "business_header": "## 이전 시도 결과",
         "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
+        # U-043: 언어 교정 전용 피드백
+        "language_header": "## 언어 혼합 오류",
+        "language_instruction": (
+            "사용자 노출 텍스트에 영어가 섞여 있습니다. "
+            "모든 텍스트를 한국어(ko-KR)로만 작성하세요. "
+            "스키마 구조는 유지하고 텍스트 값만 한국어로 수정합니다. "
+            "예외: Signal, Shard 등 재화 이름은 영어로 유지 가능합니다."
+        ),
     },
     Language.EN: {
         "schema_header": "## Previous Attempt Result",
@@ -78,6 +86,14 @@ REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
         "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
         "business_header": "## Previous Attempt Result",
         "business_instruction": "Please regenerate following the rules above.",
+        # U-043: 언어 교정 전용 피드백
+        "language_header": "## Language Mixing Error",
+        "language_instruction": (
+            "User-facing text contains Korean characters. "
+            "Rewrite all text in English (en-US) only. "
+            "Keep the schema structure intact and only modify text values to English. "
+            "Exception: Currency names like Signal, Shard may remain in English."
+        ),
     },
 }
 
@@ -309,12 +325,30 @@ def _build_repair_context_business(
     """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
 
     언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+    언어 혼합 에러가 있으면 특별한 지시를 추가합니다 (U-043).
 
     Args:
         biz_result: 비즈니스 룰 검증 결과
         language: 응답 언어
     """
     messages = REPAIR_CONTEXT_MESSAGES[language]
+
+    # U-043: 언어 혼합 에러가 있는지 확인
+    has_language_content_error = any(
+        "language_content_mixed" in err["type"] for err in biz_result.errors
+    )
+
+    # 언어 혼합 에러가 있으면 특별한 지시 추가
+    if has_language_content_error:
+        return f"""
+{messages["language_header"]}
+
+{biz_result.error_summary}
+
+{messages["language_instruction"]}
+"""
+
+    # 일반 비즈니스 룰 에러
     return f"""
 {messages["business_header"]}
 
@@ -333,17 +367,19 @@ def add_business_badges(
     에러 타입 접두어 → 배지 매핑:
         - economy_* → ECONOMY_FAIL
         - safety_* → SAFETY_BLOCKED
-        - language_* 또는 box2d_* → CONSISTENCY_FAIL
+        - language_* (mismatch/content_mixed) 또는 box2d_* → CONSISTENCY_FAIL
 
     RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
+    U-043: language_content_mixed도 CONSISTENCY_FAIL로 매핑.
 
     Args:
         biz_result: 비즈니스 룰 검증 결과
         badges: 배지 목록 (in-place 수정)
     """
-    # 에러 타입별 배지 매핑 (RU-005-S1)
+    # 에러 타입별 배지 매핑 (RU-005-S1, U-043)
     has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
     has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
+    # U-043: language_mismatch, language_content_mixed, box2d_* 모두 consistency로 매핑
     has_consistency_error = any(
         "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
     )

@@ -26,6 +26,11 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from unknown_world.models.turn import Language
+from unknown_world.validation.language_gate import (
+    LanguageGateResult,
+    build_language_error_summary,
+    validate_language_consistency,
+)
 
 if TYPE_CHECKING:
     from unknown_world.models.turn import TurnInput, TurnOutput
@@ -51,6 +56,7 @@ BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
         "signal_mismatch": "Signal 잔액 불일치: 예상 {expected}, 실제 {actual}",
         "memory_shard_mismatch": "Memory Shard 잔액 불일치: 예상 {expected}, 실제 {actual}",
         "language_mismatch": "언어 불일치: 입력 {input_lang}, 출력 {output_lang}",
+        "language_content_mixed": "언어 혼합 감지: {violation_count}개 필드에서 ko/en 혼합 발견",
         "box2d_out_of_range": "오브젝트 '{obj_id}'의 좌표가 범위를 벗어남: {coord}",
         "box2d_invalid_yorder": "오브젝트 '{obj_id}'의 ymin({ymin}) >= ymax({ymax})",
         "box2d_invalid_xorder": "오브젝트 '{obj_id}'의 xmin({xmin}) >= xmax({xmax})",
@@ -65,6 +71,7 @@ BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
         "signal_mismatch": "Signal balance mismatch: expected {expected}, actual {actual}",
         "memory_shard_mismatch": "Memory Shard balance mismatch: expected {expected}, actual {actual}",
         "language_mismatch": "Language mismatch: input {input_lang}, output {output_lang}",
+        "language_content_mixed": "Language mixing detected: {violation_count} fields contain ko/en mixing",
         "box2d_out_of_range": "Object '{obj_id}' coordinate out of range: {coord}",
         "box2d_invalid_yorder": "Object '{obj_id}' ymin({ymin}) >= ymax({ymax})",
         "box2d_invalid_xorder": "Object '{obj_id}' xmin({xmin}) >= xmax({xmax})",
@@ -95,6 +102,9 @@ class BusinessRuleError(StrEnum):
     LANGUAGE_MISMATCH = "language_mismatch"
     """입력과 출력 언어가 일치하지 않습니다"""
 
+    LANGUAGE_CONTENT_MIXED = "language_content_mixed"
+    """사용자 노출 텍스트에 ko/en이 혼합되어 있습니다 (U-043)"""
+
     # Box2D 규칙 (RULE-009)
     BOX2D_OUT_OF_RANGE = "box2d_out_of_range"
     """좌표가 0~1000 범위를 벗어났습니다"""
@@ -121,12 +131,14 @@ class BusinessRuleValidationResult:
         errors: 발견된 위반 목록
         error_summary: 에러 요약 (Repair 프롬프트용)
         language: 응답 언어 (RULE-006)
+        language_gate_result: 언어 혼합 검증 결과 (U-043)
     """
 
     is_valid: bool = True
     errors: list[dict[str, str]] = field(default_factory=lambda: [])
     error_summary: str = ""
     language: Language = Language.KO
+    language_gate_result: LanguageGateResult | None = None
 
     def add_error(self, error_type: BusinessRuleError, message: str) -> None:
         """에러를 추가합니다."""
@@ -137,6 +149,7 @@ class BusinessRuleValidationResult:
         """에러 요약을 생성합니다 (Repair 프롬프트용).
 
         언어에 따라 헤더 메시지를 분기합니다 (RULE-006).
+        언어 혼합 에러가 있으면 상세 지시를 추가합니다 (U-043).
         """
         if not self.errors:
             self.error_summary = ""
@@ -146,6 +159,11 @@ class BusinessRuleValidationResult:
         summary_lines = [messages["summary_header"]]
         for err in self.errors:
             summary_lines.append(f"- {err['message']}")
+
+        # U-043: 언어 혼합 에러가 있으면 상세 지시 추가
+        if self.language_gate_result and not self.language_gate_result.is_valid:
+            summary_lines.append("")
+            summary_lines.append(build_language_error_summary(self.language_gate_result))
 
         self.error_summary = "\n".join(summary_lines)
         return self.error_summary
@@ -245,6 +263,30 @@ def _validate_language(
         )
 
 
+def _validate_language_content(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Language 콘텐츠 혼합을 검증합니다 (RULE-006, U-043).
+
+    검증 항목:
+    - 사용자 노출 텍스트가 TurnInput.language와 동일 언어인지 확인
+    - ko/en 혼합 시 LANGUAGE_CONTENT_MIXED 에러 추가
+    """
+    # 언어 혼합 검증 (U-043)
+    lang_result = validate_language_consistency(turn_output, turn_input.language)
+
+    if not lang_result.is_valid:
+        messages = BUSINESS_RULE_MESSAGES[result.language]
+        result.add_error(
+            BusinessRuleError.LANGUAGE_CONTENT_MIXED,
+            messages["language_content_mixed"].format(violation_count=len(lang_result.violations)),
+        )
+        # 상세 에러 요약 생성을 위해 결과 저장
+        result.language_gate_result = lang_result
+
+
 def _validate_box2d(
     turn_output: TurnOutput,
     result: BusinessRuleValidationResult,
@@ -341,13 +383,16 @@ def validate_business_rules(
     # 1. Economy 검증 (RULE-005)
     _validate_economy(turn_input, turn_output, result)
 
-    # 2. Language 검증 (RULE-006)
+    # 2. Language enum 검증 (RULE-006)
     _validate_language(turn_input, turn_output, result)
 
-    # 3. Box2D 검증 (RULE-009)
+    # 3. Language 콘텐츠 혼합 검증 (RULE-006, U-043)
+    _validate_language_content(turn_input, turn_output, result)
+
+    # 4. Box2D 검증 (RULE-009)
     _validate_box2d(turn_output, result)
 
-    # 4. Safety 검증
+    # 5. Safety 검증
     _validate_safety(turn_output, result)
 
     # 에러 요약 생성

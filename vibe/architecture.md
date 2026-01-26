@@ -15,7 +15,6 @@ D:\Dev\unknown-world\
 │   │   ├── system/        # 시스템/페르소나 프롬프트
 │   │   ├── turn/          # 출력 지시사항 프롬프트
 │   │   └── image/         # 이미지 스타일 가이드라인
-│   ├── generated_images/  # 생성된 이미지 로컬 저장소 (U-019)
 │   ├── src/
 │   │   └── unknown_world/
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
@@ -30,32 +29,37 @@ D:\Dev\unknown-world\
 │   │       │   ├── stages/    # 단계별 모듈 (RU-005)
 │   │       │   │   ├── types.py
 │   │       │   │   ├── parse.py
+│   │       │   │   ├── validate.py
 │   │       │   │   └── ... (7대 단계 모듈)
 │   │       │   ├── fallback.py
 │   │       │   ├── prompt_loader.py (U-017, U-036)
 │   │       │   ├── repair_loop.py
 │   │       │   └── validator.py (U-018)
-│       ├── services/   # 외부 서비스 연동 (U-016)
-│       │   ├── genai_client.py
-│       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
-│       │   └── image_postprocess.py (rembg 배경 제거, U-035)
-│       └── validation/ # 비즈니스 룰 검증 로직
+│   │       ├── services/   # 외부 서비스 연동 (U-016)
+│   │       │   ├── genai_client.py
+│   │       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
+│   │       │   └── image_postprocess.py (rembg 배경 제거, U-035)
+│   │       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
+│   │       │   ├── business_rules.py
+│   │       │   └── language_gate.py (신규: 언어 혼합 검증)
+│   │       └── models/     # 데이터 모델 (TurnInput/Output)
+│   ├── tests/              # 백엔드 테스트 코드
+│   │   └── unit/
+│   │       └── test_u043_language_gate.py (신규)
+│   └── pyproject.toml
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
 │   │   ├── api/            # HTTP Streaming 클라이언트
 │   │   ├── components/     # 게임 UI 컴포넌트
-│   │   │   ├── SceneCanvas.tsx (핫스팟 레이어)
-│   │   │   ├── SceneImage.tsx (Lazy 로딩 및 상태 표시, U-020)
-│   │   │   └── ...
 │   │   ├── stores/         # 상태 관리 (Zustand)
 │   │   ├── turn/           # Turn Runner 모듈
 │   │   └── ...
 ├── shared/                # 공유 리소스 (SSOT)
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
-    ├── unit-plans/        # 개발 계획서 (CP-MVP-04 포함)
-    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-04 포함)
-    └── unit-runbooks/     # 검증 런북 (CP-MVP-04 포함)
+    ├── unit-plans/        # 개발 계획서
+    ├── unit-results/      # 개발 완료 보고서 (U-043 포함)
+    └── unit-runbooks/     # 검증 런북 (U-043 포함)
 ```
 
 ### 주요 디렉토리 책임

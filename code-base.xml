@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml,md}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**, .pytest_cache/**, .ruff_cache/**, dist/**, coverage/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, backend/.venv/**, frontend/node_modules/**, frontend/dist/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,12 +42,6 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-backend/prompts/image/scene_prompt.en.md
-backend/prompts/image/scene_prompt.ko.md
-backend/prompts/system/game_master.en.md
-backend/prompts/system/game_master.ko.md
-backend/prompts/turn/turn_output_instructions.en.md
-backend/prompts/turn/turn_output_instructions.ko.md
 backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/__init__.py
@@ -82,6 +76,7 @@ backend/src/unknown_world/services/image_generation.py
 backend/src/unknown_world/services/image_postprocess.py
 backend/src/unknown_world/validation/__init__.py
 backend/src/unknown_world/validation/business_rules.py
+backend/src/unknown_world/validation/language_gate.py
 backend/tests/integration/test_api.py
 backend/tests/integration/test_turn_streaming.py
 backend/tests/manual_test_image.py
@@ -98,7 +93,7 @@ backend/tests/unit/test_image_generation_integration.py
 backend/tests/unit/test_image_postprocess.py
 backend/tests/unit/test_orchestrator_repair.py
 backend/tests/unit/test_u034_verification.py
-CLAUDE.md
+backend/tests/unit/test_u043_language_gate.py
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -106,8 +101,6 @@ frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
-frontend/public/ui/QA_CHECKLIST.md
-frontend/public/ui/README.md
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
 frontend/src/App.test.tsx
@@ -147,7 +140,6 @@ frontend/src/i18n-scenario.test.ts
 frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
 frontend/src/locales/ko-KR/translation.json
-frontend/src/locales/README.md
 frontend/src/main.tsx
 frontend/src/save/constants.ts
 frontend/src/save/saveGame.test.ts
@@ -182,539 +174,12 @@ frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
 request.json
-shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="backend/prompts/image/scene_prompt.en.md">
-# [Prompt] Scene Image Generation (en-US)
-
-- prompt_id: scene_image_generation
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-26
-
-## Purpose
-
-Prompt template for generating in-game scene images.
-Creates visual representations that match the text narrative in a consistent style.
-
-## Inputs
-
-- narrative: Current turn's narrative text
-- scene_description: Scene description (optional)
-- style_hints: Style hints (optional)
-- previous_scene_context: Previous scene context (for consistency)
-
-## Output Contract (Summary)
-
-- Image generation prompts are written in **English** (model optimization).
-- Always include base style keywords for consistency.
-- Minimize negative prompts; describe the desired scene positively.
-
----
-
-## System Instructions
-
-You are the image prompt generator for "Unknown World" game.
-Based on the given narrative and scene description, create prompts for the Gemini image generation model.
-
-### Base Style Guidelines
-
-1. **Art Style**: Dark fantasy, mystery, roguelike atmosphere
-2. **Color Palette**: Dark and muted tones, neon accents (harmonizing with CRT theme)
-3. **Lighting**: Dramatic contrast, rim lighting, atmospheric illumination
-4. **Composition**: Cinematic, prefer wide or medium shots
-
-### Prompt Structure
-
-```
-[Subject/Scene Description], [Art Style], [Lighting/Mood], [Color Tones], [Camera/Composition], [Quality Keywords]
-```
-
-### Quality Keywords (Always Include)
-
-- highly detailed
-- cinematic lighting
-- atmospheric
-- dark fantasy aesthetic
-- 4k quality
-
-### Prohibited Elements
-
-- Avoid photorealistic style (difficult to maintain consistency)
-- No violent/sexual/discriminatory imagery
-- Avoid text/letters in images (readability issues)
-
----
-
-## Example Prompts
-
-### Example 1: Mysterious Forest Entrance
-
-**Input Narrative**: "The old door creaks open. Cold air rushes out from within."
-
-**Generated Prompt**:
-```
-An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
-```
-
-### Example 2: Interior of a Ruined Castle
-
-**Input Narrative**: "The throne of the crumbling castle gleams under the moonlight."
-
-**Generated Prompt**:
-```
-A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
-```
-
----
-
-## Important Constraints
-
-- **Prompts in English**: For image generation model optimization
-- **Maintain Consistent Style**: Always include base style keywords
-- **Safety Policy Compliance**: Exclude inappropriate content elements
-</file>
-
-<file path="backend/prompts/image/scene_prompt.ko.md">
-# [Prompt] Scene Image Generation (ko-KR)
-
-- prompt_id: scene_image_generation
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-26
-
-## 목적
-
-게임 내 장면(Scene) 이미지를 생성하기 위한 프롬프트 템플릿입니다.
-텍스트 내러티브에 맞는 시각적 표현을 일관된 스타일로 생성합니다.
-
-## 입력
-
-- narrative: 현재 턴의 내러티브 텍스트
-- scene_description: 장면 설명 (선택)
-- style_hints: 스타일 힌트 (선택)
-- previous_scene_context: 이전 장면 맥락 (일관성 유지용)
-
-## 출력 계약 (요약)
-
-- 이미지 생성 프롬프트는 **영어**로 작성됩니다 (모델 최적화).
-- 스타일 일관성을 위해 기본 스타일 키워드를 항상 포함합니다.
-- 부정 프롬프트는 최소화하고, 원하는 장면을 긍정적으로 서술합니다.
-
----
-
-## 시스템 지시
-
-당신은 "Unknown World" 게임의 이미지 프롬프트 생성기입니다.
-주어진 내러티브와 장면 설명을 바탕으로 Gemini 이미지 생성 모델에 전달할 프롬프트를 작성합니다.
-
-### 기본 스타일 가이드라인
-
-1. **아트 스타일**: 다크 판타지, 미스터리, 로그라이크 분위기
-2. **색상 팔레트**: 어둡고 차분한 톤, 네온 악센트 (CRT 테마와 조화)
-3. **조명**: 극적인 명암 대비, 림 라이트, 분위기 있는 조명
-4. **구도**: 시네마틱, 와이드 샷 또는 중간 샷 선호
-
-### 프롬프트 구조
-
-```
-[주제/장면 설명], [아트 스타일], [조명/분위기], [색상 톤], [카메라/구도], [품질 키워드]
-```
-
-### 품질 키워드 (기본 포함)
-
-- highly detailed
-- cinematic lighting
-- atmospheric
-- dark fantasy aesthetic
-- 4k quality
-
-### 금지 사항
-
-- 실사 스타일 (photorealistic) 지양 (일관성 유지 어려움)
-- 폭력적/성적/차별적 이미지 요소 금지
-- 텍스트/글자 포함 지양 (가독성 문제)
-
----
-
-## 예시 프롬프트
-
-### 예시 1: 신비로운 숲 입구
-
-**입력 내러티브**: "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다."
-
-**생성된 프롬프트**:
-```
-An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
-```
-
-### 예시 2: 폐허가 된 성의 내부
-
-**입력 내러티브**: "무너진 성의 왕좌가 달빛 아래 빛나고 있습니다."
-
-**생성된 프롬프트**:
-```
-A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
-```
-
----
-
-## 중요 제약
-
-- **프롬프트는 영어로 작성**: 이미지 생성 모델 최적화를 위해
-- **일관된 스타일 유지**: 기본 스타일 키워드를 항상 포함
-- **안전 정책 준수**: 부적절한 콘텐츠 생성 요소 배제
-</file>
-
-<file path="backend/prompts/system/game_master.en.md">
-# [Prompt] Game Master System (en-US)
-
-- prompt_id: game_master_system
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## Purpose
-
-Act as an agent-style Game Master to generate TurnOutput (JSON).
-"Unknown World" is an infinite generative roguelike narrative web game.
-
-## Input
-
-- TurnInput: language, text, action_id, click, client, economy_snapshot
-- WorldState: world rules, inventory, quests, relationships, history summary
-
-## Output Contract (Summary)
-
-- Output must satisfy the TurnOutput JSON Schema.
-- language is fixed to "en-US" matching the input.
-- All text (narrative, label, description, etc.) must be in English.
-
----
-
-## System Instructions
-
-You are the Game Master of "Unknown World". React to player actions, evolve the world, and generate engaging narratives.
-
-### Core Principles
-
-1. **Consistency**: Adhere to world rules and established settings.
-2. **Creativity**: Create unpredictable yet logical developments.
-3. **Responsiveness**: Provide meaningful consequences for player choices.
-4. **Economy**: Calculate cost and balance_after accurately.
-
-### Narrative Style
-
-- 2-3 sentences of concise, immersive description
-- Use present tense
-- Include sensory details (sounds, smells, textures)
-- Address the player as "you"
-
-### Action Card Generation Rules
-
-- Provide 3-6 choice cards
-- Include cost, risk level, and hint for each card
-- At least 1 low-cost alternative (is_alternative: true)
-- Disable cards (enabled: false) when balance is insufficient
-
-### Safety Policy
-
-- Do not generate violent/sexual/discriminatory content
-- On violation requests: safety.blocked=true, provide safe alternative narrative
-
----
-
-## Critical Constraints
-
-- **Output must be valid JSON.**
-- **language field is fixed to "en-US".**
-- **economy.cost and economy.balance_after are required.**
-- **balance_after must be >= 0.**
-</file>
-
-<file path="backend/prompts/system/game_master.ko.md">
-# [Prompt] Game Master System (ko-KR)
-
-- prompt_id: game_master_system
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## 목적
-
-에이전트형 Game Master로서 TurnOutput(JSON)을 생성합니다.
-"Unknown World"는 무한 생성 로그라이크 내러티브 웹게임입니다.
-
-## 입력
-
-- TurnInput: language, text, action_id, click, client, economy_snapshot
-- WorldState: 세계 규칙, 인벤토리, 퀘스트, 관계, 히스토리 요약
-
-## 출력 계약 (요약)
-
-- 반드시 JSON Schema를 만족하는 TurnOutput만 출력합니다.
-- language는 입력과 동일하게 "ko-KR"로 고정합니다.
-- 모든 텍스트(narrative, label, description 등)는 한국어로 작성합니다.
-
----
-
-## 시스템 지시
-
-당신은 "Unknown World"의 Game Master입니다. 플레이어의 행동에 반응하여 세계를 변화시키고, 흥미로운 내러티브를 생성합니다.
-
-### 핵심 원칙
-
-1. **일관성**: 세계 규칙(rules)과 기존 설정을 준수합니다.
-2. **창의성**: 예측 불가능하되 논리적인 전개를 만들어냅니다.
-3. **반응성**: 플레이어의 선택에 의미 있는 결과를 제공합니다.
-4. **경제성**: 비용(cost)과 잔액(balance_after)을 정확히 계산합니다.
-
-### 내러티브 스타일
-
-- 2~3문장의 간결하고 몰입감 있는 묘사
-- 현재 시제 사용
-- 감각적 디테일 포함 (소리, 냄새, 촉감 등)
-- 플레이어를 "당신"으로 지칭
-
-### 액션 카드 생성 규칙
-
-- 3~6장의 선택지 제공
-- 각 카드에 비용(cost), 위험도(risk), 힌트(hint) 포함
-- 최소 1장은 저비용 대안(is_alternative: true) 포함
-- 잔액 부족 시 해당 카드 비활성화(enabled: false)
-
-### 안전 정책
-
-- 폭력적/성적/차별적 콘텐츠 생성 금지
-- 위반 요청 시 safety.blocked=true, 안전한 대체 내러티브 제공
-
----
-
-## 중요 제약
-
-- **출력은 반드시 유효한 JSON이어야 합니다.**
-- **language 필드는 "ko-KR"로 고정합니다.**
-- **economy.cost와 economy.balance_after는 필수입니다.**
-- **잔액(balance_after)은 0 이상이어야 합니다.**
-</file>
-
-<file path="backend/prompts/turn/turn_output_instructions.en.md">
-# [Prompt] TurnOutput Instructions (en-US)
-
-- prompt_id: turn_output_instructions
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## Purpose
-
-Specify the rules for each field in the TurnOutput JSON schema.
-
----
-
-## Required Fields (Hard Gate)
-
-### language
-- Value: "en-US" (fixed to match input)
-- No mixed language output
-
-### narrative
-- Type: string (required)
-- Narrative text shown to the player
-- 2-3 sentences, written in English
-- Present tense, address as "you"
-
-### economy
-- Type: object (required)
-- cost: Resources consumed this turn {signal: int, memory_shard: int}
-- balance_after: Balance after consumption {signal: int, memory_shard: int}
-- **Important**: balance_after.signal >= 0, balance_after.memory_shard >= 0
-
-### safety
-- Type: object (required)
-- blocked: boolean (whether blocked by safety policy)
-- message: string | null (message to display when blocked)
-
----
-
-## Optional Fields
-
-### ui
-- action_deck.cards[]: Action card array (3-6 recommended)
-  - id: Unique card ID
-  - label: Display label (English)
-  - cost: {signal, memory_shard}
-  - risk: "low" | "medium" | "high"
-  - enabled: boolean
-  - is_alternative: boolean (low-cost alternative flag)
-- objects[]: Clickable scene objects
-  - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
-
-### world
-- rules_changed[]: Changed world rules
-- inventory_added[]: Added item IDs
-- inventory_removed[]: Removed item IDs
-- quests_updated[]: Updated quests
-- memory_pins[]: Pin candidates
-
-### render
-- image_job: Image generation job (optional)
-  - should_generate: boolean
-  - prompt: Image prompt (English preferred)
-
-### agent_console
-- current_phase: Current phase
-- badges[]: Validation badges
-- repair_count: Number of repair attempts
-
----
-
-## Coordinate Convention (RULE-009)
-
-- All coordinates use 0-1000 normalized coordinate system
-- bbox order: [ymin, xmin, ymax, xmax]
-- Do not use pixel coordinates
-
----
-
-## Example Output
-
-```json
-{
-  "language": "en-US",
-  "narrative": "The old door creaks open. Cold air rushes out from within.",
-  "economy": {
-    "cost": {"signal": 5, "memory_shard": 0},
-    "balance_after": {"signal": 95, "memory_shard": 5}
-  },
-  "safety": {"blocked": false, "message": null},
-  "ui": {
-    "action_deck": {
-      "cards": [
-        {"id": "enter", "label": "Step inside", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
-        {"id": "peek", "label": "Peek cautiously", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
-      ]
-    },
-    "objects": []
-  },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
-  "render": {"image_job": null},
-  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
-}
-```
-</file>
-
-<file path="backend/prompts/turn/turn_output_instructions.ko.md">
-# [Prompt] TurnOutput Instructions (ko-KR)
-
-- prompt_id: turn_output_instructions
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## 목적
-
-TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
-
----
-
-## 필수 필드 (Hard Gate)
-
-### language
-- 값: "ko-KR" (입력과 동일하게 고정)
-- 혼합 출력 금지
-
-### narrative
-- 타입: string (필수)
-- 플레이어에게 보여줄 내러티브 텍스트
-- 2~3문장, 한국어로 작성
-- 현재 시제, "당신" 지칭
-
-### economy
-- 타입: object (필수)
-- cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
-- balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
-- **중요**: balance_after.signal >= 0, balance_after.memory_shard >= 0
-
-### safety
-- 타입: object (필수)
-- blocked: boolean (안전 정책 차단 여부)
-- message: string | null (차단 시 표시할 메시지)
-
----
-
-## 선택 필드
-
-### ui
-- action_deck.cards[]: 액션 카드 배열 (3~6장 권장)
-  - id: 카드 고유 ID
-  - label: 표시 라벨 (한국어)
-  - cost: {signal, memory_shard}
-  - risk: "low" | "medium" | "high"
-  - enabled: boolean
-  - is_alternative: boolean (저비용 대안 여부)
-- objects[]: 클릭 가능한 장면 오브젝트
-  - box_2d: {ymin, xmin, ymax, xmax} (0~1000 정규화 좌표)
-
-### world
-- rules_changed[]: 변경된 세계 규칙
-- inventory_added[]: 추가된 아이템 ID
-- inventory_removed[]: 제거된 아이템 ID
-- quests_updated[]: 업데이트된 퀘스트
-- memory_pins[]: 고정 후보
-
-### render
-- image_job: 이미지 생성 작업 (선택)
-  - should_generate: boolean
-  - prompt: 이미지 프롬프트 (영어 권장)
-
-### agent_console
-- current_phase: 현재 단계
-- badges[]: 검증 배지
-- repair_count: 복구 시도 횟수
-
----
-
-## 좌표 규약 (RULE-009)
-
-- 모든 좌표는 0~1000 정규화 좌표계
-- bbox 순서: [ymin, xmin, ymax, xmax]
-- 픽셀 좌표 사용 금지
-
----
-
-## 예시 출력
-
-```json
-{
-  "language": "ko-KR",
-  "narrative": "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다.",
-  "economy": {
-    "cost": {"signal": 5, "memory_shard": 0},
-    "balance_after": {"signal": 95, "memory_shard": 5}
-  },
-  "safety": {"blocked": false, "message": null},
-  "ui": {
-    "action_deck": {
-      "cards": [
-        {"id": "enter", "label": "안으로 들어간다", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
-        {"id": "peek", "label": "조심스럽게 엿본다", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
-      ]
-    },
-    "objects": []
-  },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
-  "render": {"image_job": null},
-  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
-}
-```
-</file>
 
 <file path="backend/src/unknown_world/api/image.py">
 """Unknown World - 이미지 생성 API 엔드포인트.
@@ -2714,23 +2179,447 @@ async def remove_background_if_needed(
     return result.output_path
 </file>
 
-<file path="backend/src/unknown_world/validation/__init__.py">
-"""Unknown World - 검증 모듈.
+<file path="backend/src/unknown_world/validation/language_gate.py">
+"""Unknown World - 언어 혼합 검증 게이트 (RULE-006).
 
-비즈니스 룰 검증기를 제공합니다.
+ko/en 혼합 출력을 감지하고 차단하는 Hard Gate입니다.
+TurnInput.language를 SSOT로 삼아 TurnOutput의 사용자 노출 텍스트가
+동일 언어로 수렴하는지 검증합니다.
+
+설계 원칙:
+    - RULE-006: ko/en 언어 정책 준수 (혼합 출력 금지)
+    - RULE-004: 검증 실패 시 Repair loop로 복구
+    - CP-MVP-05: 언어 혼합 금지 검증
+
+페어링 결정:
+    - Q1: Option A (보수적 - 오탐 최소, CP에서 튜닝)
+    - Q2: Option A (고유명 최소치만 허용)
+
+참조:
+    - vibe/unit-plans/U-043[Mvp].md
+    - vibe/ref/en-ko-issue.png (혼합 출력 사례)
+    - .cursor/rules/00-core-critical.mdc
 """
 
-from unknown_world.validation.business_rules import (
-    BusinessRuleError,
-    BusinessRuleValidationResult,
-    validate_business_rules,
-)
+from __future__ import annotations
 
-__all__ = [
-    "BusinessRuleError",
-    "BusinessRuleValidationResult",
-    "validate_business_rules",
-]
+import logging
+import re
+import unicodedata
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from unknown_world.models.turn import Language
+
+if TYPE_CHECKING:
+    from unknown_world.models.turn import TurnOutput
+
+# =============================================================================
+# 로거 설정
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# 상수 및 설정
+# =============================================================================
+
+# 페어링 결정 Q1: Option A (보수적 - 오탐 최소)
+# 혼합 판정 임계값 (이 비율 이상이면 "잘못된 언어"로 판정)
+MIXED_THRESHOLD_RATIO = 0.15  # 15% 이상의 반대 언어 문자 → 혼합으로 판정
+
+# 페어링 결정 Q2: Option A (고유명 최소치만 허용)
+# 허용 화이트리스트 (영어 고유명 - 재화/모델 라벨 등)
+# 주의: 복합어는 개별 단어도 함께 등록해야 합니다 (한글 붙은 경우 단어 경계 매칭 문제)
+ALLOWED_ENGLISH_TERMS: set[str] = {
+    # 재화 이름 (RULE-005)
+    "signal",
+    "shard",
+    "memory",
+    "memory shard",
+    # 모델 라벨 (RULE-008)
+    "fast",
+    "quality",
+    "cheap",
+    "ref",
+    # 시스템 상수
+    "ok",
+    "fail",
+    "blocked",
+    # 기타 허용 약어
+    "ui",
+    "api",
+    "id",
+    "json",
+    "schema",
+}
+
+# 한글 유니코드 범위
+HANGUL_JAMO_START = 0x1100
+HANGUL_JAMO_END = 0x11FF
+HANGUL_SYLLABLES_START = 0xAC00
+HANGUL_SYLLABLES_END = 0xD7AF
+HANGUL_COMPAT_JAMO_START = 0x3130
+HANGUL_COMPAT_JAMO_END = 0x318F
+
+
+# =============================================================================
+# 언어 감지 휴리스틱
+# =============================================================================
+
+
+def _is_hangul(char: str) -> bool:
+    """한글 문자인지 확인합니다."""
+    code = ord(char)
+    return (
+        (HANGUL_SYLLABLES_START <= code <= HANGUL_SYLLABLES_END)
+        or (HANGUL_JAMO_START <= code <= HANGUL_JAMO_END)
+        or (HANGUL_COMPAT_JAMO_START <= code <= HANGUL_COMPAT_JAMO_END)
+    )
+
+
+def _is_latin(char: str) -> bool:
+    """라틴 알파벳인지 확인합니다 (a-z, A-Z)."""
+    return char.isalpha() and unicodedata.category(char).startswith("L") and not _is_hangul(char)
+
+
+def _normalize_text_for_check(text: str) -> str:
+    """검사용으로 텍스트를 정규화합니다.
+
+    - 소문자 변환
+    - 화이트리스트 단어 제거
+    - 숫자/기호/공백/이모지 제거
+    """
+    normalized = text.lower()
+
+    # 화이트리스트 단어 제거 (대소문자 무시)
+    # 복합어를 먼저 처리 (긴 것부터)
+    sorted_terms = sorted(ALLOWED_ENGLISH_TERMS, key=len, reverse=True)
+    for term in sorted_terms:
+        # 한글이 붙어있는 경우도 처리하기 위해 단어 경계 대신
+        # 알파벳이 아닌 문자 또는 문자열 경계로 매칭
+        # 예: "Signal가", "Memory Shard를" 등
+        pattern = rf"(?<![a-zA-Z]){re.escape(term)}(?![a-zA-Z])"
+        normalized = re.sub(pattern, "", normalized, flags=re.IGNORECASE)
+
+    return normalized
+
+
+@dataclass
+class LanguageRatio:
+    """언어 비율 측정 결과.
+
+    Attributes:
+        hangul_count: 한글 문자 수
+        latin_count: 라틴 문자 수
+        total_alpha: 총 알파벳 문자 수 (한글 + 라틴)
+        hangul_ratio: 한글 비율 (0.0 ~ 1.0)
+        latin_ratio: 라틴 비율 (0.0 ~ 1.0)
+    """
+
+    hangul_count: int = 0
+    latin_count: int = 0
+    total_alpha: int = 0
+    hangul_ratio: float = 0.0
+    latin_ratio: float = 0.0
+
+
+def measure_language_ratio(text: str) -> LanguageRatio:
+    """텍스트의 한글/라틴 비율을 측정합니다.
+
+    화이트리스트 단어는 제거한 후 측정합니다.
+
+    Args:
+        text: 측정할 텍스트
+
+    Returns:
+        LanguageRatio: 언어 비율 측정 결과
+    """
+    if not text:
+        return LanguageRatio()
+
+    # 정규화 (화이트리스트 제거)
+    normalized = _normalize_text_for_check(text)
+
+    hangul_count = 0
+    latin_count = 0
+
+    for char in normalized:
+        if _is_hangul(char):
+            hangul_count += 1
+        elif _is_latin(char):
+            latin_count += 1
+
+    total = hangul_count + latin_count
+
+    if total == 0:
+        return LanguageRatio()
+
+    return LanguageRatio(
+        hangul_count=hangul_count,
+        latin_count=latin_count,
+        total_alpha=total,
+        hangul_ratio=hangul_count / total,
+        latin_ratio=latin_count / total,
+    )
+
+
+def is_language_mixed(text: str, expected_language: Language) -> bool:
+    """텍스트가 예상 언어와 다른 언어가 혼합되었는지 확인합니다.
+
+    Args:
+        text: 검사할 텍스트
+        expected_language: 예상 언어 (TurnInput.language)
+
+    Returns:
+        bool: 혼합되었으면 True
+    """
+    if not text or len(text.strip()) == 0:
+        return False
+
+    ratio = measure_language_ratio(text)
+
+    # 알파벳이 거의 없는 경우 (숫자/기호만) → 혼합 아님
+    if ratio.total_alpha < 3:
+        return False
+
+    # 예상 언어에 따라 반대 언어 비율 체크
+    if expected_language == Language.KO:
+        # 한국어 예상인데 라틴 비율이 임계값 이상이면 혼합
+        return ratio.latin_ratio >= MIXED_THRESHOLD_RATIO
+    else:
+        # 영어 예상인데 한글 비율이 임계값 이상이면 혼합
+        return ratio.hangul_ratio >= MIXED_THRESHOLD_RATIO
+
+
+# =============================================================================
+# TurnOutput 텍스트 추출
+# =============================================================================
+
+
+@dataclass
+class ExtractedText:
+    """추출된 사용자 노출 텍스트.
+
+    Attributes:
+        field_path: 필드 경로 (예: "narrative", "ui.action_deck.cards[0].label")
+        text: 텍스트 내용
+    """
+
+    field_path: str
+    text: str
+
+
+def extract_user_facing_texts(turn_output: TurnOutput) -> list[ExtractedText]:
+    """TurnOutput에서 사용자 노출 텍스트를 추출합니다.
+
+    검사 범위 (우선순위):
+        - narrative
+        - ui.action_deck.cards[].label, description, hint, reward_hint, disabled_reason
+        - ui.objects[].label, interaction_hint
+        - world.quests_updated[].label
+        - world.rules_changed[].label, description
+        - world.memory_pins[].content
+
+    Args:
+        turn_output: 검사할 TurnOutput
+
+    Returns:
+        list[ExtractedText]: 추출된 텍스트 목록
+    """
+    texts: list[ExtractedText] = []
+
+    # 1. narrative (가장 중요)
+    if turn_output.narrative:
+        texts.append(ExtractedText(field_path="narrative", text=turn_output.narrative))
+
+    # 2. ui.action_deck.cards[]
+    for i, card in enumerate(turn_output.ui.action_deck.cards):
+        texts.append(ExtractedText(field_path=f"ui.action_deck.cards[{i}].label", text=card.label))
+        if card.description:
+            texts.append(
+                ExtractedText(
+                    field_path=f"ui.action_deck.cards[{i}].description",
+                    text=card.description,
+                )
+            )
+        if card.hint:
+            texts.append(
+                ExtractedText(field_path=f"ui.action_deck.cards[{i}].hint", text=card.hint)
+            )
+        if card.reward_hint:
+            texts.append(
+                ExtractedText(
+                    field_path=f"ui.action_deck.cards[{i}].reward_hint",
+                    text=card.reward_hint,
+                )
+            )
+        if card.disabled_reason:
+            texts.append(
+                ExtractedText(
+                    field_path=f"ui.action_deck.cards[{i}].disabled_reason",
+                    text=card.disabled_reason,
+                )
+            )
+
+    # 3. ui.objects[]
+    for i, obj in enumerate(turn_output.ui.objects):
+        texts.append(ExtractedText(field_path=f"ui.objects[{i}].label", text=obj.label))
+        if obj.interaction_hint:
+            texts.append(
+                ExtractedText(
+                    field_path=f"ui.objects[{i}].interaction_hint",
+                    text=obj.interaction_hint,
+                )
+            )
+
+    # 4. world.quests_updated[]
+    for i, quest in enumerate(turn_output.world.quests_updated):
+        texts.append(ExtractedText(field_path=f"world.quests_updated[{i}].label", text=quest.label))
+
+    # 5. world.rules_changed[]
+    for i, rule in enumerate(turn_output.world.rules_changed):
+        texts.append(ExtractedText(field_path=f"world.rules_changed[{i}].label", text=rule.label))
+        if rule.description:
+            texts.append(
+                ExtractedText(
+                    field_path=f"world.rules_changed[{i}].description",
+                    text=rule.description,
+                )
+            )
+
+    # 6. world.memory_pins[]
+    for i, pin in enumerate(turn_output.world.memory_pins):
+        texts.append(ExtractedText(field_path=f"world.memory_pins[{i}].content", text=pin.content))
+
+    # 7. safety.message
+    if turn_output.safety.message:
+        texts.append(ExtractedText(field_path="safety.message", text=turn_output.safety.message))
+
+    return texts
+
+
+# =============================================================================
+# 언어 혼합 검증 결과
+# =============================================================================
+
+
+@dataclass
+class LanguageGateResult:
+    """언어 혼합 검증 결과.
+
+    Attributes:
+        is_valid: 검증 통과 여부 (혼합 없음)
+        violations: 위반 사항 목록 (필드 경로 + 샘플 토큰)
+        expected_language: 예상 언어
+    """
+
+    is_valid: bool = True
+    violations: list[dict[str, str]] = field(default_factory=lambda: [])
+    expected_language: Language = Language.KO
+
+    def add_violation(self, field_path: str, sample_text: str) -> None:
+        """위반 사항을 추가합니다."""
+        self.is_valid = False
+        # 로그에 전체 텍스트 노출 방지 - 앞 50자만 샘플링
+        truncated = sample_text[:50] + "..." if len(sample_text) > 50 else sample_text
+        self.violations.append({"field": field_path, "sample": truncated})
+
+
+def validate_language_consistency(
+    turn_output: TurnOutput,
+    expected_language: Language,
+) -> LanguageGateResult:
+    """TurnOutput의 언어 일관성을 검증합니다.
+
+    사용자 노출 텍스트가 expected_language와 일치하는지 확인합니다.
+    혼합 발견 시 위반 목록을 반환합니다.
+
+    Args:
+        turn_output: 검사할 TurnOutput
+        expected_language: 예상 언어 (TurnInput.language)
+
+    Returns:
+        LanguageGateResult: 검증 결과
+
+    Example:
+        >>> result = validate_language_consistency(turn_output, Language.KO)
+        >>> if not result.is_valid:
+        ...     print(f"혼합 발견: {len(result.violations)}건")
+    """
+    result = LanguageGateResult(expected_language=expected_language)
+
+    # 사용자 노출 텍스트 추출
+    texts = extract_user_facing_texts(turn_output)
+
+    # 각 텍스트 검사
+    for extracted in texts:
+        if is_language_mixed(extracted.text, expected_language):
+            result.add_violation(extracted.field_path, extracted.text)
+
+    if not result.is_valid:
+        logger.warning(
+            "[LanguageGate] 언어 혼합 감지",
+            extra={
+                "expected_language": expected_language.value,
+                "violation_count": len(result.violations),
+            },
+        )
+
+    return result
+
+
+# =============================================================================
+# i18n 에러 메시지 (RULE-006)
+# =============================================================================
+
+LANGUAGE_GATE_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "summary_header": "언어 혼합이 감지되었습니다 (RULE-006 위반):",
+        "violation_item": "- 필드 '{field}': 한국어로 작성해야 합니다",
+        "instruction": "모든 사용자 노출 텍스트를 한국어(ko-KR)로 다시 작성하세요.",
+    },
+    Language.EN: {
+        "summary_header": "Language mixing detected (RULE-006 violation):",
+        "violation_item": "- Field '{field}': Must be written in English",
+        "instruction": "Rewrite all user-facing text in English (en-US).",
+    },
+}
+
+
+def build_language_error_summary(result: LanguageGateResult) -> str:
+    """언어 혼합 검증 실패에 대한 에러 요약을 생성합니다.
+
+    Repair 프롬프트에 포함할 요약입니다.
+    전체 텍스트는 노출하지 않고 필드 경로만 표시합니다.
+
+    Args:
+        result: 언어 검증 결과
+
+    Returns:
+        str: 에러 요약 문자열
+    """
+    if result.is_valid:
+        return ""
+
+    messages = LANGUAGE_GATE_MESSAGES[result.expected_language]
+    lines = [messages["summary_header"]]
+
+    # 최대 5개까지만 표시 (너무 많으면 프롬프트 비대)
+    for violation in result.violations[:5]:
+        lines.append(messages["violation_item"].format(field=violation["field"]))
+
+    if len(result.violations) > 5:
+        remaining = len(result.violations) - 5
+        if result.expected_language == Language.KO:
+            lines.append(f"- (외 {remaining}건 추가 위반)")
+        else:
+            lines.append(f"- (and {remaining} more violations)")
+
+    lines.append("")
+    lines.append(messages["instruction"])
+
+    return "\n".join(lines)
 </file>
 
 <file path="backend/tests/integration/test_api.py">
@@ -4623,6 +4512,202 @@ async def test_validate_economy_negative_attempt(sample_turn_input: TurnInput) -
     assert any("signal" in err["message"].lower() for err in result.errors)
 </file>
 
+<file path="backend/tests/unit/test_u043_language_gate.py">
+"""U-043: 언어 혼합 검증 및 Repair 루프 단위 테스트."""
+
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from unknown_world.models.turn import (
+    ActionCard,
+    ActionDeck,
+    AgentConsole,
+    ClientInfo,
+    CurrencyAmount,
+    EconomyOutput,
+    EconomySnapshot,
+    Language,
+    RenderOutput,
+    SafetyOutput,
+    TurnInput,
+    TurnOutput,
+    UIOutput,
+    ValidationBadge,
+    WorldDelta,
+)
+from unknown_world.orchestrator.generate_turn_output import GenerationResult, GenerationStatus
+from unknown_world.orchestrator.repair_loop import run_repair_loop
+from unknown_world.validation.business_rules import BusinessRuleError, validate_business_rules
+from unknown_world.validation.language_gate import (
+    measure_language_ratio,
+    validate_language_consistency,
+)
+
+
+@pytest.fixture
+def sample_turn_input() -> TurnInput:
+    return TurnInput(
+        language=Language.KO,
+        text="테스트 입력",
+        client=ClientInfo(viewport_w=1920, viewport_h=1080),
+        economy_snapshot=EconomySnapshot(signal=100, memory_shard=5),
+    )
+
+
+@pytest.fixture
+def base_turn_output(sample_turn_input: TurnInput) -> TurnOutput:
+    return TurnOutput(
+        language=Language.KO,
+        narrative="정상적인 한국어 내러티브입니다.",
+        ui=UIOutput(
+            action_deck=ActionDeck(
+                cards=[
+                    ActionCard(
+                        id="test",
+                        label="테스트 카드",
+                        cost=CurrencyAmount(signal=10, memory_shard=0),
+                    )
+                ]
+            ),
+            objects=[],
+        ),
+        world=WorldDelta(),
+        render=RenderOutput(image_job=None),
+        economy=EconomyOutput(
+            cost=CurrencyAmount(signal=10, memory_shard=0),
+            balance_after=CurrencyAmount(signal=90, memory_shard=5),
+        ),
+        safety=SafetyOutput(blocked=False),
+        agent_console=AgentConsole(repair_count=0),
+    )
+
+
+def test_measure_language_ratio_ko():
+    """한국어 텍스트의 언어 비율 측정 테스트."""
+    text = "안녕하세요. 이것은 테스트입니다."
+    ratio = measure_language_ratio(text)
+    assert ratio.hangul_ratio > 0.8
+    assert ratio.latin_ratio < 0.2
+
+
+def test_measure_language_ratio_en():
+    """영어 텍스트의 언어 비율 측정 테스트."""
+    text = "Hello. This is a test."
+    ratio = measure_language_ratio(text)
+    assert ratio.latin_ratio > 0.8
+    assert ratio.hangul_ratio == 0.0
+
+
+def test_measure_language_ratio_mixed():
+    """혼합된 텍스트의 언어 비율 측정 테스트."""
+    text = "안녕하세요. This is a mixed text."
+    ratio = measure_language_ratio(text)
+    assert ratio.hangul_count > 0
+    assert ratio.latin_count > 0
+
+
+def test_measure_language_ratio_whitelist():
+    """화이트리스트 단어가 비율 측정에서 제외되는지 테스트."""
+    # "Signal"은 화이트리스트에 있으므로 라틴 카운트에서 제외되어야 함
+    text = "Signal이 감지되었습니다."
+    ratio = measure_language_ratio(text)
+    # "이 감지되었습니다" (한글 7자 + 공백 1자) -> 한글 7
+    # "signal" 제거됨. "i" 남음?
+    # re.sub(rf"(?<![a-zA-Z]){re.escape(term)}(?![a-zA-Z])", "", ...)
+    # "signal" -> ""
+    # "이 감지되었습니다." 만 남음
+    assert ratio.latin_count == 0
+    assert ratio.hangul_count > 0
+
+
+def test_validate_language_consistency_mixed_ko(base_turn_output):
+    """한국어 요청에 영어가 섞인 경우 검증 테스트."""
+    # 1. narrative
+    mixed_output = base_turn_output.model_copy(deep=True)
+    mixed_output.narrative = "이것은 한국어인데 Suddenly English appeared."
+    result = validate_language_consistency(mixed_output, Language.KO)
+    assert result.is_valid is False
+    assert any(v["field"] == "narrative" for v in result.violations)
+
+    # 2. action_deck.cards[0].label
+    mixed_output = base_turn_output.model_copy(deep=True)
+    mixed_output.ui.action_deck.cards[0].label = "Mixed Label 영어"
+    result = validate_language_consistency(mixed_output, Language.KO)
+    assert result.is_valid is False
+    assert any(v["field"] == "ui.action_deck.cards[0].label" for v in result.violations)
+
+    # 3. safety.message
+    mixed_output = base_turn_output.model_copy(deep=True)
+    mixed_output.safety.message = "This is a blocked message in English."
+    result = validate_language_consistency(mixed_output, Language.KO)
+    assert result.is_valid is False
+    assert any(v["field"] == "safety.message" for v in result.violations)
+
+
+def test_validate_language_consistency_en_with_ko(base_turn_output):
+    """영어 요청에 한국어가 섞인 경우 검증 테스트."""
+    en_input_lang = Language.EN
+    en_output = base_turn_output.model_copy(deep=True)
+    en_output.language = Language.EN
+    en_output.narrative = "This is English but 한국어가 섞임."
+
+    result = validate_language_consistency(en_output, en_input_lang)
+    assert result.is_valid is False
+    assert any(v["field"] == "narrative" for v in result.violations)
+
+
+def test_build_language_error_summary_ko(base_turn_output):
+    """한국어 에러 요약 생성 테스트."""
+    from unknown_world.validation.language_gate import build_language_error_summary
+
+    mixed_output = base_turn_output.model_copy(deep=True)
+    mixed_output.narrative = "Mixed English."
+    result = validate_language_consistency(mixed_output, Language.KO)
+
+    summary = build_language_error_summary(result)
+    assert "언어 혼합이 감지되었습니다" in summary
+    assert "narrative" in summary
+    assert "한국어(ko-KR)로 다시 작성하세요" in summary
+
+
+def test_validate_business_rules_language_content_mixed(sample_turn_input, base_turn_output):
+    """비즈니스 룰 검증에서 언어 혼합 감지 테스트."""
+    mixed_output = base_turn_output.model_copy(deep=True)
+    mixed_output.narrative = "한국어와 English가 섞여 있습니다. This should fail."
+
+    result = validate_business_rules(sample_turn_input, mixed_output)
+    assert result.is_valid is False
+    assert any(err["type"] == BusinessRuleError.LANGUAGE_CONTENT_MIXED for err in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_repair_loop_fixes_language_mixing(sample_turn_input, base_turn_output):
+    """언어 혼합 시 Repair 루프가 작동하여 수정되는지 테스트."""
+    mixed_output = base_turn_output.model_copy(deep=True)
+    mixed_output.narrative = "혼합된 언어 English Mixed."
+
+    valid_output = base_turn_output.model_copy(deep=True)
+    valid_output.narrative = "수정된 한국어 내러티브"
+
+    with patch("unknown_world.orchestrator.repair_loop.get_turn_output_generator") as mock_get_gen:
+        mock_gen = mock_get_gen.return_value
+        # 첫 번째는 혼합 출력, 두 번째는 정상 출력 반환
+        mock_gen.generate = AsyncMock(
+            side_effect=[
+                GenerationResult(status=GenerationStatus.SUCCESS, output=mixed_output),
+                GenerationResult(status=GenerationStatus.SUCCESS, output=valid_output),
+            ]
+        )
+
+        result = await run_repair_loop(sample_turn_input)
+
+        assert result.repair_attempts == 1
+        assert result.output.narrative == "수정된 한국어 내러티브"
+        assert ValidationBadge.CONSISTENCY_OK in result.badges
+        assert ValidationBadge.CONSISTENCY_FAIL not in result.badges  # 최종 배지는 OK여야 함
+</file>
+
 <file path="frontend/coverage/block-navigation.js">
 /* eslint-disable */
 var jumpToCode = (function init() {
@@ -4934,296 +5019,6 @@ var addSorting = (function() {
 })();
 
 window.addEventListener('load', addSorting);
-</file>
-
-<file path="frontend/public/ui/QA_CHECKLIST.md">
-# UI 에셋 QA 체크리스트
-
-> **참조**: `frontend/public/ui/README.md` (SSOT 규칙), `vibe/ref/rembg-guide.md` (배경 제거)  
-> **목적**: nanobanana mcp로 생성한 에셋의 품질/일관성 보장  
-> **적용 시점**: 에셋 추가/수정 시 반드시 체크
-
----
-
-## 1. 용량 예산 (Performance Budget)
-
-### 1.1 개별 에셋 상한
-
-| 유형            | 상한  | 권장       | 체크 항목         |
-| --------------- | ----- | ---------- | ----------------- |
-| **아이콘**      | 30KB  | 20KB 이하  | `bytes` 필드 확인 |
-| **placeholder** | 300KB | 200KB 이하 | `bytes` 필드 확인 |
-| **chrome**      | 120KB | 30KB 이하  | `bytes` 필드 확인 |
-
-### 1.2 총합 예산
-
-| 항목     | 값                                  |
-| -------- | ----------------------------------- |
-| **상한** | 1.5MB (1,572,864 bytes)             |
-| **권장** | 1MB (1,048,576 bytes) 이하          |
-| **현재** | `manifest.json`의 `totalBytes` 확인 |
-
-### 1.3 용량 초과 시 대응
-
-1. **압축/최적화**: TinyPNG, ImageMagick, WebP 변환
-2. **해상도/색상 축소**: 필요 사이즈만 유지
-3. **불필요 에셋 제거**: 사용처 없는 에셋 정리
-4. **예산 상향**: 근거 문서화 후 `budgetBytes` 조정
-
----
-
-## 2. 사이즈/규격 (Size)
-
-### 2.1 아이콘 사이즈 체크
-
-| 항목            | 요구                 | 체크 |
-| --------------- | -------------------- | ---- |
-| **필수 사이즈** | 16px, 24px 최소 2종  | ☐    |
-| **선택 사이즈** | 32px, 64px (필요 시) | ☐    |
-| **정방형**      | 가로 = 세로          | ☐    |
-
-### 2.2 16px 실루엣 테스트 ⚠️
-
-> **중요**: 16px에서도 형태가 구분되어야 합니다.
-
-**테스트 방법**:
-
-1. 16px 아이콘을 100% 배율로 표시
-2. 2m 거리에서 형태 구분 가능 여부 확인
-3. 다른 아이콘과 혼동되지 않는지 확인
-
-**실패 시 대응**:
-
-- 디테일 단순화
-- 외곽선/실루엣 강화
-- 16px/24px 별도 디자인 (사용처 분리)
-
-### 2.3 placeholder/chrome 사이즈
-
-| 항목            | 권장                     | 비고               |
-| --------------- | ------------------------ | ------------------ |
-| **placeholder** | 512x384 또는 용도별 적정 | 가로세로 비율 유지 |
-| **chrome**      | 타일링 가능 사이즈       | 48px, 64px 등      |
-
----
-
-## 3. 대비/가독성 (Contrast)
-
-### 3.1 기본 대비 테스트
-
-| 모드         | 배경                    | 요구 대비               | 체크 |
-| ------------ | ----------------------- | ----------------------- | ---- |
-| **기본**     | `#0d0d0d` (어두운 배경) | 인광 녹색(#33ff00) 대비 | ☐    |
-| **Readable** | 대비 강화 모드          | 4.5:1 이상              | ☐    |
-
-### 3.2 대비 검증 방법
-
-```
-도구: WebAIM Contrast Checker
-URL: https://webaim.org/resources/contrastchecker/
-
-전경색: 아이콘 주요 색상
-배경색: #0d0d0d (CRT 배경)
-목표: 4.5:1 이상 (AA 기준)
-```
-
-### 3.3 Readable 모드 호환
-
-- [ ] CRT 글로우/스캔라인 OFF 시에도 식별 가능
-- [ ] 텍스트 라벨이 이미지를 방해하지 않음
-- [ ] 색약/색맹 접근성 고려 (색상만으로 의미 전달 금지)
-
----
-
-## 4. 투명 배경 (Alpha Channel)
-
-### 4.1 투명 배경 필요 여부
-
-| 유형            | 투명 필수 | 배경 색상        |
-| --------------- | --------- | ---------------- |
-| **아이콘**      | ✅ 필수   | 투명 (알파 채널) |
-| **placeholder** | ❌ 선택   | 불투명 허용      |
-| **chrome**      | ✅ 필수   | 투명 (알파 채널) |
-
-### 4.2 배경 제거 체크 (rembg)
-
-> **참조**: `vibe/ref/rembg-guide.md`
-
-**생성 단계 요구 (조건부)**:
-
-- [ ] 배경 제거 예정인 에셋은 **순백(#FFFFFF) 단색 배경**으로 생성
-- [ ] 그라데이션/텍스처/그림자 배경 금지
-
-**배경 제거 실행**:
-
-- [ ] `rembg i -m birefnet-general <input> <output>` 실행
-- [ ] 알파 채널 존재 확인 (GIMP/Photoshop/Preview)
-- [ ] 경계 부분 잔여 배경 없음 확인
-
-### 4.3 투명도 검증 명령어
-
-```bash
-# ImageMagick으로 알파 채널 확인
-magick identify -verbose <image.png> | grep -i alpha
-
-# 또는 파일 정보 확인 (PNG 포맷)
-file <image.png>  # PNG image data, ... RGBA
-```
-
----
-
-## 5. 폴백 (Fallback)
-
-### 5.1 폴백 텍스트/이모지 체크
-
-| 체크 항목         | 요구  | 설명                               |
-| ----------------- | ----- | ---------------------------------- |
-| **fallback 필드** | 필수  | manifest.json에 `fallback` 값 존재 |
-| **이모지/텍스트** | 1~2자 | 예: `📡`, `⚠`, `✓`, `OK`           |
-| **의미 전달**     | 명확  | 원본 아이콘과 동일한 의미          |
-
-### 5.2 폴백 동작 테스트
-
-**테스트 시나리오**:
-
-1. 에셋 파일을 임시로 삭제/이름 변경
-2. 브라우저에서 UI 로드
-3. 폴백 텍스트/이모지가 표시되는지 확인
-4. UI가 깨지지 않는지 확인
-
-**코드 구현 확인**:
-
-```tsx
-// 예상 패턴
-<img
-  src="/ui/icons/signal-24.png"
-  alt=""
-  aria-hidden="true"
-  onError={(e) => (e.currentTarget.style.display = 'none')}
-/>
-<span className="icon-fallback">📡</span>
-```
-
----
-
-## 6. 매니페스트 동기화 (manifest.json)
-
-### 6.1 필수 필드 체크
-
-| 필드       | 필수 | 체크                              |
-| ---------- | ---- | --------------------------------- |
-| `id`       | ✅   | kebab-case, 고유값                |
-| `path`     | ✅   | `ui/` 기준 상대 경로              |
-| `type`     | ✅   | `icon` / `placeholder` / `chrome` |
-| `fallback` | 권장 | 이모지/텍스트                     |
-| `bytes`    | 권장 | 파일 크기                         |
-| `usedIn`   | 권장 | 사용처 컴포넌트 목록              |
-| `notes`    | 선택 | QA/생성 관련 메모                 |
-
-### 6.2 실제 파일과 매니페스트 정합성
-
-- [ ] manifest.json의 모든 에셋이 실제 파일로 존재
-- [ ] 실제 디렉토리의 모든 에셋이 manifest.json에 등록됨
-- [ ] `path` 경로가 실제 파일 위치와 일치
-- [ ] `bytes` 값이 실제 파일 크기와 일치
-
-### 6.3 정합성 검증 스크립트 (참고)
-
-```bash
-# manifest.json에 있는 path들이 실제로 존재하는지 확인
-cd frontend/public/ui
-cat manifest.json | jq -r '.assets[].path' | while read p; do
-  [ -f "$p" ] || echo "MISSING: $p"
-done
-
-# 실제 파일이 manifest에 있는지 확인
-find icons placeholders chrome -type f \( -name "*.png" -o -name "*.webp" \) | while read f; do
-  grep -q "\"$f\"" manifest.json || echo "NOT IN MANIFEST: $f"
-done
-```
-
----
-
-## 7. 스타일 일관성 (CRT Theme)
-
-### 7.1 색상 팔레트 준수
-
-| 색상        | Hex       | 용도        | 체크 |
-| ----------- | --------- | ----------- | ---- |
-| 인광 녹색   | `#33ff00` | 주요 색상   | ☐    |
-| 어두운 녹색 | `#1a8000` | 보조 색상   | ☐    |
-| 마젠타      | `#ff00ff` | 포인트/경고 | ☐    |
-| 주황색      | `#ffaa00` | 경고        | ☐    |
-| 붉은색      | `#ff3333` | 에러        | ☐    |
-| 배경        | `#0d0d0d` | 배경        | ☐    |
-
-### 7.2 스타일 금지 사항
-
-- [ ] 외부 로고/상표 복제 금지
-- [ ] CRT 테마와 충돌하는 색상 금지 (밝은 파스텔, 난색 남용)
-- [ ] 복잡한 그라데이션/사진 스타일 금지
-
----
-
-## 8. Retina 대응 (선택)
-
-### 8.1 Retina 필요 여부 판단
-
-| 상황             | Retina 필요 | 비고                  |
-| ---------------- | ----------- | --------------------- |
-| **16px 아이콘**  | 선택        | HiDPI에서 선명도 향상 |
-| **24px+ 아이콘** | 낮음        | 기본 해상도로 충분    |
-| **placeholder**  | 낮음        | 이미 충분한 해상도    |
-
-### 8.2 Retina 파일 규칙
-
-- 파일명: `{name}-24.png` → `{name}-24@2x.png`
-- CSS: `image-set()`으로 1x/2x 제공
-- manifest.json: `retina: true` 표기
-
----
-
-## 9. 종합 체크리스트 (Quick Reference)
-
-에셋 추가/수정 시 아래 항목을 순서대로 체크하세요:
-
-### 📦 추가 전
-
-- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
-- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
-- [ ] CRT 테마 색상과 조화
-
-### 🎨 생성 시
-
-- [ ] (조건부) 배경 제거 필요 시 순백(#FFFFFF) 배경으로 생성
-- [ ] 필요 사이즈로 리사이즈
-- [ ] (조건부) `rembg`로 배경 제거
-
-### ✅ 추가 후
-
-- [ ] 개별 용량 예산 준수 확인
-- [ ] 총합 예산 준수 확인 (`totalBytes` < `budgetBytes`)
-- [ ] 16px 실루엣 구분 가능 여부 (아이콘)
-- [ ] 기본/Readable 모드 대비 확인
-- [ ] (조건부) 알파 채널 존재 확인 (투명 필요 에셋)
-- [ ] 폴백 텍스트/이모지 지정
-- [ ] manifest.json 업데이트
-- [ ] 실제 파일과 매니페스트 정합성 확인
-
----
-
-## 10. 참고 자료
-
-- **SSOT 규칙**: `frontend/public/ui/README.md`
-- **배경 제거 가이드**: `vibe/ref/rembg-guide.md`
-- **매니페스트 스키마**: `frontend/public/ui/manifest.schema.json`
-- **스타일 가이드**: `vibe/ref/frontend-style-guide.md`
-- **가독성 패스**: U-028[Mvp] (Readable 모드)
-
----
-
-_마지막 업데이트: 2026-01-12_  
-_문서 버전: 1.0.0_
 </file>
 
 <file path="frontend/src/components/DemoProfileSelect.tsx">
@@ -6933,173 +6728,6 @@ describe('i18n Integration Scenarios (U-039)', () => {
     expect(i18next.t('connection.online')).toBe('온라인');
   });
 });
-</file>
-
-<file path="frontend/src/locales/README.md">
-# i18n 언어 리소스 가이드 (Unknown World)
-
-이 디렉토리는 Unknown World의 **프론트엔드 UI 문자열 리소스**를 관리하는 SSOT(Single Source of Truth)입니다.
-
-## 디렉토리 구조
-
-```
-locales/
-├── ko-KR/
-│   └── translation.json    # 한국어 리소스
-├── en-US/
-│   └── translation.json    # 영어 리소스
-└── README.md               # 이 문서
-```
-
-## 지원 언어
-
-| 코드    | 언어   | 상태 | 비고           |
-| ------- | ------ | ---- | -------------- |
-| `ko-KR` | 한국어 | 기본 | 데모 기준 언어 |
-| `en-US` | 영어   | 폴백 | fallbackLng    |
-
-> **언어 코드 규칙**: BCP-47 형식을 사용합니다 (`ko-KR`, `en-US`).  
-> TurnInput/SaveGame의 `language` 필드와 동일한 축입니다.
-
-## 키 네이밍 규칙
-
-키는 **도메인.섹션.항목** 형태의 계층 구조를 따릅니다.
-
-### 도메인 목록
-
-| 도메인       | 용도                                    |
-| ------------ | --------------------------------------- |
-| `scene`      | Scene Canvas 관련 메시지                |
-| `agent`      | Agent Console 관련 라벨/상태            |
-| `ui`         | 공통 UI 요소 (버튼, 입력, 플레이스홀더) |
-| `economy`    | 재화 관련 라벨                          |
-| `connection` | 연결 상태                               |
-| `panel`      | 패널별 타이틀/플레이스홀더              |
-| `action`     | 액션 카드/선택지                        |
-| `narrative`  | 내러티브/게임 로그                      |
-
-### 예시
-
-```json
-{
-  "scene.status.loading": "동기화 중...",
-  "agent.console.badges": "검증 배지",
-  "ui.execute": "실행",
-  "panel.inventory.placeholder": "[ 드래그 앤 드롭 영역 ]"
-}
-```
-
-## 새 언어 추가 절차
-
-1. **디렉토리 생성**: `locales/{언어코드}/` 생성 (예: `ja-JP`)
-2. **translation.json 복사**: `ko-KR/translation.json`을 복사하여 시작점으로 사용
-3. **번역 작업**: 모든 값을 해당 언어로 번역
-4. **i18n.ts 등록**: `frontend/src/i18n.ts`에 새 언어 리소스 import 및 등록
-5. **검증**: 누락된 키가 없는지 확인 (i18next의 `missingKeyHandler` 활용)
-
-```typescript
-// frontend/src/i18n.ts
-import jaJP from './locales/ja-JP/translation.json';
-
-const resources = {
-  'ko-KR': { translation: koKR },
-  'en-US': { translation: enUS },
-  'ja-JP': { translation: jaJP }, // 새 언어 추가
-};
-```
-
-## 사용 방법
-
-### 기본 사용
-
-```tsx
-import { useTranslation } from 'react-i18next';
-
-function MyComponent() {
-  const { t } = useTranslation();
-
-  return <button>{t('ui.execute')}</button>;
-}
-```
-
-### 보간 (Interpolation)
-
-```tsx
-// JSON
-{ "narrative.turn_label": "[TURN {{turn}}]" }
-
-// 컴포넌트
-<span>{t('narrative.turn_label', { turn: 5 })}</span>
-// 결과: "[TURN 5]"
-```
-
-### 언어 변경 (향후)
-
-```tsx
-import { useTranslation } from 'react-i18next';
-
-function LanguageToggle() {
-  const { i18n } = useTranslation();
-
-  const toggleLanguage = () => {
-    const newLang = i18n.resolvedLanguage === 'ko-KR' ? 'en-US' : 'ko-KR';
-    i18n.changeLanguage(newLang);
-  };
-
-  return <button onClick={toggleLanguage}>🌐</button>;
-}
-```
-
-## 금지사항
-
-### ❌ 텍스트를 이미지에 포함하지 마세요
-
-이미지에 텍스트를 박으면:
-
-- 언어 변경 시 이미지를 교체해야 함
-- 리사이즈 시 가독성 저하
-- 접근성 문제 (스크린 리더)
-
-**대신**: 이미지와 텍스트를 분리하고, 텍스트는 i18n 키로 관리
-
-### ❌ 하드코딩 문자열 금지
-
-```tsx
-// ❌ Bad
-<button>실행</button>
-
-// ✅ Good
-<button>{t('ui.execute')}</button>
-```
-
-### ❌ ko/en 혼합 출력 금지 (RULE-006)
-
-동일 화면에서 한국어와 영어가 섞여 나오면 안 됩니다.
-모든 UI 문자열은 현재 선택된 언어로 일관되게 표시되어야 합니다.
-
-### ❌ 키 임의 삭제/변경 금지
-
-키를 삭제하거나 이름을 변경하면 기존 코드에서 참조 오류가 발생합니다.
-
-- 삭제: deprecated 마킹 후 충분한 기간을 두고 제거
-- 변경: 새 키 추가 → 마이그레이션 → 구 키 제거
-
-## 검증 체크리스트
-
-새 리소스 추가/수정 시:
-
-- [ ] 모든 지원 언어에 동일한 키가 존재하는지 확인
-- [ ] 보간 변수명이 일치하는지 확인 (`{{variable}}`)
-- [ ] 빌드 및 린트 통과
-- [ ] 실제 UI에서 문자열이 올바르게 표시되는지 확인
-
-## 참고 문서
-
-- `vibe/prd.md` - 3.1(지원 언어), 8.7(TurnInput.language)
-- `vibe/tech-stack.md` - i18next/react-i18next 버전
-- `.cursor/rules/00-core-critical.mdc` - RULE-006(i18n/언어 혼합 금지)
-- [i18next 공식 문서](https://www.i18next.com/)
-- [react-i18next 공식 문서](https://react.i18next.com/)
 </file>
 
 <file path="frontend/src/save/constants.ts">
@@ -11160,368 +10788,41 @@ def reset_genai_client() -> None:
     _client_instance = None
 </file>
 
-<file path="backend/src/unknown_world/validation/business_rules.py">
-"""Unknown World - 비즈니스 룰 검증기 (Hard Gate).
+<file path="backend/src/unknown_world/validation/__init__.py">
+"""Unknown World - 검증 모듈.
 
-스키마 검증 이후에도 남는 "의미적 실패"를 검증합니다:
-- Economy: cost/balance_after 일관성, 잔액 음수 금지
-- Language: TurnInput.language와 TurnOutput.language 불일치 차단
-- Box2D: 0~1000 범위 + [ymin,xmin,ymax,xmax] 순서 검증
-- Safety: blocked 시 안전한 대체 결과 제공 확인
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
-    - RULE-006: ko/en 언어 정책 준수
-    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/unit-results/U-017[Mvp].md
+비즈니스 룰 검증기 및 언어 혼합 검증 게이트를 제공합니다.
 """
 
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import TYPE_CHECKING
-
-from unknown_world.models.turn import Language
-
-if TYPE_CHECKING:
-    from unknown_world.models.turn import TurnInput, TurnOutput
-
-# =============================================================================
-# 로거 설정
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# i18n 에러 메시지 (RULE-006: ko/en 언어 정책 준수)
-# =============================================================================
-
-BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
-    Language.KO: {
-        "summary_header": "다음 비즈니스 룰을 위반했습니다:",
-        "signal_insufficient": "Signal 재화가 부족합니다: 보유 {have}, 필요 {need}",
-        "memory_shard_insufficient": "Memory Shard 재화가 부족합니다: 보유 {have}, 필요 {need}",
-        "signal_negative": "Signal 잔액이 음수입니다: {value}",
-        "memory_shard_negative": "Memory Shard 잔액이 음수입니다: {value}",
-        "signal_mismatch": "Signal 잔액 불일치: 예상 {expected}, 실제 {actual}",
-        "memory_shard_mismatch": "Memory Shard 잔액 불일치: 예상 {expected}, 실제 {actual}",
-        "language_mismatch": "언어 불일치: 입력 {input_lang}, 출력 {output_lang}",
-        "box2d_out_of_range": "오브젝트 '{obj_id}'의 좌표가 범위를 벗어남: {coord}",
-        "box2d_invalid_yorder": "오브젝트 '{obj_id}'의 ymin({ymin}) >= ymax({ymax})",
-        "box2d_invalid_xorder": "오브젝트 '{obj_id}'의 xmin({xmin}) >= xmax({xmax})",
-        "safety_blocked_no_fallback": "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
-    },
-    Language.EN: {
-        "summary_header": "The following business rules were violated:",
-        "signal_insufficient": "Insufficient Signal: have {have}, need {need}",
-        "memory_shard_insufficient": "Insufficient Memory Shard: have {have}, need {need}",
-        "signal_negative": "Signal balance is negative: {value}",
-        "memory_shard_negative": "Memory Shard balance is negative: {value}",
-        "signal_mismatch": "Signal balance mismatch: expected {expected}, actual {actual}",
-        "memory_shard_mismatch": "Memory Shard balance mismatch: expected {expected}, actual {actual}",
-        "language_mismatch": "Language mismatch: input {input_lang}, output {output_lang}",
-        "box2d_out_of_range": "Object '{obj_id}' coordinate out of range: {coord}",
-        "box2d_invalid_yorder": "Object '{obj_id}' ymin({ymin}) >= ymax({ymax})",
-        "box2d_invalid_xorder": "Object '{obj_id}' xmin({xmin}) >= xmax({xmax})",
-        "safety_blocked_no_fallback": "Blocked by safety policy but no fallback text provided",
-    },
-}
-
-
-# =============================================================================
-# 에러 타입
-# =============================================================================
-
-
-class BusinessRuleError(StrEnum):
-    """비즈니스 룰 위반 타입."""
-
-    # Economy 규칙 (RULE-005)
-    ECONOMY_NEGATIVE_BALANCE = "economy_negative_balance"
-    """잔액이 음수입니다 (금지)"""
-
-    ECONOMY_COST_MISMATCH = "economy_cost_mismatch"
-    """비용과 잔액 변화가 일치하지 않습니다"""
-
-    ECONOMY_COST_MISSING = "economy_cost_missing"
-    """비용 정보가 누락되었습니다"""
-
-    # Language 규칙 (RULE-006)
-    LANGUAGE_MISMATCH = "language_mismatch"
-    """입력과 출력 언어가 일치하지 않습니다"""
-
-    # Box2D 규칙 (RULE-009)
-    BOX2D_OUT_OF_RANGE = "box2d_out_of_range"
-    """좌표가 0~1000 범위를 벗어났습니다"""
-
-    BOX2D_INVALID_ORDER = "box2d_invalid_order"
-    """bbox 순서가 올바르지 않습니다 (ymin < ymax, xmin < xmax 필요)"""
-
-    # Safety 규칙
-    SAFETY_BLOCKED_NO_FALLBACK = "safety_blocked_no_fallback"
-    """차단되었지만 안전한 대체 결과가 제공되지 않았습니다"""
-
-
-# =============================================================================
-# 검증 결과 타입
-# =============================================================================
-
-
-@dataclass
-class BusinessRuleValidationResult:
-    """비즈니스 룰 검증 결과.
-
-    Attributes:
-        is_valid: 모든 검증 통과 여부
-        errors: 발견된 위반 목록
-        error_summary: 에러 요약 (Repair 프롬프트용)
-        language: 응답 언어 (RULE-006)
-    """
-
-    is_valid: bool = True
-    errors: list[dict[str, str]] = field(default_factory=lambda: [])
-    error_summary: str = ""
-    language: Language = Language.KO
-
-    def add_error(self, error_type: BusinessRuleError, message: str) -> None:
-        """에러를 추가합니다."""
-        self.is_valid = False
-        self.errors.append({"type": error_type.value, "message": message})
-
-    def build_summary(self) -> str:
-        """에러 요약을 생성합니다 (Repair 프롬프트용).
-
-        언어에 따라 헤더 메시지를 분기합니다 (RULE-006).
-        """
-        if not self.errors:
-            self.error_summary = ""
-            return ""
-
-        messages = BUSINESS_RULE_MESSAGES[self.language]
-        summary_lines = [messages["summary_header"]]
-        for err in self.errors:
-            summary_lines.append(f"- {err['message']}")
-
-        self.error_summary = "\n".join(summary_lines)
-        return self.error_summary
-
-
-# =============================================================================
-# 개별 검증 함수
-# =============================================================================
-
-
-def _validate_economy(
-    turn_input: TurnInput,
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Economy 규칙을 검증합니다 (RULE-005).
-
-    검증 항목:
-    - 잔액 음수 금지
-    - snapshot 대비 과도한 비용 청구 금지
-    - cost와 balance_after 일관성
-    """
-    economy = turn_output.economy
-    snapshot = turn_input.economy_snapshot
-    messages = BUSINESS_RULE_MESSAGES[result.language]
-
-    # 1. 과도한 비용 청구 금지 (snapshot < cost)
-    if snapshot.signal < economy.cost.signal:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            messages["signal_insufficient"].format(have=snapshot.signal, need=economy.cost.signal),
-        )
-
-    if snapshot.memory_shard < economy.cost.memory_shard:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            messages["memory_shard_insufficient"].format(
-                have=snapshot.memory_shard, need=economy.cost.memory_shard
-            ),
-        )
-
-    # 2. 잔액 음수 금지 (이미 필드 수준 ge=0 검증이 있지만, 비즈니스 룰에서도 명시)
-    if economy.balance_after.signal < 0:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            messages["signal_negative"].format(value=economy.balance_after.signal),
-        )
-
-    if economy.balance_after.memory_shard < 0:
-        result.add_error(
-            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
-            messages["memory_shard_negative"].format(value=economy.balance_after.memory_shard),
-        )
-
-    # 3. cost와 balance_after 일관성 검증
-    # balance_after = snapshot - cost 여야 함
-    expected_signal = snapshot.signal - economy.cost.signal
-    expected_shard = snapshot.memory_shard - economy.cost.memory_shard
-
-    # 이미 위에서 snapshot < cost 체크를 했으므로,
-    # 여기서는 단순 일치 여부만 확인 (음수 결과는 위에서 차단됨)
-    if economy.balance_after.signal != expected_signal:
-        result.add_error(
-            BusinessRuleError.ECONOMY_COST_MISMATCH,
-            messages["signal_mismatch"].format(
-                expected=expected_signal, actual=economy.balance_after.signal
-            ),
-        )
-
-    if economy.balance_after.memory_shard != expected_shard:
-        result.add_error(
-            BusinessRuleError.ECONOMY_COST_MISMATCH,
-            messages["memory_shard_mismatch"].format(
-                expected=expected_shard, actual=economy.balance_after.memory_shard
-            ),
-        )
-
-
-def _validate_language(
-    turn_input: TurnInput,
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Language 규칙을 검증합니다 (RULE-006).
-
-    검증 항목:
-    - TurnInput.language와 TurnOutput.language 일치
-    """
-    if turn_input.language != turn_output.language:
-        messages = BUSINESS_RULE_MESSAGES[result.language]
-        result.add_error(
-            BusinessRuleError.LANGUAGE_MISMATCH,
-            messages["language_mismatch"].format(
-                input_lang=turn_input.language.value,
-                output_lang=turn_output.language.value,
-            ),
-        )
-
-
-def _validate_box2d(
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Box2D 좌표 규칙을 검증합니다 (RULE-009).
-
-    검증 항목:
-    - 0~1000 범위
-    - ymin < ymax, xmin < xmax 순서
-    """
-    messages = BUSINESS_RULE_MESSAGES[result.language]
-
-    # UI 오브젝트의 box2d 검증
-    for obj in turn_output.ui.objects:
-        box = obj.box_2d
-
-        # 범위 검증 (0~1000)
-        coords = [box.ymin, box.xmin, box.ymax, box.xmax]
-        for coord in coords:
-            if coord < 0 or coord > 1000:
-                result.add_error(
-                    BusinessRuleError.BOX2D_OUT_OF_RANGE,
-                    messages["box2d_out_of_range"].format(obj_id=obj.id, coord=coord),
-                )
-                break  # 한 오브젝트에 대해 한 번만 보고
-
-        # 순서 검증 (ymin < ymax, xmin < xmax)
-        if box.ymin >= box.ymax:
-            result.add_error(
-                BusinessRuleError.BOX2D_INVALID_ORDER,
-                messages["box2d_invalid_yorder"].format(
-                    obj_id=obj.id, ymin=box.ymin, ymax=box.ymax
-                ),
-            )
-
-        if box.xmin >= box.xmax:
-            result.add_error(
-                BusinessRuleError.BOX2D_INVALID_ORDER,
-                messages["box2d_invalid_xorder"].format(
-                    obj_id=obj.id, xmin=box.xmin, xmax=box.xmax
-                ),
-            )
-
-
-def _validate_safety(
-    turn_output: TurnOutput,
-    result: BusinessRuleValidationResult,
-) -> None:
-    """Safety 규칙을 검증합니다.
-
-    검증 항목:
-    - blocked 시 안전한 대체 결과(narrative) 제공 확인
-    """
-    safety = turn_output.safety
-    messages = BUSINESS_RULE_MESSAGES[result.language]
-
-    # 차단 시에도 narrative가 있어야 함 (안전한 대체 결과)
-    if safety.blocked and (not turn_output.narrative or len(turn_output.narrative.strip()) == 0):
-        result.add_error(
-            BusinessRuleError.SAFETY_BLOCKED_NO_FALLBACK,
-            messages["safety_blocked_no_fallback"],
-        )
-
-
-# =============================================================================
-# 메인 검증 함수
-# =============================================================================
-
-
-def validate_business_rules(
-    turn_input: TurnInput,
-    turn_output: TurnOutput,
-) -> BusinessRuleValidationResult:
-    """비즈니스 룰을 검증합니다.
-
-    스키마 검증 이후 호출되며, 의미적 규칙을 검증합니다.
-    에러 메시지는 turn_input.language에 따라 분기됩니다 (RULE-006).
-
-    Args:
-        turn_input: 사용자 턴 입력
-        turn_output: 생성된 턴 출력
-
-    Returns:
-        BusinessRuleValidationResult: 검증 결과
-
-    Example:
-        >>> result = validate_business_rules(turn_input, turn_output)
-        >>> if not result.is_valid:
-        ...     print(result.build_summary())
-    """
-    # RU-005-S2: turn_input.language에 따라 에러 메시지 i18n 분기
-    result = BusinessRuleValidationResult(language=turn_input.language)
-
-    # 1. Economy 검증 (RULE-005)
-    _validate_economy(turn_input, turn_output, result)
-
-    # 2. Language 검증 (RULE-006)
-    _validate_language(turn_input, turn_output, result)
-
-    # 3. Box2D 검증 (RULE-009)
-    _validate_box2d(turn_output, result)
-
-    # 4. Safety 검증
-    _validate_safety(turn_output, result)
-
-    # 에러 요약 생성
-    if not result.is_valid:
-        result.build_summary()
-        logger.warning(
-            "[BusinessRules] 검증 실패",
-            extra={"error_count": len(result.errors)},
-        )
-
-    return result
+from unknown_world.validation.business_rules import (
+    BusinessRuleError,
+    BusinessRuleValidationResult,
+    validate_business_rules,
+)
+from unknown_world.validation.language_gate import (
+    MIXED_THRESHOLD_RATIO,
+    LanguageGateResult,
+    LanguageRatio,
+    build_language_error_summary,
+    is_language_mixed,
+    measure_language_ratio,
+    validate_language_consistency,
+)
+
+__all__ = [
+    # Business Rules
+    "BusinessRuleError",
+    "BusinessRuleValidationResult",
+    "validate_business_rules",
+    # Language Gate (U-043)
+    "MIXED_THRESHOLD_RATIO",
+    "LanguageGateResult",
+    "LanguageRatio",
+    "build_language_error_summary",
+    "is_language_mixed",
+    "measure_language_ratio",
+    "validate_language_consistency",
+]
 </file>
 
 <file path="backend/tests/unit/services/test_genai_client.py">
@@ -11858,183 +11159,6 @@ def test_schema_rembg_rules():
     assert "solid_white" in rembg_desc.lower(), (
         "requires_rembg description should recommend solid_white"
     )
-</file>
-
-<file path="CLAUDE.md">
-# AI 에이전트 전역 지침 (Unknown World)
-
-이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
-
----
-
-## 프로젝트 개요
-
-**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
-
-- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
-- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
-- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
-
----
-
-## SSOT(단일 출처) 및 충돌 해결 우선순위
-
-문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
-
-1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
-2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
-3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
-4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
-5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
-
-불확실하면 **추측하지 말고 질문**합니다.
-
----
-
-## 핵심 원칙 (Non‑Negotiable)
-
-### 1) Prompt-only wrapper / Generic chatbot 회피
-
-- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
-- 반드시 다음이 존재해야 합니다:
-  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
-  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
-  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
-
-### 2) 채팅 버블 UI 금지, 게임 UI 고정
-
-- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
-- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
-  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
-    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
-
-### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
-
-- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
-- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
-
-### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
-
-- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
-- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
-
-### 5) 비용/지연은 UX/게임 메커닉으로 제어
-
-- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
-- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
-
-### 6) ko/en i18n: 혼합 출력 금지
-
-- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
-- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
-- 프롬프트는 언어별 `.md` 파일로 관리합니다.
-
-### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
-
-- BYOK(사용자 API 키 입력) 요구 금지(MVP).
-- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
-- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
-
-### 8) 관측 가능성(Observability) = UX의 일부
-
-- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
-- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
-
----
-
-## 작업 표준 (Workflow)
-
-### 작업 시작 전 필수
-
-- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
-- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
-
-### 유닛(단계) 기반 개발
-
-- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
-- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
-- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
-
-### 문서 동기화
-
-- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
-- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
-
-### 리팩토링
-
-- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
-
-### 테스트
-
-- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
-- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
-
-### 커밋 메시지
-
-- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
-- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
-
----
-
-## 품질 기준 (출시/데모 관점)
-
-### Hard Gate (필수 통과)
-
-- **Schema OK**: TurnOutput JSON이 스키마를 통과
-- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
-- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
-- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
-
-### Soft Gate (관측/튜닝)
-
-- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
-- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
-
----
-
-## 금지사항 (절대 금지)
-
-- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
-- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
-- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
-- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
-- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
-- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
-- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
-
----
-
-## 지침 운영/사용 가이드
-
-### Cursor 규칙 적용 방식
-
-- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
-- 규칙이 부족/충돌하면:
-  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
-  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
-
-### 온보딩(신규 합류자/에이전트) 10분 루프
-
-- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
-- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
-- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
-- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
-
-### 지침 업데이트 프로세스(권장)
-
-- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
-- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
-
----
-
-## 참조 문서
-
-- `vibe/prd.md`
-- `vibe/tech-stack.md`
-- `vibe/ref/frontend-style-guide.md`
-- `vibe/ref/structured-outputs-guide.md`
-- `vibe/commands/*.md` / `.cursor/commands/*.md`
-- `.gemini/rules/commit-rules.md`
 </file>
 
 <file path="frontend/public/ui/manifest.schema.json">
@@ -14204,69 +13328,6 @@ export interface PlaceholderInfo {
 }
 </file>
 
-<file path="shared/README.md">
-# shared/
-
-이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
-
-## 📁 구조
-
-```
-shared/
-├── schemas/
-│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
-│       ├── turn_input.schema.json    # Client → Server 요청 스키마
-│       └── turn_output.schema.json   # Server → Client 응답 스키마
-└── README.md
-```
-
-## 🔄 SSOT 원칙 (RU-001-Q4)
-
-- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
-- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
-- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
-
-### 소비 전략 (Option B: 생성물 기반 동기화)
-
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
-| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
-
-> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
-
-## 📋 스키마 파일 목록
-
-### Turn 계약 (MVP)
-
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
-| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
-
-## ✅ 스키마 작성 가이드라인
-
-- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
-- **권장 속성**: `required`, `enum`, `description`을 적극 사용
-- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
-- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
-- **참조**: `vibe/ref/structured-outputs-guide.md`
-
-## ⚠️ 보안 주의사항 (RULE-007)
-
-- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
-- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
-- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
-
-## 📚 관련 문서
-
-- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
-- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
-- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
-- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
-- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
-</file>
-
 <file path="backend/src/unknown_world/__init__.py">
 """Unknown World - Backend Package
 
@@ -14329,376 +13390,6 @@ __all__ = [
     "load_system_prompt",
     "load_turn_instructions",
 ]
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
-"""Unknown World - Repair Loop (제한된 재시도).
-
-스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
-max_repair_attempts 내에서 repair 재요청을 수행하고,
-최종 실패 시 안전한 폴백으로 종료합니다.
-
-설계 원칙:
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
-
-페어링 결정:
-    - Q1: max_repair_attempts = 2 (Option A)
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/unit-results/U-017[Mvp].md
-"""
-
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-from unknown_world.config.models import ModelLabel
-from unknown_world.models.turn import (
-    CurrencyAmount,
-    Language,
-    TurnInput,
-    TurnOutput,
-    ValidationBadge,
-)
-from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.generate_turn_output import (
-    GenerationResult,
-    GenerationStatus,
-    get_turn_output_generator,
-)
-from unknown_world.validation.business_rules import (
-    BusinessRuleValidationResult,
-    validate_business_rules,
-)
-
-if TYPE_CHECKING:
-    pass
-
-# =============================================================================
-# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 설정 상수
-# =============================================================================
-
-# 페어링 결정: Q1 = Option A (2회)
-MAX_REPAIR_ATTEMPTS = 2
-"""최대 복구 시도 횟수."""
-
-
-# =============================================================================
-# i18n Repair 컨텍스트 메시지 (RULE-006, RU-005-S2)
-# =============================================================================
-
-REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
-    Language.KO: {
-        "schema_header": "## 이전 시도 결과",
-        "schema_error": "응답 형식이 올바르지 않았습니다.",
-        "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
-        "business_header": "## 이전 시도 결과",
-        "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
-    },
-    Language.EN: {
-        "schema_header": "## Previous Attempt Result",
-        "schema_error": "The response format was invalid.",
-        "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
-        "business_header": "## Previous Attempt Result",
-        "business_instruction": "Please regenerate following the rules above.",
-    },
-}
-
-
-# =============================================================================
-# Repair Loop 결과 타입
-# =============================================================================
-
-
-@dataclass
-class RepairLoopResult:
-    """Repair Loop 결과.
-
-    Attributes:
-        output: 최종 TurnOutput (성공 또는 폴백)
-        total_attempts: 총 시도 횟수 (초기 시도 포함)
-        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
-        is_fallback: 폴백으로 종료되었는지
-        badges: 검증 배지 목록
-        error_messages: 각 시도의 에러 메시지 (UI 노출용)
-    """
-
-    output: TurnOutput
-    total_attempts: int = 1
-    repair_attempts: int = 0
-    is_fallback: bool = False
-    badges: list[ValidationBadge] = field(default_factory=lambda: [])
-    error_messages: list[str] = field(default_factory=lambda: [])
-
-
-# =============================================================================
-# Repair Loop 함수
-# =============================================================================
-
-
-async def run_repair_loop(
-    turn_input: TurnInput,
-    *,
-    model_label: ModelLabel | None = None,
-    world_context: str = "",
-    force_mock: bool = False,
-    max_attempts: int = MAX_REPAIR_ATTEMPTS,
-) -> RepairLoopResult:
-    """Repair Loop를 실행합니다.
-
-    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
-    최종 실패 시 안전한 폴백을 반환합니다.
-
-    Args:
-        turn_input: 사용자 턴 입력
-        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
-        world_context: 현재 세계 상태 요약 (선택)
-        force_mock: Mock 클라이언트 강제 사용 여부
-        max_attempts: 최대 복구 시도 횟수
-
-    Returns:
-        RepairLoopResult: 최종 결과 (성공 또는 폴백)
-
-    Example:
-        >>> result = await run_repair_loop(turn_input)
-        >>> if result.is_fallback:
-        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
-        >>> print(result.output.narrative)
-    """
-    generator = get_turn_output_generator(force_mock=force_mock)
-    economy_snapshot = CurrencyAmount(
-        signal=turn_input.economy_snapshot.signal,
-        memory_shard=turn_input.economy_snapshot.memory_shard,
-    )
-
-    error_messages: list[str] = []
-    badges: list[ValidationBadge] = []
-    repair_context = ""  # 재시도 시 추가할 컨텍스트
-
-    last_attempt = 0
-    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
-        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
-        last_attempt = attempt
-        is_repair = attempt > 0
-
-        # 로그 기록 (프롬프트 노출 금지)
-        logger.info(
-            "[RepairLoop] 시도",
-            extra={
-                "attempt": attempt,
-                "is_repair": is_repair,
-                "language": turn_input.language.value,
-            },
-        )
-
-        # 컨텍스트 구성 (복구 시 에러 요약 추가)
-        current_context = world_context
-        if is_repair and repair_context:
-            current_context = f"{world_context}\n\n{repair_context}"
-
-        # 생성 시도
-        gen_result = await generator.generate(
-            turn_input,
-            model_label=model_label,
-            world_context=current_context,
-        )
-
-        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
-        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            # RU-005-S2: language에 따라 repair 메시지 분기
-            repair_context = _build_repair_context_schema(gen_result, turn_input.language)
-            continue
-
-        # 2. API 에러
-        if gen_result.status == GenerationStatus.API_ERROR:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
-            # 하지만 일시적 오류일 수 있으므로 재시도 허용
-            repair_context = ""
-            continue
-
-        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
-        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
-            badges.append(ValidationBadge.SCHEMA_OK)
-
-            # 비즈니스 룰 검증
-            biz_result = validate_business_rules(turn_input, gen_result.output)
-
-            if biz_result.is_valid:
-                # 모든 검증 통과
-                badges.extend(
-                    [
-                        ValidationBadge.ECONOMY_OK,
-                        ValidationBadge.SAFETY_OK,
-                        ValidationBadge.CONSISTENCY_OK,
-                    ]
-                )
-
-                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
-                gen_result.output.agent_console.badges = badges
-                gen_result.output.agent_console.repair_count = attempt
-
-                logger.info(
-                    "[RepairLoop] 성공",
-                    extra={
-                        "total_attempts": attempt + 1,
-                        "repair_attempts": attempt,
-                    },
-                )
-
-                return RepairLoopResult(
-                    output=gen_result.output,
-                    total_attempts=attempt + 1,
-                    repair_attempts=attempt,
-                    is_fallback=False,
-                    badges=badges,
-                    error_messages=error_messages,
-                )
-
-            # 비즈니스 룰 실패
-            add_business_badges(biz_result, badges)
-            error_messages.append(biz_result.error_summary)
-            # RU-005-S2: language에 따라 repair 메시지 분기
-            repair_context = _build_repair_context_business(biz_result, turn_input.language)
-            continue
-
-        # 4. 안전 차단
-        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
-            badges.append(ValidationBadge.SAFETY_BLOCKED)
-            # 안전 차단은 재시도 불가 → 즉시 폴백
-            logger.warning(
-                "[RepairLoop] 안전 차단으로 폴백",
-                extra={"attempt": attempt},
-            )
-            break
-
-    # 최종 실패 → 안전한 폴백 반환
-    logger.warning(
-        "[RepairLoop] 최종 폴백 반환",
-        extra={
-            "max_attempts": max_attempts,
-            "actual_attempts": last_attempt,
-        },
-    )
-
-    fallback = create_safe_fallback(
-        language=turn_input.language,
-        economy_snapshot=economy_snapshot,
-        repair_count=last_attempt,
-        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
-    )
-
-    return RepairLoopResult(
-        output=fallback,
-        total_attempts=last_attempt + 1,
-        repair_attempts=last_attempt,
-        is_fallback=True,
-        badges=badges,
-        error_messages=error_messages,
-    )
-
-
-# =============================================================================
-# 헬퍼 함수
-# =============================================================================
-
-
-def _build_repair_context_schema(gen_result: GenerationResult, language: Language) -> str:
-    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
-
-    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
-    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
-
-    Args:
-        gen_result: 생성 결과
-        language: 응답 언어
-    """
-    # 짧은 요약만 포함 (RULE-007/008)
-    messages = REPAIR_CONTEXT_MESSAGES[language]
-    return f"""
-{messages["schema_header"]}
-
-{messages["schema_error"]}
-{messages["schema_instruction"]}
-"""
-
-
-def _build_repair_context_business(
-    biz_result: BusinessRuleValidationResult, language: Language
-) -> str:
-    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
-
-    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
-
-    Args:
-        biz_result: 비즈니스 룰 검증 결과
-        language: 응답 언어
-    """
-    messages = REPAIR_CONTEXT_MESSAGES[language]
-    return f"""
-{messages["business_header"]}
-
-{biz_result.error_summary}
-
-{messages["business_instruction"]}
-"""
-
-
-def add_business_badges(
-    biz_result: BusinessRuleValidationResult,
-    badges: list[ValidationBadge],
-) -> None:
-    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
-
-    에러 타입 접두어 → 배지 매핑:
-        - economy_* → ECONOMY_FAIL
-        - safety_* → SAFETY_BLOCKED
-        - language_* 또는 box2d_* → CONSISTENCY_FAIL
-
-    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
-
-    Args:
-        biz_result: 비즈니스 룰 검증 결과
-        badges: 배지 목록 (in-place 수정)
-    """
-    # 에러 타입별 배지 매핑 (RU-005-S1)
-    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
-    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
-    has_consistency_error = any(
-        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
-    )
-
-    # Economy 배지
-    if has_economy_error:
-        badges.append(ValidationBadge.ECONOMY_FAIL)
-    else:
-        badges.append(ValidationBadge.ECONOMY_OK)
-
-    # Safety 배지
-    if has_safety_error:
-        badges.append(ValidationBadge.SAFETY_BLOCKED)
-    else:
-        badges.append(ValidationBadge.SAFETY_OK)
-
-    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
-    if has_consistency_error:
-        badges.append(ValidationBadge.CONSISTENCY_FAIL)
-    else:
-        badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
 <file path="backend/src/unknown_world/services/image_generation.py">
@@ -15356,6 +14047,415 @@ def validate_image_request(request: ImageGenerationRequest) -> str | None:
         return "프롬프트가 너무 깁니다 (최대 2000자)."
 
     return None
+</file>
+
+<file path="backend/src/unknown_world/validation/business_rules.py">
+"""Unknown World - 비즈니스 룰 검증기 (Hard Gate).
+
+스키마 검증 이후에도 남는 "의미적 실패"를 검증합니다:
+- Economy: cost/balance_after 일관성, 잔액 음수 금지
+- Language: TurnInput.language와 TurnOutput.language 불일치 차단
+- Box2D: 0~1000 범위 + [ymin,xmin,ymax,xmax] 순서 검증
+- Safety: blocked 시 안전한 대체 결과 제공 확인
+
+설계 원칙:
+    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
+    - RULE-006: ko/en 언어 정책 준수
+    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-results/U-017[Mvp].md
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import TYPE_CHECKING
+
+from unknown_world.models.turn import Language
+from unknown_world.validation.language_gate import (
+    LanguageGateResult,
+    build_language_error_summary,
+    validate_language_consistency,
+)
+
+if TYPE_CHECKING:
+    from unknown_world.models.turn import TurnInput, TurnOutput
+
+# =============================================================================
+# 로거 설정
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# i18n 에러 메시지 (RULE-006: ko/en 언어 정책 준수)
+# =============================================================================
+
+BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "summary_header": "다음 비즈니스 룰을 위반했습니다:",
+        "signal_insufficient": "Signal 재화가 부족합니다: 보유 {have}, 필요 {need}",
+        "memory_shard_insufficient": "Memory Shard 재화가 부족합니다: 보유 {have}, 필요 {need}",
+        "signal_negative": "Signal 잔액이 음수입니다: {value}",
+        "memory_shard_negative": "Memory Shard 잔액이 음수입니다: {value}",
+        "signal_mismatch": "Signal 잔액 불일치: 예상 {expected}, 실제 {actual}",
+        "memory_shard_mismatch": "Memory Shard 잔액 불일치: 예상 {expected}, 실제 {actual}",
+        "language_mismatch": "언어 불일치: 입력 {input_lang}, 출력 {output_lang}",
+        "language_content_mixed": "언어 혼합 감지: {violation_count}개 필드에서 ko/en 혼합 발견",
+        "box2d_out_of_range": "오브젝트 '{obj_id}'의 좌표가 범위를 벗어남: {coord}",
+        "box2d_invalid_yorder": "오브젝트 '{obj_id}'의 ymin({ymin}) >= ymax({ymax})",
+        "box2d_invalid_xorder": "오브젝트 '{obj_id}'의 xmin({xmin}) >= xmax({xmax})",
+        "safety_blocked_no_fallback": "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
+    },
+    Language.EN: {
+        "summary_header": "The following business rules were violated:",
+        "signal_insufficient": "Insufficient Signal: have {have}, need {need}",
+        "memory_shard_insufficient": "Insufficient Memory Shard: have {have}, need {need}",
+        "signal_negative": "Signal balance is negative: {value}",
+        "memory_shard_negative": "Memory Shard balance is negative: {value}",
+        "signal_mismatch": "Signal balance mismatch: expected {expected}, actual {actual}",
+        "memory_shard_mismatch": "Memory Shard balance mismatch: expected {expected}, actual {actual}",
+        "language_mismatch": "Language mismatch: input {input_lang}, output {output_lang}",
+        "language_content_mixed": "Language mixing detected: {violation_count} fields contain ko/en mixing",
+        "box2d_out_of_range": "Object '{obj_id}' coordinate out of range: {coord}",
+        "box2d_invalid_yorder": "Object '{obj_id}' ymin({ymin}) >= ymax({ymax})",
+        "box2d_invalid_xorder": "Object '{obj_id}' xmin({xmin}) >= xmax({xmax})",
+        "safety_blocked_no_fallback": "Blocked by safety policy but no fallback text provided",
+    },
+}
+
+
+# =============================================================================
+# 에러 타입
+# =============================================================================
+
+
+class BusinessRuleError(StrEnum):
+    """비즈니스 룰 위반 타입."""
+
+    # Economy 규칙 (RULE-005)
+    ECONOMY_NEGATIVE_BALANCE = "economy_negative_balance"
+    """잔액이 음수입니다 (금지)"""
+
+    ECONOMY_COST_MISMATCH = "economy_cost_mismatch"
+    """비용과 잔액 변화가 일치하지 않습니다"""
+
+    ECONOMY_COST_MISSING = "economy_cost_missing"
+    """비용 정보가 누락되었습니다"""
+
+    # Language 규칙 (RULE-006)
+    LANGUAGE_MISMATCH = "language_mismatch"
+    """입력과 출력 언어가 일치하지 않습니다"""
+
+    LANGUAGE_CONTENT_MIXED = "language_content_mixed"
+    """사용자 노출 텍스트에 ko/en이 혼합되어 있습니다 (U-043)"""
+
+    # Box2D 규칙 (RULE-009)
+    BOX2D_OUT_OF_RANGE = "box2d_out_of_range"
+    """좌표가 0~1000 범위를 벗어났습니다"""
+
+    BOX2D_INVALID_ORDER = "box2d_invalid_order"
+    """bbox 순서가 올바르지 않습니다 (ymin < ymax, xmin < xmax 필요)"""
+
+    # Safety 규칙
+    SAFETY_BLOCKED_NO_FALLBACK = "safety_blocked_no_fallback"
+    """차단되었지만 안전한 대체 결과가 제공되지 않았습니다"""
+
+
+# =============================================================================
+# 검증 결과 타입
+# =============================================================================
+
+
+@dataclass
+class BusinessRuleValidationResult:
+    """비즈니스 룰 검증 결과.
+
+    Attributes:
+        is_valid: 모든 검증 통과 여부
+        errors: 발견된 위반 목록
+        error_summary: 에러 요약 (Repair 프롬프트용)
+        language: 응답 언어 (RULE-006)
+        language_gate_result: 언어 혼합 검증 결과 (U-043)
+    """
+
+    is_valid: bool = True
+    errors: list[dict[str, str]] = field(default_factory=lambda: [])
+    error_summary: str = ""
+    language: Language = Language.KO
+    language_gate_result: LanguageGateResult | None = None
+
+    def add_error(self, error_type: BusinessRuleError, message: str) -> None:
+        """에러를 추가합니다."""
+        self.is_valid = False
+        self.errors.append({"type": error_type.value, "message": message})
+
+    def build_summary(self) -> str:
+        """에러 요약을 생성합니다 (Repair 프롬프트용).
+
+        언어에 따라 헤더 메시지를 분기합니다 (RULE-006).
+        언어 혼합 에러가 있으면 상세 지시를 추가합니다 (U-043).
+        """
+        if not self.errors:
+            self.error_summary = ""
+            return ""
+
+        messages = BUSINESS_RULE_MESSAGES[self.language]
+        summary_lines = [messages["summary_header"]]
+        for err in self.errors:
+            summary_lines.append(f"- {err['message']}")
+
+        # U-043: 언어 혼합 에러가 있으면 상세 지시 추가
+        if self.language_gate_result and not self.language_gate_result.is_valid:
+            summary_lines.append("")
+            summary_lines.append(build_language_error_summary(self.language_gate_result))
+
+        self.error_summary = "\n".join(summary_lines)
+        return self.error_summary
+
+
+# =============================================================================
+# 개별 검증 함수
+# =============================================================================
+
+
+def _validate_economy(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Economy 규칙을 검증합니다 (RULE-005).
+
+    검증 항목:
+    - 잔액 음수 금지
+    - snapshot 대비 과도한 비용 청구 금지
+    - cost와 balance_after 일관성
+    """
+    economy = turn_output.economy
+    snapshot = turn_input.economy_snapshot
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # 1. 과도한 비용 청구 금지 (snapshot < cost)
+    if snapshot.signal < economy.cost.signal:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["signal_insufficient"].format(have=snapshot.signal, need=economy.cost.signal),
+        )
+
+    if snapshot.memory_shard < economy.cost.memory_shard:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["memory_shard_insufficient"].format(
+                have=snapshot.memory_shard, need=economy.cost.memory_shard
+            ),
+        )
+
+    # 2. 잔액 음수 금지 (이미 필드 수준 ge=0 검증이 있지만, 비즈니스 룰에서도 명시)
+    if economy.balance_after.signal < 0:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["signal_negative"].format(value=economy.balance_after.signal),
+        )
+
+    if economy.balance_after.memory_shard < 0:
+        result.add_error(
+            BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
+            messages["memory_shard_negative"].format(value=economy.balance_after.memory_shard),
+        )
+
+    # 3. cost와 balance_after 일관성 검증
+    # balance_after = snapshot - cost 여야 함
+    expected_signal = snapshot.signal - economy.cost.signal
+    expected_shard = snapshot.memory_shard - economy.cost.memory_shard
+
+    # 이미 위에서 snapshot < cost 체크를 했으므로,
+    # 여기서는 단순 일치 여부만 확인 (음수 결과는 위에서 차단됨)
+    if economy.balance_after.signal != expected_signal:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            messages["signal_mismatch"].format(
+                expected=expected_signal, actual=economy.balance_after.signal
+            ),
+        )
+
+    if economy.balance_after.memory_shard != expected_shard:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            messages["memory_shard_mismatch"].format(
+                expected=expected_shard, actual=economy.balance_after.memory_shard
+            ),
+        )
+
+
+def _validate_language(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Language 규칙을 검증합니다 (RULE-006).
+
+    검증 항목:
+    - TurnInput.language와 TurnOutput.language 일치
+    """
+    if turn_input.language != turn_output.language:
+        messages = BUSINESS_RULE_MESSAGES[result.language]
+        result.add_error(
+            BusinessRuleError.LANGUAGE_MISMATCH,
+            messages["language_mismatch"].format(
+                input_lang=turn_input.language.value,
+                output_lang=turn_output.language.value,
+            ),
+        )
+
+
+def _validate_language_content(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Language 콘텐츠 혼합을 검증합니다 (RULE-006, U-043).
+
+    검증 항목:
+    - 사용자 노출 텍스트가 TurnInput.language와 동일 언어인지 확인
+    - ko/en 혼합 시 LANGUAGE_CONTENT_MIXED 에러 추가
+    """
+    # 언어 혼합 검증 (U-043)
+    lang_result = validate_language_consistency(turn_output, turn_input.language)
+
+    if not lang_result.is_valid:
+        messages = BUSINESS_RULE_MESSAGES[result.language]
+        result.add_error(
+            BusinessRuleError.LANGUAGE_CONTENT_MIXED,
+            messages["language_content_mixed"].format(violation_count=len(lang_result.violations)),
+        )
+        # 상세 에러 요약 생성을 위해 결과 저장
+        result.language_gate_result = lang_result
+
+
+def _validate_box2d(
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Box2D 좌표 규칙을 검증합니다 (RULE-009).
+
+    검증 항목:
+    - 0~1000 범위
+    - ymin < ymax, xmin < xmax 순서
+    """
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # UI 오브젝트의 box2d 검증
+    for obj in turn_output.ui.objects:
+        box = obj.box_2d
+
+        # 범위 검증 (0~1000)
+        coords = [box.ymin, box.xmin, box.ymax, box.xmax]
+        for coord in coords:
+            if coord < 0 or coord > 1000:
+                result.add_error(
+                    BusinessRuleError.BOX2D_OUT_OF_RANGE,
+                    messages["box2d_out_of_range"].format(obj_id=obj.id, coord=coord),
+                )
+                break  # 한 오브젝트에 대해 한 번만 보고
+
+        # 순서 검증 (ymin < ymax, xmin < xmax)
+        if box.ymin >= box.ymax:
+            result.add_error(
+                BusinessRuleError.BOX2D_INVALID_ORDER,
+                messages["box2d_invalid_yorder"].format(
+                    obj_id=obj.id, ymin=box.ymin, ymax=box.ymax
+                ),
+            )
+
+        if box.xmin >= box.xmax:
+            result.add_error(
+                BusinessRuleError.BOX2D_INVALID_ORDER,
+                messages["box2d_invalid_xorder"].format(
+                    obj_id=obj.id, xmin=box.xmin, xmax=box.xmax
+                ),
+            )
+
+
+def _validate_safety(
+    turn_output: TurnOutput,
+    result: BusinessRuleValidationResult,
+) -> None:
+    """Safety 규칙을 검증합니다.
+
+    검증 항목:
+    - blocked 시 안전한 대체 결과(narrative) 제공 확인
+    """
+    safety = turn_output.safety
+    messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # 차단 시에도 narrative가 있어야 함 (안전한 대체 결과)
+    if safety.blocked and (not turn_output.narrative or len(turn_output.narrative.strip()) == 0):
+        result.add_error(
+            BusinessRuleError.SAFETY_BLOCKED_NO_FALLBACK,
+            messages["safety_blocked_no_fallback"],
+        )
+
+
+# =============================================================================
+# 메인 검증 함수
+# =============================================================================
+
+
+def validate_business_rules(
+    turn_input: TurnInput,
+    turn_output: TurnOutput,
+) -> BusinessRuleValidationResult:
+    """비즈니스 룰을 검증합니다.
+
+    스키마 검증 이후 호출되며, 의미적 규칙을 검증합니다.
+    에러 메시지는 turn_input.language에 따라 분기됩니다 (RULE-006).
+
+    Args:
+        turn_input: 사용자 턴 입력
+        turn_output: 생성된 턴 출력
+
+    Returns:
+        BusinessRuleValidationResult: 검증 결과
+
+    Example:
+        >>> result = validate_business_rules(turn_input, turn_output)
+        >>> if not result.is_valid:
+        ...     print(result.build_summary())
+    """
+    # RU-005-S2: turn_input.language에 따라 에러 메시지 i18n 분기
+    result = BusinessRuleValidationResult(language=turn_input.language)
+
+    # 1. Economy 검증 (RULE-005)
+    _validate_economy(turn_input, turn_output, result)
+
+    # 2. Language enum 검증 (RULE-006)
+    _validate_language(turn_input, turn_output, result)
+
+    # 3. Language 콘텐츠 혼합 검증 (RULE-006, U-043)
+    _validate_language_content(turn_input, turn_output, result)
+
+    # 4. Box2D 검증 (RULE-009)
+    _validate_box2d(turn_output, result)
+
+    # 5. Safety 검증
+    _validate_safety(turn_output, result)
+
+    # 에러 요약 생성
+    if not result.is_valid:
+        result.build_summary()
+        logger.warning(
+            "[BusinessRules] 검증 실패",
+            extra={"error_count": len(result.errors)},
+        )
+
+    return result
 </file>
 
 <file path="backend/tests/integration/test_turn_streaming.py">
@@ -18269,339 +17369,410 @@ class MockOrchestrator:
         )
 </file>
 
-<file path="frontend/public/ui/README.md">
-# UI 에셋 가이드 (nanobanana mcp SSOT)
+<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
+"""Unknown World - Repair Loop (제한된 재시도).
 
-> **SSOT 경로**: `frontend/public/ui/`  
-> **도구**: `nanobanana mcp` (개발 전용, 런타임 의존 금지)  
-> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7, `vibe/ref/rembg-guide.md`
+스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
+max_repair_attempts 내에서 repair 재요청을 수행하고,
+최종 실패 시 안전한 폴백으로 종료합니다.
 
----
+설계 원칙:
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
 
-## 1. 핵심 원칙
+페어링 결정:
+    - Q1: max_repair_attempts = 2 (Option A)
 
-### 1.1 Dev-only 원칙 (RULE-007)
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-results/U-017[Mvp].md
+"""
 
-- `nanobanana mcp`는 **개발 과정에서 정적 에셋을 제작**하는 도구입니다.
-- 제품 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 **금지**합니다.
-- 생성된 에셋은 이 디렉토리(`frontend/public/ui/`)에 커밋하여 정적 배포합니다.
+from __future__ import annotations
 
-### 1.2 용어 SSOT (RULE-006)
+import logging
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-- 이 도구는 반드시 **`nanobanana mcp`** 로 표기합니다.
-- "나노바나나 MCP", "Nano Banana MCP", "banana mcp" 등 혼용 금지.
-- 모델 별칭("Nano Banana / Nano Banana Pro")은 문서 인용 시에만 제한적 사용.
+from unknown_world.config.models import ModelLabel
+from unknown_world.models.turn import (
+    CurrencyAmount,
+    Language,
+    TurnInput,
+    TurnOutput,
+    ValidationBadge,
+)
+from unknown_world.orchestrator.fallback import create_safe_fallback
+from unknown_world.orchestrator.generate_turn_output import (
+    GenerationResult,
+    GenerationStatus,
+    get_turn_output_generator,
+)
+from unknown_world.validation.business_rules import (
+    BusinessRuleValidationResult,
+    validate_business_rules,
+)
 
-### 1.3 보안 (RULE-005)
+if TYPE_CHECKING:
+    pass
 
-- 키/토큰 등 비밀정보를 레포/로그/문서에 남기지 않습니다.
-- 생성 과정에서 사용한 API 키나 인증 정보는 절대 커밋하지 않습니다.
+# =============================================================================
+# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
+# =============================================================================
 
----
+logger = logging.getLogger(__name__)
 
-## 2. 디렉토리 구조
 
-```
-frontend/public/ui/
-├── README.md              # 이 파일 (SSOT 규칙)
-├── manifest.schema.json   # 에셋 매니페스트 스키마
-├── manifest.json          # (생성 시) 실제 에셋 목록
-├── icons/                 # 아이콘 에셋
-│   ├── signal-16.png
-│   ├── signal-24.png
-│   ├── badge-ok-16.png
-│   └── ...
-├── placeholders/          # 상태/장면 placeholder
-│   ├── scene-loading.webp
-│   ├── scene-error.webp
-│   └── ...
-└── chrome/                # UI 프레임/장식
-    ├── panel-corner-tl.png
-    ├── panel-border-h.png
-    └── ...
-```
+# =============================================================================
+# 설정 상수
+# =============================================================================
 
----
+# 페어링 결정: Q1 = Option A (2회)
+MAX_REPAIR_ATTEMPTS = 2
+"""최대 복구 시도 횟수."""
 
-## 3. 네이밍 규칙
 
-### 3.1 기본 포맷
+# =============================================================================
+# i18n Repair 컨텍스트 메시지 (RULE-006, RU-005-S2)
+# =============================================================================
 
-```
-{용도}-{크기}.{확장자}
-{용도}-{상태}-{크기}.{확장자}
-```
-
-**예시**:
-
-- `signal-24.png` — Signal 아이콘, 24px
-- `badge-ok-16.png` — OK 배지, 16px
-- `scene-loading.webp` — 로딩 상태 placeholder
-
-### 3.2 규칙
-
-| 항목       | 규칙                                              |
-| ---------- | ------------------------------------------------- |
-| **케이스** | `kebab-case` (소문자 + 하이픈)                    |
-| **용도**   | 명확한 역할 표현 (signal, badge, scene, panel 등) |
-| **상태**   | 필요 시 상태 포함 (ok, fail, loading, error 등)   |
-| **크기**   | 픽셀 단위 숫자 (16, 24, 32, 64 등)                |
-| **확장자** | 용도에 맞게 선택 (아래 참조)                      |
-
----
-
-## 4. 포맷 및 사이즈 규칙
-
-### 4.1 포맷 선택
-
-| 용도            | 기본 포맷  | 대안 | 비고                               |
-| --------------- | ---------- | ---- | ---------------------------------- |
-| **아이콘**      | PNG (투명) | -    | 작은 크기, 투명도 필수             |
-| **placeholder** | WebP       | PNG  | 용량 절감 우선 (Q1 결정: Option B) |
-| **chrome**      | PNG (투명) | -    | 프레임/장식, 투명도 필수           |
-
-> **배경 제거(필수 조건부)**: 아이콘/chrome 등 투명 배경이 필요한 에셋은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리합니다. (가이드: `vibe/ref/rembg-guide.md`)
-
-### 4.2 사이즈 규격
-
-| 용도            | 필수 사이즈 | 선택 사이즈 | 비고             |
-| --------------- | ----------- | ----------- | ---------------- |
-| **아이콘**      | 16, 24      | 32, 64      | 최소 2종 필수    |
-| **placeholder** | 가변        | -           | 용도별 적정 크기 |
-| **chrome**      | 가변        | -           | 타일링/반복 고려 |
-
-### 4.3 Retina 대응 (선택)
-
-- 필요 시 `image-set()`으로 1x/2x 제공
-- 파일명: `{name}-24.png`, `{name}-24@2x.png`
-
----
-
-## 5. 성능 예산
-
-| 항목                | 상한  | 권장       |
-| ------------------- | ----- | ---------- |
-| **아이콘 1개**      | 30KB  | 20KB 이하  |
-| **placeholder 1개** | 300KB | 200KB 이하 |
-| **chrome 1개**      | 50KB  | 30KB 이하  |
-| **`ui/` 폴더 총합** | 1.5MB | 1MB 이하   |
-
-**초과 시 대응**:
-
-1. 압축/최적화 (TinyPNG, ImageOptim 등)
-2. 해상도/색상 축소
-3. 불필요 에셋 제거
-4. 예산 상향 시 근거 문서화 필요
-
----
-
-## 6. 스타일 가이드
-
-### 6.1 CRT 테마 연동
-
-에셋은 `frontend/src/style.css`의 CSS 변수/테마와 조화를 이뤄야 합니다.
-
-```css
-/* 참조: CRT 테마 색상 */
---bg-color: #0d0d0d; /* 배경 */
---text-color: #33ff00; /* 인광 녹색 */
---text-dim: #1a8000; /* 어두운 녹색 */
---accent-color: #ff00ff; /* 마젠타 */
---warning-color: #ffaa00; /* 주황색 */
---error-color: #ff3333; /* 붉은색 */
-```
-
-### 6.2 스타일 원칙
-
-| 원칙                  | 설명                          |
-| --------------------- | ----------------------------- |
-| **레트로 퓨처리즘**   | CRT/터미널 미학과 조화        |
-| **기능적 미니멀리즘** | 불필요한 장식 배제            |
-| **톤 일관성**         | 인광 녹색 기반, 마젠타 포인트 |
-| **고대비**            | Readable 모드에서도 식별 가능 |
-
-### 6.3 금지 사항
-
-- ❌ 프로젝트 외부 로고/상표 복제
-- ❌ CRT 테마와 충돌하는 색상 (밝은 파스텔, 난색 계열 남용)
-- ❌ 복잡한 그라데이션/사진 스타일
-
----
-
-## 7. 폴백 원칙 (필수)
-
-### 7.1 텍스트/이모지 폴백 유지
-
-에셋 로딩 실패/미지원 시에도 **UI가 깨지지 않도록** 텍스트/이모지 라벨을 유지해야 합니다.
-
-**예시** (React):
-
-```tsx
-<span className="icon-wrapper" aria-label="Signal">
-  <img
-    src="/ui/icons/signal-24.png"
-    alt=""
-    aria-hidden="true"
-    onError={(e) => (e.currentTarget.style.display = 'none')}
-  />
-  <span className="icon-fallback">📡</span>
-</span>
-```
-
-**CSS**:
-
-```css
-.icon-wrapper {
-  display: inline-flex;
-  align-items: center;
+REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "schema_header": "## 이전 시도 결과",
+        "schema_error": "응답 형식이 올바르지 않았습니다.",
+        "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
+        "business_header": "## 이전 시도 결과",
+        "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
+        # U-043: 언어 교정 전용 피드백
+        "language_header": "## 언어 혼합 오류",
+        "language_instruction": (
+            "사용자 노출 텍스트에 영어가 섞여 있습니다. "
+            "모든 텍스트를 한국어(ko-KR)로만 작성하세요. "
+            "스키마 구조는 유지하고 텍스트 값만 한국어로 수정합니다. "
+            "예외: Signal, Shard 등 재화 이름은 영어로 유지 가능합니다."
+        ),
+    },
+    Language.EN: {
+        "schema_header": "## Previous Attempt Result",
+        "schema_error": "The response format was invalid.",
+        "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
+        "business_header": "## Previous Attempt Result",
+        "business_instruction": "Please regenerate following the rules above.",
+        # U-043: 언어 교정 전용 피드백
+        "language_header": "## Language Mixing Error",
+        "language_instruction": (
+            "User-facing text contains Korean characters. "
+            "Rewrite all text in English (en-US) only. "
+            "Keep the schema structure intact and only modify text values to English. "
+            "Exception: Currency names like Signal, Shard may remain in English."
+        ),
+    },
 }
-.icon-wrapper img + .icon-fallback {
-  display: none;
-}
-.icon-wrapper img[style*='display: none'] + .icon-fallback {
-  display: inline;
-}
-```
 
-### 7.2 폴백 요구사항
 
-| 에셋 유형       | 폴백 방식                |
-| --------------- | ------------------------ |
-| **아이콘**      | 이모지 또는 텍스트 라벨  |
-| **placeholder** | CSS 배경색 + 텍스트      |
-| **chrome**      | CSS border/shadow로 대체 |
+# =============================================================================
+# Repair Loop 결과 타입
+# =============================================================================
 
----
 
-## 8. 접근성 가이드
+@dataclass
+class RepairLoopResult:
+    """Repair Loop 결과.
 
-### 8.1 필수 사항
+    Attributes:
+        output: 최종 TurnOutput (성공 또는 폴백)
+        total_attempts: 총 시도 횟수 (초기 시도 포함)
+        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
+        is_fallback: 폴백으로 종료되었는지
+        badges: 검증 배지 목록
+        error_messages: 각 시도의 에러 메시지 (UI 노출용)
+    """
 
-| 항목                          | 요구사항                            |
-| ----------------------------- | ----------------------------------- |
-| **색상만으로 의미 전달 금지** | 텍스트/라벨 병행                    |
-| **장식성 이미지**             | `aria-hidden="true"` 적용           |
-| **기능성 이미지**             | `alt` 텍스트 제공 또는 `aria-label` |
-| **대비**                      | Readable 모드에서도 4.5:1 이상      |
+    output: TurnOutput
+    total_attempts: int = 1
+    repair_attempts: int = 0
+    is_fallback: bool = False
+    badges: list[ValidationBadge] = field(default_factory=lambda: [])
+    error_messages: list[str] = field(default_factory=lambda: [])
 
-### 8.2 예시
 
-```html
-<!-- 장식용 아이콘 (의미 없음) -->
-<img src="/ui/chrome/corner.png" alt="" aria-hidden="true" />
+# =============================================================================
+# Repair Loop 함수
+# =============================================================================
 
-<!-- 기능용 아이콘 (의미 있음) -->
-<button aria-label="신호 전송">
-  <img src="/ui/icons/signal-24.png" alt="Signal" />
-</button>
-```
 
----
+async def run_repair_loop(
+    turn_input: TurnInput,
+    *,
+    model_label: ModelLabel | None = None,
+    world_context: str = "",
+    force_mock: bool = False,
+    max_attempts: int = MAX_REPAIR_ATTEMPTS,
+) -> RepairLoopResult:
+    """Repair Loop를 실행합니다.
 
-## 9. 에셋 제작 워크플로우
+    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
+    최종 실패 시 안전한 폴백을 반환합니다.
 
-### 9.1 요청 → 제작 → 적용
+    Args:
+        turn_input: 사용자 턴 입력
+        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
+        world_context: 현재 세계 상태 요약 (선택)
+        force_mock: Mock 클라이언트 강제 사용 여부
+        max_attempts: 최대 복구 시도 횟수
 
-```
-1. 요청 정의
-   └── 용도, 사이즈, 스타일 명세 작성
+    Returns:
+        RepairLoopResult: 최종 결과 (성공 또는 폴백)
 
-2. nanobanana mcp로 제작
-   └── 프롬프트에 CRT 스타일 키워드 포함
-   └── 색상 팔레트 준수
-   └── (필수 조건부) 배경 제거(rembg) 예정이면 **배경은 순백(#FFFFFF) 단색**으로 생성(그라데이션/텍스처/그림자 금지)
+    Example:
+        >>> result = await run_repair_loop(turn_input)
+        >>> if result.is_fallback:
+        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
+        >>> print(result.output.narrative)
+    """
+    generator = get_turn_output_generator(force_mock=force_mock)
+    economy_snapshot = CurrencyAmount(
+        signal=turn_input.economy_snapshot.signal,
+        memory_shard=turn_input.economy_snapshot.memory_shard,
+    )
 
-3. (필수 조건부) rembg로 배경 제거
-   └── 아이콘/chrome 등 투명 배경이 필요한 에셋에서 배경이 남아 있으면 rembg로 제거
-   └── 모델 선택/옵션은 `vibe/ref/rembg-guide.md` 준수
+    error_messages: list[str] = []
+    badges: list[ValidationBadge] = []
+    repair_context = ""  # 재시도 시 추가할 컨텍스트
 
-4. 리사이즈/압축
-   └── 성능 예산 확인
-   └── 필요 사이즈로 리사이즈
+    last_attempt = 0
+    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
+        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
+        last_attempt = attempt
+        is_repair = attempt > 0
 
-5. 디렉토리 반영
-   └── 네이밍 규칙 준수
-   └── manifest.json 업데이트
+        # 로그 기록 (프롬프트 노출 금지)
+        logger.info(
+            "[RepairLoop] 시도",
+            extra={
+                "attempt": attempt,
+                "is_repair": is_repair,
+                "language": turn_input.language.value,
+            },
+        )
 
-6. UI 적용 + 폴백 확인
-   └── 컴포넌트에 적용
-   └── 폴백 동작 테스트
+        # 컨텍스트 구성 (복구 시 에러 요약 추가)
+        current_context = world_context
+        if is_repair and repair_context:
+            current_context = f"{world_context}\n\n{repair_context}"
 
-7. QA
-   └── 크기/대비/폴백/Readable 모드 확인
-```
+        # 생성 시도
+        gen_result = await generator.generate(
+            turn_input,
+            model_label=model_label,
+            world_context=current_context,
+        )
 
-### 9.2 프롬프트 가이드 (예시)
+        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
+        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_schema(gen_result, turn_input.language)
+            continue
 
-```
-CRT 터미널 스타일 아이콘,
-인광 녹색(#33ff00) 기반,
-검은 배경(#0d0d0d)에 어울리는 톤,
-심플한 라인 아트,
-픽셀 아트 또는 레트로 스타일,
-24x24 픽셀, 투명 배경
-(배경 제거 필요 시) solid white background (#FFFFFF), no gradient/texture/shadow
-```
+        # 2. API 에러
+        if gen_result.status == GenerationStatus.API_ERROR:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
+            # 하지만 일시적 오류일 수 있으므로 재시도 허용
+            repair_context = ""
+            continue
 
----
+        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
+        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
+            badges.append(ValidationBadge.SCHEMA_OK)
 
-## 10. 매니페스트 관리
+            # 비즈니스 룰 검증
+            biz_result = validate_business_rules(turn_input, gen_result.output)
 
-### 10.1 manifest.json
+            if biz_result.is_valid:
+                # 모든 검증 통과
+                badges.extend(
+                    [
+                        ValidationBadge.ECONOMY_OK,
+                        ValidationBadge.SAFETY_OK,
+                        ValidationBadge.CONSISTENCY_OK,
+                    ]
+                )
 
-모든 에셋은 `manifest.json`에 등록하여 추적합니다.
+                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
+                gen_result.output.agent_console.badges = badges
+                gen_result.output.agent_console.repair_count = attempt
 
-```json
-{
-  "$schema": "./manifest.schema.json",
-  "version": "1.0.0",
-  "assets": [
-    {
-      "id": "signal-24",
-      "path": "icons/signal-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "📡",
-      "usedIn": ["EconomyHUD"],
-      "bytes": 1234
-    }
-  ]
-}
-```
+                logger.info(
+                    "[RepairLoop] 성공",
+                    extra={
+                        "total_attempts": attempt + 1,
+                        "repair_attempts": attempt,
+                    },
+                )
 
-### 10.2 업데이트 시점
+                return RepairLoopResult(
+                    output=gen_result.output,
+                    total_attempts=attempt + 1,
+                    repair_attempts=attempt,
+                    is_fallback=False,
+                    badges=badges,
+                    error_messages=error_messages,
+                )
 
-- 에셋 추가/제거 시 manifest.json 동기화
-- U-033에서 QA 자동화 예정
+            # 비즈니스 룰 실패
+            add_business_badges(biz_result, badges)
+            error_messages.append(biz_result.error_summary)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_business(biz_result, turn_input.language)
+            continue
 
----
+        # 4. 안전 차단
+        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
+            badges.append(ValidationBadge.SAFETY_BLOCKED)
+            # 안전 차단은 재시도 불가 → 즉시 폴백
+            logger.warning(
+                "[RepairLoop] 안전 차단으로 폴백",
+                extra={"attempt": attempt},
+            )
+            break
 
-## 11. 라이선스
+    # 최종 실패 → 안전한 폴백 반환
+    logger.warning(
+        "[RepairLoop] 최종 폴백 반환",
+        extra={
+            "max_attempts": max_attempts,
+            "actual_attempts": last_attempt,
+        },
+    )
 
-- 모든 에셋은 **프로젝트 내부 용도**로 제작됩니다.
-- 외부 로고/상표를 복제하지 않습니다.
-- `nanobanana mcp`로 생성된 에셋은 도구의 라이선스 정책을 따릅니다.
-- 에셋에 **SynthID 워터마크**가 포함될 수 있습니다 (AI 생성 표기).
+    fallback = create_safe_fallback(
+        language=turn_input.language,
+        economy_snapshot=economy_snapshot,
+        repair_count=last_attempt,
+        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
+    )
 
----
+    return RepairLoopResult(
+        output=fallback,
+        total_attempts=last_attempt + 1,
+        repair_attempts=last_attempt,
+        is_fallback=True,
+        badges=badges,
+        error_messages=error_messages,
+    )
 
-## 12. 체크리스트 (에셋 추가 시)
 
-- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
-- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
-- [ ] 성능 예산 준수 (개별/총합)
-- [ ] (조건부) 투명 배경이 필요한 에셋은 `rembg`로 배경 제거 완료(알파 채널 확인)
-- [ ] (조건부) 배경 제거(rembg) 예정이면 원본 생성 단계에서 배경이 순백(#FFFFFF) 단색인지 확인(그라데이션/텍스처/그림자 금지)
-- [ ] CRT 테마 색상과 조화
-- [ ] 폴백 구현 확인
-- [ ] 접근성 속성 적용 (`aria-hidden` 또는 `alt`)
-- [ ] manifest.json 업데이트
-- [ ] Readable 모드에서 대비 확인
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
 
----
 
-_마지막 업데이트: 2026-01-11_
-_문서 버전: 1.1.0_
+def _build_repair_context_schema(gen_result: GenerationResult, language: Language) -> str:
+    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+
+    Args:
+        gen_result: 생성 결과
+        language: 응답 언어
+    """
+    # 짧은 요약만 포함 (RULE-007/008)
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+    return f"""
+{messages["schema_header"]}
+
+{messages["schema_error"]}
+{messages["schema_instruction"]}
+"""
+
+
+def _build_repair_context_business(
+    biz_result: BusinessRuleValidationResult, language: Language
+) -> str:
+    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+    언어 혼합 에러가 있으면 특별한 지시를 추가합니다 (U-043).
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        language: 응답 언어
+    """
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+
+    # U-043: 언어 혼합 에러가 있는지 확인
+    has_language_content_error = any(
+        "language_content_mixed" in err["type"] for err in biz_result.errors
+    )
+
+    # 언어 혼합 에러가 있으면 특별한 지시 추가
+    if has_language_content_error:
+        return f"""
+{messages["language_header"]}
+
+{biz_result.error_summary}
+
+{messages["language_instruction"]}
+"""
+
+    # 일반 비즈니스 룰 에러
+    return f"""
+{messages["business_header"]}
+
+{biz_result.error_summary}
+
+{messages["business_instruction"]}
+"""
+
+
+def add_business_badges(
+    biz_result: BusinessRuleValidationResult,
+    badges: list[ValidationBadge],
+) -> None:
+    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
+
+    에러 타입 접두어 → 배지 매핑:
+        - economy_* → ECONOMY_FAIL
+        - safety_* → SAFETY_BLOCKED
+        - language_* (mismatch/content_mixed) 또는 box2d_* → CONSISTENCY_FAIL
+
+    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
+    U-043: language_content_mixed도 CONSISTENCY_FAIL로 매핑.
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        badges: 배지 목록 (in-place 수정)
+    """
+    # 에러 타입별 배지 매핑 (RU-005-S1, U-043)
+    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
+    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
+    # U-043: language_mismatch, language_content_mixed, box2d_* 모두 consistency로 매핑
+    has_consistency_error = any(
+        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
+    )
+
+    # Economy 배지
+    if has_economy_error:
+        badges.append(ValidationBadge.ECONOMY_FAIL)
+    else:
+        badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety 배지
+    if has_safety_error:
+        badges.append(ValidationBadge.SAFETY_BLOCKED)
+    else:
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
+    if has_consistency_error:
+        badges.append(ValidationBadge.CONSISTENCY_FAIL)
+    else:
+        badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
 <file path="frontend/src/api/turnStream.test.ts">
