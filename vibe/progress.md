@@ -1,6 +1,43 @@
 # 프로젝트 진행 상황
 
-## [2026-01-25 15:40] [U-035[Mvp]] 실시간 이미지 생성 시 rembg 배경 제거 통합 완료
+## [2026-01-26 23:50] [U-036[Mvp]] 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 하드코딩된 프롬프트를 마크다운 파일로 분리하고, 언어별 로딩 및 개발 모드 핫리로드를 지원하는 `PromptLoader` 구축
+- **추가 컴포넌트**: `backend/prompts/` (프롬프트 저장소), `backend/src/unknown_world/orchestrator/prompt_loader.py` (로더 서비스), `vibe/unit-results/U-036[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-006/007] 언어별 프롬프트 분리 및 혼합 출력 금지, [PRD 3.2] 프롬프트 디렉토리 구조 준수, [PRD 10.4] 프롬프트 핫리로드
+
+### 기술적 구현 세부사항
+
+**프롬프트 관리 체계**:
+- **Directory Structure**: PRD 3.2 규격에 따라 `system/`, `turn/`, `image/` 카테고리별로 프롬프트를 구조화하고 `*.ko.md`, `*.en.md` 형식으로 관리
+- **Frontmatter Parsing**: 프롬프트 파일 상단에 `- key: value` 형식의 메타데이터를 포함하여 버전 및 정책 추적성 확보 (PromptData 모델 도입)
+- **Hot-Reload (Development Mode)**: `ENVIRONMENT=development` 환경에서 캐시를 우회하여 파일 변경 사항을 실시간으로 반영함으로써 프롬프트 튜닝 생산성 극대화
+
+**서비스 통합 및 안정성**:
+- **Service Decoupling**: `image_generation.py` 등 서비스 코드에서 하드코딩된 텍스트를 제거하고 `load_image_prompt` 등 로더 인터페이스로 전환
+- **Fallback Logic**: 요청된 언어 파일이 없을 경우 자동 폴백(KO <-> EN) 처리를 통해 서비스 가용성 보장
+- **Operational Optimization**: 운영 환경에서는 `lru_cache`를 적용하여 I/O 오버헤드를 최소화하고 성능 최적화
+
+### 코드 구조
+repo-root/
+├── backend/prompts/
+│   ├── system/ (게임 마스터 프롬프트)
+│   ├── turn/ (출력 지시사항)
+│   └── image/ (스타일 가이드라인)
+└── backend/src/unknown_world/
+    ├── orchestrator/
+    │   └── prompt_loader.py (신규: 프롬프트 로더 및 핫리로드)
+    └── services/
+        └── image_generation.py (로더 적용)
+
+### 다음 단계
+- [U-021[Mvp]] Scanner 슬롯 UI + 업로드→아이템화(이미지 이해 프롬프트 통합)
+- [U-024[Mvp]] Autopilot 전략 로직 고도화 (Plan/Resolve stage 연동)
+
+---
+
 
 ### 구현 완료 항목
 

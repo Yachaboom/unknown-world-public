@@ -11,6 +11,10 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ```text
 D:\Dev\unknown-world\
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
+│   ├── prompts/           # 프롬프트 저장소 (U-036)
+│   │   ├── system/        # 시스템/페르소나 프롬프트
+│   │   ├── turn/          # 출력 지시사항 프롬프트
+│   │   └── image/         # 이미지 스타일 가이드라인
 │   ├── generated_images/  # 생성된 이미지 로컬 저장소 (U-019)
 │   ├── src/
 │   │   └── unknown_world/
@@ -28,7 +32,7 @@ D:\Dev\unknown-world\
 │   │       │   │   ├── parse.py
 │   │       │   │   └── ... (7대 단계 모듈)
 │   │       │   ├── fallback.py
-│   │       │   ├── prompt_loader.py (U-017)
+│   │       │   ├── prompt_loader.py (U-017, U-036)
 │   │       │   ├── repair_loop.py
 │   │       │   └── validator.py (U-018)
 │       ├── services/   # 외부 서비스 연동 (U-016)
@@ -293,6 +297,18 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **안전 폴백 (RULE-004)**:
     - 이미지 생성 실패(모델 오류, 정책 차단, 잔액 부족 등) 시에도 텍스트-only로 게임을 계속 진행할 수 있도록 `ImageGenerationStatus.FAILED` 또는 `SKIPPED` 상태와 함께 적절한 메시지를 반환함.
 
----
+## 15. 프롬프트 관리 및 i18n 정책 (U-036[Mvp])
 
-_본 문서는 프로젝트의 진화에 따라 수시로 업데이트됩니다._
+1. **프롬프트 외부화 (SSOT)**:
+    - 모든 핵심 프롬프트(시스템, 턴 지시, 이미지 스타일)는 `backend/prompts/` 하위의 마크다운(`.md`) 파일로 관리함.
+    - 코드 내 하드코딩을 배제하여 프롬프트 튜닝과 버전 관리를 독립적으로 수행함.
+2. **언어별 분리 (RULE-006)**:
+    - 프롬프트 파일은 `*.ko.md` 및 `*.en.md` 형식으로 엄격히 분리하여 혼합 출력을 방지함.
+    - `PromptLoader`는 요청된 언어에 맞는 파일을 로드하며, 부재 시 자동 폴백(KO <-> EN)을 제공함.
+3. **프론트매터 및 메타데이터**:
+    - 프롬프트 파일 상단에 `- key: value` 형식의 메타데이터를 포함하여 버전, 정책 프리셋, 고유 ID 등을 관리함.
+4. **개발 모드 핫리로드 (PRD 10.4)**:
+    - `ENVIRONMENT=development` 환경에서는 매 호출 시 파일을 다시 읽어 수정 사항을 즉시 반영(Hot-Reload)함.
+    - 운영 환경에서는 `lru_cache`를 통한 메모리 캐싱으로 성능을 보장함.
+
+---

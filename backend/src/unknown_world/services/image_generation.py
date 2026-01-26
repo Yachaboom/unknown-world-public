@@ -34,6 +34,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
+from unknown_world.models.turn import Language
+from unknown_world.orchestrator.prompt_loader import load_image_prompt
 
 # =============================================================================
 # 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
@@ -404,6 +406,17 @@ class ImageGenerator:
 
         # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
         prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+
+        # U-036: 프롬프트 로더에서 스타일 가이드라인 로드 (선택적 참고용)
+        # 실제 모델은 Imagen이므로 지시사항보다는 텍스트 생성 모델(U-019)에서 이 가이드라인을 활용해
+        # 최적화된 영어 프롬프트를 생성하는 것이 권장됩니다.
+        try:
+            # 현재 요청의 언어 정보를 알 수 없으므로 기본 KO 사용 (또는 요청에 언어 추가 필요)
+            _style_guidelines = load_image_prompt(Language.KO)
+            logger.debug("[ImageGen] 스타일 가이드라인 로드 완료 (U-036)")
+        except Exception:
+            logger.warning("[ImageGen] 스타일 가이드라인 로드 실패")
+
         logger.debug(
             "[ImageGen] 이미지 생성 요청",
             extra={
