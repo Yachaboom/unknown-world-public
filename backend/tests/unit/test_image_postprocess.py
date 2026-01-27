@@ -81,43 +81,74 @@ class TestImagePostprocess(unittest.TestCase):
         processor = ImagePostprocessor()
         self.assertFalse(processor.is_available())
 
-    @patch("shutil.copy")
-    @patch("unknown_world.services.image_postprocess.ImagePostprocessor.is_available")
-    def test_remove_background_fallback(
-        self, mock_available: MagicMock, mock_copy: MagicMock
-    ) -> None:
-        """rembg 사용 불가 시 원본을 복사하는 폴백 시나리오."""
-        mock_available.return_value = False
-        processor = ImagePostprocessor()
+        @patch("shutil.copy")
+        @patch("unknown_world.services.image_postprocess.preflight_is_available")
+        @patch("unknown_world.services.image_postprocess.ImagePostprocessor.is_available")
+        def test_remove_background_fallback(
+            self,
+            mock_available: MagicMock,
+            mock_preflight_available: MagicMock,
+            mock_copy: MagicMock,
+        ) -> None:
+            """rembg 사용 불가 시 원본을 복사하는 폴백 시나리오."""
+            mock_preflight_available.return_value = True
+            mock_available.return_value = False
+            processor = ImagePostprocessor()
 
-        input_path = Path("dummy.png")
-        with patch.object(Path, "exists", return_value=True):
-            result = processor.remove_background(input_path)
+            input_path = Path("dummy.png")
+            with patch.object(Path, "exists", return_value=True):
+                result = processor.remove_background(input_path)
 
-            self.assertEqual(result.status, BackgroundRemovalStatus.FAILED)
-            self.assertEqual(result.output_path, Path("dummy_nobg.png"))
-            mock_copy.assert_called_once()
+                self.assertEqual(result.status, BackgroundRemovalStatus.FAILED)
+                self.assertEqual(result.output_path, Path("dummy_nobg.png"))
+                mock_copy.assert_called_once()
 
-    @patch("unknown_world.services.image_postprocess.subprocess.run")
-    @patch("unknown_world.services.image_postprocess.ImagePostprocessor.is_available")
-    def test_remove_background_success(
-        self, mock_available: MagicMock, mock_run: MagicMock
-    ) -> None:
-        """rembg 실행 성공 시나리오."""
-        mock_available.return_value = True
-        mock_run.return_value = MagicMock(returncode=0)
+        @patch("unknown_world.services.image_postprocess.preflight_is_available")
+        @patch("unknown_world.services.image_postprocess.subprocess.run")
+        @patch("unknown_world.services.image_postprocess.ImagePostprocessor.is_available")
+        def test_remove_background_success(
+            self,
+            mock_available: MagicMock,
+            mock_run: MagicMock,
+            mock_preflight_available: MagicMock,
+        ) -> None:
+            """rembg 실행 성공 시나리오."""
+            mock_preflight_available.return_value = True
+            mock_available.return_value = True
+            mock_run.return_value = MagicMock(returncode=0)
 
-        processor = ImagePostprocessor()
-        input_path = Path("input.png")
+            processor = ImagePostprocessor()
+            input_path = Path("input.png")
 
-        with patch.object(Path, "exists", side_effect=[True, True, True]):
-            result = processor.remove_background(input_path, image_type_hint="character")
-
-            self.assertEqual(result.status, BackgroundRemovalStatus.SUCCESS)
+            with patch.object(Path, "exists", side_effect=[True, True, True]):
+                result = processor.remove_background(input_path, image_type_hint="character")
+                self.assertEqual(result.status, BackgroundRemovalStatus.SUCCESS)
             self.assertEqual(result.model_used, RembgModel.ISNET_ANIME)
             # 명령어에 모델 인자가 포함되었는지 확인
             args, _ = mock_run.call_args
             self.assertIn(RembgModel.ISNET_ANIME, args[0])
+
+    @patch("shutil.copy")
+    @patch("unknown_world.services.image_postprocess.preflight_is_available")
+    def test_remove_background_preflight_not_available(
+        self, mock_preflight_available: MagicMock, mock_copy: MagicMock
+    ) -> None:
+        """U-045: preflight가 준비되지 않았을 때 즉시 원본을 반환하는지 테스트합니다."""
+        # preflight 미준비 상태 설정
+        mock_preflight_available.return_value = False
+
+        processor = ImagePostprocessor()
+        input_path = Path("input.png")
+        output_path = Path("output.png")
+
+        with patch.object(Path, "exists", return_value=True):
+            result = processor.remove_background(input_path, output_path=output_path)
+
+            # 결과가 FAILED(또는 SKIPPED)이고 메시지에 preflight 관련 내용이 포함되어야 함
+            self.assertEqual(result.status, BackgroundRemovalStatus.FAILED)
+            self.assertIn("preflight", result.message)
+            # 원본을 결과 경로로 복사했는지 확인
+            mock_copy.assert_called_once_with(input_path, output_path)
 
 
 if __name__ == "__main__":

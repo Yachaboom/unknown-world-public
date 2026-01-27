@@ -38,14 +38,17 @@ D:\Dev\unknown-world\
 │   │       ├── services/   # 외부 서비스 연동 (U-016)
 │   │       │   ├── genai_client.py
 │   │       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
-│   │       │   └── image_postprocess.py (rembg 배경 제거, U-035)
+│   │       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
+│   │       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
 │   │       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
 │   │       │   ├── business_rules.py
 │   │       │   └── language_gate.py (신규: 언어 혼합 검증)
 │   │       └── models/     # 데이터 모델 (TurnInput/Output)
 │   ├── tests/              # 백엔드 테스트 코드
 │   │   └── unit/
-│   │       └── test_u043_language_gate.py (신규)
+│   │       ├── test_u043_language_gate.py
+│   │       └── services/
+│   │           └── test_rembg_preflight.py (신규: U-045)
 │   └── pyproject.toml
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
@@ -60,8 +63,8 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (U-044 포함)
-    └── unit-runbooks/     # 검증 런북 (U-043 포함)
+    ├── unit-results/      # 개발 완료 보고서 (U-045 포함)
+    └── unit-runbooks/     # 검증 런북 (U-045 포함)
 ```
 
 ### 주요 디렉토리 책임
@@ -136,7 +139,21 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - 취소(Abort) 시에는 `onComplete`를 호출하지 않음 (Option B).
     - 호출자(Turn Runner/App)가 취소 의도를 파악하고 직접 UI를 스트리밍 종료 상태로 복구해야 함.
 
-## 14. 이미지 Lazy Render 정책 (U-020[Mvp])
+## 17. Preflight 및 모델 관리 정책 (U-045[Mvp])
+
+1. **서버 시작 시 프리플라이트 (Preflight on Startup)**:
+    - 백엔드 서버 부팅 시 `rembg` 설치 상태와 필수 모델(`birefnet-general`) 캐시 존재 여부를 자동 점검함.
+    - 모델 부재 시 `rembg d <model>`을 통해 자동 다운로드를 시도하여 런타임 지연을 사전 제거함.
+2. **비차단 부팅 및 Degraded 모드 (Option A)**:
+    - 부팅 시 모델 다운로드에 타임아웃(120s)을 적용하여 무한 대기를 방지함.
+    - 다운로드 실패 시 서버를 중단하지 않고 `degraded` 상태로 기동하며, 후처리 기능만 비활성화하여 서비스 가용성을 유지함 (RULE-004).
+3. **런타임 다운로드 가드 (Runtime Guard)**:
+    - 이미지 후처리(`image_postprocess.py`) 호출 시 프리플라이트 준비 상태를 선제적으로 확인하여, 요청 처리 중 대용량 다운로드가 발생하는 현상을 원천 차단함.
+    - 미준비 상태인 경우 즉시 원본 이미지를 반환하는 안전 폴백을 수행함.
+4. **상태 관측성 (Observability)**:
+    - `/health` 엔드포인트에 `rembg` 상세 상태(ready/degraded/unavailable)를 노출하여 운영 및 디버깅 시 환경 준비 상태를 즉시 진단 가능하게 함.
+
+## 9. Economy/재화 관리 정책 (U-014[Mvp])
 
 1. **Lazy Loading + Option A (Persistent Image)**:
     - 새로운 장면 정보 수신 시, 이미지가 완전히 로드될 때까지 이전 장면 이미지를 유지(Option A)하여 화면 깜빡임을 방지함.

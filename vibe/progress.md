@@ -1,5 +1,40 @@
 # 프로젝트 진행 상황
 
+## [2026-01-28 15:30] [U-045[Mvp]] Backend 시작 시 rembg/모델 사전 점검 + 다운로드(preflight) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 백엔드 부팅 시 rembg 모델 존재 여부를 자동 확인하고 부재 시 사전 다운로드하는 Preflight 파이프라인 구축
+- **추가 컴포넌트**: `backend/src/unknown_world/services/rembg_preflight.py` (프리플라이트 서비스), `vibe/unit-runbooks/U-045-rembg-preflight-runbook.md` (런북), `vibe/unit-results/U-045[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-004] 실패 시 안전 폴백(degraded 모드), [RULE-008] 텍스트 우선(부팅 지연 최소화), [PRD 10.2] 초기 구동 환경 점검
+
+### 기술적 구현 세부사항
+
+**Preflight 아키텍처**:
+- **Option A (Non-blocking Startup)**: 부팅 시 타임아웃 기반 모델 다운로드를 수행하되, 실패하더라도 서버는 `degraded` 상태로 정상 기동되어 전체 서비스 중단 방지
+- **Runtime Guard**: `image_postprocess.py`에 프리플라이트 상태 가드를 적용하여, 모델이 준비되지 않은 경우 요청 처리 중 대용량 다운로드가 발생하는 현상을 원천 차단
+- **Observability Enhancement**: `/health` 엔드포인트에 `rembg` 상세 상태(installed, models, error 등)를 노출하여 운영 가시성 확보
+
+**품질 및 안정성**:
+- **Atomic File Check**: `.u2net/` 경로의 `.onnx` 파일 존재 여부로 모델 준비 상태를 엄격히 검증
+- **Isolated Testing**: Subprocess 모킹을 통한 설치/미설치 및 다운로드 성공/실패 시나리오 전수 검증
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── main.py (FastAPI lifespan 연동 및 health 확장)
+    ├── services/
+    │   ├── rembg_preflight.py (신규: 프리플라이트 엔진)
+    │   └── image_postprocess.py (상태 가드 적용)
+    └── tests/unit/services/
+        └── test_rembg_preflight.py (신규 테스트)
+
+### 다음 단계
+- [U-046[Mvp]] 분리 프롬프트(.md) XML 태그 규격 통일 및 로더 파싱 단일화
+- [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+
+---
+
 ## [2026-01-26 23:50] [U-036[Mvp]] 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 완료
 
 ### 구현 완료 항목

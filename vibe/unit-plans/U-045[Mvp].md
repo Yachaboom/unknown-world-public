@@ -93,12 +93,15 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 부팅 시 preflight를 얼마나 강하게 할까?
+- [x] **Q1**: 부팅 시 preflight를 얼마나 강하게 할까?
   - Option A: 타임아웃 짧게 + 실패 시 degraded(권장: 데모 루프 보호)
   - Option B: 다운로드 완료까지 부팅을 블로킹(첫 사용 지연은 제거되지만, 부팅 실패/지연 리스크↑)
-- [ ] **Q2**: 기본 prefetch 모델은 무엇으로 고정할까?
+  **A1**: Option A
+
+- [x] **Q2**: 기본 prefetch 모델은 무엇으로 고정할까?
   - Option A: `birefnet-general`만(권장: 범용/안정)
   - Option B: `birefnet-general` + 인물용 1종(예: `birefnet-portrait`)까지
+  **A2**: Option A
 
 ## 참고 자료
 

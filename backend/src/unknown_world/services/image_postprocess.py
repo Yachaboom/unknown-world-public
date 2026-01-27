@@ -8,10 +8,12 @@
     - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
     - Q1 결정: Option A (동기 처리)
     - Q2 결정: Option B (힌트 기반 자동 모델 선택)
+    - U-045: preflight 상태 참조 → 미준비 시 즉시 원본 반환 (요청 중 다운로드 차단)
 
 참조:
     - vibe/ref/rembg-guide.md (모델 선택/옵션 가이드 SSOT)
     - vibe/unit-plans/U-035[Mvp].md
+    - vibe/unit-plans/U-045[Mvp].md
     - vibe/tech-stack.md (rembg 버전 고정)
 """
 
@@ -26,6 +28,8 @@ from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from unknown_world.services.rembg_preflight import is_rembg_available as preflight_is_available
 
 # =============================================================================
 # 로거 설정
@@ -320,7 +324,23 @@ class ImagePostprocessor:
         else:
             model, alpha_matting = select_model_from_hint(image_type_hint)
 
-        # rembg 사용 가능 여부 확인
+        # U-045: preflight 상태 확인 (요청 중 다운로드 차단)
+        # preflight가 실패/미완료인 경우 즉시 원본 반환
+        if not preflight_is_available():
+            logger.warning(
+                "[Rembg] preflight 미완료 또는 실패, 원본 이미지 사용 (요청 중 다운로드 방지)"
+            )
+            import shutil
+
+            shutil.copy(input_path, output_path)
+            return BackgroundRemovalResult(
+                status=BackgroundRemovalStatus.FAILED,
+                output_path=output_path,
+                original_path=input_path,
+                message="rembg preflight가 완료되지 않았습니다. 원본 이미지를 사용합니다.",
+            )
+
+        # rembg 사용 가능 여부 확인 (CLI 실행 가능 여부)
         if not self.is_available():
             # 폴백: 원본 복사
             logger.warning("[Rembg] rembg 미설치, 원본 이미지 사용")
