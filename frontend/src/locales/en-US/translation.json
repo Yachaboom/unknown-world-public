@@ -1,4 +1,15 @@
 {
+  "language": {
+    "toggle": "Change Language",
+    "toggle_tooltip": "Click to change language. A new game will start after change.",
+    "ko-KR": "한국어",
+    "en-US": "English"
+  },
+  "error": {
+    "unknown_error": "An unknown error occurred.",
+    "response_processing": "[System] An error occurred while processing response data.",
+    "connection_failed": "[System] Failed to connect to server. Please try again."
+  },
   "profile": {
     "select_title": "Select Your Profile",
     "select_hint": "Each profile has different starting conditions and objectives",

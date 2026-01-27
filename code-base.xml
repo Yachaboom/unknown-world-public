@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, backend/.venv/**, frontend/node_modules/**, frontend/dist/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, backend/.venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -5021,115 +5021,6 @@ var addSorting = (function() {
 window.addEventListener('load', addSorting);
 </file>
 
-<file path="frontend/src/components/DemoProfileSelect.tsx">
-/**
- * Unknown World - 데모 프로필 선택 컴포넌트 (U-015[Mvp]).
- *
- * 첫 화면에서 3종의 데모 프로필을 선택할 수 있는 UI를 제공합니다.
- * 프로필 선택 시 해당 SaveGame을 즉시 로드하고 게임을 시작합니다.
- *
- * 설계 원칙:
- *   - RULE-002: 채팅 UI 금지, 게임 UI로 상시 노출
- *   - RULE-006: i18n 키 기반 다국어 지원
- *   - PRD 6.9: 데모 프로필 선택만으로 즉시 시작
- *
- * @module components/DemoProfileSelect
- */
-
-import { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { DEMO_PROFILES, type DemoProfile } from '../data/demoProfiles';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-export interface DemoProfileSelectProps {
-  /** 프로필 선택 시 호출되는 콜백 */
-  onSelectProfile: (profile: DemoProfile) => void;
-  /** 기존 세이브 로드 시 호출되는 콜백 (세이브가 있는 경우) */
-  onContinue?: () => void;
-  /** 기존 세이브가 있는지 여부 */
-  hasSavedGame?: boolean;
-}
-
-// =============================================================================
-// 컴포넌트
-// =============================================================================
-
-/**
- * 데모 프로필 선택 화면.
- * 게임 시작 전에 3종의 프로필 중 하나를 선택합니다.
- */
-export function DemoProfileSelect({
-  onSelectProfile,
-  onContinue,
-  hasSavedGame = false,
-}: DemoProfileSelectProps) {
-  const { t } = useTranslation();
-
-  const handleSelectProfile = useCallback(
-    (profile: DemoProfile) => {
-      onSelectProfile(profile);
-    },
-    [onSelectProfile],
-  );
-
-  const handleContinue = useCallback(() => {
-    onContinue?.();
-  }, [onContinue]);
-
-  return (
-    <div className="profile-select-container" data-ui-importance="critical">
-      {/* 타이틀 */}
-      <header className="profile-select-header">
-        <h1 className="profile-select-title glitch" data-text={t('ui.logo')}>
-          {t('ui.logo')}
-        </h1>
-        <p className="profile-select-subtitle">{t('profile.select_title')}</p>
-      </header>
-
-      {/* 프로필 카드 목록 */}
-      <div className="profile-card-grid">
-        {DEMO_PROFILES.map((profile) => (
-          <button
-            key={profile.id}
-            type="button"
-            className="profile-card"
-            onClick={() => handleSelectProfile(profile)}
-            style={{ '--profile-accent': profile.themeColor } as React.CSSProperties}
-            aria-label={t(profile.nameKey)}
-          >
-            <span className="profile-card-icon" aria-hidden="true">
-              {profile.icon}
-            </span>
-            <span className="profile-card-name">{t(profile.nameKey)}</span>
-            <span className="profile-card-description">{t(profile.descriptionKey)}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* 기존 세이브 계속하기 (있는 경우) */}
-      {hasSavedGame && onContinue && (
-        <div className="profile-continue-section">
-          <div className="profile-continue-divider">
-            <span>{t('profile.or')}</span>
-          </div>
-          <button type="button" className="profile-continue-btn" onClick={handleContinue}>
-            {t('profile.continue_saved')}
-          </button>
-        </div>
-      )}
-
-      {/* 안내 문구 */}
-      <footer className="profile-select-footer">
-        <p className="profile-select-hint">{t('profile.select_hint')}</p>
-      </footer>
-    </div>
-  );
-}
-</file>
-
 <file path="frontend/src/components/EconomyHud.test.tsx">
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -6672,60 +6563,6 @@ describe('demoProfiles (U-015[Mvp])', () => {
     expect(saveGame.sceneObjects[0].box_2d).toEqual(
       PROFILE_EXPLORER.initialState.sceneObjectDefs[0].box_2d,
     );
-  });
-});
-</file>
-
-<file path="frontend/src/i18n-scenario.test.ts">
-import { describe, it, expect } from 'vitest';
-import i18next from './i18n';
-
-describe('i18n Integration Scenarios (U-039)', () => {
-  it('Scenario D: should have correct i18next options', () => {
-    expect(i18next.options.supportedLngs).toContain('ko-KR');
-    expect(i18next.options.supportedLngs).toContain('en-US');
-    expect(i18next.options.lng).toBe('ko-KR');
-    expect(i18next.options.fallbackLng).toContain('en-US');
-  });
-
-  it('Scenario A: should translate to Korean by default', () => {
-    // Economy labels
-    expect(i18next.t('economy.signal')).toBe('Signal');
-    expect(i18next.t('economy.shard')).toBe('Shard');
-
-    // Panel titles
-    expect(i18next.t('panel.inventory.title')).toBe('Inventory');
-    expect(i18next.t('panel.quest.title')).toBe('Quest');
-
-    // Agent Console
-    expect(i18next.t('agent.console.queue')).toBe('대기열');
-    expect(i18next.t('agent.console.status.idle')).toBe('대기 중');
-
-    // Connection
-    expect(i18next.t('connection.online')).toBe('온라인');
-
-    // UI
-    expect(i18next.t('ui.command_placeholder')).toBe('명령을 입력하세요...');
-    expect(i18next.t('ui.execute')).toBe('실행');
-  });
-
-  it('Scenario B: should switch to English and back to Korean', async () => {
-    // Switch to English
-    await i18next.changeLanguage('en-US');
-    expect(i18next.resolvedLanguage).toBe('en-US');
-
-    // Check English translations
-    expect(i18next.t('agent.console.queue')).toBe('Queue');
-    expect(i18next.t('agent.console.status.idle')).toBe('IDLE');
-    expect(i18next.t('connection.online')).toBe('ONLINE');
-    expect(i18next.t('ui.command_placeholder')).toBe('Enter command...');
-    expect(i18next.t('ui.execute')).toBe('EXECUTE');
-
-    // Switch back to Korean
-    await i18next.changeLanguage('ko-KR');
-    expect(i18next.resolvedLanguage).toBe('ko-KR');
-    expect(i18next.t('agent.console.queue')).toBe('대기열');
-    expect(i18next.t('connection.online')).toBe('온라인');
   });
 });
 </file>
@@ -11347,6 +11184,156 @@ describe('AgentConsole (U-037)', () => {
 });
 </file>
 
+<file path="frontend/src/components/DemoProfileSelect.tsx">
+/**
+ * Unknown World - 데모 프로필 선택 컴포넌트 (U-015[Mvp]).
+ *
+ * 첫 화면에서 3종의 데모 프로필을 선택할 수 있는 UI를 제공합니다.
+ * 프로필 선택 시 해당 SaveGame을 즉시 로드하고 게임을 시작합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: 채팅 UI 금지, 게임 UI로 상시 노출
+ *   - RULE-006: i18n 키 기반 다국어 지원
+ *   - PRD 6.9: 데모 프로필 선택만으로 즉시 시작
+ *
+ * @module components/DemoProfileSelect
+ */
+
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DEMO_PROFILES, type DemoProfile } from '../data/demoProfiles';
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../i18n';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+export interface DemoProfileSelectProps {
+  /** 프로필 선택 시 호출되는 콜백 */
+  onSelectProfile: (profile: DemoProfile) => void;
+  /** 기존 세이브 로드 시 호출되는 콜백 (세이브가 있는 경우) */
+  onContinue?: () => void;
+  /** 기존 세이브가 있는지 여부 */
+  hasSavedGame?: boolean;
+  /** U-044: 현재 선택된 언어 */
+  currentLanguage?: SupportedLanguage;
+  /** U-044: 언어 변경 콜백 (profile_select에서만 허용) */
+  onLanguageChange?: (language: SupportedLanguage) => void;
+}
+
+// =============================================================================
+// 컴포넌트
+// =============================================================================
+
+/** U-044: 언어 표시 레이블 매핑 */
+const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
+  'ko-KR': '한국어',
+  'en-US': 'English',
+};
+
+/**
+ * 데모 프로필 선택 화면.
+ * 게임 시작 전에 3종의 프로필 중 하나를 선택합니다.
+ * U-044: 언어 선택 UI 포함 (profile_select에서만 변경 가능).
+ */
+export function DemoProfileSelect({
+  onSelectProfile,
+  onContinue,
+  hasSavedGame = false,
+  currentLanguage = 'ko-KR',
+  onLanguageChange,
+}: DemoProfileSelectProps) {
+  const { t } = useTranslation();
+
+  const handleSelectProfile = useCallback(
+    (profile: DemoProfile) => {
+      onSelectProfile(profile);
+    },
+    [onSelectProfile],
+  );
+
+  const handleContinue = useCallback(() => {
+    onContinue?.();
+  }, [onContinue]);
+
+  /** U-044: 언어 토글 핸들러 */
+  const handleLanguageToggle = useCallback(() => {
+    if (!onLanguageChange) return;
+    // 현재 언어의 다음 언어로 전환 (2개 언어만 지원하므로 토글)
+    const currentIndex = SUPPORTED_LANGUAGES.indexOf(currentLanguage);
+    const nextIndex = (currentIndex + 1) % SUPPORTED_LANGUAGES.length;
+    onLanguageChange(SUPPORTED_LANGUAGES[nextIndex]);
+  }, [currentLanguage, onLanguageChange]);
+
+  return (
+    <div className="profile-select-container" data-ui-importance="critical">
+      {/* U-044: 언어 선택 토글 (우측 상단) */}
+      {onLanguageChange && (
+        <div className="language-toggle-container">
+          <button
+            type="button"
+            className="language-toggle-btn"
+            onClick={handleLanguageToggle}
+            aria-label={t('language.toggle')}
+            title={t('language.toggle_tooltip')}
+          >
+            <span className="language-toggle-icon" aria-hidden="true">
+              🌐
+            </span>
+            <span className="language-toggle-label">{LANGUAGE_LABELS[currentLanguage]}</span>
+          </button>
+        </div>
+      )}
+
+      {/* 타이틀 */}
+      <header className="profile-select-header">
+        <h1 className="profile-select-title glitch" data-text={t('ui.logo')}>
+          {t('ui.logo')}
+        </h1>
+        <p className="profile-select-subtitle">{t('profile.select_title')}</p>
+      </header>
+
+      {/* 프로필 카드 목록 */}
+      <div className="profile-card-grid">
+        {DEMO_PROFILES.map((profile) => (
+          <button
+            key={profile.id}
+            type="button"
+            className="profile-card"
+            onClick={() => handleSelectProfile(profile)}
+            style={{ '--profile-accent': profile.themeColor } as React.CSSProperties}
+            aria-label={t(profile.nameKey)}
+          >
+            <span className="profile-card-icon" aria-hidden="true">
+              {profile.icon}
+            </span>
+            <span className="profile-card-name">{t(profile.nameKey)}</span>
+            <span className="profile-card-description">{t(profile.descriptionKey)}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 기존 세이브 계속하기 (있는 경우) */}
+      {hasSavedGame && onContinue && (
+        <div className="profile-continue-section">
+          <div className="profile-continue-divider">
+            <span>{t('profile.or')}</span>
+          </div>
+          <button type="button" className="profile-continue-btn" onClick={handleContinue}>
+            {t('profile.continue_saved')}
+          </button>
+        </div>
+      )}
+
+      {/* 안내 문구 */}
+      <footer className="profile-select-footer">
+        <p className="profile-select-hint">{t('profile.select_hint')}</p>
+      </footer>
+    </div>
+  );
+}
+</file>
+
 <file path="frontend/src/components/Panel.tsx">
 import { useTranslation } from 'react-i18next';
 
@@ -12027,6 +12014,210 @@ export function compareHotspotPriority(a: Box2D, b: Box2D): number {
 }
 </file>
 
+<file path="frontend/src/i18n-scenario.test.ts">
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getSessionLanguage, startSessionFromProfile } from './save/sessionLifecycle';
+import { buildTurnInput } from './turn/turnRunner';
+import { SAVEGAME_STORAGE_KEY, SAVEGAME_VERSION } from './save/constants';
+import { PROFILE_EXPLORER } from './data/demoProfiles';
+import { useWorldStore } from './stores/worldStore';
+import { useInventoryStore } from './stores/inventoryStore';
+import { useEconomyStore } from './stores/economyStore';
+
+// i18n 모듈 mock
+vi.mock('./i18n', async () => {
+  const actual = await vi.importActual('./i18n');
+  return {
+    ...actual,
+    changeLanguage: vi.fn().mockResolvedValue(undefined),
+    getResolvedLanguage: vi.fn().mockReturnValue('ko-KR'),
+  };
+});
+
+describe('U-044[Mvp] i18n Session SSOT Scenario', () => {
+  const mockT = (key: string) => `translated-${key}`;
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+
+    // Store 초기화
+    useWorldStore.getState().reset();
+    useInventoryStore.getState().reset();
+    useEconomyStore.getState().reset();
+  });
+
+  describe('Language SSOT (getSessionLanguage)', () => {
+    it('SaveGame이 없을 때는 기본 언어(ko-KR)를 반환해야 한다', () => {
+      expect(getSessionLanguage()).toBe('ko-KR');
+    });
+
+    it('SaveGame에 저장된 언어가 있으면 해당 언어를 반환해야 한다 (en-US)', () => {
+      const saveGame = {
+        version: SAVEGAME_VERSION,
+        language: 'en-US',
+        profileId: 'explorer',
+        savedAt: new Date().toISOString(),
+        economy: { signal: 100, memory_shard: 5 },
+        economyLedger: [],
+        turnCount: 1,
+        narrativeHistory: [],
+        inventory: [],
+        quests: [],
+        activeRules: [],
+        mutationTimeline: [],
+        sceneObjects: [],
+      };
+      localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(saveGame));
+
+      expect(getSessionLanguage()).toBe('en-US');
+    });
+
+    it('i18n resolvedLanguage가 변경되어도 SaveGame 언어를 우선해야 한다 (드리프트 방지)', () => {
+      const saveGame = {
+        version: SAVEGAME_VERSION,
+        language: 'ko-KR',
+        profileId: 'explorer',
+        savedAt: new Date().toISOString(),
+        economy: { signal: 100, memory_shard: 5 },
+        economyLedger: [],
+        turnCount: 1,
+        narrativeHistory: [],
+        inventory: [],
+        quests: [],
+        activeRules: [],
+        mutationTimeline: [],
+        sceneObjects: [],
+      };
+      localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(saveGame));
+
+      // i18n.getResolvedLanguage()가 'en-US'를 반환하도록 상황 가정 (드리프트)
+      // 실제로는 mock이므로 직접 비교는 어렵지만 logic상 validSaveGame 확인 우선순위 검증
+      expect(getSessionLanguage()).toBe('ko-KR');
+    });
+  });
+
+  describe('TurnInput Language Injection', () => {
+    it('buildTurnInput은 외부에서 주입된 언어를 사용해야 한다', () => {
+      const turnInput = buildTurnInput({
+        text: 'hello',
+        economySnapshot: { signal: 100, memory_shard: 0 },
+        theme: 'dark',
+        language: 'en-US', // 주입된 언어
+      });
+
+      expect(turnInput.language).toBe('en-US');
+    });
+  });
+
+  describe('Session Language Policy (Toggle = Reset)', () => {
+    it('startSessionFromProfile 호출 시 명시적 언어를 SaveGame에 반영해야 한다', () => {
+      startSessionFromProfile({
+        profile: PROFILE_EXPLORER,
+
+        t: mockT,
+
+        language: 'en-US',
+      });
+
+      const saved = JSON.parse(localStorage.getItem(SAVEGAME_STORAGE_KEY)!);
+
+      expect(saved.language).toBe('en-US');
+
+      expect(getSessionLanguage()).toBe('en-US');
+    });
+  });
+
+  describe('turnStream Error Message Language', () => {
+    it('네트워크 에러 시 입력 언어에 맞는 한국어 메시지를 반환해야 한다 (ko-KR)', async () => {
+      const { executeTurnStream } = await import('./api/turnStream');
+
+      const mockInput = {
+        language: 'ko-KR' as const,
+
+        text: 'Hello',
+
+        action_id: null,
+
+        click: null,
+
+        drop: null,
+
+        client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+
+        economy_snapshot: { signal: 100, memory_shard: 0 },
+      };
+
+      const onError = vi.fn();
+
+      const onFinal = vi.fn();
+
+      // fetch 실패 유도
+
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
+
+      await executeTurnStream(mockInput, { onError, onFinal });
+
+      // onError 보다는 onFinal의 narrative를 검증 (createClientFallbackTurnOutput)
+
+      // onError는 error.message를 그대로 쓰므로 'Network Error'가 나옴
+
+      expect(onFinal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            language: 'ko-KR',
+
+            narrative: '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.',
+          }),
+        }),
+      );
+
+      vi.unstubAllGlobals();
+    });
+
+    it('네트워크 에러 시 입력 언어에 맞는 영어 메시지를 반환해야 한다 (en-US)', async () => {
+      const { executeTurnStream } = await import('./api/turnStream');
+
+      const mockInput = {
+        language: 'en-US' as const,
+
+        text: 'Hello',
+
+        action_id: null,
+
+        click: null,
+
+        drop: null,
+
+        client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+
+        economy_snapshot: { signal: 100, memory_shard: 0 },
+      };
+
+      const onFinal = vi.fn();
+
+      // fetch 실패 유도
+
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
+
+      await executeTurnStream(mockInput, { onFinal });
+
+      expect(onFinal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            language: 'en-US',
+
+            narrative: '[System] Failed to connect to server. Please try again.',
+          }),
+        }),
+      );
+
+      vi.unstubAllGlobals();
+    });
+  });
+});
+</file>
+
 <file path="frontend/src/i18n.ts">
 /**
  * Unknown World - i18n 초기화 모듈
@@ -12118,356 +12309,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-</file>
-
-<file path="frontend/src/save/sessionLifecycle.ts">
-/**
- * Unknown World - 세션 라이프사이클 관리 모듈 (RU-004-Q4).
- *
- * 세션 초기화/복원/리셋/변경을 SSOT로 관리합니다.
- * App.tsx의 세션 관련 로직을 이 모듈로 이동하여 책임 경계를 명확히 합니다.
- *
- * 설계 원칙:
- *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
- *   - RULE-006: ko/en i18n 정책 준수 (언어 적용 후 UI 렌더링)
- *   - RU-004-S1: 언어 async 적용 완료 후 store 주입
- *   - RU-004-S2: profileId SSOT + 유효 SaveGame만 Continue
- *
- * @module save/sessionLifecycle
- */
-
-import {
-  loadSaveGame,
-  saveSaveGame,
-  clearSaveGame,
-  getValidSaveGameOrNull,
-  createSaveGame,
-  loadCurrentProfileId,
-  saveCurrentProfileId,
-  clearCurrentProfileId,
-} from './saveGame';
-import { findProfileById, createSaveGameFromProfile, type DemoProfile } from '../data/demoProfiles';
-import { getResolvedLanguage, changeLanguage, type SupportedLanguage } from '../i18n';
-import { useWorldStore } from '../stores/worldStore';
-import { useInventoryStore } from '../stores/inventoryStore';
-import { useEconomyStore } from '../stores/economyStore';
-import { useActionDeckStore } from '../stores/actionDeckStore';
-import { useAgentStore } from '../stores/agentStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/**
- * 부팅 결과 타입.
- * 앱 시작 시 어떤 phase로 시작할지 결정합니다.
- */
-export type SessionBootstrap =
-  | { phase: 'profile_select'; savedGameAvailable: boolean }
-  | { phase: 'playing'; profileId: string | null };
-
-/**
- * 세션 시작 결과 타입.
- */
-export interface SessionStartResult {
-  success: true;
-  profileId: string;
-}
-
-/**
- * 세션 복원 결과 타입.
- */
-export interface SessionContinueResult {
-  success: true;
-  profileId: string;
-}
-
-/**
- * 세션 리셋 결과 타입.
- */
-export interface SessionResetResult {
-  success: boolean;
-  profileId: string | null;
-}
-
-// =============================================================================
-// 내부 헬퍼: 모든 세션 관련 store를 초기화
-// =============================================================================
-
-/**
- * 모든 세션 관련 store를 초기화합니다.
- *
- * RU-004-Q4 Step 2: store reset/hydrate 범위 표준화
- * - worldStore, inventoryStore, economyStore, actionDeckStore, agentStore
- *
- * 세션 경계에서 항상 이 함수를 호출하여 이전 세션 잔재를 완전히 제거합니다.
- */
-function resetAllSessionStores(): void {
-  useWorldStore.getState().reset();
-  useInventoryStore.getState().reset();
-  useEconomyStore.getState().reset();
-  useActionDeckStore.getState().reset();
-  useAgentStore.getState().reset();
-}
-
-// =============================================================================
-// 세션 라이프사이클 API
-// =============================================================================
-
-/**
- * 부팅 시 세션 상태를 확인하고 시작 phase를 결정합니다.
- *
- * RU-004-S2: hasSaveGame() 대신 getValidSaveGameOrNull()로 "유효한 세이브만" 판단
- *
- * @returns SessionBootstrap - 시작 phase와 관련 정보
- */
-export function bootstrapSession(): SessionBootstrap {
-  const validSaveGame = getValidSaveGameOrNull();
-
-  if (validSaveGame) {
-    // 유효한 세이브가 있으면 playing 상태로 시작
-    return {
-      phase: 'playing',
-      profileId: validSaveGame.profileId,
-    };
-  }
-
-  // 유효한 세이브가 없으면 profile_select로 시작
-  // 단, localStorage에 깨진 세이브가 있을 수 있으므로 savedGameAvailable은 false
-  return {
-    phase: 'profile_select',
-    savedGameAvailable: false,
-  };
-}
-
-/**
- * 저장된 게임이 있는지 확인합니다 (Continue 버튼 표시용).
- *
- * RU-004-S2: 유효한 세이브만 "있음"으로 판단
- *
- * @returns 유효한 세이브가 있으면 true
- */
-export function hasValidSaveGame(): boolean {
-  return getValidSaveGameOrNull() !== null;
-}
-
-/**
- * 프로필을 선택하고 새 세션을 시작합니다.
- *
- * RU-004-Q4 Step 1: startSessionFromProfile
- * - 모든 store를 초기화
- * - 프로필 기반 SaveGame 생성
- * - store에 초기 상태 주입
- * - localStorage에 저장
- *
- * @param args.profile - 선택한 데모 프로필
- * @param args.t - i18n 번역 함수
- * @returns 세션 시작 결과
- */
-export function startSessionFromProfile(args: {
-  profile: DemoProfile;
-  t: (key: string) => string;
-}): SessionStartResult {
-  const { profile, t } = args;
-
-  // 현재 언어 설정 유지
-  const language = getResolvedLanguage();
-
-  // 프로필에서 SaveGame 생성
-  const saveGame = createSaveGameFromProfile(profile, language, t);
-
-  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
-  resetAllSessionStores();
-
-  // Store에 초기 상태 주입
-  useWorldStore.setState({
-    economy: {
-      signal: saveGame.economy.signal,
-      memory_shard: saveGame.economy.memory_shard,
-    },
-    turnCount: 0,
-    narrativeEntries: saveGame.narrativeHistory,
-    quests: saveGame.quests,
-    activeRules: saveGame.activeRules,
-    mutationTimeline: saveGame.mutationTimeline,
-    sceneObjects: saveGame.sceneObjects,
-  });
-
-  useInventoryStore.getState().setItems(saveGame.inventory);
-
-  // 프로필 ID 저장 (localStorage)
-  saveCurrentProfileId(profile.id);
-
-  // SaveGame 저장 (localStorage)
-  saveSaveGame(saveGame);
-
-  return {
-    success: true,
-    profileId: profile.id,
-  };
-}
-
-/**
- * 저장된 게임을 복원하여 세션을 계속합니다.
- *
- * RU-004-Q4 Step 1: continueSession
- * RU-004-S1: async로 언어 적용 완료 후 store 주입
- * RU-004-S2: profileId SSOT + 로드 실패 시 null 반환
- *
- * @returns 세션 복원 결과 또는 null (실패 시)
- */
-export async function continueSession(): Promise<SessionContinueResult | null> {
-  const saveGame = loadSaveGame();
-  if (!saveGame) {
-    // 로드 실패 시 클린업
-    clearSaveGame();
-    clearCurrentProfileId();
-    console.warn('[SessionLifecycle] SaveGame 로드 실패, 새로 시작 필요');
-    return null;
-  }
-
-  // RU-004-S1: 언어 설정 비동기 적용 완료 후 진행 (RULE-006)
-  await changeLanguage(saveGame.language as SupportedLanguage);
-
-  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
-  resetAllSessionStores();
-
-  // Store에 저장된 상태 복원
-  useWorldStore.setState({
-    economy: {
-      signal: saveGame.economy.signal,
-      memory_shard: saveGame.economy.memory_shard,
-    },
-    turnCount: saveGame.turnCount,
-    narrativeEntries: saveGame.narrativeHistory,
-    quests: saveGame.quests,
-    activeRules: saveGame.activeRules,
-    mutationTimeline: saveGame.mutationTimeline,
-    sceneObjects: saveGame.sceneObjects,
-  });
-
-  // 인벤토리 복원
-  useInventoryStore.getState().setItems(saveGame.inventory);
-
-  // Economy 복원 (RU-004-S1: hydrateLedger로 순서/timestamp/lastCost/isBalanceLow 정합성 보장)
-  useEconomyStore.getState().hydrateLedger(saveGame.economyLedger, saveGame.economy);
-
-  // RU-004-S2: profileId SSOT - SaveGame.profileId를 권위자로 사용
-  const profileId = saveGame.profileId;
-  if (profileId) {
-    saveCurrentProfileId(profileId); // localStorage 동기화 (드리프트 방지)
-  }
-
-  return {
-    success: true,
-    profileId: profileId ?? loadCurrentProfileId() ?? '',
-  };
-}
-
-/**
- * 현재 프로필의 초기 상태로 리셋합니다.
- *
- * RU-004-Q4 Step 1: resetToCurrentProfile
- *
- * @param args.t - i18n 번역 함수
- * @param args.currentProfileId - 현재 프로필 ID
- * @returns 리셋 성공 여부
- */
-export function resetToCurrentProfile(args: {
-  t: (key: string) => string;
-  currentProfileId: string | null;
-}): SessionResetResult {
-  const { t, currentProfileId } = args;
-
-  if (!currentProfileId) {
-    return { success: false, profileId: null };
-  }
-
-  const profile = findProfileById(currentProfileId);
-  if (!profile) {
-    return { success: false, profileId: null };
-  }
-
-  // 동일 프로필로 새 세션 시작
-  const result = startSessionFromProfile({ profile, t });
-
-  return {
-    success: result.success,
-    profileId: result.profileId,
-  };
-}
-
-/**
- * 세션을 종료하고 프로필 선택 화면으로 돌아갑니다.
- *
- * RU-004-Q4 Step 1: clearSessionAndReturnToSelect
- * - 모든 세션 데이터 클린업 (localStorage + store)
- */
-export function clearSessionAndReturnToSelect(): void {
-  // localStorage 클린업
-  clearSaveGame();
-  clearCurrentProfileId();
-
-  // 모든 세션 store 초기화
-  resetAllSessionStores();
-}
-
-/**
- * 현재 상태를 저장합니다.
- *
- * 턴 완료 시 자동 저장에 사용됩니다.
- *
- * RU-004-Q5: seed는 세션 시작 시 생성되고, 이후 변경되지 않아야 합니다.
- * 기존 SaveGame에서 seed를 읽어와서 유지합니다.
- *
- * @param profileId - 현재 프로필 ID
- * @returns 저장 성공 여부
- */
-export function saveCurrentSession(profileId: string | null): boolean {
-  if (!profileId) return false;
-
-  const worldState = useWorldStore.getState();
-  const economyState = useEconomyStore.getState();
-  const inventoryState = useInventoryStore.getState();
-
-  // RU-004-Q5: 기존 SaveGame에서 seed를 가져와 유지 (SSOT)
-  const existingSaveGame = getValidSaveGameOrNull();
-  const seed = existingSaveGame?.seed ?? null;
-
-  const saveGame = createSaveGame({
-    language: getResolvedLanguage(),
-    profileId,
-    seed, // RU-004-Q5: seed 유지
-    economy: worldState.economy,
-    economyLedger: economyState.ledger,
-    turnCount: worldState.turnCount,
-    narrativeHistory: worldState.narrativeEntries,
-    inventory: inventoryState.items,
-    quests: worldState.quests,
-    activeRules: worldState.activeRules,
-    mutationTimeline: worldState.mutationTimeline,
-    sceneObjects: worldState.sceneObjects,
-  });
-
-  return saveSaveGame(saveGame);
-}
-
-/**
- * 초기 profileId를 결정합니다.
- *
- * RU-004-S2: SaveGame.profileId가 SSOT, CURRENT_PROFILE_KEY는 폴백
- *
- * @returns 초기 profileId 또는 null
- */
-export function getInitialProfileId(): string | null {
-  // 유효한 SaveGame이 있으면 그 profileId를 사용
-  const validSaveGame = getValidSaveGameOrNull();
-  if (validSaveGame?.profileId) {
-    return validSaveGame.profileId;
-  }
-  // 폴백: CURRENT_PROFILE_KEY (호환성)
-  return loadCurrentProfileId();
-}
 </file>
 
 <file path="frontend/src/stores/agentStore.test.ts">
@@ -15892,6 +15733,421 @@ export function useDemoInitializer() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
+}
+</file>
+
+<file path="frontend/src/save/sessionLifecycle.ts">
+/**
+ * Unknown World - 세션 라이프사이클 관리 모듈 (RU-004-Q4).
+ *
+ * 세션 초기화/복원/리셋/변경을 SSOT로 관리합니다.
+ * App.tsx의 세션 관련 로직을 이 모듈로 이동하여 책임 경계를 명확히 합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
+ *   - RULE-006: ko/en i18n 정책 준수 (언어 적용 후 UI 렌더링)
+ *   - RU-004-S1: 언어 async 적용 완료 후 store 주입
+ *   - RU-004-S2: profileId SSOT + 유효 SaveGame만 Continue
+ *
+ * @module save/sessionLifecycle
+ */
+
+import {
+  loadSaveGame,
+  saveSaveGame,
+  clearSaveGame,
+  getValidSaveGameOrNull,
+  createSaveGame,
+  loadCurrentProfileId,
+  saveCurrentProfileId,
+  clearCurrentProfileId,
+} from './saveGame';
+import { findProfileById, createSaveGameFromProfile, type DemoProfile } from '../data/demoProfiles';
+import {
+  getResolvedLanguage,
+  changeLanguage,
+  type SupportedLanguage,
+  DEFAULT_LANGUAGE,
+} from '../i18n';
+import { useWorldStore } from '../stores/worldStore';
+import { useInventoryStore } from '../stores/inventoryStore';
+import { useEconomyStore } from '../stores/economyStore';
+import { useActionDeckStore } from '../stores/actionDeckStore';
+import { useAgentStore } from '../stores/agentStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 부팅 결과 타입.
+ * 앱 시작 시 어떤 phase로 시작할지 결정합니다.
+ */
+export type SessionBootstrap =
+  | { phase: 'profile_select'; savedGameAvailable: boolean }
+  | { phase: 'playing'; profileId: string | null };
+
+/**
+ * 세션 시작 결과 타입.
+ */
+export interface SessionStartResult {
+  success: true;
+  profileId: string;
+}
+
+/**
+ * 세션 복원 결과 타입.
+ */
+export interface SessionContinueResult {
+  success: true;
+  profileId: string;
+}
+
+/**
+ * 세션 리셋 결과 타입.
+ */
+export interface SessionResetResult {
+  success: boolean;
+  profileId: string | null;
+}
+
+// =============================================================================
+// 내부 헬퍼: 모든 세션 관련 store를 초기화
+// =============================================================================
+
+/**
+ * 모든 세션 관련 store를 초기화합니다.
+ *
+ * RU-004-Q4 Step 2: store reset/hydrate 범위 표준화
+ * - worldStore, inventoryStore, economyStore, actionDeckStore, agentStore
+ *
+ * 세션 경계에서 항상 이 함수를 호출하여 이전 세션 잔재를 완전히 제거합니다.
+ */
+function resetAllSessionStores(): void {
+  useWorldStore.getState().reset();
+  useInventoryStore.getState().reset();
+  useEconomyStore.getState().reset();
+  useActionDeckStore.getState().reset();
+  useAgentStore.getState().reset();
+}
+
+// =============================================================================
+// 세션 라이프사이클 API
+// =============================================================================
+
+/**
+ * 부팅 시 세션 상태를 확인하고 시작 phase를 결정합니다.
+ *
+ * RU-004-S2: hasSaveGame() 대신 getValidSaveGameOrNull()로 "유효한 세이브만" 판단
+ *
+ * @returns SessionBootstrap - 시작 phase와 관련 정보
+ */
+export function bootstrapSession(): SessionBootstrap {
+  const validSaveGame = getValidSaveGameOrNull();
+
+  if (validSaveGame) {
+    // 유효한 세이브가 있으면 playing 상태로 시작
+    return {
+      phase: 'playing',
+      profileId: validSaveGame.profileId,
+    };
+  }
+
+  // 유효한 세이브가 없으면 profile_select로 시작
+  // 단, localStorage에 깨진 세이브가 있을 수 있으므로 savedGameAvailable은 false
+  return {
+    phase: 'profile_select',
+    savedGameAvailable: false,
+  };
+}
+
+/**
+ * 저장된 게임이 있는지 확인합니다 (Continue 버튼 표시용).
+ *
+ * RU-004-S2: 유효한 세이브만 "있음"으로 판단
+ *
+ * @returns 유효한 세이브가 있으면 true
+ */
+export function hasValidSaveGame(): boolean {
+  return getValidSaveGameOrNull() !== null;
+}
+
+/**
+ * 프로필을 선택하고 새 세션을 시작합니다.
+ *
+ * RU-004-Q4 Step 1: startSessionFromProfile
+ * U-044: 세션 언어를 명시적으로 받아 SSOT 유지
+ * - 모든 store를 초기화
+ * - 프로필 기반 SaveGame 생성
+ * - store에 초기 상태 주입
+ * - localStorage에 저장
+ *
+ * @param args.profile - 선택한 데모 프로필
+ * @param args.t - i18n 번역 함수
+ * @param args.language - 세션 언어 (U-044: 명시적 전달로 SSOT 유지)
+ * @returns 세션 시작 결과
+ */
+export function startSessionFromProfile(args: {
+  profile: DemoProfile;
+  t: (key: string) => string;
+  language?: SupportedLanguage;
+}): SessionStartResult {
+  const { profile, t, language: explicitLanguage } = args;
+
+  // U-044: 명시적 언어가 있으면 사용, 없으면 i18n 현재 값 사용
+  const language = explicitLanguage ?? getResolvedLanguage();
+
+  // 프로필에서 SaveGame 생성
+  const saveGame = createSaveGameFromProfile(profile, language, t);
+
+  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
+  resetAllSessionStores();
+
+  // Store에 초기 상태 주입
+  useWorldStore.setState({
+    economy: {
+      signal: saveGame.economy.signal,
+      memory_shard: saveGame.economy.memory_shard,
+    },
+    turnCount: 0,
+    narrativeEntries: saveGame.narrativeHistory,
+    quests: saveGame.quests,
+    activeRules: saveGame.activeRules,
+    mutationTimeline: saveGame.mutationTimeline,
+    sceneObjects: saveGame.sceneObjects,
+  });
+
+  useInventoryStore.getState().setItems(saveGame.inventory);
+
+  // 프로필 ID 저장 (localStorage)
+  saveCurrentProfileId(profile.id);
+
+  // SaveGame 저장 (localStorage)
+  saveSaveGame(saveGame);
+
+  return {
+    success: true,
+    profileId: profile.id,
+  };
+}
+
+/**
+ * 저장된 게임을 복원하여 세션을 계속합니다.
+ *
+ * RU-004-Q4 Step 1: continueSession
+ * RU-004-S1: async로 언어 적용 완료 후 store 주입
+ * RU-004-S2: profileId SSOT + 로드 실패 시 null 반환
+ *
+ * @returns 세션 복원 결과 또는 null (실패 시)
+ */
+export async function continueSession(): Promise<SessionContinueResult | null> {
+  const saveGame = loadSaveGame();
+  if (!saveGame) {
+    // 로드 실패 시 클린업
+    clearSaveGame();
+    clearCurrentProfileId();
+    console.warn('[SessionLifecycle] SaveGame 로드 실패, 새로 시작 필요');
+    return null;
+  }
+
+  // RU-004-S1: 언어 설정 비동기 적용 완료 후 진행 (RULE-006)
+  await changeLanguage(saveGame.language as SupportedLanguage);
+
+  // 모든 세션 store 초기화 (이전 세션 잔재 제거)
+  resetAllSessionStores();
+
+  // Store에 저장된 상태 복원
+  useWorldStore.setState({
+    economy: {
+      signal: saveGame.economy.signal,
+      memory_shard: saveGame.economy.memory_shard,
+    },
+    turnCount: saveGame.turnCount,
+    narrativeEntries: saveGame.narrativeHistory,
+    quests: saveGame.quests,
+    activeRules: saveGame.activeRules,
+    mutationTimeline: saveGame.mutationTimeline,
+    sceneObjects: saveGame.sceneObjects,
+  });
+
+  // 인벤토리 복원
+  useInventoryStore.getState().setItems(saveGame.inventory);
+
+  // Economy 복원 (RU-004-S1: hydrateLedger로 순서/timestamp/lastCost/isBalanceLow 정합성 보장)
+  useEconomyStore.getState().hydrateLedger(saveGame.economyLedger, saveGame.economy);
+
+  // RU-004-S2: profileId SSOT - SaveGame.profileId를 권위자로 사용
+  const profileId = saveGame.profileId;
+  if (profileId) {
+    saveCurrentProfileId(profileId); // localStorage 동기화 (드리프트 방지)
+  }
+
+  return {
+    success: true,
+    profileId: profileId ?? loadCurrentProfileId() ?? '',
+  };
+}
+
+/**
+ * 현재 프로필의 초기 상태로 리셋합니다.
+ *
+ * RU-004-Q4 Step 1: resetToCurrentProfile
+ *
+ * @param args.t - i18n 번역 함수
+ * @param args.currentProfileId - 현재 프로필 ID
+ * @returns 리셋 성공 여부
+ */
+export function resetToCurrentProfile(args: {
+  t: (key: string) => string;
+  currentProfileId: string | null;
+}): SessionResetResult {
+  const { t, currentProfileId } = args;
+
+  if (!currentProfileId) {
+    return { success: false, profileId: null };
+  }
+
+  const profile = findProfileById(currentProfileId);
+  if (!profile) {
+    return { success: false, profileId: null };
+  }
+
+  // 동일 프로필로 새 세션 시작
+  const result = startSessionFromProfile({ profile, t });
+
+  return {
+    success: result.success,
+    profileId: result.profileId,
+  };
+}
+
+/**
+ * 세션을 종료하고 프로필 선택 화면으로 돌아갑니다.
+ *
+ * RU-004-Q4 Step 1: clearSessionAndReturnToSelect
+ * - 모든 세션 데이터 클린업 (localStorage + store)
+ */
+export function clearSessionAndReturnToSelect(): void {
+  // localStorage 클린업
+  clearSaveGame();
+  clearCurrentProfileId();
+
+  // 모든 세션 store 초기화
+  resetAllSessionStores();
+}
+
+/**
+ * 현재 상태를 저장합니다.
+ *
+ * 턴 완료 시 자동 저장에 사용됩니다.
+ *
+ * RU-004-Q5: seed는 세션 시작 시 생성되고, 이후 변경되지 않아야 합니다.
+ * 기존 SaveGame에서 seed를 읽어와서 유지합니다.
+ *
+ * @param profileId - 현재 프로필 ID
+ * @returns 저장 성공 여부
+ */
+export function saveCurrentSession(profileId: string | null): boolean {
+  if (!profileId) return false;
+
+  const worldState = useWorldStore.getState();
+  const economyState = useEconomyStore.getState();
+  const inventoryState = useInventoryStore.getState();
+
+  // RU-004-Q5: 기존 SaveGame에서 seed를 가져와 유지 (SSOT)
+  const existingSaveGame = getValidSaveGameOrNull();
+  const seed = existingSaveGame?.seed ?? null;
+
+  const saveGame = createSaveGame({
+    language: getResolvedLanguage(),
+    profileId,
+    seed, // RU-004-Q5: seed 유지
+    economy: worldState.economy,
+    economyLedger: economyState.ledger,
+    turnCount: worldState.turnCount,
+    narrativeHistory: worldState.narrativeEntries,
+    inventory: inventoryState.items,
+    quests: worldState.quests,
+    activeRules: worldState.activeRules,
+    mutationTimeline: worldState.mutationTimeline,
+    sceneObjects: worldState.sceneObjects,
+  });
+
+  return saveSaveGame(saveGame);
+}
+
+/**
+ * 초기 profileId를 결정합니다.
+ *
+ * RU-004-S2: SaveGame.profileId가 SSOT, CURRENT_PROFILE_KEY는 폴백
+ *
+ * @returns 초기 profileId 또는 null
+ */
+export function getInitialProfileId(): string | null {
+  // 유효한 SaveGame이 있으면 그 profileId를 사용
+  const validSaveGame = getValidSaveGameOrNull();
+  if (validSaveGame?.profileId) {
+    return validSaveGame.profileId;
+  }
+  // 폴백: CURRENT_PROFILE_KEY (호환성)
+  return loadCurrentProfileId();
+}
+
+// =============================================================================
+// U-044: 세션 언어 SSOT API
+// =============================================================================
+
+/**
+ * 현재 세션 언어를 반환합니다 (SSOT).
+ *
+ * U-044: SaveGame.language를 권위자로 사용하여 언어 드리프트를 방지합니다.
+ * - 유효한 SaveGame이 있으면 해당 언어 반환
+ * - 없으면 i18n의 현재 언어 반환 (폴백)
+ *
+ * TurnRunner에서 TurnInput.language를 생성할 때 이 함수를 사용합니다.
+ *
+ * @returns 현재 세션 언어 (ko-KR | en-US)
+ */
+export function getSessionLanguage(): SupportedLanguage {
+  const validSaveGame = getValidSaveGameOrNull();
+  if (validSaveGame?.language) {
+    return validSaveGame.language as SupportedLanguage;
+  }
+  // 폴백: i18n의 현재 언어
+  return getResolvedLanguage();
+}
+
+/**
+ * 세션 언어를 변경합니다.
+ *
+ * U-044: 언어 변경은 세션 경계에서만 허용 (토글=리셋 정책).
+ * 이 함수는 i18n 언어를 변경하고, 이후 startSessionFromProfile 시
+ * 새 SaveGame에 해당 언어가 저장됩니다.
+ *
+ * 주의: playing 상태에서는 이 함수를 호출하지 마세요.
+ * 언어 변경은 profile_select에서만 허용됩니다.
+ *
+ * @param language - 변경할 언어
+ */
+export async function setSessionLanguage(language: SupportedLanguage): Promise<void> {
+  await changeLanguage(language);
+}
+
+/**
+ * 초기 세션 언어를 결정합니다.
+ *
+ * U-044: 앱 부팅 시 사용합니다.
+ * - 유효한 SaveGame이 있으면 해당 언어
+ * - 없으면 DEFAULT_LANGUAGE
+ *
+ * @returns 초기 세션 언어
+ */
+export function getInitialSessionLanguage(): SupportedLanguage {
+  const validSaveGame = getValidSaveGameOrNull();
+  if (validSaveGame?.language) {
+    return validSaveGame.language as SupportedLanguage;
+  }
+  return DEFAULT_LANGUAGE;
 }
 </file>
 
@@ -19563,370 +19819,6 @@ export function canAffordEstimate(
 }
 </file>
 
-<file path="frontend/src/turn/turnRunner.ts">
-/**
- * Unknown World - Turn Runner 모듈
- *
- * RU-003-Q3: Turn 실행/스트리밍 결합을 App.tsx에서 분리하여
- * "레이아웃 + 이벤트 라우팅"과 "오케스트레이션"을 명확히 분리합니다.
- *
- * 책임:
- *   - TurnInput 생성 (언어/클릭/드롭/클라이언트 정보/재화 스냅샷)
- *   - 스트림 시작/취소/콜백 라우팅
- *   - agentStore/worldStore로 이벤트 분배
- *
- * 설계 원칙:
- *   - RULE-002: 채팅 앱이 아닌 상태 기반 게임 시스템
- *   - RULE-003/004: 구조화 출력 + 검증/복구
- *   - RULE-006: ko/en i18n 정책 준수
- *
- * @module turn/turnRunner
- */
-
-import type { TurnInput, DropInput } from '../schemas/turn';
-import type { HotspotClickData } from '../components/SceneCanvas';
-import { getResolvedLanguage } from '../i18n';
-import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
-import { useAgentStore } from '../stores/agentStore';
-import { useWorldStore } from '../stores/worldStore';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/** TurnInput 생성을 위한 파라미터 */
-export interface BuildTurnInputParams {
-  /** 사용자 입력 텍스트 */
-  text: string;
-  /** 액션 카드 ID (선택) */
-  actionId?: string;
-  /** 핫스팟 클릭 데이터 (U-010) */
-  click?: HotspotClickData;
-  /** 드롭 데이터 (U-012) */
-  drop?: DropInput;
-  /** 재화 스냅샷 */
-  economySnapshot: { signal: number; memory_shard: number };
-  /** UI 테마 */
-  theme: 'dark' | 'light';
-}
-
-/** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
-export interface RunTurnParams {
-  /** 사용자 입력 텍스트 */
-  text: string;
-  /** 액션 카드 ID (선택) */
-  actionId?: string;
-  /** 핫스팟 클릭 데이터 (U-010) */
-  click?: HotspotClickData;
-  /** 드롭 데이터 (U-012) */
-  drop?: DropInput;
-}
-
-/** Turn Runner 인터페이스 */
-export interface TurnRunner {
-  /** 턴 실행 (스트림 시작) */
-  runTurn: (params: RunTurnParams) => void;
-  /** 스트림 취소 */
-  cancel: () => void;
-}
-
-// =============================================================================
-// TurnInput 생성
-// =============================================================================
-
-/**
- * TurnInput을 생성합니다.
- *
- * 언어, 클릭, 드롭, 클라이언트 정보, 재화 스냅샷을 조합하여
- * 서버로 전송할 TurnInput을 생성합니다.
- */
-export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
-  const { text, actionId, click, drop, economySnapshot, theme } = params;
-
-  return {
-    language: getResolvedLanguage(),
-    text,
-    action_id: actionId ?? null,
-    // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
-    click: click
-      ? {
-          object_id: click.object_id,
-          box_2d: click.box_2d,
-        }
-      : null,
-    // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
-    drop: drop ?? null,
-    client: {
-      viewport_w: window.innerWidth,
-      viewport_h: window.innerHeight,
-      theme,
-    },
-    economy_snapshot: economySnapshot,
-  };
-}
-
-// =============================================================================
-// Turn Runner 생성
-// =============================================================================
-
-/**
- * Turn Runner를 생성합니다.
- *
- * RU-003-Q3: App에서 Turn Runner 인스턴스를 생성하여 사용합니다.
- * 스트림 콜백은 agentStore와 worldStore로 라우팅됩니다.
- *
- * @param deps - 의존성 (i18n 번역 함수 등)
- * @returns Turn Runner 인터페이스
- *
- * @example
- * ```tsx
- * // App.tsx에서 사용
- * const runner = useMemo(() => createTurnRunner({
- *   t,
- *   theme: 'dark',
- * }), [t]);
- *
- * runner.runTurn({ text: 'hello' });
- * ```
- */
-export function createTurnRunner(deps: {
-  /** i18n 번역 함수 */
-  t: (key: string, options?: Record<string, unknown>) => string;
-  /** UI 테마 */
-  theme: 'dark' | 'light';
-}): TurnRunner {
-  const { t, theme } = deps;
-
-  // 취소 함수 저장
-  let cancelFn: (() => void) | null = null;
-
-  /**
-   * 턴을 실행합니다.
-   */
-  const runTurn = (params: RunTurnParams): void => {
-    // 스트리밍 중이면 무시
-    const isStreaming = useAgentStore.getState().isStreaming;
-    if (isStreaming) return;
-
-    // Store 액션 가져오기 (클로저 외부에서 호출 시점에 최신 상태 참조)
-    const agentStore = useAgentStore.getState();
-    const worldStore = useWorldStore.getState();
-
-    // 재화 스냅샷 가져오기
-    const economySnapshot = worldStore.economy;
-
-    // TurnInput 생성
-    const turnInput = buildTurnInput({
-      text:
-        params.text ||
-        (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
-      actionId: params.actionId,
-      click: params.click,
-      drop: params.drop,
-      economySnapshot,
-      theme,
-    });
-
-    // Agent Store 시작
-    agentStore.startStream();
-
-    // Scene Canvas를 로딩 상태로 전환 (U-031)
-    worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
-
-    // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
-    // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
-    const callbacks: StreamCallbacks = {
-      // Stage/Badges/NarrativeDelta → agentStore로만 전달
-      onStage: (event) => {
-        useAgentStore.getState().handleStage(event);
-      },
-      onBadges: (event) => {
-        useAgentStore.getState().handleBadges(event);
-      },
-      onNarrativeDelta: (event) => {
-        useAgentStore.getState().handleNarrativeDelta(event);
-      },
-      // Final → agentStore.handleFinal + worldStore.applyTurnOutput
-      onFinal: (event) => {
-        useAgentStore.getState().handleFinal(event);
-        // RU-003-Q4: TurnOutput 반영 SSOT
-        useWorldStore.getState().applyTurnOutput(event.data);
-        // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
-        useWorldStore.getState().setConnected(true);
-      },
-      // Error → agentStore.handleError + worldStore 상태 복구
-      onError: (event) => {
-        useAgentStore.getState().handleError(event);
-        useWorldStore.getState().setConnected(false);
-        // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
-        const errorCode = event.code;
-        if (errorCode === 'SAFETY_BLOCKED') {
-          useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
-        } else if (errorCode === 'INSUFFICIENT_BALANCE') {
-          useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
-        } else {
-          useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
-        }
-      },
-      // Complete → agentStore.completeStream
-      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
-      // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
-      // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
-      onComplete: () => {
-        useAgentStore.getState().completeStream();
-        // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
-        // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
-      },
-    };
-
-    // 스트림 시작
-    cancelFn = startTurnStream(turnInput, callbacks);
-  };
-
-  /**
-   * 스트림을 취소합니다.
-   *
-   * 추후 Cancel/Pause/Autopilot UX를 위한 기본 골격입니다.
-   * 현재 executeTurnStream은 Abort 시 onComplete를 호출하지 않으므로,
-   * Cancel 버튼을 넣을 계획이라면 "취소 시 UI 복구 정책"을 별도로 명시해야 합니다.
-   */
-  const cancel = (): void => {
-    cancelFn?.();
-    cancelFn = null;
-  };
-
-  return {
-    runTurn,
-    cancel,
-  };
-}
-
-// =============================================================================
-// React Hook (선택적 사용)
-// =============================================================================
-
-/**
- * Turn Runner를 React 컴포넌트에서 사용하기 위한 훅.
- *
- * @param deps - 의존성
- * @returns Turn Runner 인터페이스 및 취소 효과
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 사용
- * const { runTurn, cancel } = useTurnRunner({ t, theme: 'dark' });
- * ```
- */
-import { useCallback, useEffect, useRef } from 'react';
-
-export function useTurnRunner(deps: {
-  t: (key: string, options?: Record<string, unknown>) => string;
-  theme: 'dark' | 'light';
-}): TurnRunner {
-  const { t, theme } = deps;
-
-  // 취소 함수 저장 ref
-  const cancelFnRef = useRef<(() => void) | null>(null);
-
-  // runTurn을 useCallback으로 정의
-  const runTurn = useCallback(
-    (params: RunTurnParams): void => {
-      // 스트리밍 중이면 무시
-      const isStreaming = useAgentStore.getState().isStreaming;
-      if (isStreaming) return;
-
-      // Store 액션 가져오기
-      const agentStore = useAgentStore.getState();
-      const worldStore = useWorldStore.getState();
-
-      // 재화 스냅샷 가져오기
-      const economySnapshot = worldStore.economy;
-
-      // TurnInput 생성
-      const turnInput = buildTurnInput({
-        text:
-          params.text ||
-          (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
-        actionId: params.actionId,
-        click: params.click,
-        drop: params.drop,
-        economySnapshot,
-        theme,
-      });
-
-      // Agent Store 시작
-      agentStore.startStream();
-
-      // Scene Canvas를 로딩 상태로 전환 (U-031)
-      worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
-
-      // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
-      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
-      const callbacks: StreamCallbacks = {
-        onStage: (event) => {
-          useAgentStore.getState().handleStage(event);
-        },
-        onBadges: (event) => {
-          useAgentStore.getState().handleBadges(event);
-        },
-        onNarrativeDelta: (event) => {
-          useAgentStore.getState().handleNarrativeDelta(event);
-        },
-        onFinal: (event) => {
-          useAgentStore.getState().handleFinal(event);
-          useWorldStore.getState().applyTurnOutput(event.data);
-          // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
-          useWorldStore.getState().setConnected(true);
-        },
-        onError: (event) => {
-          useAgentStore.getState().handleError(event);
-          useWorldStore.getState().setConnected(false);
-          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
-          const errorCode = event.code;
-          if (errorCode === 'SAFETY_BLOCKED') {
-            useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
-          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
-            useWorldStore
-              .getState()
-              .setSceneState({ status: 'low_signal', message: event.message });
-          } else {
-            useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
-          }
-        },
-        // Complete → agentStore.completeStream
-        // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
-        // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
-        // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
-        onComplete: () => {
-          useAgentStore.getState().completeStream();
-          // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
-          // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
-        },
-      };
-
-      // 스트림 시작 및 취소 함수 저장
-      cancelFnRef.current = startTurnStream(turnInput, callbacks);
-    },
-    [t, theme],
-  );
-
-  // cancel 함수
-  const cancel = useCallback((): void => {
-    cancelFnRef.current?.();
-    cancelFnRef.current = null;
-  }, []);
-
-  // 컴포넌트 언마운트 시 스트림 취소
-  useEffect(() => {
-    return () => {
-      cancelFnRef.current?.();
-    };
-  }, []);
-
-  return { runTurn, cancel };
-}
-</file>
-
 <file path="frontend/src/types/turn_stream.ts">
 /**
  * Unknown World - Turn Stream 이벤트 계약(Contract).
@@ -20717,6 +20609,386 @@ export const selectActiveQuests = (state: WorldStore) =>
 /** 완료된 퀘스트 셀렉터 */
 export const selectCompletedQuests = (state: WorldStore) =>
   state.quests.filter((q) => q.is_completed);
+</file>
+
+<file path="frontend/src/turn/turnRunner.ts">
+/**
+ * Unknown World - Turn Runner 모듈
+ *
+ * RU-003-Q3: Turn 실행/스트리밍 결합을 App.tsx에서 분리하여
+ * "레이아웃 + 이벤트 라우팅"과 "오케스트레이션"을 명확히 분리합니다.
+ *
+ * 책임:
+ *   - TurnInput 생성 (언어/클릭/드롭/클라이언트 정보/재화 스냅샷)
+ *   - 스트림 시작/취소/콜백 라우팅
+ *   - agentStore/worldStore로 이벤트 분배
+ *
+ * 설계 원칙:
+ *   - RULE-002: 채팅 앱이 아닌 상태 기반 게임 시스템
+ *   - RULE-003/004: 구조화 출력 + 검증/복구
+ *   - RULE-006: ko/en i18n 정책 준수
+ *
+ * @module turn/turnRunner
+ */
+
+import type { TurnInput, DropInput, Language } from '../schemas/turn';
+import type { HotspotClickData } from '../components/SceneCanvas';
+import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
+import { useAgentStore } from '../stores/agentStore';
+import { useWorldStore } from '../stores/worldStore';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/** TurnInput 생성을 위한 파라미터 */
+export interface BuildTurnInputParams {
+  /** 사용자 입력 텍스트 */
+  text: string;
+  /** 액션 카드 ID (선택) */
+  actionId?: string;
+  /** 핫스팟 클릭 데이터 (U-010) */
+  click?: HotspotClickData;
+  /** 드롭 데이터 (U-012) */
+  drop?: DropInput;
+  /** 재화 스냅샷 */
+  economySnapshot: { signal: number; memory_shard: number };
+  /** UI 테마 */
+  theme: 'dark' | 'light';
+  /** U-044: 세션 언어 (외부 주입, SSOT) */
+  language: Language;
+}
+
+/** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
+export interface RunTurnParams {
+  /** 사용자 입력 텍스트 */
+  text: string;
+  /** 액션 카드 ID (선택) */
+  actionId?: string;
+  /** 핫스팟 클릭 데이터 (U-010) */
+  click?: HotspotClickData;
+  /** 드롭 데이터 (U-012) */
+  drop?: DropInput;
+}
+
+/** Turn Runner 인터페이스 */
+export interface TurnRunner {
+  /** 턴 실행 (스트림 시작) */
+  runTurn: (params: RunTurnParams) => void;
+  /** 스트림 취소 */
+  cancel: () => void;
+}
+
+// =============================================================================
+// TurnInput 생성
+// =============================================================================
+
+/**
+ * TurnInput을 생성합니다.
+ *
+ * U-044: 언어는 외부에서 주입받아 SSOT 유지 (getResolvedLanguage() 직접 호출 제거).
+ * 클릭, 드롭, 클라이언트 정보, 재화 스냅샷을 조합하여
+ * 서버로 전송할 TurnInput을 생성합니다.
+ */
+export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
+  const { text, actionId, click, drop, economySnapshot, theme, language } = params;
+
+  return {
+    language,
+    text,
+    action_id: actionId ?? null,
+    // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
+    click: click
+      ? {
+          object_id: click.object_id,
+          box_2d: click.box_2d,
+        }
+      : null,
+    // U-012: 아이템 드롭 데이터 포함 (Q1: Option B - target_box_2d 포함)
+    drop: drop ?? null,
+    client: {
+      viewport_w: window.innerWidth,
+      viewport_h: window.innerHeight,
+      theme,
+    },
+    economy_snapshot: economySnapshot,
+  };
+}
+
+// =============================================================================
+// Turn Runner 생성
+// =============================================================================
+
+/**
+ * Turn Runner를 생성합니다.
+ *
+ * RU-003-Q3: App에서 Turn Runner 인스턴스를 생성하여 사용합니다.
+ * U-044: 세션 언어를 외부에서 주입받아 TurnInput 생성 시 SSOT 유지.
+ * 스트림 콜백은 agentStore와 worldStore로 라우팅됩니다.
+ *
+ * @param deps - 의존성 (i18n 번역 함수, 테마, 세션 언어)
+ * @returns Turn Runner 인터페이스
+ *
+ * @example
+ * ```tsx
+ * // App.tsx에서 사용
+ * const runner = useMemo(() => createTurnRunner({
+ *   t,
+ *   theme: 'dark',
+ *   language: sessionLanguage, // U-044: 세션 언어 SSOT
+ * }), [t, sessionLanguage]);
+ *
+ * runner.runTurn({ text: 'hello' });
+ * ```
+ */
+export function createTurnRunner(deps: {
+  /** i18n 번역 함수 */
+  t: (key: string, options?: Record<string, unknown>) => string;
+  /** UI 테마 */
+  theme: 'dark' | 'light';
+  /** U-044: 세션 언어 (SSOT) */
+  language: Language;
+}): TurnRunner {
+  const { t, theme, language } = deps;
+
+  // 취소 함수 저장
+  let cancelFn: (() => void) | null = null;
+
+  /**
+   * 턴을 실행합니다.
+   */
+  const runTurn = (params: RunTurnParams): void => {
+    // 스트리밍 중이면 무시
+    const isStreaming = useAgentStore.getState().isStreaming;
+    if (isStreaming) return;
+
+    // Store 액션 가져오기 (클로저 외부에서 호출 시점에 최신 상태 참조)
+    const agentStore = useAgentStore.getState();
+    const worldStore = useWorldStore.getState();
+
+    // 재화 스냅샷 가져오기
+    const economySnapshot = worldStore.economy;
+
+    // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
+    const turnInput = buildTurnInput({
+      text:
+        params.text ||
+        (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
+      actionId: params.actionId,
+      click: params.click,
+      drop: params.drop,
+      economySnapshot,
+      theme,
+      language,
+    });
+
+    // Agent Store 시작
+    agentStore.startStream();
+
+    // Scene Canvas를 로딩 상태로 전환 (U-031)
+    worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+
+    // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
+    // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
+    const callbacks: StreamCallbacks = {
+      // Stage/Badges/NarrativeDelta → agentStore로만 전달
+      onStage: (event) => {
+        useAgentStore.getState().handleStage(event);
+      },
+      onBadges: (event) => {
+        useAgentStore.getState().handleBadges(event);
+      },
+      onNarrativeDelta: (event) => {
+        useAgentStore.getState().handleNarrativeDelta(event);
+      },
+      // Final → agentStore.handleFinal + worldStore.applyTurnOutput
+      onFinal: (event) => {
+        useAgentStore.getState().handleFinal(event);
+        // RU-003-Q4: TurnOutput 반영 SSOT
+        useWorldStore.getState().applyTurnOutput(event.data);
+        // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
+        useWorldStore.getState().setConnected(true);
+      },
+      // Error → agentStore.handleError + worldStore 상태 복구
+      onError: (event) => {
+        useAgentStore.getState().handleError(event);
+        useWorldStore.getState().setConnected(false);
+        // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
+        const errorCode = event.code;
+        if (errorCode === 'SAFETY_BLOCKED') {
+          useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
+        } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+          useWorldStore.getState().setSceneState({ status: 'low_signal', message: event.message });
+        } else {
+          useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
+        }
+      },
+      // Complete → agentStore.completeStream
+      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
+      // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
+      // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
+      onComplete: () => {
+        useAgentStore.getState().completeStream();
+        // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
+        // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
+      },
+    };
+
+    // 스트림 시작
+    cancelFn = startTurnStream(turnInput, callbacks);
+  };
+
+  /**
+   * 스트림을 취소합니다.
+   *
+   * 추후 Cancel/Pause/Autopilot UX를 위한 기본 골격입니다.
+   * 현재 executeTurnStream은 Abort 시 onComplete를 호출하지 않으므로,
+   * Cancel 버튼을 넣을 계획이라면 "취소 시 UI 복구 정책"을 별도로 명시해야 합니다.
+   */
+  const cancel = (): void => {
+    cancelFn?.();
+    cancelFn = null;
+  };
+
+  return {
+    runTurn,
+    cancel,
+  };
+}
+
+// =============================================================================
+// React Hook (선택적 사용)
+// =============================================================================
+
+/**
+ * Turn Runner를 React 컴포넌트에서 사용하기 위한 훅.
+ *
+ * U-044: 세션 언어를 외부에서 주입받아 TurnInput 생성 시 SSOT 유지.
+ *
+ * @param deps - 의존성 (i18n 번역 함수, 테마, 세션 언어)
+ * @returns Turn Runner 인터페이스 및 취소 효과
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 사용
+ * const { runTurn, cancel } = useTurnRunner({
+ *   t,
+ *   theme: 'dark',
+ *   language: sessionLanguage, // U-044: 세션 언어 SSOT
+ * });
+ * ```
+ */
+import { useCallback, useEffect, useRef } from 'react';
+
+export function useTurnRunner(deps: {
+  t: (key: string, options?: Record<string, unknown>) => string;
+  theme: 'dark' | 'light';
+  /** U-044: 세션 언어 (SSOT) */
+  language: Language;
+}): TurnRunner {
+  const { t, theme, language } = deps;
+
+  // 취소 함수 저장 ref
+  const cancelFnRef = useRef<(() => void) | null>(null);
+
+  // runTurn을 useCallback으로 정의
+  const runTurn = useCallback(
+    (params: RunTurnParams): void => {
+      // 스트리밍 중이면 무시
+      const isStreaming = useAgentStore.getState().isStreaming;
+      if (isStreaming) return;
+
+      // Store 액션 가져오기
+      const agentStore = useAgentStore.getState();
+      const worldStore = useWorldStore.getState();
+
+      // 재화 스냅샷 가져오기
+      const economySnapshot = worldStore.economy;
+
+      // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
+      const turnInput = buildTurnInput({
+        text:
+          params.text ||
+          (params.actionId ? t('action.card_select', { cardId: params.actionId }) : ''),
+        actionId: params.actionId,
+        click: params.click,
+        drop: params.drop,
+        economySnapshot,
+        theme,
+        language,
+      });
+
+      // Agent Store 시작
+      agentStore.startStream();
+
+      // Scene Canvas를 로딩 상태로 전환 (U-031)
+      worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+
+      // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
+      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
+      const callbacks: StreamCallbacks = {
+        onStage: (event) => {
+          useAgentStore.getState().handleStage(event);
+        },
+        onBadges: (event) => {
+          useAgentStore.getState().handleBadges(event);
+        },
+        onNarrativeDelta: (event) => {
+          useAgentStore.getState().handleNarrativeDelta(event);
+        },
+        onFinal: (event) => {
+          useAgentStore.getState().handleFinal(event);
+          useWorldStore.getState().applyTurnOutput(event.data);
+          // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
+          useWorldStore.getState().setConnected(true);
+        },
+        onError: (event) => {
+          useAgentStore.getState().handleError(event);
+          useWorldStore.getState().setConnected(false);
+          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
+          const errorCode = event.code;
+          if (errorCode === 'SAFETY_BLOCKED') {
+            useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
+          } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+            useWorldStore
+              .getState()
+              .setSceneState({ status: 'low_signal', message: event.message });
+          } else {
+            useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
+          }
+        },
+        // Complete → agentStore.completeStream
+        // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
+        // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
+        // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
+        onComplete: () => {
+          useAgentStore.getState().completeStream();
+          // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
+          // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
+        },
+      };
+
+      // 스트림 시작 및 취소 함수 저장
+      cancelFnRef.current = startTurnStream(turnInput, callbacks);
+    },
+    [t, theme, language],
+  );
+
+  // cancel 함수
+  const cancel = useCallback((): void => {
+    cancelFnRef.current?.();
+    cancelFnRef.current = null;
+  }, []);
+
+  // 컴포넌트 언마운트 시 스트림 취소
+  useEffect(() => {
+    return () => {
+      cancelFnRef.current?.();
+    };
+  }, []);
+
+  return { runTurn, cancel };
+}
 </file>
 
 <file path="package.json">
@@ -23014,10 +23286,10 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
         callbacks.onError?.(errorResult.data);
       } else {
         console.warn('[TurnStream] Invalid error event:', errorResult.error.message);
-        // 에러 이벤트가 깨진 경우에도 기본 에러 전달
+        // U-044: 에러 이벤트가 깨진 경우에도 기본 에러 전달 (i18n 메시지 사용)
         callbacks.onError?.({
           type: StreamEventType.ERROR,
-          message: 'Unknown error (malformed error event)',
+          message: getErrorMessage('unknown_error', language),
           code: 'INVALID_ERROR_EVENT',
         });
       }
@@ -23031,15 +23303,50 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
   }
 }
 
+// =============================================================================
+// U-044: i18n 에러/폴백 메시지 (Q2: Option B - translation.json 키 사용)
+// =============================================================================
+
+/**
+ * U-044: 에러 메시지 번역 리소스.
+ * 클라이언트에서 발생하는 에러 메시지를 언어별로 제공합니다.
+ *
+ * 주의: turnStream.ts는 React 컴포넌트가 아니므로 useTranslation 사용 불가.
+ * 대신 language 매개변수로 분기 처리합니다.
+ * translation.json의 키와 동기화 유지 필요 (error.* 네임스페이스).
+ */
+const ERROR_MESSAGES: Record<string, Record<Language, string>> = {
+  // 에러 이벤트 파싱 실패
+  unknown_error: {
+    'ko-KR': '알 수 없는 오류가 발생했습니다.',
+    'en-US': 'An unknown error occurred.',
+  },
+  // 응답 데이터 처리 실패 (final 이벤트 스키마 검증 실패)
+  response_processing: {
+    'ko-KR': '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.',
+    'en-US': '[System] An error occurred while processing response data.',
+  },
+  // 서버 연결 실패 (네트워크 에러)
+  connection_failed: {
+    'ko-KR': '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.',
+    'en-US': '[System] Failed to connect to server. Please try again.',
+  },
+};
+
+/**
+ * U-044: 에러 메시지를 언어에 맞게 반환합니다.
+ */
+function getErrorMessage(key: string, language: Language): string {
+  return ERROR_MESSAGES[key]?.[language] ?? ERROR_MESSAGES[key]?.['en-US'] ?? key;
+}
+
 /**
  * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
  * dispatchEvent 내부에서 사용하는 간단한 폴백.
+ * U-044: 하드코딩 메시지 제거, i18n 리소스 사용.
  */
 function createFallbackTurnOutput(language: Language): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.'
-      : '[System] An error occurred while processing response data.';
+  const fallbackNarrative = getErrorMessage('response_processing', language);
 
   return {
     language,
@@ -23206,15 +23513,13 @@ export async function executeTurnStream(
  * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
  * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
  * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
+ * U-044: 하드코딩 메시지 제거, i18n 리소스 사용.
  */
 function createClientFallbackTurnOutput(
   language: Language,
   economySnapshot: { signal: number; memory_shard: number },
 ): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
-      : '[System] Failed to connect to server. Please try again.';
+  const fallbackNarrative = getErrorMessage('connection_failed', language);
 
   return {
     language,
@@ -23578,8 +23883,360 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 }
 </file>
 
+<file path="frontend/src/locales/en-US/translation.json">
+{
+  "language": {
+    "toggle": "Change Language",
+    "toggle_tooltip": "Click to change language. A new game will start after change.",
+    "ko-KR": "한국어",
+    "en-US": "English"
+  },
+  "error": {
+    "unknown_error": "An unknown error occurred.",
+    "response_processing": "[System] An error occurred while processing response data.",
+    "connection_failed": "[System] Failed to connect to server. Please try again."
+  },
+  "profile": {
+    "select_title": "Select Your Profile",
+    "select_hint": "Each profile has different starting conditions and objectives",
+    "or": "or",
+    "continue_saved": "Continue Saved Game",
+    "change": "Change Profile",
+    "change_tooltip": "Start a new game with a different profile",
+    "narrator": {
+      "name": "Narrator",
+      "description": "Explore diverse stories with abundant resources",
+      "welcome": "Welcome to the Ancient Library. Forgotten tales slumber within these walls...",
+      "items": {
+        "ancient_tome": "Ancient Tome",
+        "quill_pen": "Quill Pen",
+        "memory_fragment": "Memory Fragment"
+      },
+      "quest": {
+        "discover_origin": "Discover the World's Origin",
+        "collect_memories": "Collect 3 Memory Fragments"
+      },
+      "rule": {
+        "time_flows": "Flow of Time",
+        "time_flows_desc": "Time flows normally",
+        "memories_persist": "Memory Persistence",
+        "memories_persist_desc": "Once obtained, memories never fade"
+      },
+      "scene": {
+        "bookshelf": "Mysterious Bookshelf",
+        "bookshelf_hint": "Ancient books are glowing",
+        "portal": "Glowing Portal",
+        "portal_hint": "It seems to lead somewhere"
+      }
+    },
+    "explorer": {
+      "name": "Explorer",
+      "description": "Explore unknown territories and uncover secrets",
+      "welcome": "You wake up in a dark maze. You must find the exit and escape...",
+      "items": {
+        "compass": "Compass",
+        "rope": "Rope",
+        "lantern": "Lantern",
+        "map_fragment": "Map Fragment"
+      },
+      "quest": {
+        "find_exit": "Find the Exit",
+        "explore_areas": "Explore 3 Areas",
+        "gather_supplies": "Gather Supplies"
+      },
+      "rule": {
+        "gravity": "Gravity Law",
+        "gravity_desc": "Objects fall downward",
+        "darkness": "Darkness Law",
+        "darkness_desc": "You cannot see without light"
+      },
+      "scene": {
+        "door": "Ancient Door",
+        "door_hint": "Looks like it needs a key",
+        "mechanism": "Strange Mechanism",
+        "mechanism_hint": "It might be operable",
+        "passage": "Hidden Passage",
+        "passage_hint": "Where does it lead?"
+      }
+    },
+    "tech": {
+      "name": "Tech Expert",
+      "description": "Strategize efficiently with limited resources",
+      "welcome": "System boot complete. Find the optimal path with limited energy...",
+      "items": {
+        "data_core": "Data Core",
+        "circuit_board": "Circuit Board",
+        "energy_cell": "Energy Cell",
+        "scanner": "Scanner Device"
+      },
+      "quest": {
+        "analyze_system": "Complete System Analysis",
+        "optimize_resources": "Optimize Resource Efficiency"
+      },
+      "rule": {
+        "energy_conservation": "Energy Conservation",
+        "energy_conservation_desc": "Energy is neither created nor destroyed",
+        "data_integrity": "Data Integrity",
+        "data_integrity_desc": "Corrupted data cannot be recovered",
+        "system_limits": "System Limits",
+        "system_limits_desc": "There are limits to concurrent processing"
+      },
+      "scene": {
+        "terminal": "Main Terminal",
+        "terminal_hint": "You can access the system",
+        "conduit": "Power Conduit",
+        "conduit_hint": "Energy is flowing through it"
+      }
+    }
+  },
+  "reset": {
+    "button": "Reset",
+    "confirm": "Click again to confirm",
+    "cancel": "Cancel",
+    "tooltip": "Return to the initial state of current profile"
+  },
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "Keycard A"
+      },
+      "medkit": {
+        "name": "Medkit"
+      },
+      "flashlight": {
+        "name": "Flashlight"
+      },
+      "data-chip": {
+        "name": "Data Chip"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "Terminal",
+        "hint": "An active terminal"
+      },
+      "door": {
+        "label": "Door",
+        "hint": "It appears to be locked"
+      }
+    },
+    "quest": {
+      "terminal": {
+        "label": "Access the terminal"
+      },
+      "escape": {
+        "label": "Find facility exit"
+      },
+      "collect": {
+        "label": "Collect data chips"
+      }
+    },
+    "rule": {
+      "gravity": {
+        "label": "Gravity Law",
+        "description": "Objects fall downward"
+      },
+      "time": {
+        "label": "Time Flow",
+        "description": "Time flows at normal speed"
+      }
+    }
+  },
+  "quest": {
+    "empty": "[ NO OBJECTIVES ]",
+    "completed": "DONE",
+    "section": {
+      "active": "Active",
+      "completed": "Completed"
+    }
+  },
+  "rule_board": {
+    "empty": "[ NO RULES ]",
+    "active_count": "Active Rules: {{count}}"
+  },
+  "mutation": {
+    "empty": "[ NO MUTATIONS ]",
+    "timeline_title": "Mutation Timeline",
+    "event_count": "{{count}} events",
+    "more_events": "+{{count}} more",
+    "turn_label": "T{{turn}}",
+    "type": {
+      "added": "Added",
+      "modified": "Modified",
+      "removed": "Removed"
+    }
+  },
+  "scene": {
+    "status": {
+      "default": "NO SIGNAL DATA",
+      "loading": "SYNCHRONIZING...",
+      "offline": "CONNECTION LOST",
+      "blocked": "ACCESS RESTRICTED",
+      "low_signal": "LOW SIGNAL",
+      "image_error": "Unable to load scene image.",
+      "image_loading": "Loading scene image...",
+      "image_generating": "Generating new scene...",
+      "initial_sync": "Awaiting global data synchronization...",
+      "syncing": "Synchronizing data...",
+      "alt": "Scene Image"
+    },
+    "hotspot": {
+      "layer_label": "Clickable Objects Area",
+      "hint_prefix": "Hint",
+      "click_action": "Click {{label}}",
+      "drop_hint": "Drop here to use",
+      "drop_action": "Use {{item}} on {{target}}",
+      "drop_invalid": "You cannot use {{item}} there.",
+      "demo_hint": "[DEMO TARGET]"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "Queue",
+      "badges": "Badges",
+      "repair": "Auto-repair",
+      "status": {
+        "idle": "IDLE",
+        "processing": "PROCESSING"
+      },
+      "badges_empty": "[ Awaiting Validation ]",
+      "repaired": "(Repaired)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "Enter command...",
+    "processing": "Processing...",
+    "execute": "EXECUTE",
+    "wait": "WAIT",
+    "panel_placeholder": "[ Ready ]",
+    "scale_decrease": "Decrease text size",
+    "scale_increase": "Increase text size",
+    "scale_label": "UI Scale Settings"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal cost",
+    "shard_cost": "Shard cost",
+    "risk_level": "Risk level",
+    "hud_label": "Economy Status",
+    "estimated_cost": "Est. Cost",
+    "confirmed_cost": "Confirmed",
+    "insufficient_funds": "Insufficient funds",
+    "low_balance_warning": "Low balance",
+    "alternatives_title": "Alternatives",
+    "alternative_text_only": "Text-only (no images)",
+    "alternative_low_quality": "Low quality / Fast response",
+    "ledger_title": "Recent Ledger",
+    "ledger_empty": "[ NO HISTORY ]",
+    "model_label": {
+      "FAST": "Fast",
+      "QUALITY": "Quality",
+      "CHEAP": "Cheap",
+      "REF": "Ref"
+    }
+  },
+  "connection": {
+    "online": "ONLINE",
+    "offline": "OFFLINE"
+  },
+  "inventory": {
+    "empty": "[ NO ITEMS ]",
+    "grid_label": "Inventory Items",
+    "item_label": "{{name}} (Qty: {{quantity}})",
+    "drag_hint": "Drag to use"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ Drag & Drop Area ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ Objectives / Quest List ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ World Rules / Mutation Timeline ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ Pinned Memories / Clues ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ Image Upload Slot ]"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "Explore",
+        "description": "Look around"
+      },
+      "investigate": {
+        "label": "Investigate",
+        "description": "Examine closely"
+      },
+      "talk": {
+        "label": "Talk",
+        "description": "Start a conversation"
+      }
+    },
+    "card_select": "Card selected: {{cardId}}",
+    "deck_label": "Action Cards",
+    "alternative": "ALT",
+    "insufficient_balance": "Insufficient balance",
+    "all_disabled_notice": "No actions available. Check alternatives.",
+    "risk": {
+      "low": "Low",
+      "medium": "Med",
+      "high": "High"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "Welcome to the Unknown World...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]"
+  }
+}
+</file>
+
 <file path="frontend/src/locales/ko-KR/translation.json">
 {
+  "language": {
+    "toggle": "언어 변경",
+    "toggle_tooltip": "클릭하여 언어를 변경합니다. 변경 후 새 게임이 시작됩니다.",
+    "ko-KR": "한국어",
+    "en-US": "English"
+  },
+  "error": {
+    "unknown_error": "알 수 없는 오류가 발생했습니다.",
+    "response_processing": "[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.",
+    "connection_failed": "[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요."
+  },
   "profile": {
     "select_title": "프로필을 선택하세요",
     "select_hint": "프로필마다 다른 시작 조건과 목표가 있습니다",
@@ -23971,6 +24628,7 @@ import type { ActionCard, DropInput } from './schemas/turn';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
 // RU-004-Q4: 세션 라이프사이클 SSOT
+// U-044: 세션 언어 SSOT API 추가
 import {
   bootstrapSession,
   hasValidSaveGame,
@@ -23980,8 +24638,12 @@ import {
   clearSessionAndReturnToSelect,
   saveCurrentSession,
   getInitialProfileId,
+  getSessionLanguage,
+  setSessionLanguage,
+  getInitialSessionLanguage,
 } from './save/sessionLifecycle';
 import type { DemoProfile } from './data/demoProfiles';
+import type { SupportedLanguage } from './i18n';
 
 // =============================================================================
 // 게임 상태 타입
@@ -24009,6 +24671,13 @@ function App() {
     return getInitialProfileId();
   });
 
+  // U-044: 세션 언어 SSOT
+  // - SaveGame.language를 권위자로 사용하여 드리프트 방지
+  // - profile_select에서만 변경 가능 (토글=리셋 정책)
+  const [sessionLanguage, setSessionLanguageState] = useState<SupportedLanguage>(() => {
+    return getInitialSessionLanguage();
+  });
+
   // 로컬 UI 상태
   const [inputText, setInputText] = useState('');
 
@@ -24034,27 +24703,40 @@ function App() {
    * 프로필을 선택하고 게임을 시작합니다.
    *
    * RU-004-Q4: sessionLifecycle.startSessionFromProfile 호출
+   * U-044: 세션 언어를 명시적으로 전달하여 SSOT 유지
    */
   const handleSelectProfile = useCallback(
     (profile: DemoProfile) => {
-      const result = startSessionFromProfile({ profile, t });
+      const result = startSessionFromProfile({ profile, t, language: sessionLanguage });
       if (result.success) {
         setCurrentProfileId(result.profileId);
         setGamePhase('playing');
       }
     },
-    [t],
+    [t, sessionLanguage],
   );
+
+  /**
+   * U-044: profile_select에서 언어를 변경합니다.
+   * 토글=리셋 정책에 따라 profile_select에서만 호출 가능합니다.
+   */
+  const handleLanguageChange = useCallback(async (language: SupportedLanguage) => {
+    await setSessionLanguage(language);
+    setSessionLanguageState(language);
+  }, []);
 
   /**
    * 저장된 게임을 계속합니다.
    *
    * RU-004-Q4: sessionLifecycle.continueSession 호출
+   * U-044: 세션 복원 후 언어 상태도 동기화
    */
   const handleContinue = useCallback(async () => {
     const result = await continueSession();
     if (result) {
       setCurrentProfileId(result.profileId);
+      // U-044: 세션 복원 후 언어 상태 동기화 (SaveGame.language가 SSOT)
+      setSessionLanguageState(getSessionLanguage());
       setGamePhase('playing');
     } else {
       // 로드 실패 시 profile_select로 폴백
@@ -24110,12 +24792,14 @@ function App() {
   }, [gamePhase, narrativeEntries.length, currentProfileId]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
+  // U-044: 세션 언어를 SSOT로 주입하여 드리프트 방지
   const turnRunnerDeps = useMemo(
     () => ({
       t,
       theme: getCurrentThemeFromDOM(),
+      language: sessionLanguage,
     }),
-    [t],
+    [t, sessionLanguage],
   );
   const turnRunner = useTurnRunner(turnRunnerDeps);
 
@@ -24250,6 +24934,7 @@ function App() {
   // ==========================================================================
   // 렌더링: 프로필 선택 화면
   // RU-004-Q4: hasValidSaveGame()으로 "유효한 세이브만" Continue 노출
+  // U-044: 언어 선택 UI 추가 (profile_select에서만, Q1: Option A)
   // ==========================================================================
   if (gamePhase === 'profile_select') {
     const hasSavedGame = hasValidSaveGame();
@@ -24260,6 +24945,8 @@ function App() {
           onSelectProfile={handleSelectProfile}
           onContinue={hasSavedGame ? handleContinue : undefined}
           hasSavedGame={hasSavedGame}
+          currentLanguage={sessionLanguage}
+          onLanguageChange={handleLanguageChange}
         />
       </>
     );

@@ -24,7 +24,12 @@ import {
   clearCurrentProfileId,
 } from './saveGame';
 import { findProfileById, createSaveGameFromProfile, type DemoProfile } from '../data/demoProfiles';
-import { getResolvedLanguage, changeLanguage, type SupportedLanguage } from '../i18n';
+import {
+  getResolvedLanguage,
+  changeLanguage,
+  type SupportedLanguage,
+  DEFAULT_LANGUAGE,
+} from '../i18n';
 import { useWorldStore } from '../stores/worldStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useEconomyStore } from '../stores/economyStore';
@@ -132,6 +137,7 @@ export function hasValidSaveGame(): boolean {
  * 프로필을 선택하고 새 세션을 시작합니다.
  *
  * RU-004-Q4 Step 1: startSessionFromProfile
+ * U-044: 세션 언어를 명시적으로 받아 SSOT 유지
  * - 모든 store를 초기화
  * - 프로필 기반 SaveGame 생성
  * - store에 초기 상태 주입
@@ -139,16 +145,18 @@ export function hasValidSaveGame(): boolean {
  *
  * @param args.profile - 선택한 데모 프로필
  * @param args.t - i18n 번역 함수
+ * @param args.language - 세션 언어 (U-044: 명시적 전달로 SSOT 유지)
  * @returns 세션 시작 결과
  */
 export function startSessionFromProfile(args: {
   profile: DemoProfile;
   t: (key: string) => string;
+  language?: SupportedLanguage;
 }): SessionStartResult {
-  const { profile, t } = args;
+  const { profile, t, language: explicitLanguage } = args;
 
-  // 현재 언어 설정 유지
-  const language = getResolvedLanguage();
+  // U-044: 명시적 언어가 있으면 사용, 없으면 i18n 현재 값 사용
+  const language = explicitLanguage ?? getResolvedLanguage();
 
   // 프로필에서 SaveGame 생성
   const saveGame = createSaveGameFromProfile(profile, language, t);
@@ -344,4 +352,61 @@ export function getInitialProfileId(): string | null {
   }
   // 폴백: CURRENT_PROFILE_KEY (호환성)
   return loadCurrentProfileId();
+}
+
+// =============================================================================
+// U-044: 세션 언어 SSOT API
+// =============================================================================
+
+/**
+ * 현재 세션 언어를 반환합니다 (SSOT).
+ *
+ * U-044: SaveGame.language를 권위자로 사용하여 언어 드리프트를 방지합니다.
+ * - 유효한 SaveGame이 있으면 해당 언어 반환
+ * - 없으면 i18n의 현재 언어 반환 (폴백)
+ *
+ * TurnRunner에서 TurnInput.language를 생성할 때 이 함수를 사용합니다.
+ *
+ * @returns 현재 세션 언어 (ko-KR | en-US)
+ */
+export function getSessionLanguage(): SupportedLanguage {
+  const validSaveGame = getValidSaveGameOrNull();
+  if (validSaveGame?.language) {
+    return validSaveGame.language as SupportedLanguage;
+  }
+  // 폴백: i18n의 현재 언어
+  return getResolvedLanguage();
+}
+
+/**
+ * 세션 언어를 변경합니다.
+ *
+ * U-044: 언어 변경은 세션 경계에서만 허용 (토글=리셋 정책).
+ * 이 함수는 i18n 언어를 변경하고, 이후 startSessionFromProfile 시
+ * 새 SaveGame에 해당 언어가 저장됩니다.
+ *
+ * 주의: playing 상태에서는 이 함수를 호출하지 마세요.
+ * 언어 변경은 profile_select에서만 허용됩니다.
+ *
+ * @param language - 변경할 언어
+ */
+export async function setSessionLanguage(language: SupportedLanguage): Promise<void> {
+  await changeLanguage(language);
+}
+
+/**
+ * 초기 세션 언어를 결정합니다.
+ *
+ * U-044: 앱 부팅 시 사용합니다.
+ * - 유효한 SaveGame이 있으면 해당 언어
+ * - 없으면 DEFAULT_LANGUAGE
+ *
+ * @returns 초기 세션 언어
+ */
+export function getInitialSessionLanguage(): SupportedLanguage {
+  const validSaveGame = getValidSaveGameOrNull();
+  if (validSaveGame?.language) {
+    return validSaveGame.language as SupportedLanguage;
+  }
+  return DEFAULT_LANGUAGE;
 }

@@ -17,9 +17,8 @@
  * @module turn/turnRunner
  */
 
-import type { TurnInput, DropInput } from '../schemas/turn';
+import type { TurnInput, DropInput, Language } from '../schemas/turn';
 import type { HotspotClickData } from '../components/SceneCanvas';
-import { getResolvedLanguage } from '../i18n';
 import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
 import { useAgentStore } from '../stores/agentStore';
 import { useWorldStore } from '../stores/worldStore';
@@ -42,6 +41,8 @@ export interface BuildTurnInputParams {
   economySnapshot: { signal: number; memory_shard: number };
   /** UI 테마 */
   theme: 'dark' | 'light';
+  /** U-044: 세션 언어 (외부 주입, SSOT) */
+  language: Language;
 }
 
 /** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
@@ -71,14 +72,15 @@ export interface TurnRunner {
 /**
  * TurnInput을 생성합니다.
  *
- * 언어, 클릭, 드롭, 클라이언트 정보, 재화 스냅샷을 조합하여
+ * U-044: 언어는 외부에서 주입받아 SSOT 유지 (getResolvedLanguage() 직접 호출 제거).
+ * 클릭, 드롭, 클라이언트 정보, 재화 스냅샷을 조합하여
  * 서버로 전송할 TurnInput을 생성합니다.
  */
 export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
-  const { text, actionId, click, drop, economySnapshot, theme } = params;
+  const { text, actionId, click, drop, economySnapshot, theme, language } = params;
 
   return {
-    language: getResolvedLanguage(),
+    language,
     text,
     action_id: actionId ?? null,
     // U-010: 핫스팟 클릭 데이터 포함 (Q1: Option B)
@@ -107,9 +109,10 @@ export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
  * Turn Runner를 생성합니다.
  *
  * RU-003-Q3: App에서 Turn Runner 인스턴스를 생성하여 사용합니다.
+ * U-044: 세션 언어를 외부에서 주입받아 TurnInput 생성 시 SSOT 유지.
  * 스트림 콜백은 agentStore와 worldStore로 라우팅됩니다.
  *
- * @param deps - 의존성 (i18n 번역 함수 등)
+ * @param deps - 의존성 (i18n 번역 함수, 테마, 세션 언어)
  * @returns Turn Runner 인터페이스
  *
  * @example
@@ -118,7 +121,8 @@ export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
  * const runner = useMemo(() => createTurnRunner({
  *   t,
  *   theme: 'dark',
- * }), [t]);
+ *   language: sessionLanguage, // U-044: 세션 언어 SSOT
+ * }), [t, sessionLanguage]);
  *
  * runner.runTurn({ text: 'hello' });
  * ```
@@ -128,8 +132,10 @@ export function createTurnRunner(deps: {
   t: (key: string, options?: Record<string, unknown>) => string;
   /** UI 테마 */
   theme: 'dark' | 'light';
+  /** U-044: 세션 언어 (SSOT) */
+  language: Language;
 }): TurnRunner {
-  const { t, theme } = deps;
+  const { t, theme, language } = deps;
 
   // 취소 함수 저장
   let cancelFn: (() => void) | null = null;
@@ -149,7 +155,7 @@ export function createTurnRunner(deps: {
     // 재화 스냅샷 가져오기
     const economySnapshot = worldStore.economy;
 
-    // TurnInput 생성
+    // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
     const turnInput = buildTurnInput({
       text:
         params.text ||
@@ -159,6 +165,7 @@ export function createTurnRunner(deps: {
       drop: params.drop,
       economySnapshot,
       theme,
+      language,
     });
 
     // Agent Store 시작
@@ -242,13 +249,19 @@ export function createTurnRunner(deps: {
 /**
  * Turn Runner를 React 컴포넌트에서 사용하기 위한 훅.
  *
- * @param deps - 의존성
+ * U-044: 세션 언어를 외부에서 주입받아 TurnInput 생성 시 SSOT 유지.
+ *
+ * @param deps - 의존성 (i18n 번역 함수, 테마, 세션 언어)
  * @returns Turn Runner 인터페이스 및 취소 효과
  *
  * @example
  * ```tsx
  * // 컴포넌트에서 사용
- * const { runTurn, cancel } = useTurnRunner({ t, theme: 'dark' });
+ * const { runTurn, cancel } = useTurnRunner({
+ *   t,
+ *   theme: 'dark',
+ *   language: sessionLanguage, // U-044: 세션 언어 SSOT
+ * });
  * ```
  */
 import { useCallback, useEffect, useRef } from 'react';
@@ -256,8 +269,10 @@ import { useCallback, useEffect, useRef } from 'react';
 export function useTurnRunner(deps: {
   t: (key: string, options?: Record<string, unknown>) => string;
   theme: 'dark' | 'light';
+  /** U-044: 세션 언어 (SSOT) */
+  language: Language;
 }): TurnRunner {
-  const { t, theme } = deps;
+  const { t, theme, language } = deps;
 
   // 취소 함수 저장 ref
   const cancelFnRef = useRef<(() => void) | null>(null);
@@ -276,7 +291,7 @@ export function useTurnRunner(deps: {
       // 재화 스냅샷 가져오기
       const economySnapshot = worldStore.economy;
 
-      // TurnInput 생성
+      // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
       const turnInput = buildTurnInput({
         text:
           params.text ||
@@ -286,6 +301,7 @@ export function useTurnRunner(deps: {
         drop: params.drop,
         economySnapshot,
         theme,
+        language,
       });
 
       // Agent Store 시작
@@ -341,7 +357,7 @@ export function useTurnRunner(deps: {
       // 스트림 시작 및 취소 함수 저장
       cancelFnRef.current = startTurnStream(turnInput, callbacks);
     },
-    [t, theme],
+    [t, theme, language],
   );
 
   // cancel 함수

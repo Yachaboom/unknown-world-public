@@ -60,6 +60,7 @@ import type { ActionCard, DropInput } from './schemas/turn';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
 // RU-004-Q4: 세션 라이프사이클 SSOT
+// U-044: 세션 언어 SSOT API 추가
 import {
   bootstrapSession,
   hasValidSaveGame,
@@ -69,8 +70,12 @@ import {
   clearSessionAndReturnToSelect,
   saveCurrentSession,
   getInitialProfileId,
+  getSessionLanguage,
+  setSessionLanguage,
+  getInitialSessionLanguage,
 } from './save/sessionLifecycle';
 import type { DemoProfile } from './data/demoProfiles';
+import type { SupportedLanguage } from './i18n';
 
 // =============================================================================
 // 게임 상태 타입
@@ -98,6 +103,13 @@ function App() {
     return getInitialProfileId();
   });
 
+  // U-044: 세션 언어 SSOT
+  // - SaveGame.language를 권위자로 사용하여 드리프트 방지
+  // - profile_select에서만 변경 가능 (토글=리셋 정책)
+  const [sessionLanguage, setSessionLanguageState] = useState<SupportedLanguage>(() => {
+    return getInitialSessionLanguage();
+  });
+
   // 로컬 UI 상태
   const [inputText, setInputText] = useState('');
 
@@ -123,27 +135,40 @@ function App() {
    * 프로필을 선택하고 게임을 시작합니다.
    *
    * RU-004-Q4: sessionLifecycle.startSessionFromProfile 호출
+   * U-044: 세션 언어를 명시적으로 전달하여 SSOT 유지
    */
   const handleSelectProfile = useCallback(
     (profile: DemoProfile) => {
-      const result = startSessionFromProfile({ profile, t });
+      const result = startSessionFromProfile({ profile, t, language: sessionLanguage });
       if (result.success) {
         setCurrentProfileId(result.profileId);
         setGamePhase('playing');
       }
     },
-    [t],
+    [t, sessionLanguage],
   );
+
+  /**
+   * U-044: profile_select에서 언어를 변경합니다.
+   * 토글=리셋 정책에 따라 profile_select에서만 호출 가능합니다.
+   */
+  const handleLanguageChange = useCallback(async (language: SupportedLanguage) => {
+    await setSessionLanguage(language);
+    setSessionLanguageState(language);
+  }, []);
 
   /**
    * 저장된 게임을 계속합니다.
    *
    * RU-004-Q4: sessionLifecycle.continueSession 호출
+   * U-044: 세션 복원 후 언어 상태도 동기화
    */
   const handleContinue = useCallback(async () => {
     const result = await continueSession();
     if (result) {
       setCurrentProfileId(result.profileId);
+      // U-044: 세션 복원 후 언어 상태 동기화 (SaveGame.language가 SSOT)
+      setSessionLanguageState(getSessionLanguage());
       setGamePhase('playing');
     } else {
       // 로드 실패 시 profile_select로 폴백
@@ -199,12 +224,14 @@ function App() {
   }, [gamePhase, narrativeEntries.length, currentProfileId]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
+  // U-044: 세션 언어를 SSOT로 주입하여 드리프트 방지
   const turnRunnerDeps = useMemo(
     () => ({
       t,
       theme: getCurrentThemeFromDOM(),
+      language: sessionLanguage,
     }),
-    [t],
+    [t, sessionLanguage],
   );
   const turnRunner = useTurnRunner(turnRunnerDeps);
 
@@ -339,6 +366,7 @@ function App() {
   // ==========================================================================
   // 렌더링: 프로필 선택 화면
   // RU-004-Q4: hasValidSaveGame()으로 "유효한 세이브만" Continue 노출
+  // U-044: 언어 선택 UI 추가 (profile_select에서만, Q1: Option A)
   // ==========================================================================
   if (gamePhase === 'profile_select') {
     const hasSavedGame = hasValidSaveGame();
@@ -349,6 +377,8 @@ function App() {
           onSelectProfile={handleSelectProfile}
           onContinue={hasSavedGame ? handleContinue : undefined}
           hasSavedGame={hasSavedGame}
+          currentLanguage={sessionLanguage}
+          onLanguageChange={handleLanguageChange}
         />
       </>
     );

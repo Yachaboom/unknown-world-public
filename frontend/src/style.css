@@ -3262,6 +3262,50 @@ button:disabled,
    - PRD 6.9: 데모 프로필 3종 + 즉시 시작
    ============================================ */
 
+/* U-044: 언어 선택 토글 (프로필 선택 화면 우측 상단) */
+.language-toggle-container {
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 100;
+}
+
+.language-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(0, 30, 0, 0.9);
+  border: 1px solid var(--text-dim);
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+  font-family: var(--font-main);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.language-toggle-btn:hover {
+  border-color: var(--text-color);
+  box-shadow: 0 0 10px var(--text-dim);
+}
+
+.language-toggle-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.language-toggle-icon {
+  font-size: 1.2rem;
+}
+
+.language-toggle-label {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 .profile-select-container {
   display: flex;
   flex-direction: column;

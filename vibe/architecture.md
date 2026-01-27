@@ -20,7 +20,7 @@ D:\Dev\unknown-world\
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
 │   │       │   ├── image.py (이미지 생성 API, U-019)
 │   │       │   ├── turn.py
-│   │       │   ├── turn_stream_events.py
+│   │       │   ├── turn_stream_events.py (U-044: 에러 메시지 i18n 상수 포함)
 │   │       │   └── turn_streaming_helpers.py
 │   │       ├── config/     # 모델 및 시스템 설정 (U-016)
 │   │       │   └── models.py
@@ -49,27 +49,29 @@ D:\Dev\unknown-world\
 │   └── pyproject.toml
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
-│   │   ├── api/            # HTTP Streaming 클라이언트
+│   │   ├── api/            # HTTP Streaming 클라이언트 (U-044: 클라이언트 에러 i18n 적용)
 │   │   ├── components/     # 게임 UI 컴포넌트
+│   │   ├── locales/        # i18n 리소스 (U-044: 에러 및 언어 키 추가)
+│   │   ├── save/           # 세션 및 저장 (U-044: 세션 언어 SSOT 추가)
 │   │   ├── stores/         # 상태 관리 (Zustand)
-│   │   ├── turn/           # Turn Runner 모듈
+│   │   ├── turn/           # Turn Runner 모듈 (U-044: 세션 언어 주입 구조)
 │   │   └── ...
 ├── shared/                # 공유 리소스 (SSOT)
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (U-043 포함)
+    ├── unit-results/      # 개발 완료 보고서 (U-044 포함)
     └── unit-runbooks/     # 검증 런북 (U-043 포함)
 ```
 
 ### 주요 디렉토리 책임
 
-- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리.
+- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. U-044를 통해 세션 언어 SSOT와 클라이언트 에러 i18n을 내재화함.
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini(Vertex AI) 연동 담당. 서비스 계정 인증을 통한 보안 모델 호출 관리.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
 - **`vibe/`**: 프로젝트의 모든 명세, 진행 상황, 개발 계획 및 결과 보고서를 기록하는 단일 진실 공급원(SSOT).
     - `unit-plans/`: 각 개발 유닛의 목표, 범위, 완료 기준을 사전에 정의.
-    - `unit-results/`: 개발 완료 후 실제 구현 결과 및 검증 데이터를 기록하는 공식 보고서.
+    - `unit-results/`: 개발 완료 후 실제 구현 결과 및 검증 데이터를 기록하는 공식 보고서 (U-044 포함).
     - `unit-runbooks/`: 기능 검증을 위한 재현 가능한 수동/자동 절차 명세.
 
 
@@ -194,7 +196,6 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 ## 11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004)
 
 
-
 1. **정책 상수 및 초기값 SSOT (RU-004-Q5)**:
 
     - **상수 중앙화**: `frontend/src/save/constants.ts`를 단일 진실 공급원(SSOT)으로 삼아 세이브 버전, 스토리지 키, 시드 정책, 재화 임계치 등을 집중 관리함.
@@ -204,13 +205,11 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **시드 정책 (Seed Policy)**: `generateDemoSeed`를 통해 시드 생성 로직을 통일하고, 세션 유지 기간 동안 동일한 시드가 보존되도록 보장함.
 
 
-
 2. **무가입 즉시 시작 (Demo Profiles)**:
 
     - 심사 및 데모 편의성을 위해 3종의 프리셋 프로필(Narrator, Explorer, Tech) 제공.
 
     - 프로필 선택 시 해당 페르소나에 맞는 초기 상태(재화/아이템/퀘스트)로 즉시 게임 시작.
-
 
 
 3. **SaveGame 생성 SSOT 단일화 (RU-004-Q1)**:
@@ -222,7 +221,6 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **드리프트 방지**: 스키마 변경, 기본값 설정, 버전 관리 로직을 `saveGame.ts` 한 곳으로 집중하여 생성 경로에 따른 데이터 불일치를 원천 차단함.
 
 
-
 4. **세션 라이프사이클 SSOT (RU-004-Q4)**:
 
     - **중앙 집중화**: 부팅, 선택, 복원, 리셋, 변경 등 모든 세션 전환 이벤트를 `sessionLifecycle.ts` 모듈로 단일화.
@@ -230,7 +228,6 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **App.tsx 의존성 제거**: App은 비즈니스 로직(스토어 주입 등)을 직접 수행하지 않고 세션 모듈의 API를 호출하는 얇은 인터페이스 역할만 수행.
 
     - **원자적 초기화**: `resetAllSessionStores`를 통해 세션 전환 시 모든 관련 스토어를 일괄 초기화하여 이전 세션의 잔재를 완전히 제거.
-
 
 
 5. **유효성 기반 로컬 영속화 (SaveGame)**:
@@ -244,7 +241,6 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **버전 관리**: `SAVEGAME_VERSION`을 통한 스키마 하위 호환성 관리 및 `migrateSaveGame`을 통한 자동 마이그레이션 적용.
 
 
-
 6. **즉시 리셋 및 세션 초기화 (Reset)**:
 
     - **스토어 초기화 표준화**: 세션 전환(Select/Continue/Reset) 시 `world`, `inventory`, `economy`, `actionDeck`, `agent` 스토어를 모두 리셋하여 이전 세션의 잔재를 완전히 제거.
@@ -252,13 +248,11 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **안전 리셋**: 현재 세션을 폐기하고 선택된 프로필의 초기 상태로 복구. 실수 방지를 위해 2단계 확인 UI 적용.
 
 
-
 7. **ID 및 상태 SSOT (Single Source of Truth)**:
 
     - **profileId SSOT**: `SaveGame.profileId`를 최우선 권위자로 설정. Continue/Load 시점에 브라우저 캐시 키(`CURRENT_PROFILE_KEY`)를 이 값으로 강제 동기화하여 드리프트 방지.
 
     - **복원 실패 폴백**: 세이브 데이터 손상 시 자동 클린업 후 프로필 선택 화면(`profile_select`)으로 안전하게 이동.
-
 
 
 8. **복원 정합성 보장 (RU-004-S1)**:
@@ -315,4 +309,18 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - `ENVIRONMENT=development` 환경에서는 매 호출 시 파일을 다시 읽어 수정 사항을 즉시 반영(Hot-Reload)함.
     - 운영 환경에서는 `lru_cache`를 통한 메모리 캐싱으로 성능을 보장함.
 
----
+## 16. 세션 언어 SSOT 및 i18n 정책 (U-044[Mvp])
+
+1. **세션 언어 SSOT (Single Source of Truth)**:
+    - **권위자 설정**: `SaveGame.language`를 세션 언어의 유일한 권위자로 설정하여 언어 드리프트를 방지함.
+    - **주입 구조**: `App.tsx`에서 세션 언어 상태를 관리하고, `turnRunner` 생성 시 의존성으로 주입하여 턴 요청(`TurnInput`)의 언어 일관성을 보장함.
+    - **복원 정합성**: 저장된 게임 복원 시 i18n 엔진(`resolvedLanguage`)보다 `SaveGame`의 언어를 우선하여 `turnRunner`에 전달함.
+
+2. **언어 전환 정책 (토글 = 리셋)**:
+    - **세션 경계 고정**: MVP 정책에 따라 언어 전환은 `profile_select` 화면에서만 허용됨.
+    - **리셋 강제**: 게임 플레이 중 언어 변경을 원할 경우, 기존 상태를 번역하는 대신 세션을 종료(Reset)하고 새 언어로 다시 시작해야 함. 이는 월드 상태(기존 narrative 등)와 시스템 언어의 혼합 출력을 원천 차단하기 위함임.
+
+3. **클라이언트 에러 i18n (Zero English Hardcoding)**:
+    - **하드코딩 제거**: `turnStream.ts` 내부에 존재하던 영문 에러 메시지(Unknown error, Connection failed 등)를 모두 제거함.
+    - **다국어 매핑**: `ERROR_MESSAGES` 상수를 통해 세션 언어(`Language`)에 맞는 번역된 메시지를 노출하며, `translation.json`의 키와 동기화하여 일관된 톤앤매너를 유지함.
+    - **안전 폴백**: 에러 이벤트 파싱 실패나 네트워크 단절 시에도 세션 언어에 맞는 시스템 내러티브를 생성하여 UI 안정성을 확보함.

@@ -227,10 +227,10 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
         callbacks.onError?.(errorResult.data);
       } else {
         console.warn('[TurnStream] Invalid error event:', errorResult.error.message);
-        // 에러 이벤트가 깨진 경우에도 기본 에러 전달
+        // U-044: 에러 이벤트가 깨진 경우에도 기본 에러 전달 (i18n 메시지 사용)
         callbacks.onError?.({
           type: StreamEventType.ERROR,
-          message: 'Unknown error (malformed error event)',
+          message: getErrorMessage('unknown_error', language),
           code: 'INVALID_ERROR_EVENT',
         });
       }
@@ -244,15 +244,50 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
   }
 }
 
+// =============================================================================
+// U-044: i18n 에러/폴백 메시지 (Q2: Option B - translation.json 키 사용)
+// =============================================================================
+
+/**
+ * U-044: 에러 메시지 번역 리소스.
+ * 클라이언트에서 발생하는 에러 메시지를 언어별로 제공합니다.
+ *
+ * 주의: turnStream.ts는 React 컴포넌트가 아니므로 useTranslation 사용 불가.
+ * 대신 language 매개변수로 분기 처리합니다.
+ * translation.json의 키와 동기화 유지 필요 (error.* 네임스페이스).
+ */
+const ERROR_MESSAGES: Record<string, Record<Language, string>> = {
+  // 에러 이벤트 파싱 실패
+  unknown_error: {
+    'ko-KR': '알 수 없는 오류가 발생했습니다.',
+    'en-US': 'An unknown error occurred.',
+  },
+  // 응답 데이터 처리 실패 (final 이벤트 스키마 검증 실패)
+  response_processing: {
+    'ko-KR': '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.',
+    'en-US': '[System] An error occurred while processing response data.',
+  },
+  // 서버 연결 실패 (네트워크 에러)
+  connection_failed: {
+    'ko-KR': '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.',
+    'en-US': '[System] Failed to connect to server. Please try again.',
+  },
+};
+
+/**
+ * U-044: 에러 메시지를 언어에 맞게 반환합니다.
+ */
+function getErrorMessage(key: string, language: Language): string {
+  return ERROR_MESSAGES[key]?.[language] ?? ERROR_MESSAGES[key]?.['en-US'] ?? key;
+}
+
 /**
  * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
  * dispatchEvent 내부에서 사용하는 간단한 폴백.
+ * U-044: 하드코딩 메시지 제거, i18n 리소스 사용.
  */
 function createFallbackTurnOutput(language: Language): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.'
-      : '[System] An error occurred while processing response data.';
+  const fallbackNarrative = getErrorMessage('response_processing', language);
 
   return {
     language,
@@ -419,15 +454,13 @@ export async function executeTurnStream(
  * 클라이언트 측 폴백 TurnOutput 생성 (RU-002-S1).
  * 서버에서 final이 오지 못한 경우 (네트워크 에러 등) 사용합니다.
  * Economy는 요청 직전 스냅샷을 그대로 유지합니다.
+ * U-044: 하드코딩 메시지 제거, i18n 리소스 사용.
  */
 function createClientFallbackTurnOutput(
   language: Language,
   economySnapshot: { signal: number; memory_shard: number },
 ): TurnOutput {
-  const fallbackNarrative =
-    language === 'ko-KR'
-      ? '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.'
-      : '[System] Failed to connect to server. Please try again.';
+  const fallbackNarrative = getErrorMessage('connection_failed', language);
 
   return {
     language,

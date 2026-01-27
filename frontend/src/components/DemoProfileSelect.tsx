@@ -15,6 +15,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEMO_PROFILES, type DemoProfile } from '../data/demoProfiles';
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../i18n';
 
 // =============================================================================
 // 타입 정의
@@ -27,20 +28,33 @@ export interface DemoProfileSelectProps {
   onContinue?: () => void;
   /** 기존 세이브가 있는지 여부 */
   hasSavedGame?: boolean;
+  /** U-044: 현재 선택된 언어 */
+  currentLanguage?: SupportedLanguage;
+  /** U-044: 언어 변경 콜백 (profile_select에서만 허용) */
+  onLanguageChange?: (language: SupportedLanguage) => void;
 }
 
 // =============================================================================
 // 컴포넌트
 // =============================================================================
 
+/** U-044: 언어 표시 레이블 매핑 */
+const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
+  'ko-KR': '한국어',
+  'en-US': 'English',
+};
+
 /**
  * 데모 프로필 선택 화면.
  * 게임 시작 전에 3종의 프로필 중 하나를 선택합니다.
+ * U-044: 언어 선택 UI 포함 (profile_select에서만 변경 가능).
  */
 export function DemoProfileSelect({
   onSelectProfile,
   onContinue,
   hasSavedGame = false,
+  currentLanguage = 'ko-KR',
+  onLanguageChange,
 }: DemoProfileSelectProps) {
   const { t } = useTranslation();
 
@@ -55,8 +69,35 @@ export function DemoProfileSelect({
     onContinue?.();
   }, [onContinue]);
 
+  /** U-044: 언어 토글 핸들러 */
+  const handleLanguageToggle = useCallback(() => {
+    if (!onLanguageChange) return;
+    // 현재 언어의 다음 언어로 전환 (2개 언어만 지원하므로 토글)
+    const currentIndex = SUPPORTED_LANGUAGES.indexOf(currentLanguage);
+    const nextIndex = (currentIndex + 1) % SUPPORTED_LANGUAGES.length;
+    onLanguageChange(SUPPORTED_LANGUAGES[nextIndex]);
+  }, [currentLanguage, onLanguageChange]);
+
   return (
     <div className="profile-select-container" data-ui-importance="critical">
+      {/* U-044: 언어 선택 토글 (우측 상단) */}
+      {onLanguageChange && (
+        <div className="language-toggle-container">
+          <button
+            type="button"
+            className="language-toggle-btn"
+            onClick={handleLanguageToggle}
+            aria-label={t('language.toggle')}
+            title={t('language.toggle_tooltip')}
+          >
+            <span className="language-toggle-icon" aria-hidden="true">
+              🌐
+            </span>
+            <span className="language-toggle-label">{LANGUAGE_LABELS[currentLanguage]}</span>
+          </button>
+        </div>
+      )}
+
       {/* 타이틀 */}
       <header className="profile-select-header">
         <h1 className="profile-select-title glitch" data-text={t('ui.logo')}>
