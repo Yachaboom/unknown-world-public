@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 54/75 (72%) | **MVP**: 54/61 (88%) | **MMP**: 0/14 (0%)
+**전체**: 54/80 (67%) | **MVP**: 54/66 (81%) | **MMP**: 0/14 (0%)
 
-**예상 완료(가정)**: MVP D-3 | MMP D-8  
+**예상 완료(가정)**: MVP D-4 | MMP D-8  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -19,6 +19,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
 - M3 통합 구간에서 “나중에 한 번에 붙이기”로 인한 기술 부채/회귀를 줄이기 위해, 중간 체크포인트(CP-MVP-04~06)를 추가했다(실모델 Hard Gate / 멀티모달 이미지 게이트 / Scanner 업로드 게이트). **ID는 유지**하되, 목표일/Depends 기준으로 실행 순서를 정렬한다.
 - ko/en 혼합 출력 사례: `vibe/ref/en-ko-issue.png` (현상/원인 분류 및 수정 계획은 U-043/U-044에서 정리)
+- 로컬에서 `.env`가 자동 로딩되지 않으면 `UW_MODE`가 기본값(mock)으로 동작해 MockOrchestrator 템플릿(“...라고 말했습니다”, 고정 내러티브)이 반복 노출될 수 있다 → U-047(백엔드 `.env` 자동 로딩) + U-048(Mock 내러티브/액션 echo 개선)로 해결한다.
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -61,6 +62,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-24 | 10/10  | ✅   |
 | MVP  | CP-MVP-04 | **✓ 체크포인트: 실모델 Hard Gate**     | 2026-01-21 | -      | ✅   |
+| MVP  | CP-MVP-07 | **✓ 체크포인트: real 모드 로컬 실행 게이트(.env/Vertex)** | 2026-01-22 | -      | ⏸️   |
 | MVP  | CP-MVP-06 | **✓ 체크포인트: Scanner 업로드 게이트** | 2026-01-23 | -      | ⏸️   |
 | MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-24 | -      | ⏸️   |
 | MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
@@ -73,13 +75,13 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### Turn 계약 + 오케스트레이터 스트리밍
 
 - **완료 기준**: HTTP Streaming(POST)로 Queue/Badges/Auto-repair를 스트리밍하고, 최종 TurnOutput이 스키마/비즈니스 룰을 통과
-- **책임 Unit**: U-005 ~ CP-MVP-01, U-016 ~ U-018, CP-MVP-04, RU-005
+- **책임 Unit**: U-005 ~ CP-MVP-01, U-016 ~ U-018, CP-MVP-04, RU-005, U-047, U-048, CP-MVP-07
 - **상태**: ✅ (리팩토링 완료)
 
 ### “채팅이 아닌” 고정 게임 UI + 핵심 인터랙션
 
 - **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 “읽을 수 있는” 수준으로 유지된다
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042
+- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
@@ -113,6 +115,9 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | R-007 | ko/en 혼합 출력(내러티브/룰/퀘스트/UI)이 한 화면에 노출되어 데모 신뢰도 붕괴 | High | 20% | 세션 언어 SSOT(언어 전환=리셋) + 언어 게이트/Repair + i18n/폴백/하드코딩 정리 |
 | R-008 | 프롬프트 포맷 드리프트(프론트매터/태그 혼재)로 메타 추적/튜닝/검증이 흔들림 | Medium | 25% | 분리 프롬프트(.md) XML 태그 규격 통일 + (권장) 로더 파싱/검증 단일화(U-046) |
 | R-009 | Agentic Vision(코드 실행) 추가 호출로 비용/지연이 커져 UX가 악화되거나, 생성 이미지-행동/핫스팟 정합이 깨질 수 있음 | Medium | 20% | Key scene 제한 + Economy 게이트/예상비용 + 실패/차단 시 텍스트 폴백 + (Dev) 시각적 증거(annotated crop) 아티팩트로 디버그 |
+| R-010 | 로컬/데모에서 실모델(real) 모드 환경변수 로딩 누락으로 mock 출력(고정 내러티브) 또는 인증 실패로 데모가 흔들릴 수 있음 | Medium | 25% | 백엔드 `.env` 자동 로딩(U-047) + real 모드 스모크 체크포인트(CP-MVP-07) + 실패 시 안전 폴백 |
+| R-011 | 오버레이(핫스팟/CRT) 색이 콘텐츠를 과도하게 덮거나, 패널 스크롤 전략이 불편해 “게임 UI” 체감이 저하될 수 있음 | Medium | 30% | 오버레이 팔레트/강도 토큰 튜닝(U-050) + 레이아웃/스크롤 설계 개선(U-049) + 가이드 기반 점검 |
+| R-012 | Action 실행 시 템플릿 문장(“...라고 말했습니다”)이 반복되어 몰입/자연스러움이 깨질 수 있음(특히 mock 모드) | Low | 35% | MockOrchestrator 액션 타입별 로그/내러티브 개선(U-048) + real 모드 기본 동선(CP-MVP-07) |
 
 ## 메트릭
 
@@ -133,6 +138,10 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
+ID=[U-047[Mvp]](unit-plans/U-047[Mvp].md) | Backend: `.env` 자동 로딩(로컬) + 모드/ENV 가드(프롬프트/Vertex) | Depends=U-003[Mvp],U-016[Mvp] | ⏸️
+ID=[CP-MVP-07](unit-plans/CP-MVP-07.md) | **체크포인트: real 모드 로컬 실행 게이트(.env/Vertex/스트리밍)** | Depends=U-047[Mvp],CP-MVP-04 | ⏸️
+ID=[U-048[Mvp]](unit-plans/U-048[Mvp].md) | Mock Orchestrator: 액션 echo/내러티브 템플릿 개선(“말했습니다” 제거, 반복 완화) | Depends=U-007[Mvp] | ⏸️
+
 ID=[U-021[Mvp]](unit-plans/U-021[Mvp].md) | 이미지 이해(Scanner) 백엔드 엔드포인트 | Depends=U-016 | ⏸️
 ID=[U-022[Mvp]](unit-plans/U-022[Mvp].md) | ⚡Scanner 슬롯 UI + 업로드→아이템화 반영 | Depends=U-011,U-021 | ⏸️
 ID=[CP-MVP-06](unit-plans/CP-MVP-06.md) | **체크포인트: Scanner 업로드 게이트(안전/좌표/비용)** | Depends=U-022 | ⏸️
@@ -140,6 +149,8 @@ ID=[RU-006[Mvp]](unit-plans/RU-006[Mvp].md) | 리팩토링: media/artifacts 스�
 
 ID=[U-041[Mvp]](unit-plans/U-041[Mvp].md) | SaveGame 마이그레이션: migrateSaveGame에 버전별 변환 로직 구현 | Depends=RU-004 | ⏸️
 ID=[U-042[Mvp]](unit-plans/U-042[Mvp].md) | 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 | Depends=U-014,U-039 | ⏸️
+ID=[U-049[Mvp]](unit-plans/U-049[Mvp].md) | UI/UX: 레이아웃/스크롤 설계 개선(첫 화면 과도 스크롤 제거, 카드 내부 스크롤) | Depends=U-004[Mvp],U-013[Mvp],U-014[Mvp] | ⏸️
+ID=[U-050[Mvp]](unit-plans/U-050[Mvp].md) | UI/UX: 오버레이 팔레트/강도 튜닝(덮임/쨍함 완화) + 반응형 폴리시(가이드 준수) | Depends=U-010[Mvp],U-037[Mvp] | ⏸️
 
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
@@ -238,7 +249,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [CP-MVP-05](unit-plans/CP-MVP-05.md) - 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+**현재 작업**: [CP-MVP-06](unit-plans/CP-MVP-06.md) - 체크포인트: Scanner 업로드 게이트(안전/좌표/비용)
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -250,6 +261,8 @@ pnpm -C frontend dev
 
 # Backend (uv 기반, RULE-011: 8011~8020)
 cd backend
+# (로컬) 환경변수 예시 파일 복사 후 값 입력
+cp .env.example .env
 uv sync
 uv run uvicorn unknown_world.main:app --reload --port 8011
 # → http://localhost:8011/health 로 확인
