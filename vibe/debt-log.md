@@ -52,6 +52,14 @@
 - **보류 사유**: CP-MVP-05 범위 밖 (DnD 인터랙션 관련 기존 테스트)
 - **권장 조치**: Mock 설정 재검토 또는 DndContext 마운트 조건(playing 상태) 확인 필요
 
+## 2026-01-28 이슈: backend/tests Pyright 엄격 모드 타입 에러 (326개)
+
+- **발견 위치**: `backend/tests` 전체
+- **현상**: `pyright` 실행 시 테스트 코드에서 326개의 타입 에러 발생. (주로 `reportUnknownVariableType`, `reportMissingParameterType` 등)
+- **추정 원인**: `pyproject.toml`에서 `typeCheckingMode = "strict"`가 설정되어 있으나, 테스트 코드는 동적 특성(pytest fixtures, mocking 등)으로 인해 명시적 타입 어노테이션이 누락됨.
+- **보류 사유**: `src` 디렉토리(프로덕션 코드)는 0 에러로 타입 안정성이 확보되어 있으며, 테스트 코드의 타입 정리는 작업량이 많아 별도 품질 개선 작업으로 분리 필요.
+- **권장 조치**: 테스트 코드의 주요 함수 및 fixture에 타입 어노테이션을 순차적으로 추가하거나, 테스트 디렉토리에 대해서만 `typeCheckingMode`를 완화하는 설정 검토.
+
 ## 2026-01-24 이슈: 에셋 요청 스키마 검증 실패 (U-034 관련) ✅ 해결됨
 
 - **발견 위치**: backend/tests/unit/test_u034_verification.py

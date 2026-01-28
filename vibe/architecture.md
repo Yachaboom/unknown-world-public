@@ -44,8 +44,10 @@ D:\Dev\unknown-world\
 │   │       │   ├── business_rules.py
 │   │       │   └── language_gate.py (신규: 언어 혼합 검증)
 │   │       └── models/     # 데이터 모델 (TurnInput/Output)
+│       └── main.py     # 엔트리포인트 (.env 자동 로딩, U-047)
 │   ├── tests/              # 백엔드 테스트 코드
 │   │   └── unit/
+│   │       ├── test_dotenv_autoload.py (신규: U-047)
 │   │       ├── test_u043_language_gate.py
 │   │       └── services/
 │   │           └── test_rembg_preflight.py (신규: U-045)
@@ -63,14 +65,14 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-05, U-040, U-045 포함)
-    └── unit-runbooks/     # 검증 런북 (U-040, U-045 포함)
+    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-05, U-040, U-045, U-047 포함)
+    └── unit-runbooks/     # 검증 런북 (U-040, U-045, U-047 포함)
 ```
 
 ### 주요 디렉토리 책임
 
 - **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. U-044를 통해 세션 언어 SSOT와 클라이언트 에러 i18n을 내재화함.
-- **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini(Vertex AI) 연동 담당. 서비스 계정 인증을 통한 보안 모델 호출 관리.
+- **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini(Vertex AI) 연동 담당. 서비스 계정 인증을 통한 보안 모델 호출 관리. `main.py`에서 `.env` 자동 로딩(U-047)을 통해 로컬 개발 편의성 및 운영 환경 SSOT 보호를 수행함.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
 - **`vibe/`**: 프로젝트의 모든 명세, 진행 상황, 개발 계획 및 결과 보고서를 기록하는 단일 진실 공급원(SSOT).
     - `unit-plans/`: 각 개발 유닛의 목표, 범위, 완료 기준을 사전에 정의.

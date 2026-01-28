@@ -1,5 +1,39 @@
 # 프로젝트 진행 상황
 
+## [2026-01-28 23:50] [U-047[Mvp]] Backend `.env` 자동 로딩(로컬) + 모드/ENV 가드(프롬프트/Vertex) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 로컬 개발 시 `backend/.env` 파일을 자동 로딩하여 `UW_MODE`, `ENVIRONMENT` 등 환경 변수를 쉘 export 없이 일관되게 적용
+- **추가 컴포넌트**: `backend/src/unknown_world/main.py` (자동 로드 로직), `backend/tests/unit/test_dotenv_autoload.py` (검증 테스트), `vibe/unit-runbooks/U-047-dotenv-autoload-runbook.md` (런북), `vibe/unit-results/U-047[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-007] 비밀정보 노출 금지, [RULE-008] 관측 가시성 확보, [PRD 8.2] Vertex 인증/런타임 정책 준수
+
+### 기술적 구현 세부사항
+
+**환경 변수 관리 정책**:
+- **Automatic Loading**: `python-dotenv`를 사용하여 서버 부팅 시점에 `.env` 파일 존재 여부를 체크하고 자동 로드 수행.
+- **SSOT Protection**: `override=False` 설정을 적용하여 이미 설정된 시스템 환경 변수를 우선시함으로써 운영/CI 환경의 설정 오염 방지.
+- **Secure Logging**: RULE-007을 준수하여 로드 상태 기록 시 `UW_MODE`, `ENVIRONMENT` 값만 노출하고 서비스 계정 키 경로 등 민감 정보는 마스킹 처리.
+
+**안정성 및 검증**:
+- **Comprehensive Testing**: 파일 부재 시 no-op 동작, `override` 정책 우선순위, 보안 로깅 무결성을 검증하는 단위 테스트 전수 통과.
+- **Fail-safe Startup**: `.env` 파일이 없어도 서버가 정상 기동되도록 설계하여 운영 환경 호환성 확보.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/
+│   └── main.py (자동 로딩 로직 및 보안 로깅)
+├── backend/tests/unit/
+│   └── test_dotenv_autoload.py (로딩 정책 및 보안 검증)
+└── vibe/unit-runbooks/
+    └── U-047-dotenv-autoload-runbook.md (수동 검증 가이드)
+
+### 다음 단계
+- [CP-MVP-07] 체크포인트: real 모드 로컬 실행 게이트(Vertex 인증/스트리밍)
+- [U-048[Mvp]] Mock Orchestrator: 액션 echo/내러티브 템플릿 개선
+
+---
+
 ## [2026-01-28 18:35] [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용) 검증 완료
 
 ### 구현 완료 항목

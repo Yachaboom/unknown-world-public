@@ -14,6 +14,31 @@ MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니
     - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
 """
 
+# ruff: noqa: E402
+# E402 무시: .env 로딩은 의도적으로 다른 import보다 먼저 실행되어야 함 (U-047)
+
+# =============================================================================
+# .env 자동 로딩 (U-047)
+# =============================================================================
+# 로컬 개발에서 backend/.env 파일이 있으면 자동 로딩합니다.
+# - override=False: 이미 설정된 환경변수는 덮어쓰지 않음 (운영 환경 SSOT 보장)
+# - 파일 미존재 시 no-op (운영/CI에서 파일 미존재를 기본으로 허용)
+# - 페어링 질문 Q1 결정: Option A (import 시점에 로드)
+#
+# 보안 규칙:
+#   - .env 파일은 레포에 커밋 금지 (.gitignore 필수)
+#   - 민감 정보(키/토큰/프롬프트)는 로그/스트림/UI에 노출 금지 (RULE-007)
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# .env 파일 경로 (backend 디렉토리 기준)
+_DOTENV_PATH = Path(__file__).parent.parent.parent.parent / ".env"
+
+# .env 로딩 (override=False: 기존 환경변수 우선)
+_dotenv_loaded = load_dotenv(dotenv_path=_DOTENV_PATH, override=False)
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -39,6 +64,33 @@ from unknown_world.services.rembg_preflight import (
 # =============================================================================
 
 logger = logging.getLogger(__name__)
+
+# =============================================================================
+# .env 로딩 상태 로깅 (U-047)
+# =============================================================================
+# 민감 정보(키/토큰/경로)는 출력하지 않음 (RULE-007/008)
+# 모드/환경 정도만 로깅하여 디버깅 용이성 확보
+
+_uw_mode = os.environ.get("UW_MODE", "mock")  # 기본값: mock (genai_client.py 정책)
+_environment = os.environ.get("ENVIRONMENT", "development")
+
+if _dotenv_loaded:
+    logger.info(
+        "[Config] .env 파일 로드 완료",
+        extra={
+            "dotenv_path": str(_DOTENV_PATH),
+            "UW_MODE": _uw_mode,
+            "ENVIRONMENT": _environment,
+        },
+    )
+else:
+    logger.debug(
+        "[Config] .env 파일 미존재 또는 로드 실패 (기본값 사용)",
+        extra={
+            "UW_MODE": _uw_mode,
+            "ENVIRONMENT": _environment,
+        },
+    )
 
 # =============================================================================
 # Lifespan (서버 시작/종료 이벤트)
