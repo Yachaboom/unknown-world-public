@@ -76,7 +76,7 @@ cat vibe/ref/nanobanana-asset-request.schema.json | jq '.required'
 - ✅ JSON 파싱 성공 (문법 오류 없음)
 - ✅ 필수 필드 4개 존재 (`id`, `category`, `purpose`, `size_px`)
 - ✅ `category` enum에 `icon`, `placeholder`, `chrome` 포함
-- ✅ `rembg_model` 필드 존재 (배경 제거 모델 선택)
+- ✅ `rembg_options.model` 필드 존재 (배경 제거 모델 선택 SSOT)
 
 ---
 
@@ -215,7 +215,11 @@ styles: ["vintage", "pixel-art"]
 | `palette` | string[] | - | CRT 팔레트 |
 | `background` | enum | - | transparent/solid_white/solid_black |
 | `requires_rembg` | boolean | - | rembg 필요 여부 |
-| `rembg_model` | enum | - | rembg 모델 선택 |
+| `rembg_options` | object | - | rembg 옵션 (model, alpha_matting 등) |
+| `rembg_options.model` | enum | - | rembg 모델 선택 (SSOT) |
+
+> **참고**: rembg 모델 선택의 SSOT는 `rembg_options.model`입니다.
+> top-level `rembg_model` 필드는 존재하지 않으며, 스키마/테스트/런북 모두 `rembg_options.model`을 기준으로 합니다.
 
 ### 4.3 성공/실패 판단 기준
 

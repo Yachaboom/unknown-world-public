@@ -29,9 +29,13 @@ import os
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from unknown_world.config.models import ModelLabel, get_model_id
+
+if TYPE_CHECKING:
+    from google.genai import Client
+    from google.genai.types import GenerateContentConfig
 
 # =============================================================================
 # 로거 설정 (프롬프트/비밀정보 노출 금지)
@@ -217,7 +221,7 @@ class GenAIClient:
         """
         self._project = project or os.environ.get(ENV_VERTEX_PROJECT)
         self._location = location or os.environ.get(ENV_VERTEX_LOCATION, "us-central1")
-        self._client: Any | None = None
+        self._client: Client | None = None
         self._available = False
 
         self._initialize_client()
@@ -225,7 +229,7 @@ class GenAIClient:
     def _initialize_client(self) -> None:
         """google-genai 클라이언트를 초기화합니다."""
         try:
-            from google import genai  # type: ignore[import-untyped]
+            from google.genai import Client
 
             # Vertex AI 모드로 클라이언트 초기화
             # 인증은 ADC(Application Default Credentials)를 사용
@@ -238,7 +242,7 @@ class GenAIClient:
                 client_options["location"] = self._location
 
             # vertexai=True로 Vertex AI 모드 활성화
-            self._client = genai.Client(vertexai=True, **client_options)
+            self._client = Client(vertexai=True, **client_options)
             self._available = True
 
             # 로그에는 프로젝트/리전만 기록 (키/토큰 노출 금지)
@@ -292,24 +296,30 @@ class GenAIClient:
         )
 
         # google-genai SDK 호출
-        config: dict[str, Any] = {}
-        if request.max_tokens:
-            config["max_output_tokens"] = request.max_tokens
-        if request.temperature is not None:
-            config["temperature"] = request.temperature
-        if request.response_mime_type:
-            config["response_mime_type"] = request.response_mime_type
-        if request.response_schema:
-            config["response_schema"] = request.response_schema
+        from google.genai.types import GenerateContentConfig
 
-        response = await self._client.aio.models.generate_content(
+        config_dict: dict[str, Any] = {}
+        if request.max_tokens:
+            config_dict["max_output_tokens"] = request.max_tokens
+        if request.temperature is not None:
+            config_dict["temperature"] = request.temperature
+        if request.response_mime_type:
+            config_dict["response_mime_type"] = request.response_mime_type
+        if request.response_schema:
+            config_dict["response_schema"] = request.response_schema
+
+        config: GenerateContentConfig | None = (
+            GenerateContentConfig(**config_dict) if config_dict else None
+        )
+
+        response = await self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
             model=model_id,
             contents=request.prompt,
-            config=config if config else None,
+            config=config,
         )
 
         # 응답 파싱
-        text = response.text if hasattr(response, "text") else str(response)
+        text = response.text if hasattr(response, "text") and response.text else str(response)
         finish_reason = "stop"
         if hasattr(response, "candidates") and response.candidates:
             candidate = response.candidates[0]
@@ -318,13 +328,13 @@ class GenAIClient:
 
         # 토큰 사용량 추출
         usage: dict[str, int] = {}
-        if hasattr(response, "usage_metadata"):
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
             meta = response.usage_metadata
-            if hasattr(meta, "prompt_token_count"):
+            if hasattr(meta, "prompt_token_count") and meta.prompt_token_count is not None:
                 usage["prompt_tokens"] = meta.prompt_token_count
-            if hasattr(meta, "candidates_token_count"):
+            if hasattr(meta, "candidates_token_count") and meta.candidates_token_count is not None:
                 usage["completion_tokens"] = meta.candidates_token_count
-            if hasattr(meta, "total_token_count"):
+            if hasattr(meta, "total_token_count") and meta.total_token_count is not None:
                 usage["total_tokens"] = meta.total_token_count
 
         return GenerateResponse(
@@ -359,20 +369,26 @@ class GenAIClient:
             },
         )
 
-        config: dict[str, Any] = {}
-        if request.max_tokens:
-            config["max_output_tokens"] = request.max_tokens
-        if request.temperature is not None:
-            config["temperature"] = request.temperature
-        if request.response_mime_type:
-            config["response_mime_type"] = request.response_mime_type
-        if request.response_schema:
-            config["response_schema"] = request.response_schema
+        from google.genai.types import GenerateContentConfig
 
-        stream = await self._client.aio.models.generate_content_stream(
+        config_dict: dict[str, Any] = {}
+        if request.max_tokens:
+            config_dict["max_output_tokens"] = request.max_tokens
+        if request.temperature is not None:
+            config_dict["temperature"] = request.temperature
+        if request.response_mime_type:
+            config_dict["response_mime_type"] = request.response_mime_type
+        if request.response_schema:
+            config_dict["response_schema"] = request.response_schema
+
+        config: GenerateContentConfig | None = (
+            GenerateContentConfig(**config_dict) if config_dict else None
+        )
+
+        stream = await self._client.aio.models.generate_content_stream(  # type: ignore[reportUnknownMemberType]
             model=model_id,
             contents=request.prompt,
-            config=config if config else None,
+            config=config,
         )
         async for chunk in stream:
             if hasattr(chunk, "text") and chunk.text:

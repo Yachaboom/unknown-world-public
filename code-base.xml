@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml,md}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, build/**, coverage/**, **/*.png, **/*.svg
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .clude/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, .venv/**, dist/**, coverage/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,12 +42,6 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-backend/prompts/image/scene_prompt.en.md
-backend/prompts/image/scene_prompt.ko.md
-backend/prompts/system/game_master.en.md
-backend/prompts/system/game_master.ko.md
-backend/prompts/turn/turn_output_instructions.en.md
-backend/prompts/turn/turn_output_instructions.ko.md
 backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/__init__.py
@@ -102,7 +96,6 @@ backend/tests/unit/test_image_postprocess.py
 backend/tests/unit/test_orchestrator_repair.py
 backend/tests/unit/test_u034_verification.py
 backend/tests/unit/test_u043_language_gate.py
-CLAUDE.md
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -110,8 +103,6 @@ frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
-frontend/public/ui/QA_CHECKLIST.md
-frontend/public/ui/README.md
 frontend/src/api/turnStream.test.ts
 frontend/src/api/turnStream.ts
 frontend/src/App.test.tsx
@@ -151,7 +142,6 @@ frontend/src/i18n-scenario.test.ts
 frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
 frontend/src/locales/ko-KR/translation.json
-frontend/src/locales/README.md
 frontend/src/main.tsx
 frontend/src/save/constants.ts
 frontend/src/save/saveGame.test.ts
@@ -186,7 +176,6 @@ frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
 request.json
-shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
@@ -4873,296 +4862,6 @@ var addSorting = (function() {
 window.addEventListener('load', addSorting);
 </file>
 
-<file path="frontend/public/ui/QA_CHECKLIST.md">
-# UI 에셋 QA 체크리스트
-
-> **참조**: `frontend/public/ui/README.md` (SSOT 규칙), `vibe/ref/rembg-guide.md` (배경 제거)  
-> **목적**: nanobanana mcp로 생성한 에셋의 품질/일관성 보장  
-> **적용 시점**: 에셋 추가/수정 시 반드시 체크
-
----
-
-## 1. 용량 예산 (Performance Budget)
-
-### 1.1 개별 에셋 상한
-
-| 유형            | 상한  | 권장       | 체크 항목         |
-| --------------- | ----- | ---------- | ----------------- |
-| **아이콘**      | 30KB  | 20KB 이하  | `bytes` 필드 확인 |
-| **placeholder** | 300KB | 200KB 이하 | `bytes` 필드 확인 |
-| **chrome**      | 120KB | 30KB 이하  | `bytes` 필드 확인 |
-
-### 1.2 총합 예산
-
-| 항목     | 값                                  |
-| -------- | ----------------------------------- |
-| **상한** | 1.5MB (1,572,864 bytes)             |
-| **권장** | 1MB (1,048,576 bytes) 이하          |
-| **현재** | `manifest.json`의 `totalBytes` 확인 |
-
-### 1.3 용량 초과 시 대응
-
-1. **압축/최적화**: TinyPNG, ImageMagick, WebP 변환
-2. **해상도/색상 축소**: 필요 사이즈만 유지
-3. **불필요 에셋 제거**: 사용처 없는 에셋 정리
-4. **예산 상향**: 근거 문서화 후 `budgetBytes` 조정
-
----
-
-## 2. 사이즈/규격 (Size)
-
-### 2.1 아이콘 사이즈 체크
-
-| 항목            | 요구                 | 체크 |
-| --------------- | -------------------- | ---- |
-| **필수 사이즈** | 16px, 24px 최소 2종  | ☐    |
-| **선택 사이즈** | 32px, 64px (필요 시) | ☐    |
-| **정방형**      | 가로 = 세로          | ☐    |
-
-### 2.2 16px 실루엣 테스트 ⚠️
-
-> **중요**: 16px에서도 형태가 구분되어야 합니다.
-
-**테스트 방법**:
-
-1. 16px 아이콘을 100% 배율로 표시
-2. 2m 거리에서 형태 구분 가능 여부 확인
-3. 다른 아이콘과 혼동되지 않는지 확인
-
-**실패 시 대응**:
-
-- 디테일 단순화
-- 외곽선/실루엣 강화
-- 16px/24px 별도 디자인 (사용처 분리)
-
-### 2.3 placeholder/chrome 사이즈
-
-| 항목            | 권장                     | 비고               |
-| --------------- | ------------------------ | ------------------ |
-| **placeholder** | 512x384 또는 용도별 적정 | 가로세로 비율 유지 |
-| **chrome**      | 타일링 가능 사이즈       | 48px, 64px 등      |
-
----
-
-## 3. 대비/가독성 (Contrast)
-
-### 3.1 기본 대비 테스트
-
-| 모드         | 배경                    | 요구 대비               | 체크 |
-| ------------ | ----------------------- | ----------------------- | ---- |
-| **기본**     | `#0d0d0d` (어두운 배경) | 인광 녹색(#33ff00) 대비 | ☐    |
-| **Readable** | 대비 강화 모드          | 4.5:1 이상              | ☐    |
-
-### 3.2 대비 검증 방법
-
-```
-도구: WebAIM Contrast Checker
-URL: https://webaim.org/resources/contrastchecker/
-
-전경색: 아이콘 주요 색상
-배경색: #0d0d0d (CRT 배경)
-목표: 4.5:1 이상 (AA 기준)
-```
-
-### 3.3 Readable 모드 호환
-
-- [ ] CRT 글로우/스캔라인 OFF 시에도 식별 가능
-- [ ] 텍스트 라벨이 이미지를 방해하지 않음
-- [ ] 색약/색맹 접근성 고려 (색상만으로 의미 전달 금지)
-
----
-
-## 4. 투명 배경 (Alpha Channel)
-
-### 4.1 투명 배경 필요 여부
-
-| 유형            | 투명 필수 | 배경 색상        |
-| --------------- | --------- | ---------------- |
-| **아이콘**      | ✅ 필수   | 투명 (알파 채널) |
-| **placeholder** | ❌ 선택   | 불투명 허용      |
-| **chrome**      | ✅ 필수   | 투명 (알파 채널) |
-
-### 4.2 배경 제거 체크 (rembg)
-
-> **참조**: `vibe/ref/rembg-guide.md`
-
-**생성 단계 요구 (조건부)**:
-
-- [ ] 배경 제거 예정인 에셋은 **순백(#FFFFFF) 단색 배경**으로 생성
-- [ ] 그라데이션/텍스처/그림자 배경 금지
-
-**배경 제거 실행**:
-
-- [ ] `rembg i -m birefnet-general <input> <output>` 실행
-- [ ] 알파 채널 존재 확인 (GIMP/Photoshop/Preview)
-- [ ] 경계 부분 잔여 배경 없음 확인
-
-### 4.3 투명도 검증 명령어
-
-```bash
-# ImageMagick으로 알파 채널 확인
-magick identify -verbose <image.png> | grep -i alpha
-
-# 또는 파일 정보 확인 (PNG 포맷)
-file <image.png>  # PNG image data, ... RGBA
-```
-
----
-
-## 5. 폴백 (Fallback)
-
-### 5.1 폴백 텍스트/이모지 체크
-
-| 체크 항목         | 요구  | 설명                               |
-| ----------------- | ----- | ---------------------------------- |
-| **fallback 필드** | 필수  | manifest.json에 `fallback` 값 존재 |
-| **이모지/텍스트** | 1~2자 | 예: `📡`, `⚠`, `✓`, `OK`           |
-| **의미 전달**     | 명확  | 원본 아이콘과 동일한 의미          |
-
-### 5.2 폴백 동작 테스트
-
-**테스트 시나리오**:
-
-1. 에셋 파일을 임시로 삭제/이름 변경
-2. 브라우저에서 UI 로드
-3. 폴백 텍스트/이모지가 표시되는지 확인
-4. UI가 깨지지 않는지 확인
-
-**코드 구현 확인**:
-
-```tsx
-// 예상 패턴
-<img
-  src="/ui/icons/signal-24.png"
-  alt=""
-  aria-hidden="true"
-  onError={(e) => (e.currentTarget.style.display = 'none')}
-/>
-<span className="icon-fallback">📡</span>
-```
-
----
-
-## 6. 매니페스트 동기화 (manifest.json)
-
-### 6.1 필수 필드 체크
-
-| 필드       | 필수 | 체크                              |
-| ---------- | ---- | --------------------------------- |
-| `id`       | ✅   | kebab-case, 고유값                |
-| `path`     | ✅   | `ui/` 기준 상대 경로              |
-| `type`     | ✅   | `icon` / `placeholder` / `chrome` |
-| `fallback` | 권장 | 이모지/텍스트                     |
-| `bytes`    | 권장 | 파일 크기                         |
-| `usedIn`   | 권장 | 사용처 컴포넌트 목록              |
-| `notes`    | 선택 | QA/생성 관련 메모                 |
-
-### 6.2 실제 파일과 매니페스트 정합성
-
-- [ ] manifest.json의 모든 에셋이 실제 파일로 존재
-- [ ] 실제 디렉토리의 모든 에셋이 manifest.json에 등록됨
-- [ ] `path` 경로가 실제 파일 위치와 일치
-- [ ] `bytes` 값이 실제 파일 크기와 일치
-
-### 6.3 정합성 검증 스크립트 (참고)
-
-```bash
-# manifest.json에 있는 path들이 실제로 존재하는지 확인
-cd frontend/public/ui
-cat manifest.json | jq -r '.assets[].path' | while read p; do
-  [ -f "$p" ] || echo "MISSING: $p"
-done
-
-# 실제 파일이 manifest에 있는지 확인
-find icons placeholders chrome -type f \( -name "*.png" -o -name "*.webp" \) | while read f; do
-  grep -q "\"$f\"" manifest.json || echo "NOT IN MANIFEST: $f"
-done
-```
-
----
-
-## 7. 스타일 일관성 (CRT Theme)
-
-### 7.1 색상 팔레트 준수
-
-| 색상        | Hex       | 용도        | 체크 |
-| ----------- | --------- | ----------- | ---- |
-| 인광 녹색   | `#33ff00` | 주요 색상   | ☐    |
-| 어두운 녹색 | `#1a8000` | 보조 색상   | ☐    |
-| 마젠타      | `#ff00ff` | 포인트/경고 | ☐    |
-| 주황색      | `#ffaa00` | 경고        | ☐    |
-| 붉은색      | `#ff3333` | 에러        | ☐    |
-| 배경        | `#0d0d0d` | 배경        | ☐    |
-
-### 7.2 스타일 금지 사항
-
-- [ ] 외부 로고/상표 복제 금지
-- [ ] CRT 테마와 충돌하는 색상 금지 (밝은 파스텔, 난색 남용)
-- [ ] 복잡한 그라데이션/사진 스타일 금지
-
----
-
-## 8. Retina 대응 (선택)
-
-### 8.1 Retina 필요 여부 판단
-
-| 상황             | Retina 필요 | 비고                  |
-| ---------------- | ----------- | --------------------- |
-| **16px 아이콘**  | 선택        | HiDPI에서 선명도 향상 |
-| **24px+ 아이콘** | 낮음        | 기본 해상도로 충분    |
-| **placeholder**  | 낮음        | 이미 충분한 해상도    |
-
-### 8.2 Retina 파일 규칙
-
-- 파일명: `{name}-24.png` → `{name}-24@2x.png`
-- CSS: `image-set()`으로 1x/2x 제공
-- manifest.json: `retina: true` 표기
-
----
-
-## 9. 종합 체크리스트 (Quick Reference)
-
-에셋 추가/수정 시 아래 항목을 순서대로 체크하세요:
-
-### 📦 추가 전
-
-- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
-- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
-- [ ] CRT 테마 색상과 조화
-
-### 🎨 생성 시
-
-- [ ] (조건부) 배경 제거 필요 시 순백(#FFFFFF) 배경으로 생성
-- [ ] 필요 사이즈로 리사이즈
-- [ ] (조건부) `rembg`로 배경 제거
-
-### ✅ 추가 후
-
-- [ ] 개별 용량 예산 준수 확인
-- [ ] 총합 예산 준수 확인 (`totalBytes` < `budgetBytes`)
-- [ ] 16px 실루엣 구분 가능 여부 (아이콘)
-- [ ] 기본/Readable 모드 대비 확인
-- [ ] (조건부) 알파 채널 존재 확인 (투명 필요 에셋)
-- [ ] 폴백 텍스트/이모지 지정
-- [ ] manifest.json 업데이트
-- [ ] 실제 파일과 매니페스트 정합성 확인
-
----
-
-## 10. 참고 자료
-
-- **SSOT 규칙**: `frontend/public/ui/README.md`
-- **배경 제거 가이드**: `vibe/ref/rembg-guide.md`
-- **매니페스트 스키마**: `frontend/public/ui/manifest.schema.json`
-- **스타일 가이드**: `vibe/ref/frontend-style-guide.md`
-- **가독성 패스**: U-028[Mvp] (Readable 모드)
-
----
-
-_마지막 업데이트: 2026-01-12_  
-_문서 버전: 1.0.0_
-</file>
-
 <file path="frontend/src/components/EconomyHud.test.tsx">
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -6707,173 +6406,6 @@ describe('demoProfiles (U-015[Mvp])', () => {
     );
   });
 });
-</file>
-
-<file path="frontend/src/locales/README.md">
-# i18n 언어 리소스 가이드 (Unknown World)
-
-이 디렉토리는 Unknown World의 **프론트엔드 UI 문자열 리소스**를 관리하는 SSOT(Single Source of Truth)입니다.
-
-## 디렉토리 구조
-
-```
-locales/
-├── ko-KR/
-│   └── translation.json    # 한국어 리소스
-├── en-US/
-│   └── translation.json    # 영어 리소스
-└── README.md               # 이 문서
-```
-
-## 지원 언어
-
-| 코드    | 언어   | 상태 | 비고           |
-| ------- | ------ | ---- | -------------- |
-| `ko-KR` | 한국어 | 기본 | 데모 기준 언어 |
-| `en-US` | 영어   | 폴백 | fallbackLng    |
-
-> **언어 코드 규칙**: BCP-47 형식을 사용합니다 (`ko-KR`, `en-US`).  
-> TurnInput/SaveGame의 `language` 필드와 동일한 축입니다.
-
-## 키 네이밍 규칙
-
-키는 **도메인.섹션.항목** 형태의 계층 구조를 따릅니다.
-
-### 도메인 목록
-
-| 도메인       | 용도                                    |
-| ------------ | --------------------------------------- |
-| `scene`      | Scene Canvas 관련 메시지                |
-| `agent`      | Agent Console 관련 라벨/상태            |
-| `ui`         | 공통 UI 요소 (버튼, 입력, 플레이스홀더) |
-| `economy`    | 재화 관련 라벨                          |
-| `connection` | 연결 상태                               |
-| `panel`      | 패널별 타이틀/플레이스홀더              |
-| `action`     | 액션 카드/선택지                        |
-| `narrative`  | 내러티브/게임 로그                      |
-
-### 예시
-
-```json
-{
-  "scene.status.loading": "동기화 중...",
-  "agent.console.badges": "검증 배지",
-  "ui.execute": "실행",
-  "panel.inventory.placeholder": "[ 드래그 앤 드롭 영역 ]"
-}
-```
-
-## 새 언어 추가 절차
-
-1. **디렉토리 생성**: `locales/{언어코드}/` 생성 (예: `ja-JP`)
-2. **translation.json 복사**: `ko-KR/translation.json`을 복사하여 시작점으로 사용
-3. **번역 작업**: 모든 값을 해당 언어로 번역
-4. **i18n.ts 등록**: `frontend/src/i18n.ts`에 새 언어 리소스 import 및 등록
-5. **검증**: 누락된 키가 없는지 확인 (i18next의 `missingKeyHandler` 활용)
-
-```typescript
-// frontend/src/i18n.ts
-import jaJP from './locales/ja-JP/translation.json';
-
-const resources = {
-  'ko-KR': { translation: koKR },
-  'en-US': { translation: enUS },
-  'ja-JP': { translation: jaJP }, // 새 언어 추가
-};
-```
-
-## 사용 방법
-
-### 기본 사용
-
-```tsx
-import { useTranslation } from 'react-i18next';
-
-function MyComponent() {
-  const { t } = useTranslation();
-
-  return <button>{t('ui.execute')}</button>;
-}
-```
-
-### 보간 (Interpolation)
-
-```tsx
-// JSON
-{ "narrative.turn_label": "[TURN {{turn}}]" }
-
-// 컴포넌트
-<span>{t('narrative.turn_label', { turn: 5 })}</span>
-// 결과: "[TURN 5]"
-```
-
-### 언어 변경 (향후)
-
-```tsx
-import { useTranslation } from 'react-i18next';
-
-function LanguageToggle() {
-  const { i18n } = useTranslation();
-
-  const toggleLanguage = () => {
-    const newLang = i18n.resolvedLanguage === 'ko-KR' ? 'en-US' : 'ko-KR';
-    i18n.changeLanguage(newLang);
-  };
-
-  return <button onClick={toggleLanguage}>🌐</button>;
-}
-```
-
-## 금지사항
-
-### ❌ 텍스트를 이미지에 포함하지 마세요
-
-이미지에 텍스트를 박으면:
-
-- 언어 변경 시 이미지를 교체해야 함
-- 리사이즈 시 가독성 저하
-- 접근성 문제 (스크린 리더)
-
-**대신**: 이미지와 텍스트를 분리하고, 텍스트는 i18n 키로 관리
-
-### ❌ 하드코딩 문자열 금지
-
-```tsx
-// ❌ Bad
-<button>실행</button>
-
-// ✅ Good
-<button>{t('ui.execute')}</button>
-```
-
-### ❌ ko/en 혼합 출력 금지 (RULE-006)
-
-동일 화면에서 한국어와 영어가 섞여 나오면 안 됩니다.
-모든 UI 문자열은 현재 선택된 언어로 일관되게 표시되어야 합니다.
-
-### ❌ 키 임의 삭제/변경 금지
-
-키를 삭제하거나 이름을 변경하면 기존 코드에서 참조 오류가 발생합니다.
-
-- 삭제: deprecated 마킹 후 충분한 기간을 두고 제거
-- 변경: 새 키 추가 → 마이그레이션 → 구 키 제거
-
-## 검증 체크리스트
-
-새 리소스 추가/수정 시:
-
-- [ ] 모든 지원 언어에 동일한 키가 존재하는지 확인
-- [ ] 보간 변수명이 일치하는지 확인 (`{{variable}}`)
-- [ ] 빌드 및 린트 통과
-- [ ] 실제 UI에서 문자열이 올바르게 표시되는지 확인
-
-## 참고 문서
-
-- `vibe/prd.md` - 3.1(지원 언어), 8.7(TurnInput.language)
-- `vibe/tech-stack.md` - i18next/react-i18next 버전
-- `.cursor/rules/00-core-critical.mdc` - RULE-006(i18n/언어 혼합 금지)
-- [i18next 공식 문서](https://www.i18next.com/)
-- [react-i18next 공식 문서](https://react.i18next.com/)
 </file>
 
 <file path="frontend/src/save/constants.ts">
@@ -8935,550 +8467,6 @@ export function box2dCenter(box: Box2D): { x: number; y: number } {
 {"language": "ko-KR", "text": "모험을 시작한다", "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"}, "economy_snapshot": {"signal": 5, "memory_shard": 0}}
 </file>
 
-<file path="backend/prompts/image/scene_prompt.en.md">
-<prompt_meta>
-  <prompt_id>scene_image_generation</prompt_id>
-  <language>en-US</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
-  <policy_preset>default</policy_preset>
-</prompt_meta>
-
-<prompt_body>
-## Purpose
-
-Prompt template for generating in-game scene images.
-Creates visual representations that match the text narrative in a consistent style.
-
-## Inputs
-
-- narrative: Current turn's narrative text
-- scene_description: Scene description (optional)
-- style_hints: Style hints (optional)
-- previous_scene_context: Previous scene context (for consistency)
-
-## Output Contract (Summary)
-
-- Image generation prompts are written in **English** (model optimization).
-- Always include base style keywords for consistency.
-- Minimize negative prompts; describe the desired scene positively.
-
----
-
-## System Instructions
-
-You are the image prompt generator for "Unknown World" game.
-Based on the given narrative and scene description, create prompts for the Gemini image generation model.
-
-### Base Style Guidelines
-
-1. **Art Style**: Dark fantasy, mystery, roguelike atmosphere
-2. **Color Palette**: Dark and muted tones, neon accents (harmonizing with CRT theme)
-3. **Lighting**: Dramatic contrast, rim lighting, atmospheric illumination
-4. **Composition**: Cinematic, prefer wide or medium shots
-
-### Prompt Structure
-
-```
-[Subject/Scene Description], [Art Style], [Lighting/Mood], [Color Tones], [Camera/Composition], [Quality Keywords]
-```
-
-### Quality Keywords (Always Include)
-
-- highly detailed
-- cinematic lighting
-- atmospheric
-- dark fantasy aesthetic
-- 4k quality
-
-### Prohibited Elements
-
-- Avoid photorealistic style (difficult to maintain consistency)
-- No violent/sexual/discriminatory imagery
-- Avoid text/letters in images (readability issues)
-
----
-
-## Example Prompts
-
-### Example 1: Mysterious Forest Entrance
-
-**Input Narrative**: "The old door creaks open. Cold air rushes out from within."
-
-**Generated Prompt**:
-```
-An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
-```
-
-### Example 2: Interior of a Ruined Castle
-
-**Input Narrative**: "The throne of the crumbling castle gleams under the moonlight."
-
-**Generated Prompt**:
-```
-A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
-```
-
----
-
-## Important Constraints
-
-- **Prompts in English**: For image generation model optimization
-- **Maintain Consistent Style**: Always include base style keywords
-- **Safety Policy Compliance**: Exclude inappropriate content elements
-</prompt_body>
-</file>
-
-<file path="backend/prompts/image/scene_prompt.ko.md">
-<prompt_meta>
-  <prompt_id>scene_image_generation</prompt_id>
-  <language>ko-KR</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
-  <policy_preset>default</policy_preset>
-</prompt_meta>
-
-<prompt_body>
-## 목적
-
-게임 내 장면(Scene) 이미지를 생성하기 위한 프롬프트 템플릿입니다.
-텍스트 내러티브에 맞는 시각적 표현을 일관된 스타일로 생성합니다.
-
-## 입력
-
-- narrative: 현재 턴의 내러티브 텍스트
-- scene_description: 장면 설명 (선택)
-- style_hints: 스타일 힌트 (선택)
-- previous_scene_context: 이전 장면 맥락 (일관성 유지용)
-
-## 출력 계약 (요약)
-
-- 이미지 생성 프롬프트는 **영어**로 작성됩니다 (모델 최적화).
-- 스타일 일관성을 위해 기본 스타일 키워드를 항상 포함합니다.
-- 부정 프롬프트는 최소화하고, 원하는 장면을 긍정적으로 서술합니다.
-
----
-
-## 시스템 지시
-
-당신은 "Unknown World" 게임의 이미지 프롬프트 생성기입니다.
-주어진 내러티브와 장면 설명을 바탕으로 Gemini 이미지 생성 모델에 전달할 프롬프트를 작성합니다.
-
-### 기본 스타일 가이드라인
-
-1. **아트 스타일**: 다크 판타지, 미스터리, 로그라이크 분위기
-2. **색상 팔레트**: 어둡고 차분한 톤, 네온 악센트 (CRT 테마와 조화)
-3. **조명**: 극적인 명암 대비, 림 라이트, 분위기 있는 조명
-4. **구도**: 시네마틱, 와이드 샷 또는 중간 샷 선호
-
-### 프롬프트 구조
-
-```
-[주제/장면 설명], [아트 스타일], [조명/분위기], [색상 톤], [카메라/구도], [품질 키워드]
-```
-
-### 품질 키워드 (기본 포함)
-
-- highly detailed
-- cinematic lighting
-- atmospheric
-- dark fantasy aesthetic
-- 4k quality
-
-### 금지 사항
-
-- 실사 스타일 (photorealistic) 지양 (일관성 유지 어려움)
-- 폭력적/성적/차별적 이미지 요소 금지
-- 텍스트/글자 포함 지양 (가독성 문제)
-
----
-
-## 예시 프롬프트
-
-### 예시 1: 신비로운 숲 입구
-
-**입력 내러티브**: "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다."
-
-**생성된 프롬프트**:
-```
-An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
-```
-
-### 예시 2: 폐허가 된 성의 내부
-
-**입력 내러티브**: "무너진 성의 왕좌가 달빛 아래 빛나고 있습니다."
-
-**생성된 프롬프트**:
-```
-A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
-```
-
----
-
-## 중요 제약
-
-- **프롬프트는 영어로 작성**: 이미지 생성 모델 최적화를 위해
-- **일관된 스타일 유지**: 기본 스타일 키워드를 항상 포함
-- **안전 정책 준수**: 부적절한 콘텐츠 생성 요소 배제
-</prompt_body>
-</file>
-
-<file path="backend/prompts/system/game_master.en.md">
-<prompt_meta>
-  <prompt_id>game_master_system</prompt_id>
-  <language>en-US</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
-  <policy_preset>default</policy_preset>
-</prompt_meta>
-
-<prompt_body>
-## Purpose
-
-Act as an agent-style Game Master to generate TurnOutput (JSON).
-"Unknown World" is an infinite generative roguelike narrative web game.
-
-## Input
-
-- TurnInput: language, text, action_id, click, client, economy_snapshot
-- WorldState: world rules, inventory, quests, relationships, history summary
-
-## Output Contract (Summary)
-
-- Output must satisfy the TurnOutput JSON Schema.
-- language is fixed to "en-US" matching the input.
-- All text (narrative, label, description, etc.) must be in English.
-
----
-
-## System Instructions
-
-You are the Game Master of "Unknown World". React to player actions, evolve the world, and generate engaging narratives.
-
-### Core Principles
-
-1. **Consistency**: Adhere to world rules and established settings.
-2. **Creativity**: Create unpredictable yet logical developments.
-3. **Responsiveness**: Provide meaningful consequences for player choices.
-4. **Economy**: Calculate cost and balance_after accurately.
-
-### Narrative Style
-
-- 2-3 sentences of concise, immersive description
-- Use present tense
-- Include sensory details (sounds, smells, textures)
-- Address the player as "you"
-
-### Action Card Generation Rules
-
-- Provide 3-6 choice cards
-- Include cost, risk level, and hint for each card
-- At least 1 low-cost alternative (is_alternative: true)
-- Disable cards (enabled: false) when balance is insufficient
-
-### Safety Policy
-
-- Do not generate violent/sexual/discriminatory content
-- On violation requests: safety.blocked=true, provide safe alternative narrative
-
----
-
-## Critical Constraints
-
-- **Output must be valid JSON.**
-- **language field is fixed to "en-US".**
-- **economy.cost and economy.balance_after are required.**
-- **balance_after must be >= 0.**
-</prompt_body>
-</file>
-
-<file path="backend/prompts/system/game_master.ko.md">
-<prompt_meta>
-  <prompt_id>game_master_system</prompt_id>
-  <language>ko-KR</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
-  <policy_preset>default</policy_preset>
-</prompt_meta>
-
-<prompt_body>
-## 목적
-
-에이전트형 Game Master로서 TurnOutput(JSON)을 생성합니다.
-"Unknown World"는 무한 생성 로그라이크 내러티브 웹게임입니다.
-
-## 입력
-
-- TurnInput: language, text, action_id, click, client, economy_snapshot
-- WorldState: 세계 규칙, 인벤토리, 퀘스트, 관계, 히스토리 요약
-
-## 출력 계약 (요약)
-
-- 반드시 JSON Schema를 만족하는 TurnOutput만 출력합니다.
-- language는 입력과 동일하게 "ko-KR"로 고정합니다.
-- 모든 텍스트(narrative, label, description 등)는 한국어로 작성합니다.
-
----
-
-## 시스템 지시
-
-당신은 "Unknown World"의 Game Master입니다. 플레이어의 행동에 반응하여 세계를 변화시키고, 흥미로운 내러티브를 생성합니다.
-
-### 핵심 원칙
-
-1. **일관성**: 세계 규칙(rules)과 기존 설정을 준수합니다.
-2. **창의성**: 예측 불가능하되 논리적인 전개를 만들어냅니다.
-3. **반응성**: 플레이어의 선택에 의미 있는 결과를 제공합니다.
-4. **경제성**: 비용(cost)과 잔액(balance_after)을 정확히 계산합니다.
-
-### 내러티브 스타일
-
-- 2~3문장의 간결하고 몰입감 있는 묘사
-- 현재 시제 사용
-- 감각적 디테일 포함 (소리, 냄새, 촉감 등)
-- 플레이어를 "당신"으로 지칭
-
-### 액션 카드 생성 규칙
-
-- 3~6장의 선택지 제공
-- 각 카드에 비용(cost), 위험도(risk), 힌트(hint) 포함
-- 최소 1장은 저비용 대안(is_alternative: true) 포함
-- 잔액 부족 시 해당 카드 비활성화(enabled: false)
-
-### 안전 정책
-
-- 폭력적/성적/차별적 콘텐츠 생성 금지
-- 위반 요청 시 safety.blocked=true, 안전한 대체 내러티브 제공
-
----
-
-## 중요 제약
-
-- **출력은 반드시 유효한 JSON이어야 합니다.**
-- **language 필드는 "ko-KR"로 고정합니다.**
-- **economy.cost와 economy.balance_after는 필수입니다.**
-- **잔액(balance_after)은 0 이상이어야 합니다.**
-</prompt_body>
-</file>
-
-<file path="backend/prompts/turn/turn_output_instructions.en.md">
-<prompt_meta>
-  <prompt_id>turn_output_instructions</prompt_id>
-  <language>en-US</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
-  <policy_preset>default</policy_preset>
-</prompt_meta>
-
-<prompt_body>
-## Purpose
-
-Specify the rules for each field in the TurnOutput JSON schema.
-
----
-
-## Required Fields (Hard Gate)
-
-### language
-- Value: "en-US" (fixed to match input)
-- No mixed language output
-
-### narrative
-- Type: string (required)
-- Narrative text shown to the player
-- 2-3 sentences, written in English
-- Present tense, address as "you"
-
-### economy
-- Type: object (required)
-- cost: Resources consumed this turn {signal: int, memory_shard: int}
-- balance_after: Balance after consumption {signal: int, memory_shard: int}
-- **Important**: balance_after.signal >= 0, balance_after.memory_shard >= 0
-
-### safety
-- Type: object (required)
-- blocked: boolean (whether blocked by safety policy)
-- message: string | null (message to display when blocked)
-
----
-
-## Optional Fields
-
-### ui
-- action_deck.cards[]: Action card array (3-6 recommended)
-  - id: Unique card ID
-  - label: Display label (English)
-  - cost: {signal, memory_shard}
-  - risk: "low" | "medium" | "high"
-  - enabled: boolean
-  - is_alternative: boolean (low-cost alternative flag)
-- objects[]: Clickable scene objects
-  - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
-
-### world
-- rules_changed[]: Changed world rules
-- inventory_added[]: Added item IDs
-- inventory_removed[]: Removed item IDs
-- quests_updated[]: Updated quests
-- memory_pins[]: Pin candidates
-
-### render
-- image_job: Image generation job (optional)
-  - should_generate: boolean
-  - prompt: Image prompt (English preferred)
-
-### agent_console
-- current_phase: Current phase
-- badges[]: Validation badges
-- repair_count: Number of repair attempts
-
----
-
-## Coordinate Convention (RULE-009)
-
-- All coordinates use 0-1000 normalized coordinate system
-- bbox order: [ymin, xmin, ymax, xmax]
-- Do not use pixel coordinates
-
----
-
-## Example Output
-
-```json
-{
-  "language": "en-US",
-  "narrative": "The old door creaks open. Cold air rushes out from within.",
-  "economy": {
-    "cost": {"signal": 5, "memory_shard": 0},
-    "balance_after": {"signal": 95, "memory_shard": 5}
-  },
-  "safety": {"blocked": false, "message": null},
-  "ui": {
-    "action_deck": {
-      "cards": [
-        {"id": "enter", "label": "Step inside", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
-        {"id": "peek", "label": "Peek cautiously", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
-      ]
-    },
-    "objects": []
-  },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
-  "render": {"image_job": null},
-  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
-}
-```
-</prompt_body>
-</file>
-
-<file path="backend/prompts/turn/turn_output_instructions.ko.md">
-<prompt_meta>
-  <prompt_id>turn_output_instructions</prompt_id>
-  <language>ko-KR</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
-  <policy_preset>default</policy_preset>
-</prompt_meta>
-
-<prompt_body>
-## 목적
-
-TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
-
----
-
-## 필수 필드 (Hard Gate)
-
-### language
-- 값: "ko-KR" (입력과 동일하게 고정)
-- 혼합 출력 금지
-
-### narrative
-- 타입: string (필수)
-- 플레이어에게 보여줄 내러티브 텍스트
-- 2~3문장, 한국어로 작성
-- 현재 시제, "당신" 지칭
-
-### economy
-- 타입: object (필수)
-- cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
-- balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
-- **중요**: balance_after.signal >= 0, balance_after.memory_shard >= 0
-
-### safety
-- 타입: object (필수)
-- blocked: boolean (안전 정책 차단 여부)
-- message: string | null (차단 시 표시할 메시지)
-
----
-
-## 선택 필드
-
-### ui
-- action_deck.cards[]: 액션 카드 배열 (3~6장 권장)
-  - id: 카드 고유 ID
-  - label: 표시 라벨 (한국어)
-  - cost: {signal, memory_shard}
-  - risk: "low" | "medium" | "high"
-  - enabled: boolean
-  - is_alternative: boolean (저비용 대안 여부)
-- objects[]: 클릭 가능한 장면 오브젝트
-  - box_2d: {ymin, xmin, ymax, xmax} (0~1000 정규화 좌표)
-
-### world
-- rules_changed[]: 변경된 세계 규칙
-- inventory_added[]: 추가된 아이템 ID
-- inventory_removed[]: 제거된 아이템 ID
-- quests_updated[]: 업데이트된 퀘스트
-- memory_pins[]: 고정 후보
-
-### render
-- image_job: 이미지 생성 작업 (선택)
-  - should_generate: boolean
-  - prompt: 이미지 프롬프트 (영어 권장)
-
-### agent_console
-- current_phase: 현재 단계
-- badges[]: 검증 배지
-- repair_count: 복구 시도 횟수
-
----
-
-## 좌표 규약 (RULE-009)
-
-- 모든 좌표는 0~1000 정규화 좌표계
-- bbox 순서: [ymin, xmin, ymax, xmax]
-- 픽셀 좌표 사용 금지
-
----
-
-## 예시 출력
-
-```json
-{
-  "language": "ko-KR",
-  "narrative": "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다.",
-  "economy": {
-    "cost": {"signal": 5, "memory_shard": 0},
-    "balance_after": {"signal": 95, "memory_shard": 5}
-  },
-  "safety": {"blocked": false, "message": null},
-  "ui": {
-    "action_deck": {
-      "cards": [
-        {"id": "enter", "label": "안으로 들어간다", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
-        {"id": "peek", "label": "조심스럽게 엿본다", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
-      ]
-    },
-    "objects": []
-  },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
-  "render": {"image_job": null},
-  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
-}
-```
-</prompt_body>
-</file>
-
 <file path="backend/src/unknown_world/api/__init__.py">
 """Unknown World - API 패키지.
 
@@ -10548,464 +9536,6 @@ __all__ = [
     "get_image_generator",
     "reset_image_generator",
 ]
-</file>
-
-<file path="backend/src/unknown_world/services/genai_client.py">
-"""Unknown World - GenAI 클라이언트 래퍼.
-
-이 모듈은 Vertex AI 서비스 계정 인증 기반의 google-genai 클라이언트를 제공합니다.
-환경변수로 실제 모델과 mock 모드를 전환할 수 있습니다.
-
-인증 방식:
-    - 로컬: ADC 또는 GOOGLE_APPLICATION_CREDENTIALS 환경변수
-    - 배포: Cloud Run 서비스 계정 권한 (키 파일 커밋 없음)
-
-모드 전환 (페어링 질문 Q1 결정: Option A):
-    - 환경변수 UW_MODE=mock → MockGenAIClient (테스트/개발용)
-    - 환경변수 UW_MODE=real → 실제 Vertex AI 호출 (기본값)
-
-보안 규칙:
-    - BYOK(사용자 API 키 입력) 금지 (RULE-007)
-    - 프롬프트 원문/비밀정보 로깅 금지 (RULE-007/008)
-    - 로그에는 라벨/버전/정책 메타만 노출
-
-참조:
-    - vibe/tech-stack.md (google-genai==1.56.0)
-    - .cursor/rules/20-backend-orchestrator.mdc
-    - .cursor/rules/00-core-critical.mdc (RULE-007/010)
-"""
-
-from __future__ import annotations
-
-import logging
-import os
-from collections.abc import AsyncGenerator
-from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Any
-
-from unknown_world.config.models import ModelLabel, get_model_id
-
-# =============================================================================
-# 로거 설정 (프롬프트/비밀정보 노출 금지)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-class GenAIMode(StrEnum):
-    """GenAI 클라이언트 동작 모드.
-
-    환경변수 UW_MODE로 제어합니다.
-    """
-
-    MOCK = "mock"
-    """테스트/개발용 모의 모드 - 실제 API 호출 없음"""
-
-    REAL = "real"
-    """실제 Vertex AI 호출 모드 (기본값)"""
-
-
-# =============================================================================
-# 환경변수 키 상수
-# =============================================================================
-
-ENV_UW_MODE = "UW_MODE"
-"""동작 모드 환경변수 (mock|real)"""
-
-ENV_VERTEX_PROJECT = "VERTEX_PROJECT"
-"""Vertex AI 프로젝트 ID 환경변수"""
-
-ENV_VERTEX_LOCATION = "VERTEX_LOCATION"
-"""Vertex AI 리전 환경변수 (기본값: us-central1)"""
-
-
-# =============================================================================
-# 요청/응답 데이터 클래스
-# =============================================================================
-
-
-@dataclass
-class GenerateRequest:
-    """텍스트 생성 요청.
-
-    Attributes:
-        prompt: 생성 프롬프트 (주의: 로깅 금지)
-        model_label: 모델 라벨 (FAST, QUALITY 등)
-        max_tokens: 최대 토큰 수 (선택)
-        temperature: 온도 설정 (선택, 0.0~1.0)
-        response_mime_type: 응답 MIME 타입 (예: "application/json")
-        response_schema: 응답 JSON 스키마 (dict 또는 Pydantic 모델 타입)
-    """
-
-    prompt: str
-    model_label: ModelLabel = ModelLabel.FAST
-    max_tokens: int | None = None
-    temperature: float | None = None
-    response_mime_type: str | None = None
-    response_schema: Any | None = None
-
-
-@dataclass
-class GenerateResponse:
-    """텍스트 생성 응답.
-
-    Attributes:
-        text: 생성된 텍스트
-        model_label: 사용된 모델 라벨
-        finish_reason: 종료 이유 (stop, length 등)
-        usage: 토큰 사용량 정보 (선택)
-    """
-
-    text: str
-    model_label: ModelLabel
-    finish_reason: str = "stop"
-    usage: dict[str, int] = field(default_factory=lambda: {})
-
-
-# =============================================================================
-# Mock 클라이언트 구현
-# =============================================================================
-
-
-class MockGenAIClient:
-    """테스트/개발용 모의 GenAI 클라이언트.
-
-    실제 API를 호출하지 않고 고정된 응답을 반환합니다.
-    자격 증명 미설정 시 자동으로 이 클라이언트가 사용됩니다.
-    """
-
-    def __init__(self) -> None:
-        """MockGenAIClient를 초기화합니다."""
-        logger.info(
-            "[GenAI] Mock 모드로 초기화됨 (실제 API 호출 없음)",
-            extra={"mode": GenAIMode.MOCK},
-        )
-
-    @property
-    def mode(self) -> GenAIMode:
-        """현재 동작 모드."""
-        return GenAIMode.MOCK
-
-    async def generate(self, request: GenerateRequest) -> GenerateResponse:
-        """모의 텍스트를 생성합니다.
-
-        Args:
-            request: 생성 요청
-
-        Returns:
-            고정된 모의 응답
-        """
-        # 로그에는 메타 정보만 기록 (프롬프트 원문 금지 - RULE-007/008)
-        logger.debug(
-            "[GenAI] Mock 생성 요청",
-            extra={
-                "model_label": request.model_label,
-                "max_tokens": request.max_tokens,
-            },
-        )
-
-        return GenerateResponse(
-            text=f"[Mock Response] 이것은 {request.model_label} 모델의 모의 응답입니다.",
-            model_label=request.model_label,
-            finish_reason="stop",
-            usage={"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
-        )
-
-    async def generate_stream(self, request: GenerateRequest) -> AsyncGenerator[str]:
-        """모의 텍스트를 스트리밍으로 생성합니다.
-
-        Args:
-            request: 생성 요청
-
-        Yields:
-            고정된 모의 텍스트 청크
-        """
-        logger.debug(
-            "[GenAI] Mock 스트리밍 요청",
-            extra={"model_label": request.model_label},
-        )
-
-        chunks = [
-            "[Mock] ",
-            "이것은 ",
-            f"{request.model_label} ",
-            "모델의 ",
-            "스트리밍 ",
-            "모의 응답입니다.",
-        ]
-        for chunk in chunks:
-            yield chunk
-
-    def is_available(self) -> bool:
-        """Mock 클라이언트는 항상 사용 가능합니다."""
-        return True
-
-
-# =============================================================================
-# 실제 GenAI 클라이언트 구현
-# =============================================================================
-
-
-class GenAIClient:
-    """Vertex AI 기반 실제 GenAI 클라이언트.
-
-    google-genai SDK를 사용하여 Gemini 모델을 호출합니다.
-    서비스 계정 인증(ADC)을 사용하며, BYOK는 금지됩니다.
-    """
-
-    def __init__(
-        self,
-        project: str | None = None,
-        location: str | None = None,
-    ) -> None:
-        """GenAIClient를 초기화합니다.
-
-        Args:
-            project: Vertex AI 프로젝트 ID (환경변수 VERTEX_PROJECT 사용 가능)
-            location: Vertex AI 리전 (기본값: us-central1)
-
-        Raises:
-            RuntimeError: 인증 설정이 올바르지 않은 경우
-        """
-        self._project = project or os.environ.get(ENV_VERTEX_PROJECT)
-        self._location = location or os.environ.get(ENV_VERTEX_LOCATION, "us-central1")
-        self._client: Any | None = None
-        self._available = False
-
-        self._initialize_client()
-
-    def _initialize_client(self) -> None:
-        """google-genai 클라이언트를 초기화합니다."""
-        try:
-            from google import genai  # type: ignore[import-untyped]
-
-            # Vertex AI 모드로 클라이언트 초기화
-            # 인증은 ADC(Application Default Credentials)를 사용
-            # - 로컬: gcloud auth application-default login
-            # - 배포: Cloud Run 서비스 계정 자동 인증
-            client_options: dict[str, Any] = {}
-            if self._project:
-                client_options["project"] = self._project
-            if self._location:
-                client_options["location"] = self._location
-
-            # vertexai=True로 Vertex AI 모드 활성화
-            self._client = genai.Client(vertexai=True, **client_options)
-            self._available = True
-
-            # 로그에는 프로젝트/리전만 기록 (키/토큰 노출 금지)
-            logger.info(
-                "[GenAI] Vertex AI 클라이언트 초기화 완료",
-                extra={
-                    "mode": GenAIMode.REAL,
-                    "project": self._project or "(ADC 기본)",
-                    "location": self._location,
-                },
-            )
-        except Exception as e:
-            # 인증 실패 시에도 앱이 멈추지 않도록 로깅만 수행
-            # 오류 상세(스택트레이스)에 비밀정보가 포함될 수 있으므로 exc_info=False
-            logger.warning(
-                "[GenAI] Vertex AI 클라이언트 초기화 실패 - Mock 모드로 전환 권장",
-                extra={"error_type": type(e).__name__},
-            )
-            self._available = False
-
-    @property
-    def mode(self) -> GenAIMode:
-        """현재 동작 모드."""
-        return GenAIMode.REAL
-
-    async def generate(self, request: GenerateRequest) -> GenerateResponse:
-        """텍스트를 생성합니다.
-
-        Args:
-            request: 생성 요청
-
-        Returns:
-            생성된 텍스트 응답
-
-        Raises:
-            RuntimeError: 클라이언트가 사용 불가능한 경우
-        """
-        if not self._available or self._client is None:
-            raise RuntimeError("GenAI 클라이언트가 초기화되지 않았습니다.")
-
-        model_id = get_model_id(request.model_label)
-
-        # 로그에는 메타 정보만 기록 (프롬프트 원문 금지 - RULE-007/008)
-        logger.debug(
-            "[GenAI] 생성 요청",
-            extra={
-                "model_label": request.model_label,
-                "model_id": model_id,
-                "max_tokens": request.max_tokens,
-            },
-        )
-
-        # google-genai SDK 호출
-        config: dict[str, Any] = {}
-        if request.max_tokens:
-            config["max_output_tokens"] = request.max_tokens
-        if request.temperature is not None:
-            config["temperature"] = request.temperature
-        if request.response_mime_type:
-            config["response_mime_type"] = request.response_mime_type
-        if request.response_schema:
-            config["response_schema"] = request.response_schema
-
-        response = await self._client.aio.models.generate_content(
-            model=model_id,
-            contents=request.prompt,
-            config=config if config else None,
-        )
-
-        # 응답 파싱
-        text = response.text if hasattr(response, "text") else str(response)
-        finish_reason = "stop"
-        if hasattr(response, "candidates") and response.candidates:
-            candidate = response.candidates[0]
-            if hasattr(candidate, "finish_reason"):
-                finish_reason = str(candidate.finish_reason)
-
-        # 토큰 사용량 추출
-        usage: dict[str, int] = {}
-        if hasattr(response, "usage_metadata"):
-            meta = response.usage_metadata
-            if hasattr(meta, "prompt_token_count"):
-                usage["prompt_tokens"] = meta.prompt_token_count
-            if hasattr(meta, "candidates_token_count"):
-                usage["completion_tokens"] = meta.candidates_token_count
-            if hasattr(meta, "total_token_count"):
-                usage["total_tokens"] = meta.total_token_count
-
-        return GenerateResponse(
-            text=text,
-            model_label=request.model_label,
-            finish_reason=finish_reason,
-            usage=usage,
-        )
-
-    async def generate_stream(self, request: GenerateRequest) -> AsyncGenerator[str]:
-        """텍스트를 스트리밍으로 생성합니다.
-
-        Args:
-            request: 생성 요청
-
-        Yields:
-            생성된 텍스트 청크
-
-        Raises:
-            RuntimeError: 클라이언트가 사용 불가능한 경우
-        """
-        if not self._available or self._client is None:
-            raise RuntimeError("GenAI 클라이언트가 초기화되지 않았습니다.")
-
-        model_id = get_model_id(request.model_label)
-
-        logger.debug(
-            "[GenAI] 스트리밍 요청",
-            extra={
-                "model_label": request.model_label,
-                "model_id": model_id,
-            },
-        )
-
-        config: dict[str, Any] = {}
-        if request.max_tokens:
-            config["max_output_tokens"] = request.max_tokens
-        if request.temperature is not None:
-            config["temperature"] = request.temperature
-        if request.response_mime_type:
-            config["response_mime_type"] = request.response_mime_type
-        if request.response_schema:
-            config["response_schema"] = request.response_schema
-
-        stream = await self._client.aio.models.generate_content_stream(
-            model=model_id,
-            contents=request.prompt,
-            config=config if config else None,
-        )
-        async for chunk in stream:
-            if hasattr(chunk, "text") and chunk.text:
-                yield chunk.text
-
-    def is_available(self) -> bool:
-        """클라이언트가 사용 가능한 상태인지 확인합니다."""
-        return self._available
-
-
-# =============================================================================
-# 팩토리 함수
-# =============================================================================
-
-# 클라이언트 타입 (Protocol 대신 Union 사용 - pyright 호환성)
-GenAIClientType = MockGenAIClient | GenAIClient
-
-# 싱글톤 클라이언트 인스턴스 캐시
-_client_instance: GenAIClientType | None = None
-
-
-def get_genai_client(
-    *,
-    force_mock: bool = False,
-    force_new: bool = False,
-) -> GenAIClientType:
-    """GenAI 클라이언트 인스턴스를 반환합니다.
-
-    환경변수 UW_MODE에 따라 실제 클라이언트 또는 Mock 클라이언트를 반환합니다.
-    기본적으로 싱글톤 패턴으로 동작합니다.
-
-    Args:
-        force_mock: True면 환경변수와 무관하게 Mock 클라이언트 반환
-        force_new: True면 캐시를 무시하고 새 인스턴스 생성
-
-    Returns:
-        GenAI 클라이언트 인스턴스
-
-    Example:
-        >>> client = get_genai_client()
-        >>> response = await client.generate(GenerateRequest(prompt="Hello"))
-    """
-    global _client_instance
-
-    if not force_new and _client_instance is not None:
-        return _client_instance
-
-    # 모드 결정: force_mock > 환경변수 > 기본값(real)
-    if force_mock:
-        mode = GenAIMode.MOCK
-    else:
-        mode_str = os.environ.get(ENV_UW_MODE, GenAIMode.REAL)
-        mode = GenAIMode(mode_str) if mode_str in GenAIMode.__members__.values() else GenAIMode.REAL
-
-    # 클라이언트 생성
-    client_result: GenAIClientType
-    if mode == GenAIMode.MOCK:
-        client_result = MockGenAIClient()
-    else:
-        client = GenAIClient()
-        # 실제 클라이언트 초기화 실패 시 Mock으로 폴백
-        if not client.is_available():
-            logger.warning(
-                "[GenAI] 실제 클라이언트 초기화 실패, Mock 모드로 폴백",
-            )
-            client_result = MockGenAIClient()
-        else:
-            client_result = client
-
-    _client_instance = client_result
-    return client_result
-
-
-def reset_genai_client() -> None:
-    """GenAI 클라이언트 캐시를 초기화합니다.
-
-    테스트 시 클라이언트를 재설정할 때 사용합니다.
-    """
-    global _client_instance
-    _client_instance = None
 </file>
 
 <file path="backend/src/unknown_world/services/image_postprocess.py">
@@ -12314,256 +10844,6 @@ class TestImagePostprocess(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-</file>
-
-<file path="backend/tests/unit/test_u034_verification.py">
-import json
-from pathlib import Path
-
-# 프로젝트 루트 경로 설정 (backend/tests/unit/ 위치 기준)
-ROOT_DIR = Path(__file__).parent.parent.parent.parent
-SCHEMA_PATH = ROOT_DIR / "vibe/ref/nanobanana-asset-request.schema.json"
-GUIDE_PATH = ROOT_DIR / "vibe/ref/nanobanana-mcp.md"
-
-
-def test_schema_file_exists():
-    """스키마 파일이 지정된 위치에 존재하는지 확인"""
-    assert SCHEMA_PATH.exists(), f"Schema file not found at {SCHEMA_PATH}"
-
-
-def test_schema_is_valid_json():
-    """스키마 파일이 유효한 JSON 형식인지 확인"""
-    with open(SCHEMA_PATH, encoding="utf-8") as f:
-        schema = json.load(f)
-    assert schema["title"] == "nanobanana mcp Asset Request Schema"
-
-
-def test_schema_required_properties():
-    """계획서에 명시된 필수 필드가 스키마에 정의되어 있는지 확인"""
-    with open(SCHEMA_PATH, encoding="utf-8") as f:
-        schema = json.load(f)
-
-    properties = schema.get("properties", {})
-    required_fields = ["id", "category", "purpose", "size_px", "requires_rembg", "rembg_model"]
-
-    for field in required_fields:
-        assert field in properties, f"Required field '{field}' missing in schema properties"
-
-
-def test_guide_file_exists():
-    """가이드 문서 파일이 존재하는지 확인"""
-    assert GUIDE_PATH.exists(), f"Guide file not found at {GUIDE_PATH}"
-
-
-def test_guide_content_completeness():
-    """가이드 문서에 필수 섹션(아트 디렉션, 카테고리별 템플릿)이 포함되어 있는지 확인"""
-    with open(GUIDE_PATH, encoding="utf-8") as f:
-        content = f.read()
-
-    # 계획서 구현 흐름 2단계, 3단계 관련 키워드 검사
-    required_keywords = ["아트 디렉션", "스타일", "아이콘", "placeholder", "chrome", "템플릿"]
-
-    missing_keywords = [kw for kw in required_keywords if kw.lower() not in content.lower()]
-
-    # 현재 nanobanana-mcp.md에는 rembg 내용만 있으므로 실패할 가능성이 큼
-    assert not missing_keywords, (
-        f"Guide document is missing sections for: {', '.join(missing_keywords)}"
-    )
-
-
-def test_schema_rembg_rules():
-    """배경 제거(rembg) 관련 강제 규칙(순백 배경)이 스키마/설명에 포함되어 있는지 확인"""
-    with open(SCHEMA_PATH, encoding="utf-8") as f:
-        schema = json.load(f)
-
-    # background 필드와 requires_rembg 필드 설명 확인
-    background_desc = schema["properties"]["background"].get("description", "")
-    rembg_desc = schema["properties"]["requires_rembg"].get("description", "")
-
-    assert "solid_white" in str(schema["properties"]["background"].get("enum", [])), (
-        "background enum should include solid_white"
-    )
-    assert "rembg" in background_desc.lower(), "background description should mention rembg"
-    assert "solid_white" in rembg_desc.lower(), (
-        "requires_rembg description should recommend solid_white"
-    )
-</file>
-
-<file path="CLAUDE.md">
-# AI 에이전트 전역 지침 (Unknown World)
-
-이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
-
----
-
-## 프로젝트 개요
-
-**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
-
-- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
-- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
-- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
-
----
-
-## SSOT(단일 출처) 및 충돌 해결 우선순위
-
-문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
-
-1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
-2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
-3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
-4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
-5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
-
-불확실하면 **추측하지 말고 질문**합니다.
-
----
-
-## 핵심 원칙 (Non‑Negotiable)
-
-### 1) Prompt-only wrapper / Generic chatbot 회피
-
-- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
-- 반드시 다음이 존재해야 합니다:
-  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
-  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
-  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
-
-### 2) 채팅 버블 UI 금지, 게임 UI 고정
-
-- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
-- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
-  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
-    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
-
-### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
-
-- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
-- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
-
-### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
-
-- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
-- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
-
-### 5) 비용/지연은 UX/게임 메커닉으로 제어
-
-- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
-- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
-
-### 6) ko/en i18n: 혼합 출력 금지
-
-- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
-- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
-- 프롬프트는 언어별 `.md` 파일로 관리합니다.
-
-### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
-
-- BYOK(사용자 API 키 입력) 요구 금지(MVP).
-- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
-- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
-
-### 8) 관측 가능성(Observability) = UX의 일부
-
-- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
-- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
-
----
-
-## 작업 표준 (Workflow)
-
-### 작업 시작 전 필수
-
-- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
-- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
-
-### 유닛(단계) 기반 개발
-
-- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
-- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
-- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
-
-### 문서 동기화
-
-- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
-- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
-
-### 리팩토링
-
-- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
-
-### 테스트
-
-- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
-- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
-
-### 커밋 메시지
-
-- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
-- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
-
----
-
-## 품질 기준 (출시/데모 관점)
-
-### Hard Gate (필수 통과)
-
-- **Schema OK**: TurnOutput JSON이 스키마를 통과
-- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
-- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
-- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
-
-### Soft Gate (관측/튜닝)
-
-- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
-- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
-
----
-
-## 금지사항 (절대 금지)
-
-- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
-- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
-- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
-- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
-- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
-- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
-- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
-
----
-
-## 지침 운영/사용 가이드
-
-### Cursor 규칙 적용 방식
-
-- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
-- 규칙이 부족/충돌하면:
-  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
-  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
-
-### 온보딩(신규 합류자/에이전트) 10분 루프
-
-- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
-- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
-- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
-- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
-
-### 지침 업데이트 프로세스(권장)
-
-- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
-- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
-
----
-
-## 참조 문서
-
-- `vibe/prd.md`
-- `vibe/tech-stack.md`
-- `vibe/ref/frontend-style-guide.md`
-- `vibe/ref/structured-outputs-guide.md`
-- `vibe/commands/*.md` / `.cursor/commands/*.md`
-- `.gemini/rules/commit-rules.md`
 </file>
 
 <file path="frontend/public/ui/manifest.schema.json">
@@ -14737,69 +13017,6 @@ export interface PlaceholderInfo {
 }
 </file>
 
-<file path="shared/README.md">
-# shared/
-
-이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
-
-## 📁 구조
-
-```
-shared/
-├── schemas/
-│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
-│       ├── turn_input.schema.json    # Client → Server 요청 스키마
-│       └── turn_output.schema.json   # Server → Client 응답 스키마
-└── README.md
-```
-
-## 🔄 SSOT 원칙 (RU-001-Q4)
-
-- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
-- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
-- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
-
-### 소비 전략 (Option B: 생성물 기반 동기화)
-
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
-| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
-
-> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
-
-## 📋 스키마 파일 목록
-
-### Turn 계약 (MVP)
-
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
-| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
-
-## ✅ 스키마 작성 가이드라인
-
-- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
-- **권장 속성**: `required`, `enum`, `description`을 적극 사용
-- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
-- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
-- **참조**: `vibe/ref/structured-outputs-guide.md`
-
-## ⚠️ 보안 주의사항 (RULE-007)
-
-- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
-- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
-- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
-
-## 📚 관련 문서
-
-- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
-- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
-- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
-- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
-- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
-</file>
-
 <file path="backend/src/unknown_world/__init__.py">
 """Unknown World - Backend Package
 
@@ -15445,363 +13662,231 @@ def is_hot_reload_enabled() -> bool:
     return _is_development_mode()
 </file>
 
-<file path="backend/src/unknown_world/services/image_generation.py">
-"""Unknown World - 이미지 생성 서비스.
+<file path="backend/src/unknown_world/services/genai_client.py">
+"""Unknown World - GenAI 클라이언트 래퍼.
 
-이 모듈은 Gemini 이미지 생성 모델을 호출하고 결과를 로컬에 저장하는 서비스입니다.
-텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
+이 모듈은 Vertex AI 서비스 계정 인증 기반의 google-genai 클라이언트를 제공합니다.
+환경변수로 실제 모델과 mock 모드를 전환할 수 있습니다.
 
-설계 원칙:
-    - RULE-004: 실패 시 안전한 폴백 제공 (should_generate=false)
-    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
-    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
-    - RULE-007: 프롬프트 원문 노출 금지
+인증 방식:
+    - 로컬: ADC 또는 GOOGLE_APPLICATION_CREDENTIALS 환경변수
+    - 배포: Cloud Run 서비스 계정 권한 (키 파일 커밋 없음)
 
-페어링 질문 결정:
-    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
+모드 전환 (페어링 질문 Q1 결정: Option A):
+    - 환경변수 UW_MODE=mock → MockGenAIClient (테스트/개발용)
+    - 환경변수 UW_MODE=real → 실제 Vertex AI 호출 (기본값)
+
+보안 규칙:
+    - BYOK(사용자 API 키 입력) 금지 (RULE-007)
+    - 프롬프트 원문/비밀정보 로깅 금지 (RULE-007/008)
+    - 로그에는 라벨/버전/정책 메타만 노출
 
 참조:
-    - vibe/tech-stack.md (모델 ID 고정)
-    - vibe/unit-plans/U-019[Mvp].md
+    - vibe/tech-stack.md (google-genai==1.56.0)
     - .cursor/rules/20-backend-orchestrator.mdc
+    - .cursor/rules/00-core-critical.mdc (RULE-007/010)
 """
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import logging
 import os
-import uuid
-from dataclasses import dataclass
-from datetime import UTC, datetime
+from collections.abc import AsyncGenerator
+from dataclasses import dataclass, field
 from enum import StrEnum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from unknown_world.config.models import ModelLabel, get_model_id
 
-from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
-from unknown_world.models.turn import Language
-from unknown_world.orchestrator.prompt_loader import load_image_prompt
+if TYPE_CHECKING:
+    from google.genai import Client
+    from google.genai.types import GenerateContentConfig
 
 # =============================================================================
-# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
+# 로거 설정 (프롬프트/비밀정보 노출 금지)
 # =============================================================================
 
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# 상수 정의
-# =============================================================================
+class GenAIMode(StrEnum):
+    """GenAI 클라이언트 동작 모드.
 
-# MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
-DEFAULT_OUTPUT_DIR = Path("generated_images")
-
-# 지원 이미지 크기 (Gemini 이미지 생성 지원 크기)
-SUPPORTED_SIZES: dict[str, tuple[int, int]] = {
-    "1024x1024": (1024, 1024),
-    "1280x768": (1280, 768),
-    "768x1280": (768, 1280),
-    "1536x1024": (1536, 1024),
-    "1024x1536": (1024, 1536),
-}
-
-# 기본 설정
-DEFAULT_SIZE = "1024x1024"
-DEFAULT_ASPECT_RATIO = "1:1"
-
-
-class ImageGenerationStatus(StrEnum):
-    """이미지 생성 상태."""
-
-    PENDING = "pending"
-    """생성 대기 중"""
-
-    GENERATING = "generating"
-    """생성 중"""
-
-    COMPLETED = "completed"
-    """생성 완료"""
-
-    FAILED = "failed"
-    """생성 실패"""
-
-    SKIPPED = "skipped"
-    """생성 건너뜀 (잔액 부족 등)"""
-
-
-# =============================================================================
-# 요청/응답 Pydantic 모델
-# =============================================================================
-
-
-class ImageGenerationRequest(BaseModel):
-    """이미지 생성 요청.
-
-    TurnOutput의 render.image_job과 정합되도록 필드를 설계합니다.
-
-    Attributes:
-        prompt: 이미지 생성 프롬프트 (필수)
-        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
-        image_size: 이미지 크기 (예: "1024x1024")
-        reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
-        session_id: 세션 ID (파일 그룹화용)
-        remove_background: 배경 제거 여부 (U-035, rembg 사용)
-        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
+    환경변수 UW_MODE로 제어합니다.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    MOCK = "mock"
+    """테스트/개발용 모의 모드 - 실제 API 호출 없음"""
 
-    prompt: str = Field(min_length=1, description="이미지 생성 프롬프트")
-    aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
-    image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
-    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
-    session_id: str | None = Field(default=None, description="세션 ID")
-    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
-    image_type_hint: str | None = Field(
-        default=None,
-        description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
-    )
-
-
-class ImageGenerationResponse(BaseModel):
-    """이미지 생성 응답.
-
-    Attributes:
-        status: 생성 상태
-        image_id: 생성된 이미지 ID (성공 시)
-        image_url: 생성된 이미지 URL (성공 시)
-        message: 상태 메시지 (실패 시 오류 설명)
-        generation_time_ms: 생성 소요 시간 (밀리초)
-        background_removed: 배경 제거 수행 여부 (U-035)
-        rembg_model_used: 사용된 rembg 모델 (배경 제거 시)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    status: ImageGenerationStatus
-    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
-    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
-    message: str | None = Field(default=None, description="상태 메시지")
-    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
-    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
-    rembg_model_used: str | None = Field(default=None, description="사용된 rembg 모델")
+    REAL = "real"
+    """실제 Vertex AI 호출 모드 (기본값)"""
 
 
 # =============================================================================
-# 내부 데이터 클래스
+# 환경변수 키 상수
+# =============================================================================
+
+ENV_UW_MODE = "UW_MODE"
+"""동작 모드 환경변수 (mock|real)"""
+
+ENV_VERTEX_PROJECT = "VERTEX_PROJECT"
+"""Vertex AI 프로젝트 ID 환경변수"""
+
+ENV_VERTEX_LOCATION = "VERTEX_LOCATION"
+"""Vertex AI 리전 환경변수 (기본값: us-central1)"""
+
+
+# =============================================================================
+# 요청/응답 데이터 클래스
 # =============================================================================
 
 
 @dataclass
-class GeneratedImage:
-    """생성된 이미지 정보.
+class GenerateRequest:
+    """텍스트 생성 요청.
 
     Attributes:
-        id: 이미지 고유 ID
-        path: 로컬 파일 경로
-        url: 서빙 URL
-        prompt_hash: 프롬프트 해시 (로그용, 원문 노출 금지)
-        created_at: 생성 시각
-        size: 파일 크기 (bytes)
-        metadata: 추가 메타데이터
+        prompt: 생성 프롬프트 (주의: 로깅 금지)
+        model_label: 모델 라벨 (FAST, QUALITY 등)
+        max_tokens: 최대 토큰 수 (선택)
+        temperature: 온도 설정 (선택, 0.0~1.0)
+        response_mime_type: 응답 MIME 타입 (예: "application/json")
+        response_schema: 응답 JSON 스키마 (dict 또는 Pydantic 모델 타입)
     """
 
-    id: str
-    path: Path
-    url: str
-    prompt_hash: str
-    created_at: datetime
-    size: int = 0
+    prompt: str
+    model_label: ModelLabel = ModelLabel.FAST
+    max_tokens: int | None = None
+    temperature: float | None = None
+    response_mime_type: str | None = None
+    response_schema: Any | None = None
 
-    def __post_init__(self) -> None:
-        """초기화 후 메타데이터 필드 설정."""
-        self._metadata: dict[str, str] = {}
+
+@dataclass
+class GenerateResponse:
+    """텍스트 생성 응답.
+
+    Attributes:
+        text: 생성된 텍스트
+        model_label: 사용된 모델 라벨
+        finish_reason: 종료 이유 (stop, length 등)
+        usage: 토큰 사용량 정보 (선택)
+    """
+
+    text: str
+    model_label: ModelLabel
+    finish_reason: str = "stop"
+    usage: dict[str, int] = field(default_factory=lambda: {})
+
+
+# =============================================================================
+# Mock 클라이언트 구현
+# =============================================================================
+
+
+class MockGenAIClient:
+    """테스트/개발용 모의 GenAI 클라이언트.
+
+    실제 API를 호출하지 않고 고정된 응답을 반환합니다.
+    자격 증명 미설정 시 자동으로 이 클라이언트가 사용됩니다.
+    """
+
+    def __init__(self) -> None:
+        """MockGenAIClient를 초기화합니다."""
+        logger.info(
+            "[GenAI] Mock 모드로 초기화됨 (실제 API 호출 없음)",
+            extra={"mode": GenAIMode.MOCK},
+        )
 
     @property
-    def metadata(self) -> dict[str, str]:
-        """추가 메타데이터."""
-        if not hasattr(self, "_metadata"):
-            self._metadata = {}
-        return self._metadata
+    def mode(self) -> GenAIMode:
+        """현재 동작 모드."""
+        return GenAIMode.MOCK
 
-
-# =============================================================================
-# Mock 이미지 생성기
-# =============================================================================
-
-
-class MockImageGenerator:
-    """테스트/개발용 모의 이미지 생성기.
-
-    실제 API를 호출하지 않고 플레이스홀더 이미지를 생성합니다.
-    """
-
-    def __init__(self, output_dir: Path | None = None) -> None:
-        """MockImageGenerator를 초기화합니다.
+    async def generate(self, request: GenerateRequest) -> GenerateResponse:
+        """모의 텍스트를 생성합니다.
 
         Args:
-            output_dir: 이미지 저장 디렉토리 (기본값: generated_images)
-        """
-        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
-        self._output_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(
-            "[ImageGen] Mock 모드로 초기화됨",
-            extra={"output_dir": str(self._output_dir)},
-        )
-
-    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
-        """모의 이미지를 생성합니다.
-
-        Args:
-            request: 이미지 생성 요청
+            request: 생성 요청
 
         Returns:
-            ImageGenerationResponse: 생성 결과
+            고정된 모의 응답
         """
-        start_time = datetime.now(UTC)
-
-        # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
-        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+        # 로그에는 메타 정보만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.debug(
-            "[ImageGen] Mock 이미지 생성 요청",
+            "[GenAI] Mock 생성 요청",
             extra={
-                "prompt_hash": prompt_hash,
-                "size": request.image_size,
-                "aspect_ratio": request.aspect_ratio,
-                "remove_background": request.remove_background,
+                "model_label": request.model_label,
+                "max_tokens": request.max_tokens,
             },
         )
 
-        # 고유 이미지 ID 생성
-        image_id = f"img_{uuid.uuid4().hex[:12]}"
-
-        # 플레이스홀더 이미지 생성 (1x1 투명 PNG)
-        # 실제 환경에서는 Gemini API 응답으로 대체됨
-        placeholder_png = self._create_placeholder_png(request.image_size)
-
-        # 파일 저장
-        file_name = f"{image_id}.png"
-        file_path = self._output_dir / file_name
-        file_path.write_bytes(placeholder_png)
-
-        # U-035: 배경 제거 후처리 (조건부)
-        background_removed = False
-        rembg_model_used: str | None = None
-        final_file_path = file_path
-        final_file_name = file_name
-
-        if request.remove_background:
-            from unknown_world.services.image_postprocess import get_image_postprocessor
-
-            postprocessor = get_image_postprocessor()
-            result = postprocessor.remove_background(
-                input_path=file_path,
-                image_type_hint=request.image_type_hint,
-            )
-
-            if result.status.value == "success":
-                background_removed = True
-                rembg_model_used = result.model_used
-                final_file_path = result.output_path
-                final_file_name = final_file_path.name
-
-                logger.debug(
-                    "[ImageGen] Mock 이미지 배경 제거 완료",
-                    extra={
-                        "image_id": image_id,
-                        "model": rembg_model_used,
-                        "rembg_time_ms": result.processing_time_ms,
-                    },
-                )
-            else:
-                logger.warning(
-                    "[ImageGen] Mock 이미지 배경 제거 실패, 원본 사용",
-                    extra={"image_id": image_id, "message": result.message},
-                )
-                final_file_path = result.output_path
-                final_file_name = final_file_path.name
-
-        # 서빙 URL 생성 (MVP: 로컬 static 경로)
-        image_url = f"/static/images/{final_file_name}"
-
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-        logger.info(
-            "[ImageGen] Mock 이미지 생성 완료",
-            extra={
-                "image_id": image_id,
-                "elapsed_ms": elapsed_ms,
-                "background_removed": background_removed,
-            },
+        return GenerateResponse(
+            text=f"[Mock Response] 이것은 {request.model_label} 모델의 모의 응답입니다.",
+            model_label=request.model_label,
+            finish_reason="stop",
+            usage={"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
         )
 
-        return ImageGenerationResponse(
-            status=ImageGenerationStatus.COMPLETED,
-            image_id=image_id,
-            image_url=image_url,
-            message="Mock 이미지가 생성되었습니다.",
-            generation_time_ms=elapsed_ms,
-            background_removed=background_removed,
-            rembg_model_used=rembg_model_used,
-        )
-
-    def _create_placeholder_png(self, size_str: str) -> bytes:
-        """플레이스홀더 PNG를 생성합니다.
+    async def generate_stream(self, request: GenerateRequest) -> AsyncGenerator[str]:
+        """모의 텍스트를 스트리밍으로 생성합니다.
 
         Args:
-            size_str: 이미지 크기 문자열 (예: "1024x1024")
+            request: 생성 요청
 
-        Returns:
-            PNG 바이트 데이터
+        Yields:
+            고정된 모의 텍스트 청크
         """
-        # 최소한의 유효한 PNG (1x1 회색 픽셀)
-        # 실제 크기는 무시하고 플레이스홀더만 반환
-        # 16x16 회색 PNG (mock 식별용)
-        # Base64로 인코딩된 미니멀 PNG
-        minimal_png = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAADklEQVQ4y2NgGAWjAAcA"
-            "CHABAMXKQ5oAAAAASUVORK5CYII="
+        logger.debug(
+            "[GenAI] Mock 스트리밍 요청",
+            extra={"model_label": request.model_label},
         )
-        return minimal_png
+
+        chunks = [
+            "[Mock] ",
+            "이것은 ",
+            f"{request.model_label} ",
+            "모델의 ",
+            "스트리밍 ",
+            "모의 응답입니다.",
+        ]
+        for chunk in chunks:
+            yield chunk
 
     def is_available(self) -> bool:
-        """Mock 생성기는 항상 사용 가능합니다."""
+        """Mock 클라이언트는 항상 사용 가능합니다."""
         return True
 
 
 # =============================================================================
-# 실제 이미지 생성기
+# 실제 GenAI 클라이언트 구현
 # =============================================================================
 
 
-class ImageGenerator:
-    """Gemini 기반 실제 이미지 생성기.
+class GenAIClient:
+    """Vertex AI 기반 실제 GenAI 클라이언트.
 
-    gemini-3-pro-image-preview 모델을 사용하여 이미지를 생성합니다.
-    모델 ID는 RULE-010에 따라 고정됩니다.
+    google-genai SDK를 사용하여 Gemini 모델을 호출합니다.
+    서비스 계정 인증(ADC)을 사용하며, BYOK는 금지됩니다.
     """
 
     def __init__(
         self,
-        output_dir: Path | None = None,
         project: str | None = None,
         location: str | None = None,
     ) -> None:
-        """ImageGenerator를 초기화합니다.
+        """GenAIClient를 초기화합니다.
 
         Args:
-            output_dir: 이미지 저장 디렉토리
-            project: Vertex AI 프로젝트 ID
-            location: Vertex AI 리전
+            project: Vertex AI 프로젝트 ID (환경변수 VERTEX_PROJECT 사용 가능)
+            location: Vertex AI 리전 (기본값: us-central1)
+
+        Raises:
+            RuntimeError: 인증 설정이 올바르지 않은 경우
         """
-        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
-        self._output_dir.mkdir(parents=True, exist_ok=True)
-        self._project = project or os.environ.get("VERTEX_PROJECT")
-        self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
-        self._client: Any | None = None
+        self._project = project or os.environ.get(ENV_VERTEX_PROJECT)
+        self._location = location or os.environ.get(ENV_VERTEX_LOCATION, "us-central1")
+        self._client: Client | None = None
         self._available = False
 
         self._initialize_client()
@@ -15809,190 +13894,173 @@ class ImageGenerator:
     def _initialize_client(self) -> None:
         """google-genai 클라이언트를 초기화합니다."""
         try:
-            from google import genai  # type: ignore[import-untyped]
+            from google.genai import Client
 
+            # Vertex AI 모드로 클라이언트 초기화
+            # 인증은 ADC(Application Default Credentials)를 사용
+            # - 로컬: gcloud auth application-default login
+            # - 배포: Cloud Run 서비스 계정 자동 인증
             client_options: dict[str, Any] = {}
             if self._project:
                 client_options["project"] = self._project
             if self._location:
                 client_options["location"] = self._location
 
-            self._client = genai.Client(vertexai=True, **client_options)
+            # vertexai=True로 Vertex AI 모드 활성화
+            self._client = Client(vertexai=True, **client_options)
             self._available = True
 
+            # 로그에는 프로젝트/리전만 기록 (키/토큰 노출 금지)
             logger.info(
-                "[ImageGen] Vertex AI 이미지 생성기 초기화 완료",
+                "[GenAI] Vertex AI 클라이언트 초기화 완료",
                 extra={
-                    "model": MODEL_IMAGE,
+                    "mode": GenAIMode.REAL,
                     "project": self._project or "(ADC 기본)",
                     "location": self._location,
                 },
             )
         except Exception as e:
+            # 인증 실패 시에도 앱이 멈추지 않도록 로깅만 수행
+            # 오류 상세(스택트레이스)에 비밀정보가 포함될 수 있으므로 exc_info=False
             logger.warning(
-                "[ImageGen] Vertex AI 클라이언트 초기화 실패 - Mock 모드 권장",
+                "[GenAI] Vertex AI 클라이언트 초기화 실패 - Mock 모드로 전환 권장",
                 extra={"error_type": type(e).__name__},
             )
             self._available = False
 
-    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
-        """이미지를 생성합니다.
+    @property
+    def mode(self) -> GenAIMode:
+        """현재 동작 모드."""
+        return GenAIMode.REAL
+
+    async def generate(self, request: GenerateRequest) -> GenerateResponse:
+        """텍스트를 생성합니다.
 
         Args:
-            request: 이미지 생성 요청
+            request: 생성 요청
 
         Returns:
-            ImageGenerationResponse: 생성 결과
+            생성된 텍스트 응답
+
+        Raises:
+            RuntimeError: 클라이언트가 사용 불가능한 경우
         """
         if not self._available or self._client is None:
-            return ImageGenerationResponse(
-                status=ImageGenerationStatus.FAILED,
-                message="이미지 생성 클라이언트가 초기화되지 않았습니다.",
-            )
+            raise RuntimeError("GenAI 클라이언트가 초기화되지 않았습니다.")
 
-        start_time = datetime.now(UTC)
+        model_id = get_model_id(request.model_label)
 
-        # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
-        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
-
-        # U-036: 프롬프트 로더에서 스타일 가이드라인 로드 (선택적 참고용)
-        # 실제 모델은 Imagen이므로 지시사항보다는 텍스트 생성 모델(U-019)에서 이 가이드라인을 활용해
-        # 최적화된 영어 프롬프트를 생성하는 것이 권장됩니다.
-        try:
-            # 현재 요청의 언어 정보를 알 수 없으므로 기본 KO 사용 (또는 요청에 언어 추가 필요)
-            _style_guidelines = load_image_prompt(Language.KO)
-            logger.debug("[ImageGen] 스타일 가이드라인 로드 완료 (U-036)")
-        except Exception:
-            logger.warning("[ImageGen] 스타일 가이드라인 로드 실패")
-
+        # 로그에는 메타 정보만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.debug(
-            "[ImageGen] 이미지 생성 요청",
+            "[GenAI] 생성 요청",
             extra={
-                "prompt_hash": prompt_hash,
-                "size": request.image_size,
-                "model": MODEL_IMAGE,
-                "remove_background": request.remove_background,
+                "model_label": request.model_label,
+                "model_id": model_id,
+                "max_tokens": request.max_tokens,
             },
         )
 
-        try:
-            # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
-            _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
+        # google-genai SDK 호출
+        from google.genai.types import GenerateContentConfig
 
-            # Gemini 이미지 생성 호출
-            # 참고: gemini-3-pro-image-preview 모델 사용 (RULE-010 고정)
-            response = await self._client.aio.models.generate_images(
-                model=get_model_id(ModelLabel.IMAGE),
-                prompt=request.prompt,
-                config={
-                    "number_of_images": 1,
-                    "output_mime_type": "image/png",
-                    # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
-                    # 실제 API 스펙에 맞게 조정 필요
-                },
-            )
+        config_dict: dict[str, Any] = {}
+        if request.max_tokens:
+            config_dict["max_output_tokens"] = request.max_tokens
+        if request.temperature is not None:
+            config_dict["temperature"] = request.temperature
+        if request.response_mime_type:
+            config_dict["response_mime_type"] = request.response_mime_type
+        if request.response_schema:
+            config_dict["response_schema"] = request.response_schema
 
-            # 이미지 데이터 추출 및 저장
-            if response and hasattr(response, "generated_images"):
-                image_data = response.generated_images[0]
-                image_bytes = (
-                    image_data.image.image_bytes if hasattr(image_data, "image") else image_data
-                )
+        config: GenerateContentConfig | None = (
+            GenerateContentConfig(**config_dict) if config_dict else None
+        )
 
-                # 고유 ID 및 파일 저장
-                image_id = f"img_{uuid.uuid4().hex[:12]}"
-                file_name = f"{image_id}.png"
-                file_path = self._output_dir / file_name
-                file_path.write_bytes(image_bytes)
+        response = await self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
+            model=model_id,
+            contents=request.prompt,
+            config=config,
+        )
 
-                # U-035: 배경 제거 후처리 (조건부)
-                background_removed = False
-                rembg_model_used: str | None = None
-                final_file_path = file_path
-                final_file_name = file_name
+        # 응답 파싱
+        text = response.text if hasattr(response, "text") and response.text else str(response)
+        finish_reason = "stop"
+        if hasattr(response, "candidates") and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, "finish_reason"):
+                finish_reason = str(candidate.finish_reason)
 
-                if request.remove_background:
-                    from unknown_world.services.image_postprocess import (
-                        get_image_postprocessor,
-                    )
+        # 토큰 사용량 추출
+        usage: dict[str, int] = {}
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            meta = response.usage_metadata
+            if hasattr(meta, "prompt_token_count") and meta.prompt_token_count is not None:
+                usage["prompt_tokens"] = meta.prompt_token_count
+            if hasattr(meta, "candidates_token_count") and meta.candidates_token_count is not None:
+                usage["completion_tokens"] = meta.candidates_token_count
+            if hasattr(meta, "total_token_count") and meta.total_token_count is not None:
+                usage["total_tokens"] = meta.total_token_count
 
-                    postprocessor = get_image_postprocessor()
-                    result = postprocessor.remove_background(
-                        input_path=file_path,
-                        image_type_hint=request.image_type_hint,
-                    )
+        return GenerateResponse(
+            text=text,
+            model_label=request.model_label,
+            finish_reason=finish_reason,
+            usage=usage,
+        )
 
-                    if result.status.value == "success":
-                        background_removed = True
-                        rembg_model_used = result.model_used
-                        final_file_path = result.output_path
-                        final_file_name = final_file_path.name
+    async def generate_stream(self, request: GenerateRequest) -> AsyncGenerator[str]:
+        """텍스트를 스트리밍으로 생성합니다.
 
-                        logger.debug(
-                            "[ImageGen] 이미지 배경 제거 완료",
-                            extra={
-                                "image_id": image_id,
-                                "model": rembg_model_used,
-                                "rembg_time_ms": result.processing_time_ms,
-                            },
-                        )
-                    else:
-                        logger.warning(
-                            "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
-                            extra={"image_id": image_id, "message": result.message},
-                        )
-                        final_file_path = result.output_path
-                        final_file_name = final_file_path.name
+        Args:
+            request: 생성 요청
 
-                image_url = f"/static/images/{final_file_name}"
-                elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+        Yields:
+            생성된 텍스트 청크
 
-                logger.info(
-                    "[ImageGen] 이미지 생성 완료",
-                    extra={
-                        "image_id": image_id,
-                        "elapsed_ms": elapsed_ms,
-                        "size_bytes": len(image_bytes),
-                        "background_removed": background_removed,
-                    },
-                )
+        Raises:
+            RuntimeError: 클라이언트가 사용 불가능한 경우
+        """
+        if not self._available or self._client is None:
+            raise RuntimeError("GenAI 클라이언트가 초기화되지 않았습니다.")
 
-                return ImageGenerationResponse(
-                    status=ImageGenerationStatus.COMPLETED,
-                    image_id=image_id,
-                    image_url=image_url,
-                    message="이미지가 성공적으로 생성되었습니다.",
-                    generation_time_ms=elapsed_ms,
-                    background_removed=background_removed,
-                    rembg_model_used=rembg_model_used,
-                )
-            else:
-                return ImageGenerationResponse(
-                    status=ImageGenerationStatus.FAILED,
-                    message="이미지 생성 응답이 비어있습니다.",
-                )
+        model_id = get_model_id(request.model_label)
 
-        except Exception as e:
-            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-            error_type = type(e).__name__
+        logger.debug(
+            "[GenAI] 스트리밍 요청",
+            extra={
+                "model_label": request.model_label,
+                "model_id": model_id,
+            },
+        )
 
-            logger.error(
-                "[ImageGen] 이미지 생성 실패",
-                extra={
-                    "error_type": error_type,
-                    "elapsed_ms": elapsed_ms,
-                },
-            )
+        from google.genai.types import GenerateContentConfig
 
-            # 실패 시에도 안전한 응답 반환 (RULE-004)
-            return ImageGenerationResponse(
-                status=ImageGenerationStatus.FAILED,
-                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
-                generation_time_ms=elapsed_ms,
-            )
+        config_dict: dict[str, Any] = {}
+        if request.max_tokens:
+            config_dict["max_output_tokens"] = request.max_tokens
+        if request.temperature is not None:
+            config_dict["temperature"] = request.temperature
+        if request.response_mime_type:
+            config_dict["response_mime_type"] = request.response_mime_type
+        if request.response_schema:
+            config_dict["response_schema"] = request.response_schema
+
+        config: GenerateContentConfig | None = (
+            GenerateContentConfig(**config_dict) if config_dict else None
+        )
+
+        stream = await self._client.aio.models.generate_content_stream(  # type: ignore[reportUnknownMemberType]
+            model=model_id,
+            contents=request.prompt,
+            config=config,
+        )
+        async for chunk in stream:
+            if hasattr(chunk, "text") and chunk.text:
+                yield chunk.text
 
     def is_available(self) -> bool:
-        """생성기가 사용 가능한 상태인지 확인합니다."""
+        """클라이언트가 사용 가능한 상태인지 확인합니다."""
         return self._available
 
 
@@ -16000,106 +14068,72 @@ class ImageGenerator:
 # 팩토리 함수
 # =============================================================================
 
-# 생성기 타입
-ImageGeneratorType = MockImageGenerator | ImageGenerator
+# 클라이언트 타입 (Protocol 대신 Union 사용 - pyright 호환성)
+GenAIClientType = MockGenAIClient | GenAIClient
 
-# 싱글톤 인스턴스 캐시
-_generator_instance: ImageGeneratorType | None = None
+# 싱글톤 클라이언트 인스턴스 캐시
+_client_instance: GenAIClientType | None = None
 
 
-def get_image_generator(
+def get_genai_client(
     *,
     force_mock: bool = False,
     force_new: bool = False,
-    output_dir: Path | None = None,
-) -> ImageGeneratorType:
-    """이미지 생성기 인스턴스를 반환합니다.
+) -> GenAIClientType:
+    """GenAI 클라이언트 인스턴스를 반환합니다.
 
-    환경변수 UW_MODE에 따라 실제 생성기 또는 Mock 생성기를 반환합니다.
+    환경변수 UW_MODE에 따라 실제 클라이언트 또는 Mock 클라이언트를 반환합니다.
+    기본적으로 싱글톤 패턴으로 동작합니다.
 
     Args:
-        force_mock: True면 환경변수와 무관하게 Mock 생성기 반환
+        force_mock: True면 환경변수와 무관하게 Mock 클라이언트 반환
         force_new: True면 캐시를 무시하고 새 인스턴스 생성
-        output_dir: 이미지 저장 디렉토리
 
     Returns:
-        이미지 생성기 인스턴스
+        GenAI 클라이언트 인스턴스
+
+    Example:
+        >>> client = get_genai_client()
+        >>> response = await client.generate(GenerateRequest(prompt="Hello"))
     """
-    global _generator_instance
+    global _client_instance
 
-    if not force_new and _generator_instance is not None:
-        return _generator_instance
+    if not force_new and _client_instance is not None:
+        return _client_instance
 
-    # 모드 결정
-    mode = os.environ.get("UW_MODE", "real")
-
-    if force_mock or mode == "mock":
-        generator: ImageGeneratorType = MockImageGenerator(output_dir)
+    # 모드 결정: force_mock > 환경변수 > 기본값(real)
+    if force_mock:
+        mode = GenAIMode.MOCK
     else:
-        real_gen = ImageGenerator(output_dir)
-        # 실제 생성기 초기화 실패 시 Mock으로 폴백
-        if not real_gen.is_available():
-            logger.warning("[ImageGen] 실제 생성기 초기화 실패, Mock 모드로 폴백")
-            generator = MockImageGenerator(output_dir)
+        mode_str = os.environ.get(ENV_UW_MODE, GenAIMode.REAL)
+        mode = GenAIMode(mode_str) if mode_str in GenAIMode.__members__.values() else GenAIMode.REAL
+
+    # 클라이언트 생성
+    client_result: GenAIClientType
+    if mode == GenAIMode.MOCK:
+        client_result = MockGenAIClient()
+    else:
+        client = GenAIClient()
+        # 실제 클라이언트 초기화 실패 시 Mock으로 폴백
+        if not client.is_available():
+            logger.warning(
+                "[GenAI] 실제 클라이언트 초기화 실패, Mock 모드로 폴백",
+            )
+            client_result = MockGenAIClient()
         else:
-            generator = real_gen
+            client_result = client
 
-    _generator_instance = generator
-    return generator
+    _client_instance = client_result
+    return client_result
 
 
-def reset_image_generator() -> None:
-    """이미지 생성기 캐시를 초기화합니다.
+def reset_genai_client() -> None:
+    """GenAI 클라이언트 캐시를 초기화합니다.
 
-    테스트 시 생성기를 재설정할 때 사용합니다.
+    테스트 시 클라이언트를 재설정할 때 사용합니다.
     """
-    global _generator_instance
-    _generator_instance = None
-
-
-# =============================================================================
-# 헬퍼 함수
-# =============================================================================
-
-
-def create_fallback_response(message: str | None = None) -> ImageGenerationResponse:
-    """실패 시 안전한 폴백 응답을 생성합니다.
-
-    RULE-004: 검증 실패나 오류 시에도 안전한 응답 제공
-
-    Args:
-        message: 오류 메시지 (선택)
-
-    Returns:
-        ImageGenerationResponse: 폴백 응답
-    """
-    return ImageGenerationResponse(
-        status=ImageGenerationStatus.SKIPPED,
-        message=message or "이미지 생성을 건너뛰었습니다. 텍스트로 진행합니다.",
-    )
-
-
-def validate_image_request(request: ImageGenerationRequest) -> str | None:
-    """이미지 생성 요청을 검증합니다.
-
-    Args:
-        request: 검증할 요청
-
-    Returns:
-        오류 메시지 (유효하면 None)
-    """
-    # 이미지 크기 검증
-    if request.image_size not in SUPPORTED_SIZES:
-        return f"지원하지 않는 이미지 크기: {request.image_size}"
-
-    # 프롬프트 길이 검증 (너무 짧거나 긴 경우)
-    if len(request.prompt) < 3:
-        return "프롬프트가 너무 짧습니다."
-
-    if len(request.prompt) > 2000:
-        return "프롬프트가 너무 깁니다 (최대 2000자)."
-
-    return None
+    global _client_instance
+    _client_instance = None
 </file>
 
 <file path="backend/src/unknown_world/validation/business_rules.py">
@@ -16691,6 +14725,117 @@ def test_turn_streaming_repair_loop(monkeypatch):
     assert len(repair_events) >= 1
     assert "attempt" in repair_events[0]
     assert repair_events[0]["attempt"] == 1
+</file>
+
+<file path="backend/tests/unit/test_u034_verification.py">
+import json
+from pathlib import Path
+
+# 프로젝트 루트 경로 설정 (backend/tests/unit/ 위치 기준)
+ROOT_DIR = Path(__file__).parent.parent.parent.parent
+SCHEMA_PATH = ROOT_DIR / "vibe/ref/nanobanana-asset-request.schema.json"
+GUIDE_PATH = ROOT_DIR / "vibe/ref/nanobanana-mcp.md"
+
+
+def test_schema_file_exists():
+    """스키마 파일이 지정된 위치에 존재하는지 확인"""
+    assert SCHEMA_PATH.exists(), f"Schema file not found at {SCHEMA_PATH}"
+
+
+def test_schema_is_valid_json():
+    """스키마 파일이 유효한 JSON 형식인지 확인"""
+    with open(SCHEMA_PATH, encoding="utf-8") as f:
+        schema = json.load(f)
+    assert schema["title"] == "nanobanana mcp Asset Request Schema"
+
+
+def test_schema_required_properties():
+    """스키마의 JSON Schema required 필드가 정의되어 있는지 확인
+
+    NOTE: JSON Schema의 `required` 배열과 "워크플로우 필수(조건부)" 필드는 구분됨.
+    - Schema required: ["id", "category", "purpose", "size_px"] (SSOT)
+    - Workflow required: requires_rembg, rembg_options.model 등은 조건부 필드
+    """
+    with open(SCHEMA_PATH, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    properties = schema.get("properties", {})
+    # JSON Schema의 required 필드만 검증 (스키마 SSOT 기준)
+    schema_required_fields = ["id", "category", "purpose", "size_px"]
+    # 워크플로우에서 자주 사용하는 선택적 필드 (properties에 정의되어 있어야 함)
+    optional_workflow_fields = ["requires_rembg", "rembg_options"]
+
+    for field in schema_required_fields:
+        assert field in properties, f"Schema required field '{field}' missing in properties"
+
+    for field in optional_workflow_fields:
+        assert field in properties, f"Workflow field '{field}' missing in properties"
+
+
+def test_schema_rembg_options_model():
+    """rembg 모델 선택의 SSOT가 rembg_options.model인지 확인
+
+    NOTE: 이전에 top-level rembg_model 필드가 논의되었으나,
+    SSOT는 rembg_options.model로 확정됨 (U-040 페어링 결정).
+    """
+    with open(SCHEMA_PATH, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    # rembg_options가 존재하고 model 서브필드가 있어야 함
+    rembg_options = schema["properties"].get("rembg_options", {})
+    assert rembg_options.get("type") == "object", "rembg_options should be an object"
+
+    rembg_options_props = rembg_options.get("properties", {})
+    assert "model" in rembg_options_props, (
+        "SSOT field 'rembg_options.model' missing - "
+        "rembg 모델 선택은 top-level 'rembg_model'이 아닌 'rembg_options.model'이 SSOT입니다"
+    )
+
+    # model 필드의 enum이 유효한 rembg 모델 목록을 포함하는지 확인
+    model_field = rembg_options_props["model"]
+    assert "enum" in model_field, "rembg_options.model should have enum constraint"
+    assert "birefnet-general" in model_field["enum"], (
+        "Default model 'birefnet-general' should be in enum"
+    )
+
+
+def test_guide_file_exists():
+    """가이드 문서 파일이 존재하는지 확인"""
+    assert GUIDE_PATH.exists(), f"Guide file not found at {GUIDE_PATH}"
+
+
+def test_guide_content_completeness():
+    """가이드 문서에 필수 섹션(아트 디렉션, 카테고리별 템플릿)이 포함되어 있는지 확인"""
+    with open(GUIDE_PATH, encoding="utf-8") as f:
+        content = f.read()
+
+    # 계획서 구현 흐름 2단계, 3단계 관련 키워드 검사
+    required_keywords = ["아트 디렉션", "스타일", "아이콘", "placeholder", "chrome", "템플릿"]
+
+    missing_keywords = [kw for kw in required_keywords if kw.lower() not in content.lower()]
+
+    # 현재 nanobanana-mcp.md에는 rembg 내용만 있으므로 실패할 가능성이 큼
+    assert not missing_keywords, (
+        f"Guide document is missing sections for: {', '.join(missing_keywords)}"
+    )
+
+
+def test_schema_rembg_rules():
+    """배경 제거(rembg) 관련 강제 규칙(순백 배경)이 스키마/설명에 포함되어 있는지 확인"""
+    with open(SCHEMA_PATH, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    # background 필드와 requires_rembg 필드 설명 확인
+    background_desc = schema["properties"]["background"].get("description", "")
+    rembg_desc = schema["properties"]["requires_rembg"].get("description", "")
+
+    assert "solid_white" in str(schema["properties"]["background"].get("enum", [])), (
+        "background enum should include solid_white"
+    )
+    assert "rembg" in background_desc.lower(), "background description should mention rembg"
+    assert "solid_white" in rembg_desc.lower(), (
+        "requires_rembg description should recommend solid_white"
+    )
 </file>
 
 <file path="frontend/src/App.test.tsx">
@@ -20107,339 +18252,673 @@ def add_business_badges(
         badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
-<file path="frontend/public/ui/README.md">
-# UI 에셋 가이드 (nanobanana mcp SSOT)
+<file path="backend/src/unknown_world/services/image_generation.py">
+"""Unknown World - 이미지 생성 서비스.
 
-> **SSOT 경로**: `frontend/public/ui/`  
-> **도구**: `nanobanana mcp` (개발 전용, 런타임 의존 금지)  
-> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7, `vibe/ref/rembg-guide.md`
+이 모듈은 Gemini 이미지 생성 모델을 호출하고 결과를 로컬에 저장하는 서비스입니다.
+텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
 
----
+설계 원칙:
+    - RULE-004: 실패 시 안전한 폴백 제공 (should_generate=false)
+    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
+    - RULE-007: 프롬프트 원문 노출 금지
 
-## 1. 핵심 원칙
+페어링 질문 결정:
+    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
 
-### 1.1 Dev-only 원칙 (RULE-007)
+참조:
+    - vibe/tech-stack.md (모델 ID 고정)
+    - vibe/unit-plans/U-019[Mvp].md
+    - .cursor/rules/20-backend-orchestrator.mdc
+"""
 
-- `nanobanana mcp`는 **개발 과정에서 정적 에셋을 제작**하는 도구입니다.
-- 제품 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 **금지**합니다.
-- 생성된 에셋은 이 디렉토리(`frontend/public/ui/`)에 커밋하여 정적 배포합니다.
+from __future__ import annotations
 
-### 1.2 용어 SSOT (RULE-006)
+import base64
+import hashlib
+import logging
+import os
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-- 이 도구는 반드시 **`nanobanana mcp`** 로 표기합니다.
-- "나노바나나 MCP", "Nano Banana MCP", "banana mcp" 등 혼용 금지.
-- 모델 별칭("Nano Banana / Nano Banana Pro")은 문서 인용 시에만 제한적 사용.
+from pydantic import BaseModel, ConfigDict, Field
 
-### 1.3 보안 (RULE-005)
+from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
 
-- 키/토큰 등 비밀정보를 레포/로그/문서에 남기지 않습니다.
-- 생성 과정에서 사용한 API 키나 인증 정보는 절대 커밋하지 않습니다.
+if TYPE_CHECKING:
+    from google.genai import Client
+from unknown_world.models.turn import Language
+from unknown_world.orchestrator.prompt_loader import load_image_prompt
 
----
+# =============================================================================
+# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
+# =============================================================================
 
-## 2. 디렉토리 구조
+logger = logging.getLogger(__name__)
 
-```
-frontend/public/ui/
-├── README.md              # 이 파일 (SSOT 규칙)
-├── manifest.schema.json   # 에셋 매니페스트 스키마
-├── manifest.json          # (생성 시) 실제 에셋 목록
-├── icons/                 # 아이콘 에셋
-│   ├── signal-16.png
-│   ├── signal-24.png
-│   ├── badge-ok-16.png
-│   └── ...
-├── placeholders/          # 상태/장면 placeholder
-│   ├── scene-loading.webp
-│   ├── scene-error.webp
-│   └── ...
-└── chrome/                # UI 프레임/장식
-    ├── panel-corner-tl.png
-    ├── panel-border-h.png
-    └── ...
-```
 
----
+# =============================================================================
+# 상수 정의
+# =============================================================================
 
-## 3. 네이밍 규칙
+# MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
+DEFAULT_OUTPUT_DIR = Path("generated_images")
 
-### 3.1 기본 포맷
-
-```
-{용도}-{크기}.{확장자}
-{용도}-{상태}-{크기}.{확장자}
-```
-
-**예시**:
-
-- `signal-24.png` — Signal 아이콘, 24px
-- `badge-ok-16.png` — OK 배지, 16px
-- `scene-loading.webp` — 로딩 상태 placeholder
-
-### 3.2 규칙
-
-| 항목       | 규칙                                              |
-| ---------- | ------------------------------------------------- |
-| **케이스** | `kebab-case` (소문자 + 하이픈)                    |
-| **용도**   | 명확한 역할 표현 (signal, badge, scene, panel 등) |
-| **상태**   | 필요 시 상태 포함 (ok, fail, loading, error 등)   |
-| **크기**   | 픽셀 단위 숫자 (16, 24, 32, 64 등)                |
-| **확장자** | 용도에 맞게 선택 (아래 참조)                      |
-
----
-
-## 4. 포맷 및 사이즈 규칙
-
-### 4.1 포맷 선택
-
-| 용도            | 기본 포맷  | 대안 | 비고                               |
-| --------------- | ---------- | ---- | ---------------------------------- |
-| **아이콘**      | PNG (투명) | -    | 작은 크기, 투명도 필수             |
-| **placeholder** | WebP       | PNG  | 용량 절감 우선 (Q1 결정: Option B) |
-| **chrome**      | PNG (투명) | -    | 프레임/장식, 투명도 필수           |
-
-> **배경 제거(필수 조건부)**: 아이콘/chrome 등 투명 배경이 필요한 에셋은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리합니다. (가이드: `vibe/ref/rembg-guide.md`)
-
-### 4.2 사이즈 규격
-
-| 용도            | 필수 사이즈 | 선택 사이즈 | 비고             |
-| --------------- | ----------- | ----------- | ---------------- |
-| **아이콘**      | 16, 24      | 32, 64      | 최소 2종 필수    |
-| **placeholder** | 가변        | -           | 용도별 적정 크기 |
-| **chrome**      | 가변        | -           | 타일링/반복 고려 |
-
-### 4.3 Retina 대응 (선택)
-
-- 필요 시 `image-set()`으로 1x/2x 제공
-- 파일명: `{name}-24.png`, `{name}-24@2x.png`
-
----
-
-## 5. 성능 예산
-
-| 항목                | 상한  | 권장       |
-| ------------------- | ----- | ---------- |
-| **아이콘 1개**      | 30KB  | 20KB 이하  |
-| **placeholder 1개** | 300KB | 200KB 이하 |
-| **chrome 1개**      | 50KB  | 30KB 이하  |
-| **`ui/` 폴더 총합** | 1.5MB | 1MB 이하   |
-
-**초과 시 대응**:
-
-1. 압축/최적화 (TinyPNG, ImageOptim 등)
-2. 해상도/색상 축소
-3. 불필요 에셋 제거
-4. 예산 상향 시 근거 문서화 필요
-
----
-
-## 6. 스타일 가이드
-
-### 6.1 CRT 테마 연동
-
-에셋은 `frontend/src/style.css`의 CSS 변수/테마와 조화를 이뤄야 합니다.
-
-```css
-/* 참조: CRT 테마 색상 */
---bg-color: #0d0d0d; /* 배경 */
---text-color: #33ff00; /* 인광 녹색 */
---text-dim: #1a8000; /* 어두운 녹색 */
---accent-color: #ff00ff; /* 마젠타 */
---warning-color: #ffaa00; /* 주황색 */
---error-color: #ff3333; /* 붉은색 */
-```
-
-### 6.2 스타일 원칙
-
-| 원칙                  | 설명                          |
-| --------------------- | ----------------------------- |
-| **레트로 퓨처리즘**   | CRT/터미널 미학과 조화        |
-| **기능적 미니멀리즘** | 불필요한 장식 배제            |
-| **톤 일관성**         | 인광 녹색 기반, 마젠타 포인트 |
-| **고대비**            | Readable 모드에서도 식별 가능 |
-
-### 6.3 금지 사항
-
-- ❌ 프로젝트 외부 로고/상표 복제
-- ❌ CRT 테마와 충돌하는 색상 (밝은 파스텔, 난색 계열 남용)
-- ❌ 복잡한 그라데이션/사진 스타일
-
----
-
-## 7. 폴백 원칙 (필수)
-
-### 7.1 텍스트/이모지 폴백 유지
-
-에셋 로딩 실패/미지원 시에도 **UI가 깨지지 않도록** 텍스트/이모지 라벨을 유지해야 합니다.
-
-**예시** (React):
-
-```tsx
-<span className="icon-wrapper" aria-label="Signal">
-  <img
-    src="/ui/icons/signal-24.png"
-    alt=""
-    aria-hidden="true"
-    onError={(e) => (e.currentTarget.style.display = 'none')}
-  />
-  <span className="icon-fallback">📡</span>
-</span>
-```
-
-**CSS**:
-
-```css
-.icon-wrapper {
-  display: inline-flex;
-  align-items: center;
+# 지원 이미지 크기 (Gemini 이미지 생성 지원 크기)
+SUPPORTED_SIZES: dict[str, tuple[int, int]] = {
+    "1024x1024": (1024, 1024),
+    "1280x768": (1280, 768),
+    "768x1280": (768, 1280),
+    "1536x1024": (1536, 1024),
+    "1024x1536": (1024, 1536),
 }
-.icon-wrapper img + .icon-fallback {
-  display: none;
-}
-.icon-wrapper img[style*='display: none'] + .icon-fallback {
-  display: inline;
-}
-```
 
-### 7.2 폴백 요구사항
+# 기본 설정
+DEFAULT_SIZE = "1024x1024"
+DEFAULT_ASPECT_RATIO = "1:1"
 
-| 에셋 유형       | 폴백 방식                |
-| --------------- | ------------------------ |
-| **아이콘**      | 이모지 또는 텍스트 라벨  |
-| **placeholder** | CSS 배경색 + 텍스트      |
-| **chrome**      | CSS border/shadow로 대체 |
 
----
+class ImageGenerationStatus(StrEnum):
+    """이미지 생성 상태."""
 
-## 8. 접근성 가이드
+    PENDING = "pending"
+    """생성 대기 중"""
 
-### 8.1 필수 사항
+    GENERATING = "generating"
+    """생성 중"""
 
-| 항목                          | 요구사항                            |
-| ----------------------------- | ----------------------------------- |
-| **색상만으로 의미 전달 금지** | 텍스트/라벨 병행                    |
-| **장식성 이미지**             | `aria-hidden="true"` 적용           |
-| **기능성 이미지**             | `alt` 텍스트 제공 또는 `aria-label` |
-| **대비**                      | Readable 모드에서도 4.5:1 이상      |
+    COMPLETED = "completed"
+    """생성 완료"""
 
-### 8.2 예시
+    FAILED = "failed"
+    """생성 실패"""
 
-```html
-<!-- 장식용 아이콘 (의미 없음) -->
-<img src="/ui/chrome/corner.png" alt="" aria-hidden="true" />
+    SKIPPED = "skipped"
+    """생성 건너뜀 (잔액 부족 등)"""
 
-<!-- 기능용 아이콘 (의미 있음) -->
-<button aria-label="신호 전송">
-  <img src="/ui/icons/signal-24.png" alt="Signal" />
-</button>
-```
 
----
+# =============================================================================
+# 요청/응답 Pydantic 모델
+# =============================================================================
 
-## 9. 에셋 제작 워크플로우
 
-### 9.1 요청 → 제작 → 적용
+class ImageGenerationRequest(BaseModel):
+    """이미지 생성 요청.
 
-```
-1. 요청 정의
-   └── 용도, 사이즈, 스타일 명세 작성
+    TurnOutput의 render.image_job과 정합되도록 필드를 설계합니다.
 
-2. nanobanana mcp로 제작
-   └── 프롬프트에 CRT 스타일 키워드 포함
-   └── 색상 팔레트 준수
-   └── (필수 조건부) 배경 제거(rembg) 예정이면 **배경은 순백(#FFFFFF) 단색**으로 생성(그라데이션/텍스처/그림자 금지)
+    Attributes:
+        prompt: 이미지 생성 프롬프트 (필수)
+        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
+        image_size: 이미지 크기 (예: "1024x1024")
+        reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
+        session_id: 세션 ID (파일 그룹화용)
+        remove_background: 배경 제거 여부 (U-035, rembg 사용)
+        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
+    """
 
-3. (필수 조건부) rembg로 배경 제거
-   └── 아이콘/chrome 등 투명 배경이 필요한 에셋에서 배경이 남아 있으면 rembg로 제거
-   └── 모델 선택/옵션은 `vibe/ref/rembg-guide.md` 준수
+    model_config = ConfigDict(extra="forbid")
 
-4. 리사이즈/압축
-   └── 성능 예산 확인
-   └── 필요 사이즈로 리사이즈
+    prompt: str = Field(min_length=1, description="이미지 생성 프롬프트")
+    aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
+    image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
+    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    session_id: str | None = Field(default=None, description="세션 ID")
+    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
+    image_type_hint: str | None = Field(
+        default=None,
+        description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
+    )
 
-5. 디렉토리 반영
-   └── 네이밍 규칙 준수
-   └── manifest.json 업데이트
 
-6. UI 적용 + 폴백 확인
-   └── 컴포넌트에 적용
-   └── 폴백 동작 테스트
+class ImageGenerationResponse(BaseModel):
+    """이미지 생성 응답.
 
-7. QA
-   └── 크기/대비/폴백/Readable 모드 확인
-```
+    Attributes:
+        status: 생성 상태
+        image_id: 생성된 이미지 ID (성공 시)
+        image_url: 생성된 이미지 URL (성공 시)
+        message: 상태 메시지 (실패 시 오류 설명)
+        generation_time_ms: 생성 소요 시간 (밀리초)
+        background_removed: 배경 제거 수행 여부 (U-035)
+        rembg_model_used: 사용된 rembg 모델 (배경 제거 시)
+    """
 
-### 9.2 프롬프트 가이드 (예시)
+    model_config = ConfigDict(extra="forbid")
 
-```
-CRT 터미널 스타일 아이콘,
-인광 녹색(#33ff00) 기반,
-검은 배경(#0d0d0d)에 어울리는 톤,
-심플한 라인 아트,
-픽셀 아트 또는 레트로 스타일,
-24x24 픽셀, 투명 배경
-(배경 제거 필요 시) solid white background (#FFFFFF), no gradient/texture/shadow
-```
+    status: ImageGenerationStatus
+    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
+    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
+    message: str | None = Field(default=None, description="상태 메시지")
+    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
+    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
+    rembg_model_used: str | None = Field(default=None, description="사용된 rembg 모델")
 
----
 
-## 10. 매니페스트 관리
+# =============================================================================
+# 내부 데이터 클래스
+# =============================================================================
 
-### 10.1 manifest.json
 
-모든 에셋은 `manifest.json`에 등록하여 추적합니다.
+@dataclass
+class GeneratedImage:
+    """생성된 이미지 정보.
 
-```json
-{
-  "$schema": "./manifest.schema.json",
-  "version": "1.0.0",
-  "assets": [
-    {
-      "id": "signal-24",
-      "path": "icons/signal-24.png",
-      "type": "icon",
-      "size": 24,
-      "fallback": "📡",
-      "usedIn": ["EconomyHUD"],
-      "bytes": 1234
-    }
-  ]
-}
-```
+    Attributes:
+        id: 이미지 고유 ID
+        path: 로컬 파일 경로
+        url: 서빙 URL
+        prompt_hash: 프롬프트 해시 (로그용, 원문 노출 금지)
+        created_at: 생성 시각
+        size: 파일 크기 (bytes)
+        metadata: 추가 메타데이터
+    """
 
-### 10.2 업데이트 시점
+    id: str
+    path: Path
+    url: str
+    prompt_hash: str
+    created_at: datetime
+    size: int = 0
 
-- 에셋 추가/제거 시 manifest.json 동기화
-- U-033에서 QA 자동화 예정
+    def __post_init__(self) -> None:
+        """초기화 후 메타데이터 필드 설정."""
+        self._metadata: dict[str, str] = {}
 
----
+    @property
+    def metadata(self) -> dict[str, str]:
+        """추가 메타데이터."""
+        if not hasattr(self, "_metadata"):
+            self._metadata = {}
+        return self._metadata
 
-## 11. 라이선스
 
-- 모든 에셋은 **프로젝트 내부 용도**로 제작됩니다.
-- 외부 로고/상표를 복제하지 않습니다.
-- `nanobanana mcp`로 생성된 에셋은 도구의 라이선스 정책을 따릅니다.
-- 에셋에 **SynthID 워터마크**가 포함될 수 있습니다 (AI 생성 표기).
+# =============================================================================
+# Mock 이미지 생성기
+# =============================================================================
 
----
 
-## 12. 체크리스트 (에셋 추가 시)
+class MockImageGenerator:
+    """테스트/개발용 모의 이미지 생성기.
 
-- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
-- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
-- [ ] 성능 예산 준수 (개별/총합)
-- [ ] (조건부) 투명 배경이 필요한 에셋은 `rembg`로 배경 제거 완료(알파 채널 확인)
-- [ ] (조건부) 배경 제거(rembg) 예정이면 원본 생성 단계에서 배경이 순백(#FFFFFF) 단색인지 확인(그라데이션/텍스처/그림자 금지)
-- [ ] CRT 테마 색상과 조화
-- [ ] 폴백 구현 확인
-- [ ] 접근성 속성 적용 (`aria-hidden` 또는 `alt`)
-- [ ] manifest.json 업데이트
-- [ ] Readable 모드에서 대비 확인
+    실제 API를 호출하지 않고 플레이스홀더 이미지를 생성합니다.
+    """
 
----
+    def __init__(self, output_dir: Path | None = None) -> None:
+        """MockImageGenerator를 초기화합니다.
 
-_마지막 업데이트: 2026-01-11_
-_문서 버전: 1.1.0_
+        Args:
+            output_dir: 이미지 저장 디렉토리 (기본값: generated_images)
+        """
+        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(
+            "[ImageGen] Mock 모드로 초기화됨",
+            extra={"output_dir": str(self._output_dir)},
+        )
+
+    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+        """모의 이미지를 생성합니다.
+
+        Args:
+            request: 이미지 생성 요청
+
+        Returns:
+            ImageGenerationResponse: 생성 결과
+        """
+        start_time = datetime.now(UTC)
+
+        # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
+        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+        logger.debug(
+            "[ImageGen] Mock 이미지 생성 요청",
+            extra={
+                "prompt_hash": prompt_hash,
+                "size": request.image_size,
+                "aspect_ratio": request.aspect_ratio,
+                "remove_background": request.remove_background,
+            },
+        )
+
+        # 고유 이미지 ID 생성
+        image_id = f"img_{uuid.uuid4().hex[:12]}"
+
+        # 플레이스홀더 이미지 생성 (1x1 투명 PNG)
+        # 실제 환경에서는 Gemini API 응답으로 대체됨
+        placeholder_png = self._create_placeholder_png(request.image_size)
+
+        # 파일 저장
+        file_name = f"{image_id}.png"
+        file_path = self._output_dir / file_name
+        file_path.write_bytes(placeholder_png)
+
+        # U-035: 배경 제거 후처리 (조건부)
+        background_removed = False
+        rembg_model_used: str | None = None
+        final_file_path = file_path
+        final_file_name = file_name
+
+        if request.remove_background:
+            from unknown_world.services.image_postprocess import get_image_postprocessor
+
+            postprocessor = get_image_postprocessor()
+            result = postprocessor.remove_background(
+                input_path=file_path,
+                image_type_hint=request.image_type_hint,
+            )
+
+            if result.status.value == "success":
+                background_removed = True
+                rembg_model_used = result.model_used
+                final_file_path = result.output_path
+                final_file_name = final_file_path.name
+
+                logger.debug(
+                    "[ImageGen] Mock 이미지 배경 제거 완료",
+                    extra={
+                        "image_id": image_id,
+                        "model": rembg_model_used,
+                        "rembg_time_ms": result.processing_time_ms,
+                    },
+                )
+            else:
+                logger.warning(
+                    "[ImageGen] Mock 이미지 배경 제거 실패, 원본 사용",
+                    extra={"image_id": image_id, "message": result.message},
+                )
+                final_file_path = result.output_path
+                final_file_name = final_file_path.name
+
+        # 서빙 URL 생성 (MVP: 로컬 static 경로)
+        image_url = f"/static/images/{final_file_name}"
+
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+        logger.info(
+            "[ImageGen] Mock 이미지 생성 완료",
+            extra={
+                "image_id": image_id,
+                "elapsed_ms": elapsed_ms,
+                "background_removed": background_removed,
+            },
+        )
+
+        return ImageGenerationResponse(
+            status=ImageGenerationStatus.COMPLETED,
+            image_id=image_id,
+            image_url=image_url,
+            message="Mock 이미지가 생성되었습니다.",
+            generation_time_ms=elapsed_ms,
+            background_removed=background_removed,
+            rembg_model_used=rembg_model_used,
+        )
+
+    def _create_placeholder_png(self, size_str: str) -> bytes:
+        """플레이스홀더 PNG를 생성합니다.
+
+        Args:
+            size_str: 이미지 크기 문자열 (예: "1024x1024")
+
+        Returns:
+            PNG 바이트 데이터
+        """
+        # 최소한의 유효한 PNG (1x1 회색 픽셀)
+        # 실제 크기는 무시하고 플레이스홀더만 반환
+        # 16x16 회색 PNG (mock 식별용)
+        # Base64로 인코딩된 미니멀 PNG
+        minimal_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAADklEQVQ4y2NgGAWjAAcA"
+            "CHABAMXKQ5oAAAAASUVORK5CYII="
+        )
+        return minimal_png
+
+    def is_available(self) -> bool:
+        """Mock 생성기는 항상 사용 가능합니다."""
+        return True
+
+
+# =============================================================================
+# 실제 이미지 생성기
+# =============================================================================
+
+
+class ImageGenerator:
+    """Gemini 기반 실제 이미지 생성기.
+
+    gemini-3-pro-image-preview 모델을 사용하여 이미지를 생성합니다.
+    모델 ID는 RULE-010에 따라 고정됩니다.
+    """
+
+    def __init__(
+        self,
+        output_dir: Path | None = None,
+        project: str | None = None,
+        location: str | None = None,
+    ) -> None:
+        """ImageGenerator를 초기화합니다.
+
+        Args:
+            output_dir: 이미지 저장 디렉토리
+            project: Vertex AI 프로젝트 ID
+            location: Vertex AI 리전
+        """
+        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        self._project = project or os.environ.get("VERTEX_PROJECT")
+        self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
+        self._client: Client | None = None
+        self._available = False
+
+        self._initialize_client()
+
+    def _initialize_client(self) -> None:
+        """google-genai 클라이언트를 초기화합니다."""
+        try:
+            from google.genai import Client
+
+            client_options: dict[str, Any] = {}
+            if self._project:
+                client_options["project"] = self._project
+            if self._location:
+                client_options["location"] = self._location
+
+            self._client = Client(vertexai=True, **client_options)
+            self._available = True
+
+            logger.info(
+                "[ImageGen] Vertex AI 이미지 생성기 초기화 완료",
+                extra={
+                    "model": MODEL_IMAGE,
+                    "project": self._project or "(ADC 기본)",
+                    "location": self._location,
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                "[ImageGen] Vertex AI 클라이언트 초기화 실패 - Mock 모드 권장",
+                extra={"error_type": type(e).__name__},
+            )
+            self._available = False
+
+    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+        """이미지를 생성합니다.
+
+        Args:
+            request: 이미지 생성 요청
+
+        Returns:
+            ImageGenerationResponse: 생성 결과
+        """
+        if not self._available or self._client is None:
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message="이미지 생성 클라이언트가 초기화되지 않았습니다.",
+            )
+
+        start_time = datetime.now(UTC)
+
+        # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
+        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+
+        # U-036: 프롬프트 로더에서 스타일 가이드라인 로드 (선택적 참고용)
+        # 실제 모델은 Imagen이므로 지시사항보다는 텍스트 생성 모델(U-019)에서 이 가이드라인을 활용해
+        # 최적화된 영어 프롬프트를 생성하는 것이 권장됩니다.
+        try:
+            # 현재 요청의 언어 정보를 알 수 없으므로 기본 KO 사용 (또는 요청에 언어 추가 필요)
+            _style_guidelines = load_image_prompt(Language.KO)
+            logger.debug("[ImageGen] 스타일 가이드라인 로드 완료 (U-036)")
+        except Exception:
+            logger.warning("[ImageGen] 스타일 가이드라인 로드 실패")
+
+        logger.debug(
+            "[ImageGen] 이미지 생성 요청",
+            extra={
+                "prompt_hash": prompt_hash,
+                "size": request.image_size,
+                "model": MODEL_IMAGE,
+                "remove_background": request.remove_background,
+            },
+        )
+
+        try:
+            from google.genai.types import GenerateImagesConfig
+
+            # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
+            _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
+
+            # Gemini 이미지 생성 호출
+            # 참고: gemini-3-pro-image-preview 모델 사용 (RULE-010 고정)
+            response = await self._client.aio.models.generate_images(
+                model=get_model_id(ModelLabel.IMAGE),
+                prompt=request.prompt,
+                config=GenerateImagesConfig(
+                    number_of_images=1,
+                    output_mime_type="image/png",
+                    # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
+                    # 실제 API 스펙에 맞게 조정 필요
+                ),
+            )
+
+            # 이미지 데이터 추출 및 저장
+            if response and hasattr(response, "generated_images") and response.generated_images:
+                image_data = response.generated_images[0]
+                image_bytes: bytes | None = None
+                if (
+                    hasattr(image_data, "image")
+                    and image_data.image
+                    and hasattr(image_data.image, "image_bytes")
+                ):
+                    image_bytes = image_data.image.image_bytes
+
+                if image_bytes is None:
+                    raise ValueError("이미지 데이터를 추출할 수 없습니다.")
+
+                # 고유 ID 및 파일 저장
+                image_id = f"img_{uuid.uuid4().hex[:12]}"
+                file_name = f"{image_id}.png"
+                file_path = self._output_dir / file_name
+                file_path.write_bytes(image_bytes)
+
+                # U-035: 배경 제거 후처리 (조건부)
+                background_removed = False
+                rembg_model_used: str | None = None
+                final_file_path = file_path
+                final_file_name = file_name
+
+                if request.remove_background:
+                    from unknown_world.services.image_postprocess import (
+                        get_image_postprocessor,
+                    )
+
+                    postprocessor = get_image_postprocessor()
+                    result = postprocessor.remove_background(
+                        input_path=file_path,
+                        image_type_hint=request.image_type_hint,
+                    )
+
+                    if result.status.value == "success":
+                        background_removed = True
+                        rembg_model_used = result.model_used
+                        final_file_path = result.output_path
+                        final_file_name = final_file_path.name
+
+                        logger.debug(
+                            "[ImageGen] 이미지 배경 제거 완료",
+                            extra={
+                                "image_id": image_id,
+                                "model": rembg_model_used,
+                                "rembg_time_ms": result.processing_time_ms,
+                            },
+                        )
+                    else:
+                        logger.warning(
+                            "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
+                            extra={"image_id": image_id, "message": result.message},
+                        )
+                        final_file_path = result.output_path
+                        final_file_name = final_file_path.name
+
+                image_url = f"/static/images/{final_file_name}"
+                elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+                logger.info(
+                    "[ImageGen] 이미지 생성 완료",
+                    extra={
+                        "image_id": image_id,
+                        "elapsed_ms": elapsed_ms,
+                        "size_bytes": len(image_bytes),
+                        "background_removed": background_removed,
+                    },
+                )
+
+                return ImageGenerationResponse(
+                    status=ImageGenerationStatus.COMPLETED,
+                    image_id=image_id,
+                    image_url=image_url,
+                    message="이미지가 성공적으로 생성되었습니다.",
+                    generation_time_ms=elapsed_ms,
+                    background_removed=background_removed,
+                    rembg_model_used=rembg_model_used,
+                )
+            else:
+                return ImageGenerationResponse(
+                    status=ImageGenerationStatus.FAILED,
+                    message="이미지 생성 응답이 비어있습니다.",
+                )
+
+        except Exception as e:
+            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+            error_type = type(e).__name__
+
+            logger.error(
+                "[ImageGen] 이미지 생성 실패",
+                extra={
+                    "error_type": error_type,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
+
+            # 실패 시에도 안전한 응답 반환 (RULE-004)
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
+                generation_time_ms=elapsed_ms,
+            )
+
+    def is_available(self) -> bool:
+        """생성기가 사용 가능한 상태인지 확인합니다."""
+        return self._available
+
+
+# =============================================================================
+# 팩토리 함수
+# =============================================================================
+
+# 생성기 타입
+ImageGeneratorType = MockImageGenerator | ImageGenerator
+
+# 싱글톤 인스턴스 캐시
+_generator_instance: ImageGeneratorType | None = None
+
+
+def get_image_generator(
+    *,
+    force_mock: bool = False,
+    force_new: bool = False,
+    output_dir: Path | None = None,
+) -> ImageGeneratorType:
+    """이미지 생성기 인스턴스를 반환합니다.
+
+    환경변수 UW_MODE에 따라 실제 생성기 또는 Mock 생성기를 반환합니다.
+
+    Args:
+        force_mock: True면 환경변수와 무관하게 Mock 생성기 반환
+        force_new: True면 캐시를 무시하고 새 인스턴스 생성
+        output_dir: 이미지 저장 디렉토리
+
+    Returns:
+        이미지 생성기 인스턴스
+    """
+    global _generator_instance
+
+    if not force_new and _generator_instance is not None:
+        return _generator_instance
+
+    # 모드 결정
+    mode = os.environ.get("UW_MODE", "real")
+
+    if force_mock or mode == "mock":
+        generator: ImageGeneratorType = MockImageGenerator(output_dir)
+    else:
+        real_gen = ImageGenerator(output_dir)
+        # 실제 생성기 초기화 실패 시 Mock으로 폴백
+        if not real_gen.is_available():
+            logger.warning("[ImageGen] 실제 생성기 초기화 실패, Mock 모드로 폴백")
+            generator = MockImageGenerator(output_dir)
+        else:
+            generator = real_gen
+
+    _generator_instance = generator
+    return generator
+
+
+def reset_image_generator() -> None:
+    """이미지 생성기 캐시를 초기화합니다.
+
+    테스트 시 생성기를 재설정할 때 사용합니다.
+    """
+    global _generator_instance
+    _generator_instance = None
+
+
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
+
+
+def create_fallback_response(message: str | None = None) -> ImageGenerationResponse:
+    """실패 시 안전한 폴백 응답을 생성합니다.
+
+    RULE-004: 검증 실패나 오류 시에도 안전한 응답 제공
+
+    Args:
+        message: 오류 메시지 (선택)
+
+    Returns:
+        ImageGenerationResponse: 폴백 응답
+    """
+    return ImageGenerationResponse(
+        status=ImageGenerationStatus.SKIPPED,
+        message=message or "이미지 생성을 건너뛰었습니다. 텍스트로 진행합니다.",
+    )
+
+
+def validate_image_request(request: ImageGenerationRequest) -> str | None:
+    """이미지 생성 요청을 검증합니다.
+
+    Args:
+        request: 검증할 요청
+
+    Returns:
+        오류 메시지 (유효하면 None)
+    """
+    # 이미지 크기 검증
+    if request.image_size not in SUPPORTED_SIZES:
+        return f"지원하지 않는 이미지 크기: {request.image_size}"
+
+    # 프롬프트 길이 검증 (너무 짧거나 긴 경우)
+    if len(request.prompt) < 3:
+        return "프롬프트가 너무 짧습니다."
+
+    if len(request.prompt) > 2000:
+        return "프롬프트가 너무 깁니다 (최대 2000자)."
+
+    return None
 </file>
 
 <file path="frontend/src/api/turnStream.test.ts">
@@ -24570,81 +23049,6 @@ export function useTurnRunner(deps: {
 }
 </file>
 
-<file path="backend/pyproject.toml">
-# backend/pyproject.toml
-# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[project]
-name = "unknown-world-backend"
-version = "0.1.0"
-description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
-requires-python = ">=3.14"
-dependencies = [
-    "fastapi==0.128.0",
-    "uvicorn[standard]==0.40.0",
-    "pydantic==2.12.5",
-    "google-genai==1.56.0",
-    "google-cloud-aiplatform==1.132.0",
-    "google-cloud-storage==3.7.0",
-    "python-dotenv>=1.2.1",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/unknown_world"]
-
-[dependency-groups]
-dev = [
-    "ruff==0.14.10",
-    "pyright==1.1.407",
-    "pytest==9.0.2",
-    "httpx==0.28.1",
-    "jsonschema>=4.26.0",
-    "pytest-asyncio>=1.3.0",
-    "pytest-cov>=7.0.0",
-]
-
-[tool.ruff]
-line-length = 100
-target-version = "py314"
-extend-exclude = [
-    "__pycache__",
-    ".ruff_cache",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-]
-
-[tool.ruff.lint]
-select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # pyflakes
-    "I",      # isort
-    "UP",     # pyupgrade
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "SIM",    # flake8-simplify
-]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # function call in default argument (FastAPI Depends pattern)
-]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-
-[tool.pyright]
-pythonVersion = "3.14"
-typeCheckingMode = "strict"
-include = ["src"]
-</file>
-
 <file path="frontend/package.json">
 {
   "name": "unknown-world-frontend",
@@ -25351,6 +23755,83 @@ export type TurnInputSafeParseResult = ReturnType<typeof TurnInputSchema.safePar
 export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
   return TurnInputSchema.safeParse(data);
 }
+</file>
+
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+    "google-genai==1.60.0",
+    "google-cloud-aiplatform==1.132.0",
+    "google-cloud-storage==3.7.0",
+    "python-dotenv>=1.2.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.408",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
+    "jsonschema>=4.26.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (FastAPI Depends pattern)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
+venvPath = "."
+venv = ".venv"
 </file>
 
 <file path="backend/src/unknown_world/api/turn.py">

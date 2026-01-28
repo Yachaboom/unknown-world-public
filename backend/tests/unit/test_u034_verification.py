@@ -20,15 +20,53 @@ def test_schema_is_valid_json():
 
 
 def test_schema_required_properties():
-    """계획서에 명시된 필수 필드가 스키마에 정의되어 있는지 확인"""
+    """스키마의 JSON Schema required 필드가 정의되어 있는지 확인
+
+    NOTE: JSON Schema의 `required` 배열과 "워크플로우 필수(조건부)" 필드는 구분됨.
+    - Schema required: ["id", "category", "purpose", "size_px"] (SSOT)
+    - Workflow required: requires_rembg, rembg_options.model 등은 조건부 필드
+    """
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         schema = json.load(f)
 
     properties = schema.get("properties", {})
-    required_fields = ["id", "category", "purpose", "size_px", "requires_rembg", "rembg_model"]
+    # JSON Schema의 required 필드만 검증 (스키마 SSOT 기준)
+    schema_required_fields = ["id", "category", "purpose", "size_px"]
+    # 워크플로우에서 자주 사용하는 선택적 필드 (properties에 정의되어 있어야 함)
+    optional_workflow_fields = ["requires_rembg", "rembg_options"]
 
-    for field in required_fields:
-        assert field in properties, f"Required field '{field}' missing in schema properties"
+    for field in schema_required_fields:
+        assert field in properties, f"Schema required field '{field}' missing in properties"
+
+    for field in optional_workflow_fields:
+        assert field in properties, f"Workflow field '{field}' missing in properties"
+
+
+def test_schema_rembg_options_model():
+    """rembg 모델 선택의 SSOT가 rembg_options.model인지 확인
+
+    NOTE: 이전에 top-level rembg_model 필드가 논의되었으나,
+    SSOT는 rembg_options.model로 확정됨 (U-040 페어링 결정).
+    """
+    with open(SCHEMA_PATH, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    # rembg_options가 존재하고 model 서브필드가 있어야 함
+    rembg_options = schema["properties"].get("rembg_options", {})
+    assert rembg_options.get("type") == "object", "rembg_options should be an object"
+
+    rembg_options_props = rembg_options.get("properties", {})
+    assert "model" in rembg_options_props, (
+        "SSOT field 'rembg_options.model' missing - "
+        "rembg 모델 선택은 top-level 'rembg_model'이 아닌 'rembg_options.model'이 SSOT입니다"
+    )
+
+    # model 필드의 enum이 유효한 rembg 모델 목록을 포함하는지 확인
+    model_field = rembg_options_props["model"]
+    assert "enum" in model_field, "rembg_options.model should have enum constraint"
+    assert "birefnet-general" in model_field["enum"], (
+        "Default model 'birefnet-general' should be in enum"
+    )
 
 
 def test_guide_file_exists():

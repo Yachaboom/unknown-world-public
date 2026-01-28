@@ -27,13 +27,16 @@
 - **추정 원인**: 스트리밍 파이프라인에서 badges 이벤트 발행 로직이 변경되었거나, 테스트 기대치가 현재 구현과 불일치
 - **보류 사유**: U-046[Mvp] 범위 밖 (prompt_loader XML 태그 규격과 무관한 스트리밍 로직)
 
-## 2026-01-24 이슈: 에셋 요청 스키마 검증 실패 (U-034 관련)
+## 2026-01-24 이슈: 에셋 요청 스키마 검증 실패 (U-034 관련) ✅ 해결됨
 
 - **발견 위치**: backend/tests/unit/test_u034_verification.py
 - **현상**: test_schema_required_properties 테스트에서 'rembg_model' 필드가 스키마에 없다는 AssertionError 발생.
 - **추정 원인**: vibe/ref/nanobanana-asset-request.schema.json 파일에 'rembg_model' 필드가 정의되지 않았거나 이름이 다름.
 - **보류 사유**: 이번 유닛(U-016[Mvp]) 범위 밖이며, GenAI 클라이언트 구현과는 무관한 에셋 제작용 스키마 이슈임.
 
-- **해결 계획**: [U-040[Mvp]](unit-plans/U-040[Mvp].md)
-  - 스키마의 **SSOT 필드**를 `rembg_options.model`로 확정하고, 테스트/런북/문서에서 `rembg_model` 표기를 제거(또는 별칭/하위호환이 필요하면 `rembg_model`을 deprecated alias로 추가)하여 정합성을 복구한다.
-  - 결과적으로 `backend/tests/unit/test_u034_verification.py`가 스키마와 동일한 필드명을 검증하도록 수정하고, `vibe/unit-runbooks/U-034-nanobanana-template-runbook.md`의 스키마 주요 필드 표도 동일 축으로 갱신한다.
+- **해결 완료**: [U-040[Mvp]](unit-plans/U-040[Mvp].md) (2026-01-28)
+  - **SSOT 확정**: `rembg_options.model`을 rembg 모델 선택의 단일 기준 필드로 확정
+  - **수정 파일**:
+    - `backend/tests/unit/test_u034_verification.py`: `required_fields`에서 `rembg_model` 제거, `rembg_options` 구조 검증 추가
+    - `vibe/unit-runbooks/U-034-nanobanana-template-runbook.md`: 스키마 주요 필드 표 및 확인 포인트 갱신
+  - **재발 방지**: JSON Schema required와 "워크플로우 필수" 개념을 테스트 코드에 명확히 구분/문서화함

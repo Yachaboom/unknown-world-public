@@ -1,5 +1,39 @@
 # 프로젝트 진행 상황
 
+## [2026-01-28 17:50] [U-040[Mvp]] 에셋 요청 스키마 정합(rembg_model 이슈) + 테스트/런북 복구 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: `nanobanana-asset-request.schema.json`(SSOT)과 테스트/런북 간의 필드명 불일치(rembg_model vs rembg_options.model)를 해소하고, SSOT를 `rembg_options.model`로 확정하여 정합성 확보
+- **추가 컴포넌트**: `vibe/unit-runbooks/U-040-schema-alignment-runbook.md` (신규 런북), `vibe/unit-results/U-040[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-007] 에셋 파이프라인 정합성 유지, [PRD 9.7] 에셋 제작 가이드라인 준수, 기술 부채(debt-log) 해결
+
+### 기술적 구현 세부사항
+
+**스키마 정합성 복구**:
+- **SSOT Alignment**: 기존 테스트 및 런북에서 잘못 참조하던 Top-level `rembg_model` 필드를 제거하고, 스키마의 실제 구조인 `rembg_options.model` (Nested) 필드를 기준으로 검증 로직 및 문서 설명 갱신
+- **Test Logic Update**: `backend/tests/unit/test_u034_verification.py`의 `required_fields` 검증 목록을 최신 스키마 사양에 맞춰 수정하고, `rembg_options` 내부 속성(model enum)까지 검증하도록 테스트 강화
+
+**안정성 및 문서화**:
+- **Runbook Synchronization**: `U-034` 런북 내의 에셋 요청 예시 및 필드 설명 테이블을 `rembg_options` 구조로 전면 수정하여 개발자 혼선 방지
+- **GenAI Client Refinement**: `genai_client.py` 및 `image_generation.py`의 관련 로직을 함께 정비하여 에셋 생성 파이프라인의 전반적인 안정성 제고
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/services/
+│   ├── genai_client.py (로직 개선)
+│   └── image_generation.py (로직 개선)
+├── backend/tests/unit/
+│   └── test_u034_verification.py (스키마 검증 정합화)
+└── vibe/unit-runbooks/
+    └── U-034-nanobanana-template-runbook.md (문서 정합화)
+
+### 다음 단계
+- [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+- [U-021[Mvp]] Scanner 슬롯 UI + 업로드→아이템화
+
+---
+
 ## [2026-01-28 14:15] [U-046[Mvp]] 분리 프롬프트(.md) XML 태그 규격 통일(메타/섹션) + 로더 파싱 단일화 완료
 
 ### 구현 완료 항목

@@ -29,11 +29,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
+
+if TYPE_CHECKING:
+    from google.genai import Client
 from unknown_world.models.turn import Language
 from unknown_world.orchestrator.prompt_loader import load_image_prompt
 
@@ -353,7 +356,7 @@ class ImageGenerator:
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._project = project or os.environ.get("VERTEX_PROJECT")
         self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
-        self._client: Any | None = None
+        self._client: Client | None = None
         self._available = False
 
         self._initialize_client()
@@ -361,7 +364,7 @@ class ImageGenerator:
     def _initialize_client(self) -> None:
         """google-genai 클라이언트를 초기화합니다."""
         try:
-            from google import genai  # type: ignore[import-untyped]
+            from google.genai import Client
 
             client_options: dict[str, Any] = {}
             if self._project:
@@ -369,7 +372,7 @@ class ImageGenerator:
             if self._location:
                 client_options["location"] = self._location
 
-            self._client = genai.Client(vertexai=True, **client_options)
+            self._client = Client(vertexai=True, **client_options)
             self._available = True
 
             logger.info(
@@ -428,6 +431,8 @@ class ImageGenerator:
         )
 
         try:
+            from google.genai.types import GenerateImagesConfig
+
             # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
             _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
 
@@ -436,20 +441,27 @@ class ImageGenerator:
             response = await self._client.aio.models.generate_images(
                 model=get_model_id(ModelLabel.IMAGE),
                 prompt=request.prompt,
-                config={
-                    "number_of_images": 1,
-                    "output_mime_type": "image/png",
+                config=GenerateImagesConfig(
+                    number_of_images=1,
+                    output_mime_type="image/png",
                     # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
                     # 실제 API 스펙에 맞게 조정 필요
-                },
+                ),
             )
 
             # 이미지 데이터 추출 및 저장
-            if response and hasattr(response, "generated_images"):
+            if response and hasattr(response, "generated_images") and response.generated_images:
                 image_data = response.generated_images[0]
-                image_bytes = (
-                    image_data.image.image_bytes if hasattr(image_data, "image") else image_data
-                )
+                image_bytes: bytes | None = None
+                if (
+                    hasattr(image_data, "image")
+                    and image_data.image
+                    and hasattr(image_data.image, "image_bytes")
+                ):
+                    image_bytes = image_data.image.image_bytes
+
+                if image_bytes is None:
+                    raise ValueError("이미지 데이터를 추출할 수 없습니다.")
 
                 # 고유 ID 및 파일 저장
                 image_id = f"img_{uuid.uuid4().hex[:12]}"
