@@ -46,6 +46,8 @@ D:\Dev\unknown-world\
 │   │       └── models/     # 데이터 모델 (TurnInput/Output)
 │       └── main.py     # 엔트리포인트 (.env 자동 로딩, U-047)
 │   ├── tests/              # 백엔드 테스트 코드
+│   │   ├── integration/
+│   │   │   └── test_real_mode_gate.py (신규: real 모드 통합 테스트, CP-MVP-07)
 │   │   └── unit/
 │   │       ├── test_dotenv_autoload.py (신규: U-047)
 │   │       ├── test_u043_language_gate.py
@@ -65,8 +67,8 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-05, U-040, U-045, U-047 포함)
-    └── unit-runbooks/     # 검증 런북 (U-040, U-045, U-047 포함)
+    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-07, CP-MVP-05, U-040, U-045, U-047 포함)
+    └── unit-runbooks/     # 검증 런북 (CP-MVP-07, U-040, U-045, U-047 포함)
 ```
 
 ### 주요 디렉토리 책임
@@ -293,9 +295,13 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **Hybrid Client (Mock/Real)**:
     - 환경변수 `UW_MODE`에 따라 실제 API 호출(`real`)과 모의 응답(`mock`)을 선택적으로 운용함.
     - 실제 클라이언트 초기화 실패 시 시스템 가용성 유지를 위해 자동으로 Mock 모드로 폴백함.
-4. **보안 및 개인정보 보호 (RULE-007/008)**:
+4. **환경변수 로딩 및 보호 정책 (U-047, CP-MVP-07)**:
+    - **Automatic Loading**: FastAPI 시작 시점에 `.env` 파일을 자동 로드하여 로컬 개발 편의성 확보.
+    - **SSOT Protection**: `override=False` 설정을 통해 시스템(운영/CI) 환경변수가 `.env` 파일보다 우선하도록 보장하여 설정 오염 방지.
+5. **보안 및 개인정보 보호 (RULE-007/008)**:
     - **프롬프트 은닉**: 로그 및 UI에는 프롬프트 원문이나 내부 추론(CoT)을 노출하지 않고 메타데이터(라벨, 버전, 사용량)만 기록함.
     - **비밀정보 보호**: 인증 키 파일 및 민감한 환경변수가 코드 저장소에 커밋되지 않도록 `.gitignore` 및 보안 가이드라인을 철저히 준수함.
+    - **응답 마스킹**: `/health` 및 에러 응답에서 GCP 키 경로 등 시스템 내부 정보를 원천 차단함 (CP-MVP-07).
 
 ## 13. 멀티모달 및 이미지 정책 (U-019[Mvp], U-035[Mvp])
 

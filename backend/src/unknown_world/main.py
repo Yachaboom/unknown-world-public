@@ -34,10 +34,23 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # .env 파일 경로 (backend 디렉토리 기준)
-_DOTENV_PATH = Path(__file__).parent.parent.parent.parent / ".env"
+# main.py 위치: backend/src/unknown_world/main.py
+# backend/.env 위치: backend/.env (3단계 상위)
+# resolve()로 절대 경로 보장
+_DOTENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
 
 # .env 로딩 (override=False: 기존 환경변수 우선)
 _dotenv_loaded = load_dotenv(dotenv_path=_DOTENV_PATH, override=False)
+
+# 디버그: .env 로딩 상태 즉시 출력 (U-047 검증용)
+import sys
+
+print(f"[Startup] .env path: {_DOTENV_PATH}", file=sys.stderr)
+print(f"[Startup] .env exists: {_DOTENV_PATH.exists()}", file=sys.stderr)
+print(f"[Startup] dotenv loaded: {_dotenv_loaded}", file=sys.stderr)
+import os as _os_temp
+
+print(f"[Startup] UW_MODE: {_os_temp.environ.get('UW_MODE', 'NOT_SET')}", file=sys.stderr)
 
 import logging
 from collections.abc import AsyncGenerator
