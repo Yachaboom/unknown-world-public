@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 53/75 (70%) | **MVP**: 53/61 (86%) | **MMP**: 0/14 (0%)
+**전체**: 54/75 (72%) | **MVP**: 54/61 (88%) | **MMP**: 0/14 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-8  
+**예상 완료(가정)**: MVP D-3 | MMP D-8  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [CP-MVP-05](unit-plans/CP-MVP-05.md) / **최근 완료**: [U-040[Mvp]](unit-results/U-040[Mvp].md) (2026-01-28)
+**진행 중(현재 포커스)**: [CP-MVP-06](unit-plans/CP-MVP-06.md) / **최근 완료**: [CP-MVP-05](unit-results/CP-MVP-05.md) (2026-01-28)
 
 **블로커**: 없음
 
@@ -61,7 +61,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-24 | 10/10  | ✅   |
 | MVP  | CP-MVP-04 | **✓ 체크포인트: 실모델 Hard Gate**     | 2026-01-21 | -      | ✅   |
-| MVP  | CP-MVP-05 | **✓ 체크포인트: 멀티모달 이미지 게이트** | 2026-01-22 | -      | ⏸️   |
 | MVP  | CP-MVP-06 | **✓ 체크포인트: Scanner 업로드 게이트** | 2026-01-23 | -      | ⏸️   |
 | MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-24 | -      | ⏸️   |
 | MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
@@ -134,7 +133,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[CP-MVP-05](unit-plans/CP-MVP-05.md) | **체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)** | Depends=U-035,U-036,U-043,U-044,U-045 | ⏸️
 ID=[U-021[Mvp]](unit-plans/U-021[Mvp].md) | 이미지 이해(Scanner) 백엔드 엔드포인트 | Depends=U-016 | ⏸️
 ID=[U-022[Mvp]](unit-plans/U-022[Mvp].md) | ⚡Scanner 슬롯 UI + 업로드→아이템화 반영 | Depends=U-011,U-021 | ⏸️
 ID=[CP-MVP-06](unit-plans/CP-MVP-06.md) | **체크포인트: Scanner 업로드 게이트(안전/좌표/비용)** | Depends=U-022 | ⏸️
@@ -170,6 +168,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [CP-MVP-05](unit-results/CP-MVP-05.md): 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용) 검증 완료 (2026-01-28)
 - ✅ [U-040[Mvp]](unit-results/U-040[Mvp].md): 에셋 요청 스키마 정합(rembg_model 이슈) + 테스트/런북 복구 (2026-01-28)
 - ✅ [U-046[Mvp]](unit-results/U-046[Mvp].md): 분리 프롬프트(.md) XML 태그 규격 통일 + 로더 파싱 단일화 (2026-01-28)
 - ✅ [U-045[Mvp]](unit-results/U-045[Mvp].md): Backend 시작 시 rembg/모델 사전 점검 + 다운로드(preflight) (2026-01-28)

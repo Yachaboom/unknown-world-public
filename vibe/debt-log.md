@@ -27,6 +27,31 @@
 - **추정 원인**: 스트리밍 파이프라인에서 badges 이벤트 발행 로직이 변경되었거나, 테스트 기대치가 현재 구현과 불일치
 - **보류 사유**: U-046[Mvp] 범위 밖 (prompt_loader XML 태그 규격과 무관한 스트리밍 로직)
 
+## 2026-01-28 이슈: test_genai_client Mock 검증 불일치 (2개)
+
+- **발견 위치**: `backend/tests/unit/services/test_genai_client.py:122`, `:203`
+- **현상**: `test_genai_client_generate_real_call`, `test_genai_client_full_config` 실패 - Mock 호출 검증에서 `config` 파라미터 형태 불일치
+- **에러**: `Expected: config={'max_output_tokens': 100}` vs `Actual: config=GenerateContentConfig(...)`
+- **추정 원인**: `genai_client.py`가 dict 대신 `GenerateContentConfig` 객체를 사용하도록 변경되었으나, 테스트 기대값이 업데이트되지 않음
+- **보류 사유**: CP-MVP-05 범위 밖 (GenAI 클라이언트 자체 테스트이며, 멀티모달 이미지 게이트 검증과 무관)
+- **권장 조치**: 테스트에서 `config=ANY` 또는 `GenerateContentConfig` 인스턴스로 검증하도록 수정
+
+## 2026-01-28 이슈: App.test.tsx 핫스팟 검색 실패
+
+- **발견 위치**: `frontend/src/App.test.tsx:72`
+- **현상**: `Unable to find a label with the text of: 터미널` - 초기 화면이 `profile_select`이므로 게임 핫스팟이 존재하지 않음
+- **추정 원인**: 테스트가 프로필 선택 완료 후의 `playing` 상태를 가정하지만, 실제로는 `profile_select` 상태에서 검색 시도
+- **보류 사유**: CP-MVP-05 범위 밖 (U-015 SaveGame + Demo Profiles 관련 기존 테스트)
+- **권장 조치**: 테스트에서 프로필 선택 액션을 먼저 수행하거나, playing 상태를 mocking
+
+## 2026-01-28 이슈: DndInteraction.test.tsx onDragEnd undefined (2개)
+
+- **발견 위치**: `frontend/src/components/DndInteraction.test.tsx:97`, `:148`
+- **현상**: `TypeError: Cannot read properties of undefined (reading 'onDragEnd')`
+- **추정 원인**: DndContext mock에서 `props`를 `global.dndCallbacks`에 저장하는 로직이 실행되지 않거나, App.tsx 렌더링 순서/조건에 따라 DndContext가 마운트되지 않음
+- **보류 사유**: CP-MVP-05 범위 밖 (DnD 인터랙션 관련 기존 테스트)
+- **권장 조치**: Mock 설정 재검토 또는 DndContext 마운트 조건(playing 상태) 확인 필요
+
 ## 2026-01-24 이슈: 에셋 요청 스키마 검증 실패 (U-034 관련) ✅ 해결됨
 
 - **발견 위치**: backend/tests/unit/test_u034_verification.py

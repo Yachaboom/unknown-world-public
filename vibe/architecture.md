@@ -63,7 +63,7 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (U-040, U-045 포함)
+    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-05, U-040, U-045 포함)
     └── unit-runbooks/     # 검증 런북 (U-040, U-045 포함)
 ```
 
