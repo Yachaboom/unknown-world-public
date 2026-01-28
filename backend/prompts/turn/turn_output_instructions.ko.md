@@ -1,10 +1,12 @@
-# [Prompt] TurnOutput Instructions (ko-KR)
+<prompt_meta>
+  <prompt_id>turn_output_instructions</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
 
-- prompt_id: turn_output_instructions
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-24
-
+<prompt_body>
 ## 목적
 
 TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
@@ -101,3 +103,4 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
   "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
 }
 ```
+</prompt_body>

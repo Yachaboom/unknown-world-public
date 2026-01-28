@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 51/74 (69%) | **MVP**: 51/61 (84%) | **MMP**: 0/13 (0%)
+**전체**: 52/74 (70%) | **MVP**: 52/61 (85%) | **MMP**: 0/13 (0%)
 
 **예상 완료(가정)**: MVP D-4 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-046[Mvp]](unit-plans/U-046[Mvp].md) / **최근 완료**: [U-045[Mvp]](unit-results/U-045[Mvp].md) (2026-01-28)
+**진행 중(현재 포커스)**: [CP-MVP-05](unit-plans/CP-MVP-05.md) / **최근 완료**: [U-046[Mvp]](unit-results/U-046[Mvp].md) (2026-01-28)
 
 **블로커**: 없음
 
@@ -93,7 +93,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 - **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**
 - **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06
-- **상태**: 🚧 (프롬프트 파일 분리/핫리로드 ✅, XML 태그 규격 통일은 U-046에서 정리)
+- **상태**: 🚧 (프롬프트 파일 분리/핫리로드/XML규격통일 ✅)
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
 
@@ -133,7 +133,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-046[Mvp]](unit-plans/U-046[Mvp].md) | 분리 프롬프트(.md) XML 태그 규격 통일(메타/섹션) + 로더 파싱 단일화 계획 | Depends=U-036 | ⏸️
 ID=[U-040[Mvp]](unit-plans/U-040[Mvp].md) | 에셋 요청 스키마 정합(rembg_model 이슈) + 테스트/런북 복구 | Depends=U-034 | ⏸️
 ID=[CP-MVP-05](unit-plans/CP-MVP-05.md) | **체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)** | Depends=U-035,U-036,U-043,U-044,U-045 | ⏸️
 ID=[U-021[Mvp]](unit-plans/U-021[Mvp].md) | 이미지 이해(Scanner) 백엔드 엔드포인트 | Depends=U-016 | ⏸️
@@ -170,6 +169,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-046[Mvp]](unit-results/U-046[Mvp].md): 분리 프롬프트(.md) XML 태그 규격 통일 + 로더 파싱 단일화 (2026-01-28)
 - ✅ [U-045[Mvp]](unit-results/U-045[Mvp].md): Backend 시작 시 rembg/모델 사전 점검 + 다운로드(preflight) (2026-01-28)
 - ✅ [U-044[Mvp]](unit-results/U-044[Mvp].md): 세션 언어 SSOT(토글=리셋) + 혼합 출력(상태/시스템) 제거 (2026-01-27)
 - ✅ [U-036[Mvp]](unit-results/U-036[Mvp].md): 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 (2026-01-26)
@@ -237,7 +237,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-043[Mvp]](unit-plans/U-043[Mvp].md) - ko/en 혼합 출력 게이트(언어 검증+Repair)
+**현재 작업**: [CP-MVP-05](unit-plans/CP-MVP-05.md) - 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
 
 ```bash
 # Frontend (RULE-011: 8001~8010)

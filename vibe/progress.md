@@ -1,5 +1,39 @@
 # 프로젝트 진행 상황
 
+## [2026-01-28 14:15] [U-046[Mvp]] 분리 프롬프트(.md) XML 태그 규격 통일(메타/섹션) + 로더 파싱 단일화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 프롬프트 파일의 메타데이터 및 섹션 경계를 XML 태그(`prompt_meta`, `prompt_body`)로 통일하고, `prompt_loader`가 이를 우선 파싱하도록 로직 단일화
+- **추가 컴포넌트**: `backend/prompts/**/*.md` (XML 규격 적용 6종), `vibe/unit-runbooks/U-046-prompt-xml-tags-runbook.md` (런북), `vibe/unit-results/U-046[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-006] ko/en 혼합 방지 및 규격화, [RULE-007] 메타데이터 추적성 강화, [PRD 10.4] 프롬프트 버저닝/정책 메타 관리
+
+### 기술적 구현 세부사항
+
+**프롬프트 규격 표준화 (XML Tags)**:
+- **XML Meta Structure**: `<prompt_meta>` 태그 내에 `prompt_id`, `language`, `version` 등 필수 메타데이터를 명시하여 파싱 신뢰도 향상
+- **Explicit Body Boundary**: `<prompt_body>` 태그로 모델에 전달될 실제 본문 영역을 명확히 구분하여 메타 정보의 프롬프트 오염 방지
+
+**로더 파싱 로직 고도화**:
+- **Dual Parsing Strategy**: XML 태그 파싱을 우선 시도하되, 실패 시 기존 Frontmatter(`- key: value`) 방식을 시도하는 폴백 로직으로 하위 호환성 및 운영 안정성 확보
+- **Strict Verification**: 단위 테스트(`test_prompt_loader.py`)를 통해 XML 구조 유효성, 필수 메타 누락, 레거시 폴백 동작을 전수 검증
+
+### 코드 구조
+repo-root/
+├── backend/prompts/ (XML 태그 적용)
+│   ├── system/
+│   ├── turn/
+│   └── image/
+└── backend/src/unknown_world/
+    └── orchestrator/
+        └── prompt_loader.py (XML 파싱 및 레거시 폴백 구현)
+
+### 다음 단계
+- [CP-MVP-05] 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용)
+- [U-021[Mvp]] Scanner 슬롯 UI + 업로드→아이템화
+
+---
+
 ## [2026-01-28 15:30] [U-045[Mvp]] Backend 시작 시 rembg/모델 사전 점검 + 다운로드(preflight) 완료
 
 ### 구현 완료 항목

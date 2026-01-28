@@ -11,7 +11,7 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ```text
 D:\Dev\unknown-world\
 ├── backend/               # 백엔드 (FastAPI + Pydantic)
-│   ├── prompts/           # 프롬프트 저장소 (U-036)
+│   ├── prompts/           # 프롬프트 저장소 (U-036, U-046: XML 규격 적용)
 │   │   ├── system/        # 시스템/페르소나 프롬프트
 │   │   ├── turn/          # 출력 지시사항 프롬프트
 │   │   └── image/         # 이미지 스타일 가이드라인
@@ -320,8 +320,10 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 2. **언어별 분리 (RULE-006)**:
     - 프롬프트 파일은 `*.ko.md` 및 `*.en.md` 형식으로 엄격히 분리하여 혼합 출력을 방지함.
     - `PromptLoader`는 요청된 언어에 맞는 파일을 로드하며, 부재 시 자동 폴백(KO <-> EN)을 제공함.
-3. **프론트매터 및 메타데이터**:
-    - 프롬프트 파일 상단에 `- key: value` 형식의 메타데이터를 포함하여 버전, 정책 프리셋, 고유 ID 등을 관리함.
+3. **XML 태그 기반 메타데이터 (U-046[Mvp])**:
+    - **XML Meta Structure**: 프롬프트 파일 상단에 `<prompt_meta>...</prompt_meta>` 태그를 도입하여 메타데이터(ID, 버전, 정책 등)를 명확히 구조화함.
+    - **Explicit Body Boundary**: `<prompt_body>...</prompt_body>` 태그로 실제 모델 입력 본문을 감싸 메타 정보의 오염을 방지함.
+    - **Legacy Fallback**: 마이그레이션 과도기를 위해 기존 `- key: value` 포맷 파싱도 지원하여 하위 호환성을 유지함.
 4. **개발 모드 핫리로드 (PRD 10.4)**:
     - `ENVIRONMENT=development` 환경에서는 매 호출 시 파일을 다시 읽어 수정 사항을 즉시 반영(Hot-Reload)함.
     - 운영 환경에서는 `lru_cache`를 통한 메모리 캐싱으로 성능을 보장함.

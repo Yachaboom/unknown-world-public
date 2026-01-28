@@ -1,10 +1,12 @@
-# [Prompt] Scene Image Generation (ko-KR)
+<prompt_meta>
+  <prompt_id>scene_image_generation</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
 
-- prompt_id: scene_image_generation
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-26
-
+<prompt_body>
 ## 목적
 
 게임 내 장면(Scene) 이미지를 생성하기 위한 프롬프트 템플릿입니다.
@@ -86,3 +88,4 @@ A crumbling throne in a ruined castle bathed in moonlight, broken pillars and de
 - **프롬프트는 영어로 작성**: 이미지 생성 모델 최적화를 위해
 - **일관된 스타일 유지**: 기본 스타일 키워드를 항상 포함
 - **안전 정책 준수**: 부적절한 콘텐츠 생성 요소 배제
+</prompt_body>

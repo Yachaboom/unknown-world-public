@@ -1,12 +1,13 @@
 """Unknown World - 프롬프트 로더 유틸리티.
 
 이 모듈은 언어별로 분리된 프롬프트 파일을 로드합니다.
-프론트매터 파싱 및 핫리로드를 지원합니다.
+XML 태그 기반 메타데이터 파싱 및 핫리로드를 지원합니다.
 
 설계 원칙:
     - RULE-006: ko/en 언어 정책 준수 (혼합 출력 금지)
     - RULE-007/008: 프롬프트 원문 UI/로그 노출 금지
     - U-036: 핫리로드 (개발 모드), 프론트매터 파싱 지원
+    - U-046: XML 태그 규격 통일 (메타/섹션) + 레거시 폴백
 
 프롬프트 디렉토리 구조:
     backend/prompts/
@@ -20,9 +21,25 @@
         ├── scene_prompt.ko.md
         └── scene_prompt.en.md
 
-페어링 질문 결정 (U-036):
-    - Q1: Option A (개발 모드에서만 매 호출 시 리로드)
-    - Q2: Option B (프론트매터 포함 마크다운)
+XML 태그 규격 (U-046):
+    <prompt_meta>
+      <prompt_id>game_master_system</prompt_id>
+      <language>ko-KR</language>
+      <version>0.1.0</version>
+      <last_updated>YYYY-MM-DD</last_updated>
+      <policy_preset>default</policy_preset>
+    </prompt_meta>
+
+    <prompt_body>
+    ## 목적
+    ...
+    </prompt_body>
+
+페어링 질문 결정:
+    - U-036 Q1: Option A (개발 모드에서만 매 호출 시 리로드)
+    - U-036 Q2: Option B (프론트매터 포함 마크다운)
+    - U-046 Q1: Option A (메타 블록을 모델 입력에서 제거)
+    - U-046 Q2: Option A (XML 파싱 실패 시 레거시 폴백)
 
 참조:
     - vibe/prd.md 3.2 (프롬프트 파일 관리)
@@ -113,15 +130,76 @@ def _is_development_mode() -> bool:
 
 
 # =============================================================================
-# 프론트매터 파싱
+# XML 태그 및 프론트매터 파싱 (U-046)
 # =============================================================================
 
-# 프론트매터 패턴: 파일 시작 부분의 "- key: value" 형태
+# XML 태그 패턴 (U-046 표준)
+_XML_META_PATTERN = re.compile(
+    r"<prompt_meta>\s*(.*?)\s*</prompt_meta>",
+    re.DOTALL,
+)
+_XML_BODY_PATTERN = re.compile(
+    r"<prompt_body>\s*(.*?)\s*</prompt_body>",
+    re.DOTALL,
+)
+_XML_TAG_PATTERN = re.compile(r"<(\w+)>([^<]*)</\1>")
+
+# 레거시 프론트매터 패턴: 파일 시작 부분의 "- key: value" 형태
 _FRONTMATTER_LINE_PATTERN = re.compile(r"^-\s*(\w+):\s*(.+)$")
 
 
-def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
-    """마크다운 텍스트에서 프론트매터를 파싱합니다.
+def _parse_xml_meta(text: str) -> tuple[dict[str, str], str] | None:
+    """XML 태그 기반 메타데이터와 본문을 파싱합니다.
+
+    U-046 표준 XML 태그 규격:
+        <prompt_meta>
+          <prompt_id>game_master_system</prompt_id>
+          <language>ko-KR</language>
+          <version>0.1.0</version>
+          <last_updated>YYYY-MM-DD</last_updated>
+          <policy_preset>default</policy_preset>
+        </prompt_meta>
+
+        <prompt_body>
+        ## 목적
+        ...
+        </prompt_body>
+
+    Args:
+        text: 원본 텍스트
+
+    Returns:
+        (메타데이터 딕셔너리, 본문 텍스트) 튜플
+        XML 태그가 없으면 None 반환 (레거시 폴백 필요)
+    """
+    meta_match = _XML_META_PATTERN.search(text)
+    body_match = _XML_BODY_PATTERN.search(text)
+
+    # XML 태그가 없으면 None 반환
+    if not meta_match:
+        return None
+
+    # 메타데이터 파싱
+    meta_content = meta_match.group(1)
+    metadata: dict[str, str] = {}
+    for tag_match in _XML_TAG_PATTERN.finditer(meta_content):
+        key = tag_match.group(1)
+        value = tag_match.group(2).strip()
+        metadata[key] = value
+
+    # 본문 추출 (U-046 Q1: 메타 블록을 모델 입력에서 제거)
+    if body_match:
+        content = body_match.group(1).strip()
+    else:
+        # <prompt_body>가 없으면 <prompt_meta> 이후 전체를 본문으로 취급
+        meta_end = meta_match.end()
+        content = text[meta_end:].strip()
+
+    return metadata, content
+
+
+def _parse_legacy_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """레거시 프론트매터를 파싱합니다 (U-036 호환).
 
     프론트매터는 첫 번째 제목(#) 이후, 두 번째 제목(##) 이전의
     "- key: value" 형태의 라인들입니다.
@@ -175,6 +253,39 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
     content = "\n".join(lines[content_start_idx:]).strip()
 
     return metadata, content
+
+
+def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """메타데이터와 본문을 파싱합니다 (XML 우선, 레거시 폴백).
+
+    U-046 Q2 결정: XML 태그 파싱 실패 시 레거시 폴백 후 진행
+
+    파싱 우선순위:
+        1. XML 태그 기반 (<prompt_meta>, <prompt_body>)
+        2. 레거시 프론트매터 (- key: value)
+
+    Args:
+        text: 원본 텍스트
+
+    Returns:
+        (메타데이터 딕셔너리, 본문 텍스트) 튜플
+    """
+    # 1. XML 태그 파싱 시도
+    xml_result = _parse_xml_meta(text)
+    if xml_result is not None:
+        metadata, content = xml_result
+        logger.debug(
+            "[PromptLoader] XML 태그 기반 파싱 완료",
+            extra={"format": "xml", "meta_keys": list(metadata.keys())},
+        )
+        return metadata, content
+
+    # 2. 레거시 폴백 (U-046 Q2: Option A)
+    logger.debug(
+        "[PromptLoader] 레거시 프론트매터 파싱으로 폴백",
+        extra={"format": "legacy"},
+    )
+    return _parse_legacy_frontmatter(text)
 
 
 # =============================================================================

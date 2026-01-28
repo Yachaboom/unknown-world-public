@@ -1,4 +1,8 @@
-"""Unit tests for prompt_loader.py."""
+"""Unit tests for prompt_loader.py.
+
+U-036: 프롬프트 로더 핫리로드 테스트
+U-046: XML 태그 파싱 + 레거시 폴백 테스트
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,9 @@ import unittest
 
 from unknown_world.models.turn import Language
 from unknown_world.orchestrator.prompt_loader import (
+    _parse_frontmatter,
+    _parse_legacy_frontmatter,
+    _parse_xml_meta,
     clear_prompt_cache,
     is_hot_reload_enabled,
     load_prompt,
@@ -157,6 +164,153 @@ class TestPromptLoader(unittest.TestCase):
         finally:
             if en_file.exists():
                 en_file.unlink()
+
+
+class TestXmlParsing(unittest.TestCase):
+    """U-046: XML 태그 파싱 테스트."""
+
+    def test_parse_xml_meta_valid(self) -> None:
+        """Valid XML meta tags should be parsed correctly."""
+        text = """<prompt_meta>
+  <prompt_id>test_prompt</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+테스트 프롬프트입니다.
+
+## 내용
+본문 내용이 여기에 들어갑니다.
+</prompt_body>
+"""
+        result = _parse_xml_meta(text)
+        self.assertIsNotNone(result)
+        metadata, content = result  # type: ignore
+
+        # 메타데이터 검증
+        self.assertEqual(metadata["prompt_id"], "test_prompt")
+        self.assertEqual(metadata["language"], "ko-KR")
+        self.assertEqual(metadata["version"], "0.2.0")
+        self.assertEqual(metadata["last_updated"], "2026-01-28")
+        self.assertEqual(metadata["policy_preset"], "default")
+
+        # 본문 검증 (메타 블록 제외)
+        self.assertIn("## 목적", content)
+        self.assertIn("테스트 프롬프트입니다.", content)
+        self.assertNotIn("<prompt_meta>", content)
+        self.assertNotIn("<prompt_body>", content)
+
+    def test_parse_xml_meta_no_body_tag(self) -> None:
+        """XML meta without body tag should use remaining text as content."""
+        text = """<prompt_meta>
+  <prompt_id>test</prompt_id>
+  <version>0.1.0</version>
+</prompt_meta>
+
+## Content Section
+This is the content without body tag.
+"""
+        result = _parse_xml_meta(text)
+        self.assertIsNotNone(result)
+        metadata, content = result  # type: ignore
+
+        self.assertEqual(metadata["prompt_id"], "test")
+        self.assertIn("## Content Section", content)
+
+    def test_parse_xml_meta_returns_none_for_legacy(self) -> None:
+        """Legacy format should return None from _parse_xml_meta."""
+        text = """# [Prompt] Test
+
+- prompt_id: legacy_test
+- version: 0.1.0
+
+## Content
+Legacy content here.
+"""
+        result = _parse_xml_meta(text)
+        self.assertIsNone(result)
+
+    def test_parse_legacy_frontmatter(self) -> None:
+        """Legacy frontmatter should be parsed correctly."""
+        text = """# [Prompt] Test
+
+- prompt_id: legacy_test
+- language: en-US
+- version: 0.1.0
+
+## Content
+Legacy content here.
+"""
+        metadata, content = _parse_legacy_frontmatter(text)
+
+        self.assertEqual(metadata["prompt_id"], "legacy_test")
+        self.assertEqual(metadata["language"], "en-US")
+        self.assertEqual(metadata["version"], "0.1.0")
+        self.assertIn("## Content", content)
+        self.assertIn("Legacy content here.", content)
+
+    def test_parse_frontmatter_prefers_xml(self) -> None:
+        """_parse_frontmatter should prefer XML format when available."""
+        xml_text = """<prompt_meta>
+  <prompt_id>xml_test</prompt_id>
+  <version>0.2.0</version>
+</prompt_meta>
+
+<prompt_body>
+## XML Content
+This is XML format.
+</prompt_body>
+"""
+        metadata, content = _parse_frontmatter(xml_text)
+
+        self.assertEqual(metadata["prompt_id"], "xml_test")
+        self.assertEqual(metadata["version"], "0.2.0")
+        self.assertIn("## XML Content", content)
+
+    def test_parse_frontmatter_fallback_to_legacy(self) -> None:
+        """_parse_frontmatter should fallback to legacy when XML is missing."""
+        legacy_text = """# [Prompt] Test
+
+- prompt_id: fallback_test
+- version: 0.1.0
+
+## Content
+Fallback content.
+"""
+        metadata, content = _parse_frontmatter(legacy_text)
+
+        self.assertEqual(metadata["prompt_id"], "fallback_test")
+        self.assertIn("## Content", content)
+
+    def test_load_prompt_with_xml_metadata(self) -> None:
+        """Integration test: load_prompt_with_metadata with XML format."""
+        # Load actual prompt file (migrated to XML format)
+        data = load_prompt_with_metadata("system", "game_master", Language.KO)
+
+        self.assertIsNotNone(data.content)
+        self.assertIsInstance(data.metadata, dict)
+
+        # Check metadata fields
+        self.assertEqual(data.metadata.get("prompt_id"), "game_master_system")
+        self.assertEqual(data.metadata.get("language"), "ko-KR")
+        self.assertIn("version", data.metadata)
+
+        # Content should not contain meta tags
+        self.assertNotIn("<prompt_meta>", data.content)
+        self.assertNotIn("<prompt_body>", data.content)
+        self.assertIn("## 목적", data.content)
+
+    def test_load_prompt_with_xml_metadata_en(self) -> None:
+        """Integration test: English XML format."""
+        data = load_prompt_with_metadata("system", "game_master", Language.EN)
+
+        self.assertEqual(data.metadata.get("prompt_id"), "game_master_system")
+        self.assertEqual(data.metadata.get("language"), "en-US")
+        self.assertIn("## Purpose", data.content)
 
 
 if __name__ == "__main__":

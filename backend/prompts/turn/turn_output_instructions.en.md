@@ -1,10 +1,12 @@
-# [Prompt] TurnOutput Instructions (en-US)
+<prompt_meta>
+  <prompt_id>turn_output_instructions</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
 
-- prompt_id: turn_output_instructions
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-24
-
+<prompt_body>
 ## Purpose
 
 Specify the rules for each field in the TurnOutput JSON schema.
@@ -101,3 +103,4 @@ Specify the rules for each field in the TurnOutput JSON schema.
   "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
 }
 ```
+</prompt_body>

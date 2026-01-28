@@ -1,10 +1,12 @@
-# [Prompt] Game Master System (ko-KR)
+<prompt_meta>
+  <prompt_id>game_master_system</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
 
-- prompt_id: game_master_system
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-24
-
+<prompt_body>
 ## 목적
 
 에이전트형 Game Master로서 TurnOutput(JSON)을 생성합니다.
@@ -61,3 +63,4 @@
 - **language 필드는 "ko-KR"로 고정합니다.**
 - **economy.cost와 economy.balance_after는 필수입니다.**
 - **잔액(balance_after)은 0 이상이어야 합니다.**
+</prompt_body>

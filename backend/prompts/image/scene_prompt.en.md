@@ -1,10 +1,12 @@
-# [Prompt] Scene Image Generation (en-US)
+<prompt_meta>
+  <prompt_id>scene_image_generation</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
 
-- prompt_id: scene_image_generation
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-26
-
+<prompt_body>
 ## Purpose
 
 Prompt template for generating in-game scene images.
@@ -86,3 +88,4 @@ A crumbling throne in a ruined castle bathed in moonlight, broken pillars and de
 - **Prompts in English**: For image generation model optimization
 - **Maintain Consistent Style**: Always include base style keywords
 - **Safety Policy Compliance**: Exclude inappropriate content elements
+</prompt_body>

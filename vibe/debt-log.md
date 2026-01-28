@@ -20,6 +20,13 @@
   - [U-043[Mvp]](unit-plans/U-043[Mvp].md): 서버 Hard Gate에 “언어(콘텐츠) 혼합” 검증 + Repair loop 추가
   - [U-044[Mvp]](unit-plans/U-044[Mvp].md): 세션 언어 SSOT(언어 전환=리셋) + 클라이언트 폴백/시스템 메시지 혼합 제거
 
+## 2026-01-28 이슈: test_turn_streaming_success - badges 이벤트 수 불일치
+
+- **발견 위치**: `backend/tests/integration/test_turn_streaming.py:50`
+- **현상**: `assert len(badges_events) >= 2` 실패 - 2개 이상의 badges 이벤트가 기대되나 1개만 수신됨
+- **추정 원인**: 스트리밍 파이프라인에서 badges 이벤트 발행 로직이 변경되었거나, 테스트 기대치가 현재 구현과 불일치
+- **보류 사유**: U-046[Mvp] 범위 밖 (prompt_loader XML 태그 규격과 무관한 스트리밍 로직)
+
 ## 2026-01-24 이슈: 에셋 요청 스키마 검증 실패 (U-034 관련)
 
 - **발견 위치**: backend/tests/unit/test_u034_verification.py

@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{py,ts,tsx,toml,json,md}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, backend/generated_images/**, frontend/dist/**, frontend/node_modules/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml,md}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, build/**, coverage/**, **/*.png, **/*.svg
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -103,7 +103,10 @@ backend/tests/unit/test_orchestrator_repair.py
 backend/tests/unit/test_u034_verification.py
 backend/tests/unit/test_u043_language_gate.py
 CLAUDE.md
+frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
+frontend/coverage/prettify.js
+frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
@@ -190,532 +193,6 @@ shared/schemas/turn/turn_output.schema.json
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="backend/prompts/image/scene_prompt.en.md">
-# [Prompt] Scene Image Generation (en-US)
-
-- prompt_id: scene_image_generation
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-26
-
-## Purpose
-
-Prompt template for generating in-game scene images.
-Creates visual representations that match the text narrative in a consistent style.
-
-## Inputs
-
-- narrative: Current turn's narrative text
-- scene_description: Scene description (optional)
-- style_hints: Style hints (optional)
-- previous_scene_context: Previous scene context (for consistency)
-
-## Output Contract (Summary)
-
-- Image generation prompts are written in **English** (model optimization).
-- Always include base style keywords for consistency.
-- Minimize negative prompts; describe the desired scene positively.
-
----
-
-## System Instructions
-
-You are the image prompt generator for "Unknown World" game.
-Based on the given narrative and scene description, create prompts for the Gemini image generation model.
-
-### Base Style Guidelines
-
-1. **Art Style**: Dark fantasy, mystery, roguelike atmosphere
-2. **Color Palette**: Dark and muted tones, neon accents (harmonizing with CRT theme)
-3. **Lighting**: Dramatic contrast, rim lighting, atmospheric illumination
-4. **Composition**: Cinematic, prefer wide or medium shots
-
-### Prompt Structure
-
-```
-[Subject/Scene Description], [Art Style], [Lighting/Mood], [Color Tones], [Camera/Composition], [Quality Keywords]
-```
-
-### Quality Keywords (Always Include)
-
-- highly detailed
-- cinematic lighting
-- atmospheric
-- dark fantasy aesthetic
-- 4k quality
-
-### Prohibited Elements
-
-- Avoid photorealistic style (difficult to maintain consistency)
-- No violent/sexual/discriminatory imagery
-- Avoid text/letters in images (readability issues)
-
----
-
-## Example Prompts
-
-### Example 1: Mysterious Forest Entrance
-
-**Input Narrative**: "The old door creaks open. Cold air rushes out from within."
-
-**Generated Prompt**:
-```
-An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
-```
-
-### Example 2: Interior of a Ruined Castle
-
-**Input Narrative**: "The throne of the crumbling castle gleams under the moonlight."
-
-**Generated Prompt**:
-```
-A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
-```
-
----
-
-## Important Constraints
-
-- **Prompts in English**: For image generation model optimization
-- **Maintain Consistent Style**: Always include base style keywords
-- **Safety Policy Compliance**: Exclude inappropriate content elements
-</file>
-
-<file path="backend/prompts/image/scene_prompt.ko.md">
-# [Prompt] Scene Image Generation (ko-KR)
-
-- prompt_id: scene_image_generation
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-26
-
-## 목적
-
-게임 내 장면(Scene) 이미지를 생성하기 위한 프롬프트 템플릿입니다.
-텍스트 내러티브에 맞는 시각적 표현을 일관된 스타일로 생성합니다.
-
-## 입력
-
-- narrative: 현재 턴의 내러티브 텍스트
-- scene_description: 장면 설명 (선택)
-- style_hints: 스타일 힌트 (선택)
-- previous_scene_context: 이전 장면 맥락 (일관성 유지용)
-
-## 출력 계약 (요약)
-
-- 이미지 생성 프롬프트는 **영어**로 작성됩니다 (모델 최적화).
-- 스타일 일관성을 위해 기본 스타일 키워드를 항상 포함합니다.
-- 부정 프롬프트는 최소화하고, 원하는 장면을 긍정적으로 서술합니다.
-
----
-
-## 시스템 지시
-
-당신은 "Unknown World" 게임의 이미지 프롬프트 생성기입니다.
-주어진 내러티브와 장면 설명을 바탕으로 Gemini 이미지 생성 모델에 전달할 프롬프트를 작성합니다.
-
-### 기본 스타일 가이드라인
-
-1. **아트 스타일**: 다크 판타지, 미스터리, 로그라이크 분위기
-2. **색상 팔레트**: 어둡고 차분한 톤, 네온 악센트 (CRT 테마와 조화)
-3. **조명**: 극적인 명암 대비, 림 라이트, 분위기 있는 조명
-4. **구도**: 시네마틱, 와이드 샷 또는 중간 샷 선호
-
-### 프롬프트 구조
-
-```
-[주제/장면 설명], [아트 스타일], [조명/분위기], [색상 톤], [카메라/구도], [품질 키워드]
-```
-
-### 품질 키워드 (기본 포함)
-
-- highly detailed
-- cinematic lighting
-- atmospheric
-- dark fantasy aesthetic
-- 4k quality
-
-### 금지 사항
-
-- 실사 스타일 (photorealistic) 지양 (일관성 유지 어려움)
-- 폭력적/성적/차별적 이미지 요소 금지
-- 텍스트/글자 포함 지양 (가독성 문제)
-
----
-
-## 예시 프롬프트
-
-### 예시 1: 신비로운 숲 입구
-
-**입력 내러티브**: "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다."
-
-**생성된 프롬프트**:
-```
-An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
-```
-
-### 예시 2: 폐허가 된 성의 내부
-
-**입력 내러티브**: "무너진 성의 왕좌가 달빛 아래 빛나고 있습니다."
-
-**생성된 프롬프트**:
-```
-A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
-```
-
----
-
-## 중요 제약
-
-- **프롬프트는 영어로 작성**: 이미지 생성 모델 최적화를 위해
-- **일관된 스타일 유지**: 기본 스타일 키워드를 항상 포함
-- **안전 정책 준수**: 부적절한 콘텐츠 생성 요소 배제
-</file>
-
-<file path="backend/prompts/system/game_master.en.md">
-# [Prompt] Game Master System (en-US)
-
-- prompt_id: game_master_system
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## Purpose
-
-Act as an agent-style Game Master to generate TurnOutput (JSON).
-"Unknown World" is an infinite generative roguelike narrative web game.
-
-## Input
-
-- TurnInput: language, text, action_id, click, client, economy_snapshot
-- WorldState: world rules, inventory, quests, relationships, history summary
-
-## Output Contract (Summary)
-
-- Output must satisfy the TurnOutput JSON Schema.
-- language is fixed to "en-US" matching the input.
-- All text (narrative, label, description, etc.) must be in English.
-
----
-
-## System Instructions
-
-You are the Game Master of "Unknown World". React to player actions, evolve the world, and generate engaging narratives.
-
-### Core Principles
-
-1. **Consistency**: Adhere to world rules and established settings.
-2. **Creativity**: Create unpredictable yet logical developments.
-3. **Responsiveness**: Provide meaningful consequences for player choices.
-4. **Economy**: Calculate cost and balance_after accurately.
-
-### Narrative Style
-
-- 2-3 sentences of concise, immersive description
-- Use present tense
-- Include sensory details (sounds, smells, textures)
-- Address the player as "you"
-
-### Action Card Generation Rules
-
-- Provide 3-6 choice cards
-- Include cost, risk level, and hint for each card
-- At least 1 low-cost alternative (is_alternative: true)
-- Disable cards (enabled: false) when balance is insufficient
-
-### Safety Policy
-
-- Do not generate violent/sexual/discriminatory content
-- On violation requests: safety.blocked=true, provide safe alternative narrative
-
----
-
-## Critical Constraints
-
-- **Output must be valid JSON.**
-- **language field is fixed to "en-US".**
-- **economy.cost and economy.balance_after are required.**
-- **balance_after must be >= 0.**
-</file>
-
-<file path="backend/prompts/system/game_master.ko.md">
-# [Prompt] Game Master System (ko-KR)
-
-- prompt_id: game_master_system
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## 목적
-
-에이전트형 Game Master로서 TurnOutput(JSON)을 생성합니다.
-"Unknown World"는 무한 생성 로그라이크 내러티브 웹게임입니다.
-
-## 입력
-
-- TurnInput: language, text, action_id, click, client, economy_snapshot
-- WorldState: 세계 규칙, 인벤토리, 퀘스트, 관계, 히스토리 요약
-
-## 출력 계약 (요약)
-
-- 반드시 JSON Schema를 만족하는 TurnOutput만 출력합니다.
-- language는 입력과 동일하게 "ko-KR"로 고정합니다.
-- 모든 텍스트(narrative, label, description 등)는 한국어로 작성합니다.
-
----
-
-## 시스템 지시
-
-당신은 "Unknown World"의 Game Master입니다. 플레이어의 행동에 반응하여 세계를 변화시키고, 흥미로운 내러티브를 생성합니다.
-
-### 핵심 원칙
-
-1. **일관성**: 세계 규칙(rules)과 기존 설정을 준수합니다.
-2. **창의성**: 예측 불가능하되 논리적인 전개를 만들어냅니다.
-3. **반응성**: 플레이어의 선택에 의미 있는 결과를 제공합니다.
-4. **경제성**: 비용(cost)과 잔액(balance_after)을 정확히 계산합니다.
-
-### 내러티브 스타일
-
-- 2~3문장의 간결하고 몰입감 있는 묘사
-- 현재 시제 사용
-- 감각적 디테일 포함 (소리, 냄새, 촉감 등)
-- 플레이어를 "당신"으로 지칭
-
-### 액션 카드 생성 규칙
-
-- 3~6장의 선택지 제공
-- 각 카드에 비용(cost), 위험도(risk), 힌트(hint) 포함
-- 최소 1장은 저비용 대안(is_alternative: true) 포함
-- 잔액 부족 시 해당 카드 비활성화(enabled: false)
-
-### 안전 정책
-
-- 폭력적/성적/차별적 콘텐츠 생성 금지
-- 위반 요청 시 safety.blocked=true, 안전한 대체 내러티브 제공
-
----
-
-## 중요 제약
-
-- **출력은 반드시 유효한 JSON이어야 합니다.**
-- **language 필드는 "ko-KR"로 고정합니다.**
-- **economy.cost와 economy.balance_after는 필수입니다.**
-- **잔액(balance_after)은 0 이상이어야 합니다.**
-</file>
-
-<file path="backend/prompts/turn/turn_output_instructions.en.md">
-# [Prompt] TurnOutput Instructions (en-US)
-
-- prompt_id: turn_output_instructions
-- language: en-US
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## Purpose
-
-Specify the rules for each field in the TurnOutput JSON schema.
-
----
-
-## Required Fields (Hard Gate)
-
-### language
-- Value: "en-US" (fixed to match input)
-- No mixed language output
-
-### narrative
-- Type: string (required)
-- Narrative text shown to the player
-- 2-3 sentences, written in English
-- Present tense, address as "you"
-
-### economy
-- Type: object (required)
-- cost: Resources consumed this turn {signal: int, memory_shard: int}
-- balance_after: Balance after consumption {signal: int, memory_shard: int}
-- **Important**: balance_after.signal >= 0, balance_after.memory_shard >= 0
-
-### safety
-- Type: object (required)
-- blocked: boolean (whether blocked by safety policy)
-- message: string | null (message to display when blocked)
-
----
-
-## Optional Fields
-
-### ui
-- action_deck.cards[]: Action card array (3-6 recommended)
-  - id: Unique card ID
-  - label: Display label (English)
-  - cost: {signal, memory_shard}
-  - risk: "low" | "medium" | "high"
-  - enabled: boolean
-  - is_alternative: boolean (low-cost alternative flag)
-- objects[]: Clickable scene objects
-  - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
-
-### world
-- rules_changed[]: Changed world rules
-- inventory_added[]: Added item IDs
-- inventory_removed[]: Removed item IDs
-- quests_updated[]: Updated quests
-- memory_pins[]: Pin candidates
-
-### render
-- image_job: Image generation job (optional)
-  - should_generate: boolean
-  - prompt: Image prompt (English preferred)
-
-### agent_console
-- current_phase: Current phase
-- badges[]: Validation badges
-- repair_count: Number of repair attempts
-
----
-
-## Coordinate Convention (RULE-009)
-
-- All coordinates use 0-1000 normalized coordinate system
-- bbox order: [ymin, xmin, ymax, xmax]
-- Do not use pixel coordinates
-
----
-
-## Example Output
-
-```json
-{
-  "language": "en-US",
-  "narrative": "The old door creaks open. Cold air rushes out from within.",
-  "economy": {
-    "cost": {"signal": 5, "memory_shard": 0},
-    "balance_after": {"signal": 95, "memory_shard": 5}
-  },
-  "safety": {"blocked": false, "message": null},
-  "ui": {
-    "action_deck": {
-      "cards": [
-        {"id": "enter", "label": "Step inside", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
-        {"id": "peek", "label": "Peek cautiously", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
-      ]
-    },
-    "objects": []
-  },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
-  "render": {"image_job": null},
-  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
-}
-```
-</file>
-
-<file path="backend/prompts/turn/turn_output_instructions.ko.md">
-# [Prompt] TurnOutput Instructions (ko-KR)
-
-- prompt_id: turn_output_instructions
-- language: ko-KR
-- version: 0.1.0
-- last_updated: 2026-01-24
-
-## 목적
-
-TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
-
----
-
-## 필수 필드 (Hard Gate)
-
-### language
-- 값: "ko-KR" (입력과 동일하게 고정)
-- 혼합 출력 금지
-
-### narrative
-- 타입: string (필수)
-- 플레이어에게 보여줄 내러티브 텍스트
-- 2~3문장, 한국어로 작성
-- 현재 시제, "당신" 지칭
-
-### economy
-- 타입: object (필수)
-- cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
-- balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
-- **중요**: balance_after.signal >= 0, balance_after.memory_shard >= 0
-
-### safety
-- 타입: object (필수)
-- blocked: boolean (안전 정책 차단 여부)
-- message: string | null (차단 시 표시할 메시지)
-
----
-
-## 선택 필드
-
-### ui
-- action_deck.cards[]: 액션 카드 배열 (3~6장 권장)
-  - id: 카드 고유 ID
-  - label: 표시 라벨 (한국어)
-  - cost: {signal, memory_shard}
-  - risk: "low" | "medium" | "high"
-  - enabled: boolean
-  - is_alternative: boolean (저비용 대안 여부)
-- objects[]: 클릭 가능한 장면 오브젝트
-  - box_2d: {ymin, xmin, ymax, xmax} (0~1000 정규화 좌표)
-
-### world
-- rules_changed[]: 변경된 세계 규칙
-- inventory_added[]: 추가된 아이템 ID
-- inventory_removed[]: 제거된 아이템 ID
-- quests_updated[]: 업데이트된 퀘스트
-- memory_pins[]: 고정 후보
-
-### render
-- image_job: 이미지 생성 작업 (선택)
-  - should_generate: boolean
-  - prompt: 이미지 프롬프트 (영어 권장)
-
-### agent_console
-- current_phase: 현재 단계
-- badges[]: 검증 배지
-- repair_count: 복구 시도 횟수
-
----
-
-## 좌표 규약 (RULE-009)
-
-- 모든 좌표는 0~1000 정규화 좌표계
-- bbox 순서: [ymin, xmin, ymax, xmax]
-- 픽셀 좌표 사용 금지
-
----
-
-## 예시 출력
-
-```json
-{
-  "language": "ko-KR",
-  "narrative": "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다.",
-  "economy": {
-    "cost": {"signal": 5, "memory_shard": 0},
-    "balance_after": {"signal": 95, "memory_shard": 5}
-  },
-  "safety": {"blocked": false, "message": null},
-  "ui": {
-    "action_deck": {
-      "cards": [
-        {"id": "enter", "label": "안으로 들어간다", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
-        {"id": "peek", "label": "조심스럽게 엿본다", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
-      ]
-    },
-    "objects": []
-  },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
-  "render": {"image_job": null},
-  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
-}
-```
-</file>
 
 <file path="backend/src/unknown_world/api/image.py">
 """Unknown World - 이미지 생성 API 엔드포인트.
@@ -4377,172 +3854,6 @@ async def test_validate_stage_mock_unexpected_exception(turn_input):
     assert ctx.repair_attempts > 0
 </file>
 
-<file path="backend/tests/unit/orchestrator/test_prompt_loader.py">
-"""Unit tests for prompt_loader.py."""
-
-from __future__ import annotations
-
-import os
-import unittest
-
-from unknown_world.models.turn import Language
-from unknown_world.orchestrator.prompt_loader import (
-    clear_prompt_cache,
-    is_hot_reload_enabled,
-    load_prompt,
-    load_prompt_with_metadata,
-)
-
-
-class TestPromptLoader(unittest.TestCase):
-    def setUp(self) -> None:
-        # Clear cache before each test
-        clear_prompt_cache()
-        # Backup environment
-        self._old_env = os.environ.get("ENVIRONMENT")
-
-    def tearDown(self) -> None:
-        # Restore environment
-        if self._old_env is None:
-            if "ENVIRONMENT" in os.environ:
-                del os.environ["ENVIRONMENT"]
-        else:
-            os.environ["ENVIRONMENT"] = self._old_env
-        # Clear cache
-        clear_prompt_cache()
-
-    def test_load_prompt_ko(self) -> None:
-        """Verify loading Korean prompt."""
-        # This assumes the file exists in backend/prompts/system/game_master.ko.md
-        prompt = load_prompt("system", "game_master", Language.KO)
-        self.assertGreater(len(prompt), 0)
-        self.assertIn("#", prompt)  # Should be markdown
-
-    def test_load_prompt_en(self) -> None:
-        """Verify loading English prompt."""
-        prompt = load_prompt("system", "game_master", Language.EN)
-        self.assertGreater(len(prompt), 0)
-
-    def test_load_with_metadata(self) -> None:
-        """Verify frontmatter parsing."""
-        data = load_prompt_with_metadata("system", "game_master", Language.KO)
-        self.assertIsNotNone(data.content)
-        self.assertIsInstance(data.metadata, dict)
-        # Check for typical metadata fields if they exist in the file
-        if "prompt_id" in data.metadata:
-            self.assertGreater(len(data.metadata["prompt_id"]), 0)
-
-    def test_hot_reload_development(self) -> None:
-        """Verify hot-reload works in development mode."""
-        os.environ["ENVIRONMENT"] = "development"
-        self.assertTrue(is_hot_reload_enabled())
-
-        # Use a temporary file to test hot-reload
-        test_category = "system"
-        test_name = "test_hot_reload"
-        test_lang = Language.KO
-
-        # Determine prompt path
-        # In prompt_loader.py, _PROMPTS_ROOT is Path(__file__).parent.parent.parent.parent / "prompts"
-        # Since we are in tests/unit/orchestrator/, we need to find the prompts root.
-        # But let's mock _get_prompt_path or just use an existing one if possible.
-        # Actually, creating a real file is better for verifying "hot-reload" of file system.
-
-        from unknown_world.orchestrator.prompt_loader import _PROMPTS_ROOT
-
-        test_dir = _PROMPTS_ROOT / test_category
-        test_dir.mkdir(parents=True, exist_ok=True)
-        test_file = test_dir / f"{test_name}.ko.md"
-
-        try:
-            # Initial content
-            test_file.write_text("# Test\n\nContent 1", encoding="utf-8")
-
-            p1 = load_prompt(test_category, test_name, test_lang)
-            self.assertIn("Content 1", p1)
-
-            # Modify file
-            test_file.write_text("# Test\n\nContent 2", encoding="utf-8")
-
-            # Load again - should be updated in dev mode
-            p2 = load_prompt(test_category, test_name, test_lang)
-            self.assertIn("Content 2", p2)
-            self.assertNotEqual(p1, p2)
-
-        finally:
-            if test_file.exists():
-                test_file.unlink()
-
-    def test_caching_production(self) -> None:
-        """Verify caching works in production mode (no hot-reload)."""
-        os.environ["ENVIRONMENT"] = "production"
-        self.assertFalse(is_hot_reload_enabled())
-
-        test_category = "system"
-        test_name = "test_caching"
-        test_lang = Language.KO
-
-        from unknown_world.orchestrator.prompt_loader import _PROMPTS_ROOT
-
-        test_dir = _PROMPTS_ROOT / test_category
-        test_dir.mkdir(parents=True, exist_ok=True)
-        test_file = test_dir / f"{test_name}.ko.md"
-
-        try:
-            # Initial content
-            test_file.write_text("# Test\n\nInitial", encoding="utf-8")
-
-            p1 = load_prompt(test_category, test_name, test_lang)
-            self.assertIn("Initial", p1)
-
-            # Modify file
-            test_file.write_text("# Test\n\nModified", encoding="utf-8")
-
-            # Load again - should STILL be Initial because of caching
-            p2 = load_prompt(test_category, test_name, test_lang)
-            self.assertEqual(p1, p2)
-            self.assertIn("Initial", p2)
-
-            # After clearing cache, it should be updated
-            clear_prompt_cache()
-            p3 = load_prompt(test_category, test_name, test_lang)
-            self.assertIn("Modified", p3)
-
-        finally:
-            if test_file.exists():
-                test_file.unlink()
-
-    def test_fallback_language(self) -> None:
-        """Verify fallback to other language if requested file is missing."""
-        # Create ONLY English version
-        test_category = "system"
-        test_name = "test_fallback"
-
-        from unknown_world.orchestrator.prompt_loader import _PROMPTS_ROOT
-
-        test_dir = _PROMPTS_ROOT / test_category
-        test_dir.mkdir(parents=True, exist_ok=True)
-        en_file = test_dir / f"{test_name}.en.md"
-        ko_file = test_dir / f"{test_name}.ko.md"
-
-        try:
-            en_file.write_text("# English Content", encoding="utf-8")
-            if ko_file.exists():
-                ko_file.unlink()
-
-            # Request KO, should get EN
-            prompt = load_prompt(test_category, test_name, Language.KO)
-            self.assertIn("English Content", prompt)
-
-        finally:
-            if en_file.exists():
-                en_file.unlink()
-
-
-if __name__ == "__main__":
-    unittest.main()
-</file>
-
 <file path="backend/tests/unit/services/test_image_generation.py">
 """Unknown World - 이미지 생성 서비스 단위 테스트."""
 
@@ -5249,9 +4560,317 @@ async def test_repair_loop_fixes_language_mixing(sample_turn_input, base_turn_ou
         assert ValidationBadge.CONSISTENCY_FAIL not in result.badges  # 최종 배지는 OK여야 함
 </file>
 
+<file path="frontend/coverage/block-navigation.js">
+/* eslint-disable */
+var jumpToCode = (function init() {
+    // Classes of code we would like to highlight in the file view
+    var missingCoverageClasses = ['.cbranch-no', '.cstat-no', '.fstat-no'];
+
+    // Elements to highlight in the file listing view
+    var fileListingElements = ['td.pct.low'];
+
+    // We don't want to select elements that are direct descendants of another match
+    var notSelector = ':not(' + missingCoverageClasses.join('):not(') + ') > '; // becomes `:not(a):not(b) > `
+
+    // Selector that finds elements on the page to which we can jump
+    var selector =
+        fileListingElements.join(', ') +
+        ', ' +
+        notSelector +
+        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
+
+    // The NodeList of matching elements
+    var missingCoverageElements = document.querySelectorAll(selector);
+
+    var currentIndex;
+
+    function toggleClass(index) {
+        missingCoverageElements
+            .item(currentIndex)
+            .classList.remove('highlighted');
+        missingCoverageElements.item(index).classList.add('highlighted');
+    }
+
+    function makeCurrent(index) {
+        toggleClass(index);
+        currentIndex = index;
+        missingCoverageElements.item(index).scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+        });
+    }
+
+    function goToPrevious() {
+        var nextIndex = 0;
+        if (typeof currentIndex !== 'number' || currentIndex === 0) {
+            nextIndex = missingCoverageElements.length - 1;
+        } else if (missingCoverageElements.length > 1) {
+            nextIndex = currentIndex - 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    function goToNext() {
+        var nextIndex = 0;
+
+        if (
+            typeof currentIndex === 'number' &&
+            currentIndex < missingCoverageElements.length - 1
+        ) {
+            nextIndex = currentIndex + 1;
+        }
+
+        makeCurrent(nextIndex);
+    }
+
+    return function jump(event) {
+        if (
+            document.getElementById('fileSearch') === document.activeElement &&
+            document.activeElement != null
+        ) {
+            // if we're currently focused on the search input, we don't want to navigate
+            return;
+        }
+
+        switch (event.which) {
+            case 78: // n
+            case 74: // j
+                goToNext();
+                break;
+            case 66: // b
+            case 75: // k
+            case 80: // p
+                goToPrevious();
+                break;
+        }
+    };
+})();
+window.addEventListener('keydown', jumpToCode);
+</file>
+
 <file path="frontend/coverage/coverage-final.json">
 {"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts": {"path":"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts","statementMap":{"0":{"start":{"line":30,"column":30},"end":{"line":30,"column":null}},"1":{"start":{"line":41,"column":30},"end":{"line":41,"column":null}},"2":{"start":{"line":47,"column":27},"end":{"line":47,"column":null}},"3":{"start":{"line":54,"column":32},"end":{"line":62,"column":null}},"4":{"start":{"line":69,"column":37},"end":{"line":78,"column":null}},"5":{"start":{"line":85,"column":32},"end":{"line":85,"column":null}},"6":{"start":{"line":91,"column":31},"end":{"line":91,"column":null}},"7":{"start":{"line":102,"column":32},"end":{"line":107,"column":null}},"8":{"start":{"line":115,"column":27},"end":{"line":122,"column":null}},"9":{"start":{"line":129,"column":36},"end":{"line":138,"column":null}},"10":{"start":{"line":149,"column":32},"end":{"line":156,"column":null}},"11":{"start":{"line":162,"column":32},"end":{"line":176,"column":null}},"12":{"start":{"line":183,"column":37},"end":{"line":192,"column":null}},"13":{"start":{"line":199,"column":31},"end":{"line":209,"column":null}},"14":{"start":{"line":220,"column":32},"end":{"line":229,"column":null}},"15":{"start":{"line":236,"column":33},"end":{"line":247,"column":null}},"16":{"start":{"line":254,"column":32},"end":{"line":262,"column":null}},"17":{"start":{"line":270,"column":30},"end":{"line":278,"column":null}},"18":{"start":{"line":289,"column":31},"end":{"line":295,"column":null}},"19":{"start":{"line":302,"column":31},"end":{"line":312,"column":null}},"20":{"start":{"line":319,"column":27},"end":{"line":325,"column":null}},"21":{"start":{"line":332,"column":32},"end":{"line":359,"column":null}},"22":{"start":{"line":370,"column":30},"end":{"line":382,"column":null}},"23":{"start":{"line":389,"column":34},"end":{"line":395,"column":null}},"24":{"start":{"line":407,"column":35},"end":{"line":412,"column":null}},"25":{"start":{"line":424,"column":34},"end":{"line":436,"column":null}},"26":{"start":{"line":447,"column":34},"end":{"line":453,"column":null}},"27":{"start":{"line":469,"column":32},"end":{"line":502,"column":null}},"28":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"29":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"30":{"start":{"line":532,"column":2},"end":{"line":563,"column":null}},"31":{"start":{"line":590,"column":17},"end":{"line":590,"column":null}},"32":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"33":{"start":{"line":593,"column":4},"end":{"line":593,"column":null}},"34":{"start":{"line":596,"column":2},"end":{"line":600,"column":null}},"35":{"start":{"line":611,"column":2},"end":{"line":611,"column":null}},"36":{"start":{"line":625,"column":2},"end":{"line":625,"column":null}}},"fnMap":{"0":{"name":"createFallbackTurnOutput","decl":{"start":{"line":517,"column":16},"end":{"line":517,"column":null}},"loc":{"start":{"line":521,"column":14},"end":{"line":564,"column":null}},"line":521},"1":{"name":"safeParseTurnOutput","decl":{"start":{"line":585,"column":16},"end":{"line":585,"column":null}},"loc":{"start":{"line":589,"column":25},"end":{"line":601,"column":null}},"line":589},"2":{"name":"parseTurnInput","decl":{"start":{"line":610,"column":16},"end":{"line":610,"column":31}},"loc":{"start":{"line":610,"column":57},"end":{"line":612,"column":null}},"line":610},"3":{"name":"safeParseTurnInput","decl":{"start":{"line":624,"column":16},"end":{"line":624,"column":35}},"loc":{"start":{"line":624,"column":76},"end":{"line":626,"column":null}},"line":624}},"branchMap":{"0":{"loc":{"start":{"line":519,"column":2},"end":{"line":519,"column":null}},"type":"default-arg","locations":[{"start":{"line":519,"column":24},"end":{"line":519,"column":null}}],"line":519},"1":{"loc":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"type":"cond-expr","locations":[{"start":{"line":524,"column":8},"end":{"line":524,"column":null}},{"start":{"line":525,"column":8},"end":{"line":525,"column":null}}],"line":523},"2":{"loc":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"type":"cond-expr","locations":[{"start":{"line":529,"column":8},"end":{"line":529,"column":null}},{"start":{"line":530,"column":8},"end":{"line":530,"column":null}}],"line":528},"3":{"loc":{"start":{"line":534,"column":15},"end":{"line":534,"column":null}},"type":"binary-expr","locations":[{"start":{"line":534,"column":15},"end":{"line":534,"column":31}},{"start":{"line":534,"column":31},"end":{"line":534,"column":null}}],"line":534},"4":{"loc":{"start":{"line":587,"column":2},"end":{"line":587,"column":null}},"type":"default-arg","locations":[{"start":{"line":587,"column":23},"end":{"line":587,"column":null}}],"line":587},"5":{"loc":{"start":{"line":588,"column":2},"end":{"line":588,"column":null}},"type":"default-arg","locations":[{"start":{"line":588,"column":24},"end":{"line":588,"column":null}}],"line":588},"6":{"loc":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"type":"if","locations":[{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},{"start":{},"end":{}}],"line":592}},"s":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1,"9":1,"10":1,"11":1,"12":1,"13":1,"14":1,"15":1,"16":1,"17":1,"18":1,"19":1,"20":1,"21":1,"22":1,"23":1,"24":1,"25":1,"26":1,"27":1,"28":1,"29":1,"30":1,"31":2,"32":2,"33":1,"34":1,"35":2,"36":2},"f":{"0":1,"1":2,"2":2,"3":2},"b":{"0":[1],"1":[1,0],"2":[1,0],"3":[1,1],"4":[2],"5":[2],"6":[1,1]},"meta":{"lastBranch":7,"lastFunction":4,"lastStatement":37,"seen":{"s:30:30:30:Infinity":0,"s:41:30:41:Infinity":1,"s:47:27:47:Infinity":2,"s:54:32:62:Infinity":3,"s:69:37:78:Infinity":4,"s:85:32:85:Infinity":5,"s:91:31:91:Infinity":6,"s:102:32:107:Infinity":7,"s:115:27:122:Infinity":8,"s:129:36:138:Infinity":9,"s:149:32:156:Infinity":10,"s:162:32:176:Infinity":11,"s:183:37:192:Infinity":12,"s:199:31:209:Infinity":13,"s:220:32:229:Infinity":14,"s:236:33:247:Infinity":15,"s:254:32:262:Infinity":16,"s:270:30:278:Infinity":17,"s:289:31:295:Infinity":18,"s:302:31:312:Infinity":19,"s:319:27:325:Infinity":20,"s:332:32:359:Infinity":21,"s:370:30:382:Infinity":22,"s:389:34:395:Infinity":23,"s:407:35:412:Infinity":24,"s:424:34:436:Infinity":25,"s:447:34:453:Infinity":26,"s:469:32:502:Infinity":27,"f:517:16:517:Infinity":0,"b:519:24:519:Infinity":0,"s:523:4:525:Infinity":28,"b:524:8:524:Infinity:525:8:525:Infinity":1,"s:528:4:530:Infinity":29,"b:529:8:529:Infinity:530:8:530:Infinity":2,"s:532:2:563:Infinity":30,"b:534:15:534:31:534:31:534:Infinity":3,"f:585:16:585:Infinity":1,"b:587:23:587:Infinity":4,"b:588:24:588:Infinity":5,"s:590:17:590:Infinity":31,"b:592:2:594:Infinity:undefined:undefined:undefined:undefined":6,"s:592:2:594:Infinity":32,"s:593:4:593:Infinity":33,"s:596:2:600:Infinity":34,"f:610:16:610:31":2,"s:611:2:611:Infinity":35,"f:624:16:624:35":3,"s:625:2:625:Infinity":36}}}
 }
+</file>
+
+<file path="frontend/coverage/prettify.js">
+/* eslint-disable */
+window.PR_SHOULD_USE_CONTINUATION=true;(function(){var h=["break,continue,do,else,for,if,return,while"];var u=[h,"auto,case,char,const,default,double,enum,extern,float,goto,int,long,register,short,signed,sizeof,static,struct,switch,typedef,union,unsigned,void,volatile"];var p=[u,"catch,class,delete,false,import,new,operator,private,protected,public,this,throw,true,try,typeof"];var l=[p,"alignof,align_union,asm,axiom,bool,concept,concept_map,const_cast,constexpr,decltype,dynamic_cast,explicit,export,friend,inline,late_check,mutable,namespace,nullptr,reinterpret_cast,static_assert,static_cast,template,typeid,typename,using,virtual,where"];var x=[p,"abstract,boolean,byte,extends,final,finally,implements,import,instanceof,null,native,package,strictfp,super,synchronized,throws,transient"];var R=[x,"as,base,by,checked,decimal,delegate,descending,dynamic,event,fixed,foreach,from,group,implicit,in,interface,internal,into,is,lock,object,out,override,orderby,params,partial,readonly,ref,sbyte,sealed,stackalloc,string,select,uint,ulong,unchecked,unsafe,ushort,var"];var r="all,and,by,catch,class,else,extends,false,finally,for,if,in,is,isnt,loop,new,no,not,null,of,off,on,or,return,super,then,true,try,unless,until,when,while,yes";var w=[p,"debugger,eval,export,function,get,null,set,undefined,var,with,Infinity,NaN"];var s="caller,delete,die,do,dump,elsif,eval,exit,foreach,for,goto,if,import,last,local,my,next,no,our,print,package,redo,require,sub,undef,unless,until,use,wantarray,while,BEGIN,END";var I=[h,"and,as,assert,class,def,del,elif,except,exec,finally,from,global,import,in,is,lambda,nonlocal,not,or,pass,print,raise,try,with,yield,False,True,None"];var f=[h,"alias,and,begin,case,class,def,defined,elsif,end,ensure,false,in,module,next,nil,not,or,redo,rescue,retry,self,super,then,true,undef,unless,until,when,yield,BEGIN,END"];var H=[h,"case,done,elif,esac,eval,fi,function,in,local,set,then,until"];var A=[l,R,w,s+I,f,H];var e=/^(DIR|FILE|vector|(de|priority_)?queue|list|stack|(const_)?iterator|(multi)?(set|map)|bitset|u?(int|float)\d*)/;var C="str";var z="kwd";var j="com";var O="typ";var G="lit";var L="pun";var F="pln";var m="tag";var E="dec";var J="src";var P="atn";var n="atv";var N="nocode";var M="(?:^^\\.?|[+-]|\\!|\\!=|\\!==|\\#|\\%|\\%=|&|&&|&&=|&=|\\(|\\*|\\*=|\\+=|\\,|\\-=|\\->|\\/|\\/=|:|::|\\;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\@|\\[|\\^|\\^=|\\^\\^|\\^\\^=|\\{|\\||\\|=|\\|\\||\\|\\|=|\\~|break|case|continue|delete|do|else|finally|instanceof|return|throw|try|typeof)\\s*";function k(Z){var ad=0;var S=false;var ac=false;for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.ignoreCase){ac=true}else{if(/[a-z]/i.test(ae.source.replace(/\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[^ux]/gi,""))){S=true;ac=false;break}}}var Y={b:8,t:9,n:10,v:11,f:12,r:13};function ab(ah){var ag=ah.charCodeAt(0);if(ag!==92){return ag}var af=ah.charAt(1);ag=Y[af];if(ag){return ag}else{if("0"<=af&&af<="7"){return parseInt(ah.substring(1),8)}else{if(af==="u"||af==="x"){return parseInt(ah.substring(2),16)}else{return ah.charCodeAt(1)}}}}function T(af){if(af<32){return(af<16?"\\x0":"\\x")+af.toString(16)}var ag=String.fromCharCode(af);if(ag==="\\"||ag==="-"||ag==="["||ag==="]"){ag="\\"+ag}return ag}function X(am){var aq=am.substring(1,am.length-1).match(new RegExp("\\\\u[0-9A-Fa-f]{4}|\\\\x[0-9A-Fa-f]{2}|\\\\[0-3][0-7]{0,2}|\\\\[0-7]{1,2}|\\\\[\\s\\S]|-|[^-\\\\]","g"));var ak=[];var af=[];var ao=aq[0]==="^";for(var ar=ao?1:0,aj=aq.length;ar<aj;++ar){var ah=aq[ar];if(/\\[bdsw]/i.test(ah)){ak.push(ah)}else{var ag=ab(ah);var al;if(ar+2<aj&&"-"===aq[ar+1]){al=ab(aq[ar+2]);ar+=2}else{al=ag}af.push([ag,al]);if(!(al<65||ag>122)){if(!(al<65||ag>90)){af.push([Math.max(65,ag)|32,Math.min(al,90)|32])}if(!(al<97||ag>122)){af.push([Math.max(97,ag)&~32,Math.min(al,122)&~32])}}}}af.sort(function(av,au){return(av[0]-au[0])||(au[1]-av[1])});var ai=[];var ap=[NaN,NaN];for(var ar=0;ar<af.length;++ar){var at=af[ar];if(at[0]<=ap[1]+1){ap[1]=Math.max(ap[1],at[1])}else{ai.push(ap=at)}}var an=["["];if(ao){an.push("^")}an.push.apply(an,ak);for(var ar=0;ar<ai.length;++ar){var at=ai[ar];an.push(T(at[0]));if(at[1]>at[0]){if(at[1]+1>at[0]){an.push("-")}an.push(T(at[1]))}}an.push("]");return an.join("")}function W(al){var aj=al.source.match(new RegExp("(?:\\[(?:[^\\x5C\\x5D]|\\\\[\\s\\S])*\\]|\\\\u[A-Fa-f0-9]{4}|\\\\x[A-Fa-f0-9]{2}|\\\\[0-9]+|\\\\[^ux0-9]|\\(\\?[:!=]|[\\(\\)\\^]|[^\\x5B\\x5C\\(\\)\\^]+)","g"));var ah=aj.length;var an=[];for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){an[af]=-1}}}}for(var ak=1;ak<an.length;++ak){if(-1===an[ak]){an[ak]=++ad}}for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am;if(an[am]===undefined){aj[ak]="(?:"}}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){aj[ak]="\\"+an[am]}}}}for(var ak=0,am=0;ak<ah;++ak){if("^"===aj[ak]&&"^"!==aj[ak+1]){aj[ak]=""}}if(al.ignoreCase&&S){for(var ak=0;ak<ah;++ak){var ag=aj[ak];var ai=ag.charAt(0);if(ag.length>=2&&ai==="["){aj[ak]=X(ag)}else{if(ai!=="\\"){aj[ak]=ag.replace(/[a-zA-Z]/g,function(ao){var ap=ao.charCodeAt(0);return"["+String.fromCharCode(ap&~32,ap|32)+"]"})}}}}return aj.join("")}var aa=[];for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.global||ae.multiline){throw new Error(""+ae)}aa.push("(?:"+W(ae)+")")}return new RegExp(aa.join("|"),ac?"gi":"g")}function a(V){var U=/(?:^|\s)nocode(?:\s|$)/;var X=[];var T=0;var Z=[];var W=0;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=document.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Y=S&&"pre"===S.substring(0,3);function aa(ab){switch(ab.nodeType){case 1:if(U.test(ab.className)){return}for(var ae=ab.firstChild;ae;ae=ae.nextSibling){aa(ae)}var ad=ab.nodeName;if("BR"===ad||"LI"===ad){X[W]="\n";Z[W<<1]=T++;Z[(W++<<1)|1]=ab}break;case 3:case 4:var ac=ab.nodeValue;if(ac.length){if(!Y){ac=ac.replace(/[ \t\r\n]+/g," ")}else{ac=ac.replace(/\r\n?/g,"\n")}X[W]=ac;Z[W<<1]=T;T+=ac.length;Z[(W++<<1)|1]=ab}break}}aa(V);return{sourceCode:X.join("").replace(/\n$/,""),spans:Z}}function B(S,U,W,T){if(!U){return}var V={sourceCode:U,basePos:S};W(V);T.push.apply(T,V.decorations)}var v=/\S/;function o(S){var V=undefined;for(var U=S.firstChild;U;U=U.nextSibling){var T=U.nodeType;V=(T===1)?(V?S:U):(T===3)?(v.test(U.nodeValue)?S:V):V}return V===S?undefined:V}function g(U,T){var S={};var V;(function(){var ad=U.concat(T);var ah=[];var ag={};for(var ab=0,Z=ad.length;ab<Z;++ab){var Y=ad[ab];var ac=Y[3];if(ac){for(var ae=ac.length;--ae>=0;){S[ac.charAt(ae)]=Y}}var af=Y[1];var aa=""+af;if(!ag.hasOwnProperty(aa)){ah.push(af);ag[aa]=null}}ah.push(/[\0-\uffff]/);V=k(ah)})();var X=T.length;var W=function(ah){var Z=ah.sourceCode,Y=ah.basePos;var ad=[Y,F];var af=0;var an=Z.match(V)||[];var aj={};for(var ae=0,aq=an.length;ae<aq;++ae){var ag=an[ae];var ap=aj[ag];var ai=void 0;var am;if(typeof ap==="string"){am=false}else{var aa=S[ag.charAt(0)];if(aa){ai=ag.match(aa[1]);ap=aa[0]}else{for(var ao=0;ao<X;++ao){aa=T[ao];ai=ag.match(aa[1]);if(ai){ap=aa[0];break}}if(!ai){ap=F}}am=ap.length>=5&&"lang-"===ap.substring(0,5);if(am&&!(ai&&typeof ai[1]==="string")){am=false;ap=J}if(!am){aj[ag]=ap}}var ab=af;af+=ag.length;if(!am){ad.push(Y+ab,ap)}else{var al=ai[1];var ak=ag.indexOf(al);var ac=ak+al.length;if(ai[2]){ac=ag.length-ai[2].length;ak=ac-al.length}var ar=ap.substring(5);B(Y+ab,ag.substring(0,ak),W,ad);B(Y+ab+ak,al,q(ar,al),ad);B(Y+ab+ac,ag.substring(ac),W,ad)}}ah.decorations=ad};return W}function i(T){var W=[],S=[];if(T.tripleQuotedStrings){W.push([C,/^(?:\'\'\'(?:[^\'\\]|\\[\s\S]|\'{1,2}(?=[^\']))*(?:\'\'\'|$)|\"\"\"(?:[^\"\\]|\\[\s\S]|\"{1,2}(?=[^\"]))*(?:\"\"\"|$)|\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$))/,null,"'\""])}else{if(T.multiLineStrings){W.push([C,/^(?:\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$)|\`(?:[^\\\`]|\\[\s\S])*(?:\`|$))/,null,"'\"`"])}else{W.push([C,/^(?:\'(?:[^\\\'\r\n]|\\.)*(?:\'|$)|\"(?:[^\\\"\r\n]|\\.)*(?:\"|$))/,null,"\"'"])}}if(T.verbatimStrings){S.push([C,/^@\"(?:[^\"]|\"\")*(?:\"|$)/,null])}var Y=T.hashComments;if(Y){if(T.cStyleComments){if(Y>1){W.push([j,/^#(?:##(?:[^#]|#(?!##))*(?:###|$)|.*)/,null,"#"])}else{W.push([j,/^#(?:(?:define|elif|else|endif|error|ifdef|include|ifndef|line|pragma|undef|warning)\b|[^\r\n]*)/,null,"#"])}S.push([C,/^<(?:(?:(?:\.\.\/)*|\/?)(?:[\w-]+(?:\/[\w-]+)+)?[\w-]+\.h|[a-z]\w*)>/,null])}else{W.push([j,/^#[^\r\n]*/,null,"#"])}}if(T.cStyleComments){S.push([j,/^\/\/[^\r\n]*/,null]);S.push([j,/^\/\*[\s\S]*?(?:\*\/|$)/,null])}if(T.regexLiterals){var X=("/(?=[^/*])(?:[^/\\x5B\\x5C]|\\x5C[\\s\\S]|\\x5B(?:[^\\x5C\\x5D]|\\x5C[\\s\\S])*(?:\\x5D|$))+/");S.push(["lang-regex",new RegExp("^"+M+"("+X+")")])}var V=T.types;if(V){S.push([O,V])}var U=(""+T.keywords).replace(/^ | $/g,"");if(U.length){S.push([z,new RegExp("^(?:"+U.replace(/[\s,]+/g,"|")+")\\b"),null])}W.push([F,/^\s+/,null," \r\n\t\xA0"]);S.push([G,/^@[a-z_$][a-z_$@0-9]*/i,null],[O,/^(?:[@_]?[A-Z]+[a-z][A-Za-z_$@0-9]*|\w+_t\b)/,null],[F,/^[a-z_$][a-z_$@0-9]*/i,null],[G,new RegExp("^(?:0x[a-f0-9]+|(?:\\d(?:_\\d+)*\\d*(?:\\.\\d*)?|\\.\\d\\+)(?:e[+\\-]?\\d+)?)[a-z]*","i"),null,"0123456789"],[F,/^\\[\s\S]?/,null],[L,/^.[^\s\w\.$@\'\"\`\/\#\\]*/,null]);return g(W,S)}var K=i({keywords:A,hashComments:true,cStyleComments:true,multiLineStrings:true,regexLiterals:true});function Q(V,ag){var U=/(?:^|\s)nocode(?:\s|$)/;var ab=/\r\n?|\n/;var ac=V.ownerDocument;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=ac.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Z=S&&"pre"===S.substring(0,3);var af=ac.createElement("LI");while(V.firstChild){af.appendChild(V.firstChild)}var W=[af];function ae(al){switch(al.nodeType){case 1:if(U.test(al.className)){break}if("BR"===al.nodeName){ad(al);if(al.parentNode){al.parentNode.removeChild(al)}}else{for(var an=al.firstChild;an;an=an.nextSibling){ae(an)}}break;case 3:case 4:if(Z){var am=al.nodeValue;var aj=am.match(ab);if(aj){var ai=am.substring(0,aj.index);al.nodeValue=ai;var ah=am.substring(aj.index+aj[0].length);if(ah){var ak=al.parentNode;ak.insertBefore(ac.createTextNode(ah),al.nextSibling)}ad(al);if(!ai){al.parentNode.removeChild(al)}}}break}}function ad(ak){while(!ak.nextSibling){ak=ak.parentNode;if(!ak){return}}function ai(al,ar){var aq=ar?al.cloneNode(false):al;var ao=al.parentNode;if(ao){var ap=ai(ao,1);var an=al.nextSibling;ap.appendChild(aq);for(var am=an;am;am=an){an=am.nextSibling;ap.appendChild(am)}}return aq}var ah=ai(ak.nextSibling,0);for(var aj;(aj=ah.parentNode)&&aj.nodeType===1;){ah=aj}W.push(ah)}for(var Y=0;Y<W.length;++Y){ae(W[Y])}if(ag===(ag|0)){W[0].setAttribute("value",ag)}var aa=ac.createElement("OL");aa.className="linenums";var X=Math.max(0,((ag-1))|0)||0;for(var Y=0,T=W.length;Y<T;++Y){af=W[Y];af.className="L"+((Y+X)%10);if(!af.firstChild){af.appendChild(ac.createTextNode("\xA0"))}aa.appendChild(af)}V.appendChild(aa)}function D(ac){var aj=/\bMSIE\b/.test(navigator.userAgent);var am=/\n/g;var al=ac.sourceCode;var an=al.length;var V=0;var aa=ac.spans;var T=aa.length;var ah=0;var X=ac.decorations;var Y=X.length;var Z=0;X[Y]=an;var ar,aq;for(aq=ar=0;aq<Y;){if(X[aq]!==X[aq+2]){X[ar++]=X[aq++];X[ar++]=X[aq++]}else{aq+=2}}Y=ar;for(aq=ar=0;aq<Y;){var at=X[aq];var ab=X[aq+1];var W=aq+2;while(W+2<=Y&&X[W+1]===ab){W+=2}X[ar++]=at;X[ar++]=ab;aq=W}Y=X.length=ar;var ae=null;while(ah<T){var af=aa[ah];var S=aa[ah+2]||an;var ag=X[Z];var ap=X[Z+2]||an;var W=Math.min(S,ap);var ak=aa[ah+1];var U;if(ak.nodeType!==1&&(U=al.substring(V,W))){if(aj){U=U.replace(am,"\r")}ak.nodeValue=U;var ai=ak.ownerDocument;var ao=ai.createElement("SPAN");ao.className=X[Z+1];var ad=ak.parentNode;ad.replaceChild(ao,ak);ao.appendChild(ak);if(V<S){aa[ah+1]=ak=ai.createTextNode(al.substring(W,S));ad.insertBefore(ak,ao.nextSibling)}}V=W;if(V>=S){ah+=2}if(V>=ap){Z+=2}}}var t={};function c(U,V){for(var S=V.length;--S>=0;){var T=V[S];if(!t.hasOwnProperty(T)){t[T]=U}else{if(window.console){console.warn("cannot override language handler %s",T)}}}}function q(T,S){if(!(T&&t.hasOwnProperty(T))){T=/^\s*</.test(S)?"default-markup":"default-code"}return t[T]}c(K,["default-code"]);c(g([],[[F,/^[^<?]+/],[E,/^<!\w[^>]*(?:>|$)/],[j,/^<\!--[\s\S]*?(?:-\->|$)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],[L,/^(?:<[%?]|[%?]>)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i]]),["default-markup","htm","html","mxml","xhtml","xml","xsl"]);c(g([[F,/^[\s]+/,null," \t\r\n"],[n,/^(?:\"[^\"]*\"?|\'[^\']*\'?)/,null,"\"'"]],[[m,/^^<\/?[a-z](?:[\w.:-]*\w)?|\/?>$/i],[P,/^(?!style[\s=]|on)[a-z](?:[\w:-]*\w)?/i],["lang-uq.val",/^=\s*([^>\'\"\s]*(?:[^>\'\"\s\/]|\/(?=\s)))/],[L,/^[=<>\/]+/],["lang-js",/^on\w+\s*=\s*\"([^\"]+)\"/i],["lang-js",/^on\w+\s*=\s*\'([^\']+)\'/i],["lang-js",/^on\w+\s*=\s*([^\"\'>\s]+)/i],["lang-css",/^style\s*=\s*\"([^\"]+)\"/i],["lang-css",/^style\s*=\s*\'([^\']+)\'/i],["lang-css",/^style\s*=\s*([^\"\'>\s]+)/i]]),["in.tag"]);c(g([],[[n,/^[\s\S]+/]]),["uq.val"]);c(i({keywords:l,hashComments:true,cStyleComments:true,types:e}),["c","cc","cpp","cxx","cyc","m"]);c(i({keywords:"null,true,false"}),["json"]);c(i({keywords:R,hashComments:true,cStyleComments:true,verbatimStrings:true,types:e}),["cs"]);c(i({keywords:x,cStyleComments:true}),["java"]);c(i({keywords:H,hashComments:true,multiLineStrings:true}),["bsh","csh","sh"]);c(i({keywords:I,hashComments:true,multiLineStrings:true,tripleQuotedStrings:true}),["cv","py"]);c(i({keywords:s,hashComments:true,multiLineStrings:true,regexLiterals:true}),["perl","pl","pm"]);c(i({keywords:f,hashComments:true,multiLineStrings:true,regexLiterals:true}),["rb"]);c(i({keywords:w,cStyleComments:true,regexLiterals:true}),["js"]);c(i({keywords:r,hashComments:3,cStyleComments:true,multilineStrings:true,tripleQuotedStrings:true,regexLiterals:true}),["coffee"]);c(g([],[[C,/^[\s\S]+/]]),["regex"]);function d(V){var U=V.langExtension;try{var S=a(V.sourceNode);var T=S.sourceCode;V.sourceCode=T;V.spans=S.spans;V.basePos=0;q(U,T)(V);D(V)}catch(W){if("console" in window){console.log(W&&W.stack?W.stack:W)}}}function y(W,V,U){var S=document.createElement("PRE");S.innerHTML=W;if(U){Q(S,U)}var T={langExtension:V,numberLines:U,sourceNode:S};d(T);return S.innerHTML}function b(ad){function Y(af){return document.getElementsByTagName(af)}var ac=[Y("pre"),Y("code"),Y("xmp")];var T=[];for(var aa=0;aa<ac.length;++aa){for(var Z=0,V=ac[aa].length;Z<V;++Z){T.push(ac[aa][Z])}}ac=null;var W=Date;if(!W.now){W={now:function(){return +(new Date)}}}var X=0;var S;var ab=/\blang(?:uage)?-([\w.]+)(?!\S)/;var ae=/\bprettyprint\b/;function U(){var ag=(window.PR_SHOULD_USE_CONTINUATION?W.now()+250:Infinity);for(;X<T.length&&W.now()<ag;X++){var aj=T[X];var ai=aj.className;if(ai.indexOf("prettyprint")>=0){var ah=ai.match(ab);var am;if(!ah&&(am=o(aj))&&"CODE"===am.tagName){ah=am.className.match(ab)}if(ah){ah=ah[1]}var al=false;for(var ak=aj.parentNode;ak;ak=ak.parentNode){if((ak.tagName==="pre"||ak.tagName==="code"||ak.tagName==="xmp")&&ak.className&&ak.className.indexOf("prettyprint")>=0){al=true;break}}if(!al){var af=aj.className.match(/\blinenums\b(?::(\d+))?/);af=af?af[1]&&af[1].length?+af[1]:true:false;if(af){Q(aj,af)}S={langExtension:ah,sourceNode:aj,numberLines:af};d(S)}}}if(X<T.length){setTimeout(U,250)}else{if(ad){ad()}}}U()}window.prettyPrintOne=y;window.prettyPrint=b;window.PR={createSimpleLexer:g,registerLangHandler:c,sourceDecorator:i,PR_ATTRIB_NAME:P,PR_ATTRIB_VALUE:n,PR_COMMENT:j,PR_DECLARATION:E,PR_KEYWORD:z,PR_LITERAL:G,PR_NOCODE:N,PR_PLAIN:F,PR_PUNCTUATION:L,PR_SOURCE:J,PR_STRING:C,PR_TAG:m,PR_TYPE:O}})();PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_DECLARATION,/^<!\w[^>]*(?:>|$)/],[PR.PR_COMMENT,/^<\!--[\s\S]*?(?:-\->|$)/],[PR.PR_PUNCTUATION,/^(?:<[%?]|[%?]>)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-handlebars",/^<script\b[^>]*type\s*=\s*['"]?text\/x-handlebars-template['"]?\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i],[PR.PR_DECLARATION,/^{{[#^>/]?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{&?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{{>?\s*[\w.][^}]*}}}/],[PR.PR_COMMENT,/^{{![^}]*}}/]]),["handlebars","hbs"]);PR.registerLangHandler(PR.createSimpleLexer([[PR.PR_PLAIN,/^[ \t\r\n\f]+/,null," \t\r\n\f"]],[[PR.PR_STRING,/^\"(?:[^\n\r\f\\\"]|\\(?:\r\n?|\n|\f)|\\[\s\S])*\"/,null],[PR.PR_STRING,/^\'(?:[^\n\r\f\\\']|\\(?:\r\n?|\n|\f)|\\[\s\S])*\'/,null],["lang-css-str",/^url\(([^\)\"\']*)\)/i],[PR.PR_KEYWORD,/^(?:url|rgb|\!important|@import|@page|@media|@charset|inherit)(?=[^\-\w]|$)/i,null],["lang-css-kw",/^(-?(?:[_a-z]|(?:\\[0-9a-f]+ ?))(?:[_a-z0-9\-]|\\(?:\\[0-9a-f]+ ?))*)\s*:/i],[PR.PR_COMMENT,/^\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\//],[PR.PR_COMMENT,/^(?:<!--|-->)/],[PR.PR_LITERAL,/^(?:\d+|\d*\.\d+)(?:%|[a-z]+)?/i],[PR.PR_LITERAL,/^#(?:[0-9a-f]{3}){1,2}/i],[PR.PR_PLAIN,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i],[PR.PR_PUNCTUATION,/^[^\s\w\'\"]+/]]),["css"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_KEYWORD,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i]]),["css-kw"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_STRING,/^[^\)\"\']+/]]),["css-str"]);
+</file>
+
+<file path="frontend/coverage/sorter.js">
+/* eslint-disable */
+var addSorting = (function() {
+    'use strict';
+    var cols,
+        currentSort = {
+            index: 0,
+            desc: false
+        };
+
+    // returns the summary table element
+    function getTable() {
+        return document.querySelector('.coverage-summary');
+    }
+    // returns the thead element of the summary table
+    function getTableHeader() {
+        return getTable().querySelector('thead tr');
+    }
+    // returns the tbody element of the summary table
+    function getTableBody() {
+        return getTable().querySelector('tbody');
+    }
+    // returns the th element for nth column
+    function getNthColumn(n) {
+        return getTableHeader().querySelectorAll('th')[n];
+    }
+
+    function onFilterInput() {
+        const searchValue = document.getElementById('fileSearch').value;
+        const rows = document.getElementsByTagName('tbody')[0].children;
+
+        // Try to create a RegExp from the searchValue. If it fails (invalid regex),
+        // it will be treated as a plain text search
+        let searchRegex;
+        try {
+            searchRegex = new RegExp(searchValue, 'i'); // 'i' for case-insensitive
+        } catch (error) {
+            searchRegex = null;
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            let isMatch = false;
+
+            if (searchRegex) {
+                // If a valid regex was created, use it for matching
+                isMatch = searchRegex.test(row.textContent);
+            } else {
+                // Otherwise, fall back to the original plain text search
+                isMatch = row.textContent
+                    .toLowerCase()
+                    .includes(searchValue.toLowerCase());
+            }
+
+            row.style.display = isMatch ? '' : 'none';
+        }
+    }
+
+    // loads the search box
+    function addSearchBox() {
+        var template = document.getElementById('filterTemplate');
+        var templateClone = template.content.cloneNode(true);
+        templateClone.getElementById('fileSearch').oninput = onFilterInput;
+        template.parentElement.appendChild(templateClone);
+    }
+
+    // loads all columns
+    function loadColumns() {
+        var colNodes = getTableHeader().querySelectorAll('th'),
+            colNode,
+            cols = [],
+            col,
+            i;
+
+        for (i = 0; i < colNodes.length; i += 1) {
+            colNode = colNodes[i];
+            col = {
+                key: colNode.getAttribute('data-col'),
+                sortable: !colNode.getAttribute('data-nosort'),
+                type: colNode.getAttribute('data-type') || 'string'
+            };
+            cols.push(col);
+            if (col.sortable) {
+                col.defaultDescSort = col.type === 'number';
+                colNode.innerHTML =
+                    colNode.innerHTML + '<span class="sorter"></span>';
+            }
+        }
+        return cols;
+    }
+    // attaches a data attribute to every tr element with an object
+    // of data values keyed by column name
+    function loadRowData(tableRow) {
+        var tableCols = tableRow.querySelectorAll('td'),
+            colNode,
+            col,
+            data = {},
+            i,
+            val;
+        for (i = 0; i < tableCols.length; i += 1) {
+            colNode = tableCols[i];
+            col = cols[i];
+            val = colNode.getAttribute('data-value');
+            if (col.type === 'number') {
+                val = Number(val);
+            }
+            data[col.key] = val;
+        }
+        return data;
+    }
+    // loads all row data
+    function loadData() {
+        var rows = getTableBody().querySelectorAll('tr'),
+            i;
+
+        for (i = 0; i < rows.length; i += 1) {
+            rows[i].data = loadRowData(rows[i]);
+        }
+    }
+    // sorts the table using the data for the ith column
+    function sortByIndex(index, desc) {
+        var key = cols[index].key,
+            sorter = function(a, b) {
+                a = a.data[key];
+                b = b.data[key];
+                return a < b ? -1 : a > b ? 1 : 0;
+            },
+            finalSorter = sorter,
+            tableBody = document.querySelector('.coverage-summary tbody'),
+            rowNodes = tableBody.querySelectorAll('tr'),
+            rows = [],
+            i;
+
+        if (desc) {
+            finalSorter = function(a, b) {
+                return -1 * sorter(a, b);
+            };
+        }
+
+        for (i = 0; i < rowNodes.length; i += 1) {
+            rows.push(rowNodes[i]);
+            tableBody.removeChild(rowNodes[i]);
+        }
+
+        rows.sort(finalSorter);
+
+        for (i = 0; i < rows.length; i += 1) {
+            tableBody.appendChild(rows[i]);
+        }
+    }
+    // removes sort indicators for current column being sorted
+    function removeSortIndicators() {
+        var col = getNthColumn(currentSort.index),
+            cls = col.className;
+
+        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');
+        col.className = cls;
+    }
+    // adds sort indicators for current column being sorted
+    function addSortIndicators() {
+        getNthColumn(currentSort.index).className += currentSort.desc
+            ? ' sorted-desc'
+            : ' sorted';
+    }
+    // adds event listeners for all sorter widgets
+    function enableUI() {
+        var i,
+            el,
+            ithSorter = function ithSorter(i) {
+                var col = cols[i];
+
+                return function() {
+                    var desc = col.defaultDescSort;
+
+                    if (currentSort.index === i) {
+                        desc = !currentSort.desc;
+                    }
+                    sortByIndex(i, desc);
+                    removeSortIndicators();
+                    currentSort.index = i;
+                    currentSort.desc = desc;
+                    addSortIndicators();
+                };
+            };
+        for (i = 0; i < cols.length; i += 1) {
+            if (cols[i].sortable) {
+                // add the click event handler on the th so users
+                // dont have to click on those tiny arrows
+                el = getNthColumn(i).querySelector('.sorter').parentElement;
+                if (el.addEventListener) {
+                    el.addEventListener('click', ithSorter(i));
+                } else {
+                    el.attachEvent('onclick', ithSorter(i));
+                }
+            }
+        }
+    }
+    // adds sorting functionality to the UI
+    return function() {
+        if (!getTable()) {
+            return;
+        }
+        cols = loadColumns();
+        loadData();
+        addSearchBox();
+        addSortIndicators();
+        enableUI();
+    };
+})();
+
+window.addEventListener('load', addSorting);
 </file>
 
 <file path="frontend/public/ui/QA_CHECKLIST.md">
@@ -9316,6 +8935,550 @@ export function box2dCenter(box: Box2D): { x: number; y: number } {
 {"language": "ko-KR", "text": "모험을 시작한다", "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"}, "economy_snapshot": {"signal": 5, "memory_shard": 0}}
 </file>
 
+<file path="backend/prompts/image/scene_prompt.en.md">
+<prompt_meta>
+  <prompt_id>scene_image_generation</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## Purpose
+
+Prompt template for generating in-game scene images.
+Creates visual representations that match the text narrative in a consistent style.
+
+## Inputs
+
+- narrative: Current turn's narrative text
+- scene_description: Scene description (optional)
+- style_hints: Style hints (optional)
+- previous_scene_context: Previous scene context (for consistency)
+
+## Output Contract (Summary)
+
+- Image generation prompts are written in **English** (model optimization).
+- Always include base style keywords for consistency.
+- Minimize negative prompts; describe the desired scene positively.
+
+---
+
+## System Instructions
+
+You are the image prompt generator for "Unknown World" game.
+Based on the given narrative and scene description, create prompts for the Gemini image generation model.
+
+### Base Style Guidelines
+
+1. **Art Style**: Dark fantasy, mystery, roguelike atmosphere
+2. **Color Palette**: Dark and muted tones, neon accents (harmonizing with CRT theme)
+3. **Lighting**: Dramatic contrast, rim lighting, atmospheric illumination
+4. **Composition**: Cinematic, prefer wide or medium shots
+
+### Prompt Structure
+
+```
+[Subject/Scene Description], [Art Style], [Lighting/Mood], [Color Tones], [Camera/Composition], [Quality Keywords]
+```
+
+### Quality Keywords (Always Include)
+
+- highly detailed
+- cinematic lighting
+- atmospheric
+- dark fantasy aesthetic
+- 4k quality
+
+### Prohibited Elements
+
+- Avoid photorealistic style (difficult to maintain consistency)
+- No violent/sexual/discriminatory imagery
+- Avoid text/letters in images (readability issues)
+
+---
+
+## Example Prompts
+
+### Example 1: Mysterious Forest Entrance
+
+**Input Narrative**: "The old door creaks open. Cold air rushes out from within."
+
+**Generated Prompt**:
+```
+An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
+```
+
+### Example 2: Interior of a Ruined Castle
+
+**Input Narrative**: "The throne of the crumbling castle gleams under the moonlight."
+
+**Generated Prompt**:
+```
+A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
+```
+
+---
+
+## Important Constraints
+
+- **Prompts in English**: For image generation model optimization
+- **Maintain Consistent Style**: Always include base style keywords
+- **Safety Policy Compliance**: Exclude inappropriate content elements
+</prompt_body>
+</file>
+
+<file path="backend/prompts/image/scene_prompt.ko.md">
+<prompt_meta>
+  <prompt_id>scene_image_generation</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+
+게임 내 장면(Scene) 이미지를 생성하기 위한 프롬프트 템플릿입니다.
+텍스트 내러티브에 맞는 시각적 표현을 일관된 스타일로 생성합니다.
+
+## 입력
+
+- narrative: 현재 턴의 내러티브 텍스트
+- scene_description: 장면 설명 (선택)
+- style_hints: 스타일 힌트 (선택)
+- previous_scene_context: 이전 장면 맥락 (일관성 유지용)
+
+## 출력 계약 (요약)
+
+- 이미지 생성 프롬프트는 **영어**로 작성됩니다 (모델 최적화).
+- 스타일 일관성을 위해 기본 스타일 키워드를 항상 포함합니다.
+- 부정 프롬프트는 최소화하고, 원하는 장면을 긍정적으로 서술합니다.
+
+---
+
+## 시스템 지시
+
+당신은 "Unknown World" 게임의 이미지 프롬프트 생성기입니다.
+주어진 내러티브와 장면 설명을 바탕으로 Gemini 이미지 생성 모델에 전달할 프롬프트를 작성합니다.
+
+### 기본 스타일 가이드라인
+
+1. **아트 스타일**: 다크 판타지, 미스터리, 로그라이크 분위기
+2. **색상 팔레트**: 어둡고 차분한 톤, 네온 악센트 (CRT 테마와 조화)
+3. **조명**: 극적인 명암 대비, 림 라이트, 분위기 있는 조명
+4. **구도**: 시네마틱, 와이드 샷 또는 중간 샷 선호
+
+### 프롬프트 구조
+
+```
+[주제/장면 설명], [아트 스타일], [조명/분위기], [색상 톤], [카메라/구도], [품질 키워드]
+```
+
+### 품질 키워드 (기본 포함)
+
+- highly detailed
+- cinematic lighting
+- atmospheric
+- dark fantasy aesthetic
+- 4k quality
+
+### 금지 사항
+
+- 실사 스타일 (photorealistic) 지양 (일관성 유지 어려움)
+- 폭력적/성적/차별적 이미지 요소 금지
+- 텍스트/글자 포함 지양 (가독성 문제)
+
+---
+
+## 예시 프롬프트
+
+### 예시 1: 신비로운 숲 입구
+
+**입력 내러티브**: "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다."
+
+**생성된 프롬프트**:
+```
+An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
+```
+
+### 예시 2: 폐허가 된 성의 내부
+
+**입력 내러티브**: "무너진 성의 왕좌가 달빛 아래 빛나고 있습니다."
+
+**생성된 프롬프트**:
+```
+A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
+```
+
+---
+
+## 중요 제약
+
+- **프롬프트는 영어로 작성**: 이미지 생성 모델 최적화를 위해
+- **일관된 스타일 유지**: 기본 스타일 키워드를 항상 포함
+- **안전 정책 준수**: 부적절한 콘텐츠 생성 요소 배제
+</prompt_body>
+</file>
+
+<file path="backend/prompts/system/game_master.en.md">
+<prompt_meta>
+  <prompt_id>game_master_system</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## Purpose
+
+Act as an agent-style Game Master to generate TurnOutput (JSON).
+"Unknown World" is an infinite generative roguelike narrative web game.
+
+## Input
+
+- TurnInput: language, text, action_id, click, client, economy_snapshot
+- WorldState: world rules, inventory, quests, relationships, history summary
+
+## Output Contract (Summary)
+
+- Output must satisfy the TurnOutput JSON Schema.
+- language is fixed to "en-US" matching the input.
+- All text (narrative, label, description, etc.) must be in English.
+
+---
+
+## System Instructions
+
+You are the Game Master of "Unknown World". React to player actions, evolve the world, and generate engaging narratives.
+
+### Core Principles
+
+1. **Consistency**: Adhere to world rules and established settings.
+2. **Creativity**: Create unpredictable yet logical developments.
+3. **Responsiveness**: Provide meaningful consequences for player choices.
+4. **Economy**: Calculate cost and balance_after accurately.
+
+### Narrative Style
+
+- 2-3 sentences of concise, immersive description
+- Use present tense
+- Include sensory details (sounds, smells, textures)
+- Address the player as "you"
+
+### Action Card Generation Rules
+
+- Provide 3-6 choice cards
+- Include cost, risk level, and hint for each card
+- At least 1 low-cost alternative (is_alternative: true)
+- Disable cards (enabled: false) when balance is insufficient
+
+### Safety Policy
+
+- Do not generate violent/sexual/discriminatory content
+- On violation requests: safety.blocked=true, provide safe alternative narrative
+
+---
+
+## Critical Constraints
+
+- **Output must be valid JSON.**
+- **language field is fixed to "en-US".**
+- **economy.cost and economy.balance_after are required.**
+- **balance_after must be >= 0.**
+</prompt_body>
+</file>
+
+<file path="backend/prompts/system/game_master.ko.md">
+<prompt_meta>
+  <prompt_id>game_master_system</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+
+에이전트형 Game Master로서 TurnOutput(JSON)을 생성합니다.
+"Unknown World"는 무한 생성 로그라이크 내러티브 웹게임입니다.
+
+## 입력
+
+- TurnInput: language, text, action_id, click, client, economy_snapshot
+- WorldState: 세계 규칙, 인벤토리, 퀘스트, 관계, 히스토리 요약
+
+## 출력 계약 (요약)
+
+- 반드시 JSON Schema를 만족하는 TurnOutput만 출력합니다.
+- language는 입력과 동일하게 "ko-KR"로 고정합니다.
+- 모든 텍스트(narrative, label, description 등)는 한국어로 작성합니다.
+
+---
+
+## 시스템 지시
+
+당신은 "Unknown World"의 Game Master입니다. 플레이어의 행동에 반응하여 세계를 변화시키고, 흥미로운 내러티브를 생성합니다.
+
+### 핵심 원칙
+
+1. **일관성**: 세계 규칙(rules)과 기존 설정을 준수합니다.
+2. **창의성**: 예측 불가능하되 논리적인 전개를 만들어냅니다.
+3. **반응성**: 플레이어의 선택에 의미 있는 결과를 제공합니다.
+4. **경제성**: 비용(cost)과 잔액(balance_after)을 정확히 계산합니다.
+
+### 내러티브 스타일
+
+- 2~3문장의 간결하고 몰입감 있는 묘사
+- 현재 시제 사용
+- 감각적 디테일 포함 (소리, 냄새, 촉감 등)
+- 플레이어를 "당신"으로 지칭
+
+### 액션 카드 생성 규칙
+
+- 3~6장의 선택지 제공
+- 각 카드에 비용(cost), 위험도(risk), 힌트(hint) 포함
+- 최소 1장은 저비용 대안(is_alternative: true) 포함
+- 잔액 부족 시 해당 카드 비활성화(enabled: false)
+
+### 안전 정책
+
+- 폭력적/성적/차별적 콘텐츠 생성 금지
+- 위반 요청 시 safety.blocked=true, 안전한 대체 내러티브 제공
+
+---
+
+## 중요 제약
+
+- **출력은 반드시 유효한 JSON이어야 합니다.**
+- **language 필드는 "ko-KR"로 고정합니다.**
+- **economy.cost와 economy.balance_after는 필수입니다.**
+- **잔액(balance_after)은 0 이상이어야 합니다.**
+</prompt_body>
+</file>
+
+<file path="backend/prompts/turn/turn_output_instructions.en.md">
+<prompt_meta>
+  <prompt_id>turn_output_instructions</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## Purpose
+
+Specify the rules for each field in the TurnOutput JSON schema.
+
+---
+
+## Required Fields (Hard Gate)
+
+### language
+- Value: "en-US" (fixed to match input)
+- No mixed language output
+
+### narrative
+- Type: string (required)
+- Narrative text shown to the player
+- 2-3 sentences, written in English
+- Present tense, address as "you"
+
+### economy
+- Type: object (required)
+- cost: Resources consumed this turn {signal: int, memory_shard: int}
+- balance_after: Balance after consumption {signal: int, memory_shard: int}
+- **Important**: balance_after.signal >= 0, balance_after.memory_shard >= 0
+
+### safety
+- Type: object (required)
+- blocked: boolean (whether blocked by safety policy)
+- message: string | null (message to display when blocked)
+
+---
+
+## Optional Fields
+
+### ui
+- action_deck.cards[]: Action card array (3-6 recommended)
+  - id: Unique card ID
+  - label: Display label (English)
+  - cost: {signal, memory_shard}
+  - risk: "low" | "medium" | "high"
+  - enabled: boolean
+  - is_alternative: boolean (low-cost alternative flag)
+- objects[]: Clickable scene objects
+  - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
+
+### world
+- rules_changed[]: Changed world rules
+- inventory_added[]: Added item IDs
+- inventory_removed[]: Removed item IDs
+- quests_updated[]: Updated quests
+- memory_pins[]: Pin candidates
+
+### render
+- image_job: Image generation job (optional)
+  - should_generate: boolean
+  - prompt: Image prompt (English preferred)
+
+### agent_console
+- current_phase: Current phase
+- badges[]: Validation badges
+- repair_count: Number of repair attempts
+
+---
+
+## Coordinate Convention (RULE-009)
+
+- All coordinates use 0-1000 normalized coordinate system
+- bbox order: [ymin, xmin, ymax, xmax]
+- Do not use pixel coordinates
+
+---
+
+## Example Output
+
+```json
+{
+  "language": "en-US",
+  "narrative": "The old door creaks open. Cold air rushes out from within.",
+  "economy": {
+    "cost": {"signal": 5, "memory_shard": 0},
+    "balance_after": {"signal": 95, "memory_shard": 5}
+  },
+  "safety": {"blocked": false, "message": null},
+  "ui": {
+    "action_deck": {
+      "cards": [
+        {"id": "enter", "label": "Step inside", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
+        {"id": "peek", "label": "Peek cautiously", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
+      ]
+    },
+    "objects": []
+  },
+  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
+  "render": {"image_job": null},
+  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
+}
+```
+</prompt_body>
+</file>
+
+<file path="backend/prompts/turn/turn_output_instructions.ko.md">
+<prompt_meta>
+  <prompt_id>turn_output_instructions</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+
+TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
+
+---
+
+## 필수 필드 (Hard Gate)
+
+### language
+- 값: "ko-KR" (입력과 동일하게 고정)
+- 혼합 출력 금지
+
+### narrative
+- 타입: string (필수)
+- 플레이어에게 보여줄 내러티브 텍스트
+- 2~3문장, 한국어로 작성
+- 현재 시제, "당신" 지칭
+
+### economy
+- 타입: object (필수)
+- cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
+- balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
+- **중요**: balance_after.signal >= 0, balance_after.memory_shard >= 0
+
+### safety
+- 타입: object (필수)
+- blocked: boolean (안전 정책 차단 여부)
+- message: string | null (차단 시 표시할 메시지)
+
+---
+
+## 선택 필드
+
+### ui
+- action_deck.cards[]: 액션 카드 배열 (3~6장 권장)
+  - id: 카드 고유 ID
+  - label: 표시 라벨 (한국어)
+  - cost: {signal, memory_shard}
+  - risk: "low" | "medium" | "high"
+  - enabled: boolean
+  - is_alternative: boolean (저비용 대안 여부)
+- objects[]: 클릭 가능한 장면 오브젝트
+  - box_2d: {ymin, xmin, ymax, xmax} (0~1000 정규화 좌표)
+
+### world
+- rules_changed[]: 변경된 세계 규칙
+- inventory_added[]: 추가된 아이템 ID
+- inventory_removed[]: 제거된 아이템 ID
+- quests_updated[]: 업데이트된 퀘스트
+- memory_pins[]: 고정 후보
+
+### render
+- image_job: 이미지 생성 작업 (선택)
+  - should_generate: boolean
+  - prompt: 이미지 프롬프트 (영어 권장)
+
+### agent_console
+- current_phase: 현재 단계
+- badges[]: 검증 배지
+- repair_count: 복구 시도 횟수
+
+---
+
+## 좌표 규약 (RULE-009)
+
+- 모든 좌표는 0~1000 정규화 좌표계
+- bbox 순서: [ymin, xmin, ymax, xmax]
+- 픽셀 좌표 사용 금지
+
+---
+
+## 예시 출력
+
+```json
+{
+  "language": "ko-KR",
+  "narrative": "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다.",
+  "economy": {
+    "cost": {"signal": 5, "memory_shard": 0},
+    "balance_after": {"signal": 95, "memory_shard": 5}
+  },
+  "safety": {"blocked": false, "message": null},
+  "ui": {
+    "action_deck": {
+      "cards": [
+        {"id": "enter", "label": "안으로 들어간다", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
+        {"id": "peek", "label": "조심스럽게 엿본다", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
+      ]
+    },
+    "objects": []
+  },
+  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
+  "render": {"image_job": null},
+  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
+}
+```
+</prompt_body>
+</file>
+
 <file path="backend/src/unknown_world/api/__init__.py">
 """Unknown World - API 패키지.
 
@@ -10120,476 +10283,6 @@ async def generate_turn_output(
         model_label=model_label,
         world_context=world_context,
     )
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/prompt_loader.py">
-"""Unknown World - 프롬프트 로더 유틸리티.
-
-이 모듈은 언어별로 분리된 프롬프트 파일을 로드합니다.
-프론트매터 파싱 및 핫리로드를 지원합니다.
-
-설계 원칙:
-    - RULE-006: ko/en 언어 정책 준수 (혼합 출력 금지)
-    - RULE-007/008: 프롬프트 원문 UI/로그 노출 금지
-    - U-036: 핫리로드 (개발 모드), 프론트매터 파싱 지원
-
-프롬프트 디렉토리 구조:
-    backend/prompts/
-    ├── system/
-    │   ├── game_master.ko.md
-    │   └── game_master.en.md
-    ├── turn/
-    │   ├── turn_output_instructions.ko.md
-    │   └── turn_output_instructions.en.md
-    └── image/
-        ├── scene_prompt.ko.md
-        └── scene_prompt.en.md
-
-페어링 질문 결정 (U-036):
-    - Q1: Option A (개발 모드에서만 매 호출 시 리로드)
-    - Q2: Option B (프론트매터 포함 마크다운)
-
-참조:
-    - vibe/prd.md 3.2 (프롬프트 파일 관리)
-    - vibe/prd.md 10.4 (프롬프트 핫리로드)
-    - .cursor/rules/30-prompts-i18n.mdc
-"""
-
-from __future__ import annotations
-
-import logging
-import os
-import re
-from dataclasses import dataclass, field
-from functools import lru_cache
-from pathlib import Path
-from typing import Literal
-
-from unknown_world.models.turn import Language
-
-# =============================================================================
-# 로거 설정 (프롬프트 원문 로깅 금지 - RULE-007/008)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-# =============================================================================
-# 경로 상수
-# =============================================================================
-
-# 프롬프트 루트 디렉토리 (backend/prompts/)
-_PROMPTS_ROOT = Path(__file__).parent.parent.parent.parent / "prompts"
-
-# 프롬프트 카테고리
-PromptCategory = Literal["system", "turn", "image"]
-
-# 언어 코드 매핑
-_LANGUAGE_CODE_MAP: dict[Language, str] = {
-    Language.KO: "ko",
-    Language.EN: "en",
-}
-
-# =============================================================================
-# 프론트매터 파싱 결과 타입
-# =============================================================================
-
-
-@dataclass
-class PromptData:
-    """프론트매터가 파싱된 프롬프트 데이터.
-
-    Attributes:
-        content: 프롬프트 본문 (프론트매터 제외)
-        metadata: 프론트매터에서 추출한 메타데이터
-        raw: 원본 전체 텍스트
-    """
-
-    content: str
-    metadata: dict[str, str] = field(default_factory=lambda: {})
-    raw: str = ""
-
-    def to_dict(self) -> dict[str, str | dict[str, str]]:
-        """JSON 직렬화 가능한 딕셔너리로 변환합니다.
-
-        Returns:
-            프롬프트 데이터 딕셔너리
-        """
-        return {
-            "content": self.content,
-            "metadata": self.metadata,
-        }
-
-
-# =============================================================================
-# 환경 모드 확인
-# =============================================================================
-
-
-def _is_development_mode() -> bool:
-    """개발 모드인지 확인합니다.
-
-    ENVIRONMENT 환경변수가 'development'이면 개발 모드입니다.
-    개발 모드에서는 프롬프트 핫리로드가 활성화됩니다.
-
-    Returns:
-        개발 모드 여부
-    """
-    return os.environ.get("ENVIRONMENT", "production").lower() == "development"
-
-
-# =============================================================================
-# 프론트매터 파싱
-# =============================================================================
-
-# 프론트매터 패턴: 파일 시작 부분의 "- key: value" 형태
-_FRONTMATTER_LINE_PATTERN = re.compile(r"^-\s*(\w+):\s*(.+)$")
-
-
-def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
-    """마크다운 텍스트에서 프론트매터를 파싱합니다.
-
-    프론트매터는 첫 번째 제목(#) 이후, 두 번째 제목(##) 이전의
-    "- key: value" 형태의 라인들입니다.
-
-    예시 구조:
-        # [Prompt] Title
-
-        - prompt_id: xxx
-        - version: 0.1.0
-
-        ## 본문 섹션
-        ...
-
-    Args:
-        text: 원본 마크다운 텍스트
-
-    Returns:
-        (메타데이터 딕셔너리, 본문 텍스트) 튜플
-    """
-    lines = text.split("\n")
-    metadata: dict[str, str] = {}
-    content_start_idx = 0
-    found_first_heading = False
-
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-
-        # 빈 줄은 건너뜀
-        if not stripped:
-            continue
-
-        # 첫 번째 제목(#) 발견
-        if stripped.startswith("#") and not stripped.startswith("##"):
-            found_first_heading = True
-            continue
-
-        # 두 번째 제목(##) 발견 시 프론트매터 영역 종료, 본문 시작
-        if stripped.startswith("##"):
-            content_start_idx = i
-            break
-
-        # 프론트매터 라인 매칭 (첫 번째 제목 이후)
-        if found_first_heading:
-            match = _FRONTMATTER_LINE_PATTERN.match(stripped)
-            if match:
-                key = match.group(1)
-                value = match.group(2).strip()
-                metadata[key] = value
-
-    # 본문 추출 (두 번째 제목부터)
-    content = "\n".join(lines[content_start_idx:]).strip()
-
-    return metadata, content
-
-
-# =============================================================================
-# 프롬프트 로더 함수
-# =============================================================================
-
-
-def _get_prompt_path(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> Path:
-    """프롬프트 파일 경로를 반환합니다.
-
-    Args:
-        category: 프롬프트 카테고리 (system, turn, image)
-        name: 프롬프트 파일 이름 (확장자 제외)
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        프롬프트 파일 경로
-
-    Example:
-        >>> _get_prompt_path("system", "game_master", Language.KO)
-        Path(".../prompts/system/game_master.ko.md")
-    """
-    lang_code = _LANGUAGE_CODE_MAP.get(language, "ko")
-    return _PROMPTS_ROOT / category / f"{name}.{lang_code}.md"
-
-
-def _load_prompt_file(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> str:
-    """프롬프트 파일을 직접 로드합니다 (캐싱 없음).
-
-    핫리로드 모드에서 사용됩니다.
-
-    Args:
-        category: 프롬프트 카테고리
-        name: 프롬프트 이름
-        language: 언어
-
-    Returns:
-        프롬프트 텍스트
-
-    Raises:
-        FileNotFoundError: 프롬프트 파일이 없는 경우
-    """
-    path = _get_prompt_path(category, name, language)
-
-    if not path.exists():
-        # 폴백: 반대 언어 시도
-        fallback_lang = Language.EN if language == Language.KO else Language.KO
-        fallback_path = _get_prompt_path(category, name, fallback_lang)
-
-        if fallback_path.exists():
-            logger.warning(
-                "[PromptLoader] 폴백 언어 사용",
-                extra={
-                    "original_language": language.value,
-                    "fallback_language": fallback_lang.value,
-                },
-            )
-            return fallback_path.read_text(encoding="utf-8")
-
-        raise FileNotFoundError(f"프롬프트 파일을 찾을 수 없습니다: {path}")
-
-    return path.read_text(encoding="utf-8")
-
-
-@lru_cache(maxsize=32)
-def _load_prompt_cached(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> str:
-    """프롬프트 파일을 캐싱하여 로드합니다.
-
-    운영 모드에서 사용됩니다.
-
-    Args:
-        category: 프롬프트 카테고리
-        name: 프롬프트 이름
-        language: 언어
-
-    Returns:
-        프롬프트 텍스트
-    """
-    return _load_prompt_file(category, name, language)
-
-
-def load_prompt(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> str:
-    """프롬프트 파일을 로드합니다.
-
-    개발 모드(ENVIRONMENT=development)에서는 매 호출 시 파일을 다시 읽습니다 (핫리로드).
-    운영 모드에서는 캐싱을 통해 반복 로드를 방지합니다.
-    프롬프트 원문은 로그에 기록하지 않습니다 (RULE-007/008).
-
-    Args:
-        category: 프롬프트 카테고리 (system, turn, image)
-        name: 프롬프트 파일 이름 (확장자 제외)
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        프롬프트 텍스트
-
-    Raises:
-        FileNotFoundError: 프롬프트 파일이 없는 경우
-
-    Example:
-        >>> prompt = load_prompt("system", "game_master", Language.KO)
-    """
-    # 로그에는 경로/메타만 기록 (원문 금지)
-    logger.debug(
-        "[PromptLoader] 프롬프트 로드",
-        extra={
-            "category": category,
-            "name": name,
-            "language": language.value,
-            "hot_reload": _is_development_mode(),
-        },
-    )
-
-    # U-036 Q1 결정: 개발 모드에서만 핫리로드
-    if _is_development_mode():
-        return _load_prompt_file(category, name, language)
-    else:
-        return _load_prompt_cached(category, name, language)
-
-
-def load_prompt_with_metadata(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> PromptData:
-    """프롬프트 파일을 메타데이터와 함께 로드합니다.
-
-    프론트매터를 파싱하여 메타데이터와 본문을 분리합니다.
-    JSON 형태로 프롬프트를 전달할 때 유용합니다.
-
-    Args:
-        category: 프롬프트 카테고리 (system, turn, image)
-        name: 프롬프트 파일 이름 (확장자 제외)
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        PromptData: 메타데이터와 본문이 분리된 프롬프트 데이터
-
-    Example:
-        >>> data = load_prompt_with_metadata("system", "game_master", Language.KO)
-        >>> print(data.metadata.get("version"))
-        >>> print(data.content[:100])
-    """
-    raw_text = load_prompt(category, name, language)
-    metadata, content = _parse_frontmatter(raw_text)
-
-    logger.debug(
-        "[PromptLoader] 프롬프트 메타데이터 파싱 완료",
-        extra={
-            "category": category,
-            "name": name,
-            "language": language.value,
-            "prompt_id": metadata.get("prompt_id", "unknown"),
-            "version": metadata.get("version", "unknown"),
-        },
-    )
-
-    return PromptData(
-        content=content,
-        metadata=metadata,
-        raw=raw_text,
-    )
-
-
-def load_prompt_as_json(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> dict[str, str | dict[str, str]]:
-    """프롬프트를 JSON 직렬화 가능한 딕셔너리로 로드합니다.
-
-    API 응답이나 모델 입력으로 프롬프트를 전달할 때 유용합니다.
-
-    Args:
-        category: 프롬프트 카테고리 (system, turn, image)
-        name: 프롬프트 파일 이름 (확장자 제외)
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        프롬프트 딕셔너리 (content, metadata 포함)
-
-    Example:
-        >>> prompt_json = load_prompt_as_json("image", "scene_prompt", Language.KO)
-        >>> print(prompt_json["metadata"]["prompt_id"])
-    """
-    data = load_prompt_with_metadata(category, name, language)
-    return data.to_dict()
-
-
-def load_system_prompt(language: Language) -> str:
-    """Game Master 시스템 프롬프트를 로드합니다.
-
-    Args:
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        시스템 프롬프트 텍스트
-    """
-    return load_prompt("system", "game_master", language)
-
-
-def load_turn_instructions(language: Language) -> str:
-    """TurnOutput 지시 프롬프트를 로드합니다.
-
-    Args:
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        TurnOutput 지시 텍스트
-    """
-    return load_prompt("turn", "turn_output_instructions", language)
-
-
-def load_image_prompt(language: Language) -> str:
-    """이미지 생성 프롬프트를 로드합니다.
-
-    Args:
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        이미지 생성 프롬프트 텍스트
-    """
-    return load_prompt("image", "scene_prompt", language)
-
-
-def load_image_prompt_with_metadata(language: Language) -> PromptData:
-    """이미지 생성 프롬프트를 메타데이터와 함께 로드합니다.
-
-    Args:
-        language: 언어 (ko-KR, en-US)
-
-    Returns:
-        PromptData: 메타데이터와 본문이 분리된 이미지 프롬프트 데이터
-    """
-    return load_prompt_with_metadata("image", "scene_prompt", language)
-
-
-def clear_prompt_cache() -> None:
-    """프롬프트 캐시를 초기화합니다.
-
-    개발 중 핫리로드 또는 테스트 시 사용합니다.
-    """
-    _load_prompt_cached.cache_clear()
-    logger.info("[PromptLoader] 프롬프트 캐시 초기화됨")
-
-
-def get_prompt_metadata(
-    category: PromptCategory,
-    name: str,
-    language: Language,
-) -> dict[str, str]:
-    """프롬프트의 메타데이터만 반환합니다.
-
-    본문 없이 버전, 언어, 업데이트 날짜 등 메타정보만 필요할 때 사용합니다.
-
-    Args:
-        category: 프롬프트 카테고리
-        name: 프롬프트 이름
-        language: 언어
-
-    Returns:
-        메타데이터 딕셔너리
-    """
-    data = load_prompt_with_metadata(category, name, language)
-    return data.metadata
-
-
-def is_hot_reload_enabled() -> bool:
-    """핫리로드가 활성화되어 있는지 확인합니다.
-
-    Returns:
-        핫리로드 활성화 여부
-    """
-    return _is_development_mode()
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/stages/validate.py">
@@ -11880,6 +11573,326 @@ __all__ = [
     "measure_language_ratio",
     "validate_language_consistency",
 ]
+</file>
+
+<file path="backend/tests/unit/orchestrator/test_prompt_loader.py">
+"""Unit tests for prompt_loader.py.
+
+U-036: 프롬프트 로더 핫리로드 테스트
+U-046: XML 태그 파싱 + 레거시 폴백 테스트
+"""
+
+from __future__ import annotations
+
+import os
+import unittest
+
+from unknown_world.models.turn import Language
+from unknown_world.orchestrator.prompt_loader import (
+    _parse_frontmatter,
+    _parse_legacy_frontmatter,
+    _parse_xml_meta,
+    clear_prompt_cache,
+    is_hot_reload_enabled,
+    load_prompt,
+    load_prompt_with_metadata,
+)
+
+
+class TestPromptLoader(unittest.TestCase):
+    def setUp(self) -> None:
+        # Clear cache before each test
+        clear_prompt_cache()
+        # Backup environment
+        self._old_env = os.environ.get("ENVIRONMENT")
+
+    def tearDown(self) -> None:
+        # Restore environment
+        if self._old_env is None:
+            if "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+        else:
+            os.environ["ENVIRONMENT"] = self._old_env
+        # Clear cache
+        clear_prompt_cache()
+
+    def test_load_prompt_ko(self) -> None:
+        """Verify loading Korean prompt."""
+        # This assumes the file exists in backend/prompts/system/game_master.ko.md
+        prompt = load_prompt("system", "game_master", Language.KO)
+        self.assertGreater(len(prompt), 0)
+        self.assertIn("#", prompt)  # Should be markdown
+
+    def test_load_prompt_en(self) -> None:
+        """Verify loading English prompt."""
+        prompt = load_prompt("system", "game_master", Language.EN)
+        self.assertGreater(len(prompt), 0)
+
+    def test_load_with_metadata(self) -> None:
+        """Verify frontmatter parsing."""
+        data = load_prompt_with_metadata("system", "game_master", Language.KO)
+        self.assertIsNotNone(data.content)
+        self.assertIsInstance(data.metadata, dict)
+        # Check for typical metadata fields if they exist in the file
+        if "prompt_id" in data.metadata:
+            self.assertGreater(len(data.metadata["prompt_id"]), 0)
+
+    def test_hot_reload_development(self) -> None:
+        """Verify hot-reload works in development mode."""
+        os.environ["ENVIRONMENT"] = "development"
+        self.assertTrue(is_hot_reload_enabled())
+
+        # Use a temporary file to test hot-reload
+        test_category = "system"
+        test_name = "test_hot_reload"
+        test_lang = Language.KO
+
+        # Determine prompt path
+        # In prompt_loader.py, _PROMPTS_ROOT is Path(__file__).parent.parent.parent.parent / "prompts"
+        # Since we are in tests/unit/orchestrator/, we need to find the prompts root.
+        # But let's mock _get_prompt_path or just use an existing one if possible.
+        # Actually, creating a real file is better for verifying "hot-reload" of file system.
+
+        from unknown_world.orchestrator.prompt_loader import _PROMPTS_ROOT
+
+        test_dir = _PROMPTS_ROOT / test_category
+        test_dir.mkdir(parents=True, exist_ok=True)
+        test_file = test_dir / f"{test_name}.ko.md"
+
+        try:
+            # Initial content
+            test_file.write_text("# Test\n\nContent 1", encoding="utf-8")
+
+            p1 = load_prompt(test_category, test_name, test_lang)
+            self.assertIn("Content 1", p1)
+
+            # Modify file
+            test_file.write_text("# Test\n\nContent 2", encoding="utf-8")
+
+            # Load again - should be updated in dev mode
+            p2 = load_prompt(test_category, test_name, test_lang)
+            self.assertIn("Content 2", p2)
+            self.assertNotEqual(p1, p2)
+
+        finally:
+            if test_file.exists():
+                test_file.unlink()
+
+    def test_caching_production(self) -> None:
+        """Verify caching works in production mode (no hot-reload)."""
+        os.environ["ENVIRONMENT"] = "production"
+        self.assertFalse(is_hot_reload_enabled())
+
+        test_category = "system"
+        test_name = "test_caching"
+        test_lang = Language.KO
+
+        from unknown_world.orchestrator.prompt_loader import _PROMPTS_ROOT
+
+        test_dir = _PROMPTS_ROOT / test_category
+        test_dir.mkdir(parents=True, exist_ok=True)
+        test_file = test_dir / f"{test_name}.ko.md"
+
+        try:
+            # Initial content
+            test_file.write_text("# Test\n\nInitial", encoding="utf-8")
+
+            p1 = load_prompt(test_category, test_name, test_lang)
+            self.assertIn("Initial", p1)
+
+            # Modify file
+            test_file.write_text("# Test\n\nModified", encoding="utf-8")
+
+            # Load again - should STILL be Initial because of caching
+            p2 = load_prompt(test_category, test_name, test_lang)
+            self.assertEqual(p1, p2)
+            self.assertIn("Initial", p2)
+
+            # After clearing cache, it should be updated
+            clear_prompt_cache()
+            p3 = load_prompt(test_category, test_name, test_lang)
+            self.assertIn("Modified", p3)
+
+        finally:
+            if test_file.exists():
+                test_file.unlink()
+
+    def test_fallback_language(self) -> None:
+        """Verify fallback to other language if requested file is missing."""
+        # Create ONLY English version
+        test_category = "system"
+        test_name = "test_fallback"
+
+        from unknown_world.orchestrator.prompt_loader import _PROMPTS_ROOT
+
+        test_dir = _PROMPTS_ROOT / test_category
+        test_dir.mkdir(parents=True, exist_ok=True)
+        en_file = test_dir / f"{test_name}.en.md"
+        ko_file = test_dir / f"{test_name}.ko.md"
+
+        try:
+            en_file.write_text("# English Content", encoding="utf-8")
+            if ko_file.exists():
+                ko_file.unlink()
+
+            # Request KO, should get EN
+            prompt = load_prompt(test_category, test_name, Language.KO)
+            self.assertIn("English Content", prompt)
+
+        finally:
+            if en_file.exists():
+                en_file.unlink()
+
+
+class TestXmlParsing(unittest.TestCase):
+    """U-046: XML 태그 파싱 테스트."""
+
+    def test_parse_xml_meta_valid(self) -> None:
+        """Valid XML meta tags should be parsed correctly."""
+        text = """<prompt_meta>
+  <prompt_id>test_prompt</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+테스트 프롬프트입니다.
+
+## 내용
+본문 내용이 여기에 들어갑니다.
+</prompt_body>
+"""
+        result = _parse_xml_meta(text)
+        self.assertIsNotNone(result)
+        metadata, content = result  # type: ignore
+
+        # 메타데이터 검증
+        self.assertEqual(metadata["prompt_id"], "test_prompt")
+        self.assertEqual(metadata["language"], "ko-KR")
+        self.assertEqual(metadata["version"], "0.2.0")
+        self.assertEqual(metadata["last_updated"], "2026-01-28")
+        self.assertEqual(metadata["policy_preset"], "default")
+
+        # 본문 검증 (메타 블록 제외)
+        self.assertIn("## 목적", content)
+        self.assertIn("테스트 프롬프트입니다.", content)
+        self.assertNotIn("<prompt_meta>", content)
+        self.assertNotIn("<prompt_body>", content)
+
+    def test_parse_xml_meta_no_body_tag(self) -> None:
+        """XML meta without body tag should use remaining text as content."""
+        text = """<prompt_meta>
+  <prompt_id>test</prompt_id>
+  <version>0.1.0</version>
+</prompt_meta>
+
+## Content Section
+This is the content without body tag.
+"""
+        result = _parse_xml_meta(text)
+        self.assertIsNotNone(result)
+        metadata, content = result  # type: ignore
+
+        self.assertEqual(metadata["prompt_id"], "test")
+        self.assertIn("## Content Section", content)
+
+    def test_parse_xml_meta_returns_none_for_legacy(self) -> None:
+        """Legacy format should return None from _parse_xml_meta."""
+        text = """# [Prompt] Test
+
+- prompt_id: legacy_test
+- version: 0.1.0
+
+## Content
+Legacy content here.
+"""
+        result = _parse_xml_meta(text)
+        self.assertIsNone(result)
+
+    def test_parse_legacy_frontmatter(self) -> None:
+        """Legacy frontmatter should be parsed correctly."""
+        text = """# [Prompt] Test
+
+- prompt_id: legacy_test
+- language: en-US
+- version: 0.1.0
+
+## Content
+Legacy content here.
+"""
+        metadata, content = _parse_legacy_frontmatter(text)
+
+        self.assertEqual(metadata["prompt_id"], "legacy_test")
+        self.assertEqual(metadata["language"], "en-US")
+        self.assertEqual(metadata["version"], "0.1.0")
+        self.assertIn("## Content", content)
+        self.assertIn("Legacy content here.", content)
+
+    def test_parse_frontmatter_prefers_xml(self) -> None:
+        """_parse_frontmatter should prefer XML format when available."""
+        xml_text = """<prompt_meta>
+  <prompt_id>xml_test</prompt_id>
+  <version>0.2.0</version>
+</prompt_meta>
+
+<prompt_body>
+## XML Content
+This is XML format.
+</prompt_body>
+"""
+        metadata, content = _parse_frontmatter(xml_text)
+
+        self.assertEqual(metadata["prompt_id"], "xml_test")
+        self.assertEqual(metadata["version"], "0.2.0")
+        self.assertIn("## XML Content", content)
+
+    def test_parse_frontmatter_fallback_to_legacy(self) -> None:
+        """_parse_frontmatter should fallback to legacy when XML is missing."""
+        legacy_text = """# [Prompt] Test
+
+- prompt_id: fallback_test
+- version: 0.1.0
+
+## Content
+Fallback content.
+"""
+        metadata, content = _parse_frontmatter(legacy_text)
+
+        self.assertEqual(metadata["prompt_id"], "fallback_test")
+        self.assertIn("## Content", content)
+
+    def test_load_prompt_with_xml_metadata(self) -> None:
+        """Integration test: load_prompt_with_metadata with XML format."""
+        # Load actual prompt file (migrated to XML format)
+        data = load_prompt_with_metadata("system", "game_master", Language.KO)
+
+        self.assertIsNotNone(data.content)
+        self.assertIsInstance(data.metadata, dict)
+
+        # Check metadata fields
+        self.assertEqual(data.metadata.get("prompt_id"), "game_master_system")
+        self.assertEqual(data.metadata.get("language"), "ko-KR")
+        self.assertIn("version", data.metadata)
+
+        # Content should not contain meta tags
+        self.assertNotIn("<prompt_meta>", data.content)
+        self.assertNotIn("<prompt_body>", data.content)
+        self.assertIn("## 목적", data.content)
+
+    def test_load_prompt_with_xml_metadata_en(self) -> None:
+        """Integration test: English XML format."""
+        data = load_prompt_with_metadata("system", "game_master", Language.EN)
+
+        self.assertEqual(data.metadata.get("prompt_id"), "game_master_system")
+        self.assertEqual(data.metadata.get("language"), "en-US")
+        self.assertIn("## Purpose", data.content)
+
+
+if __name__ == "__main__":
+    unittest.main()
 </file>
 
 <file path="backend/tests/unit/services/test_genai_client.py">
@@ -14849,6 +14862,587 @@ __all__ = [
     "load_system_prompt",
     "load_turn_instructions",
 ]
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/prompt_loader.py">
+"""Unknown World - 프롬프트 로더 유틸리티.
+
+이 모듈은 언어별로 분리된 프롬프트 파일을 로드합니다.
+XML 태그 기반 메타데이터 파싱 및 핫리로드를 지원합니다.
+
+설계 원칙:
+    - RULE-006: ko/en 언어 정책 준수 (혼합 출력 금지)
+    - RULE-007/008: 프롬프트 원문 UI/로그 노출 금지
+    - U-036: 핫리로드 (개발 모드), 프론트매터 파싱 지원
+    - U-046: XML 태그 규격 통일 (메타/섹션) + 레거시 폴백
+
+프롬프트 디렉토리 구조:
+    backend/prompts/
+    ├── system/
+    │   ├── game_master.ko.md
+    │   └── game_master.en.md
+    ├── turn/
+    │   ├── turn_output_instructions.ko.md
+    │   └── turn_output_instructions.en.md
+    └── image/
+        ├── scene_prompt.ko.md
+        └── scene_prompt.en.md
+
+XML 태그 규격 (U-046):
+    <prompt_meta>
+      <prompt_id>game_master_system</prompt_id>
+      <language>ko-KR</language>
+      <version>0.1.0</version>
+      <last_updated>YYYY-MM-DD</last_updated>
+      <policy_preset>default</policy_preset>
+    </prompt_meta>
+
+    <prompt_body>
+    ## 목적
+    ...
+    </prompt_body>
+
+페어링 질문 결정:
+    - U-036 Q1: Option A (개발 모드에서만 매 호출 시 리로드)
+    - U-036 Q2: Option B (프론트매터 포함 마크다운)
+    - U-046 Q1: Option A (메타 블록을 모델 입력에서 제거)
+    - U-046 Q2: Option A (XML 파싱 실패 시 레거시 폴백)
+
+참조:
+    - vibe/prd.md 3.2 (프롬프트 파일 관리)
+    - vibe/prd.md 10.4 (프롬프트 핫리로드)
+    - .cursor/rules/30-prompts-i18n.mdc
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import re
+from dataclasses import dataclass, field
+from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
+from unknown_world.models.turn import Language
+
+# =============================================================================
+# 로거 설정 (프롬프트 원문 로깅 금지 - RULE-007/008)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# 경로 상수
+# =============================================================================
+
+# 프롬프트 루트 디렉토리 (backend/prompts/)
+_PROMPTS_ROOT = Path(__file__).parent.parent.parent.parent / "prompts"
+
+# 프롬프트 카테고리
+PromptCategory = Literal["system", "turn", "image"]
+
+# 언어 코드 매핑
+_LANGUAGE_CODE_MAP: dict[Language, str] = {
+    Language.KO: "ko",
+    Language.EN: "en",
+}
+
+# =============================================================================
+# 프론트매터 파싱 결과 타입
+# =============================================================================
+
+
+@dataclass
+class PromptData:
+    """프론트매터가 파싱된 프롬프트 데이터.
+
+    Attributes:
+        content: 프롬프트 본문 (프론트매터 제외)
+        metadata: 프론트매터에서 추출한 메타데이터
+        raw: 원본 전체 텍스트
+    """
+
+    content: str
+    metadata: dict[str, str] = field(default_factory=lambda: {})
+    raw: str = ""
+
+    def to_dict(self) -> dict[str, str | dict[str, str]]:
+        """JSON 직렬화 가능한 딕셔너리로 변환합니다.
+
+        Returns:
+            프롬프트 데이터 딕셔너리
+        """
+        return {
+            "content": self.content,
+            "metadata": self.metadata,
+        }
+
+
+# =============================================================================
+# 환경 모드 확인
+# =============================================================================
+
+
+def _is_development_mode() -> bool:
+    """개발 모드인지 확인합니다.
+
+    ENVIRONMENT 환경변수가 'development'이면 개발 모드입니다.
+    개발 모드에서는 프롬프트 핫리로드가 활성화됩니다.
+
+    Returns:
+        개발 모드 여부
+    """
+    return os.environ.get("ENVIRONMENT", "production").lower() == "development"
+
+
+# =============================================================================
+# XML 태그 및 프론트매터 파싱 (U-046)
+# =============================================================================
+
+# XML 태그 패턴 (U-046 표준)
+_XML_META_PATTERN = re.compile(
+    r"<prompt_meta>\s*(.*?)\s*</prompt_meta>",
+    re.DOTALL,
+)
+_XML_BODY_PATTERN = re.compile(
+    r"<prompt_body>\s*(.*?)\s*</prompt_body>",
+    re.DOTALL,
+)
+_XML_TAG_PATTERN = re.compile(r"<(\w+)>([^<]*)</\1>")
+
+# 레거시 프론트매터 패턴: 파일 시작 부분의 "- key: value" 형태
+_FRONTMATTER_LINE_PATTERN = re.compile(r"^-\s*(\w+):\s*(.+)$")
+
+
+def _parse_xml_meta(text: str) -> tuple[dict[str, str], str] | None:
+    """XML 태그 기반 메타데이터와 본문을 파싱합니다.
+
+    U-046 표준 XML 태그 규격:
+        <prompt_meta>
+          <prompt_id>game_master_system</prompt_id>
+          <language>ko-KR</language>
+          <version>0.1.0</version>
+          <last_updated>YYYY-MM-DD</last_updated>
+          <policy_preset>default</policy_preset>
+        </prompt_meta>
+
+        <prompt_body>
+        ## 목적
+        ...
+        </prompt_body>
+
+    Args:
+        text: 원본 텍스트
+
+    Returns:
+        (메타데이터 딕셔너리, 본문 텍스트) 튜플
+        XML 태그가 없으면 None 반환 (레거시 폴백 필요)
+    """
+    meta_match = _XML_META_PATTERN.search(text)
+    body_match = _XML_BODY_PATTERN.search(text)
+
+    # XML 태그가 없으면 None 반환
+    if not meta_match:
+        return None
+
+    # 메타데이터 파싱
+    meta_content = meta_match.group(1)
+    metadata: dict[str, str] = {}
+    for tag_match in _XML_TAG_PATTERN.finditer(meta_content):
+        key = tag_match.group(1)
+        value = tag_match.group(2).strip()
+        metadata[key] = value
+
+    # 본문 추출 (U-046 Q1: 메타 블록을 모델 입력에서 제거)
+    if body_match:
+        content = body_match.group(1).strip()
+    else:
+        # <prompt_body>가 없으면 <prompt_meta> 이후 전체를 본문으로 취급
+        meta_end = meta_match.end()
+        content = text[meta_end:].strip()
+
+    return metadata, content
+
+
+def _parse_legacy_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """레거시 프론트매터를 파싱합니다 (U-036 호환).
+
+    프론트매터는 첫 번째 제목(#) 이후, 두 번째 제목(##) 이전의
+    "- key: value" 형태의 라인들입니다.
+
+    예시 구조:
+        # [Prompt] Title
+
+        - prompt_id: xxx
+        - version: 0.1.0
+
+        ## 본문 섹션
+        ...
+
+    Args:
+        text: 원본 마크다운 텍스트
+
+    Returns:
+        (메타데이터 딕셔너리, 본문 텍스트) 튜플
+    """
+    lines = text.split("\n")
+    metadata: dict[str, str] = {}
+    content_start_idx = 0
+    found_first_heading = False
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+
+        # 빈 줄은 건너뜀
+        if not stripped:
+            continue
+
+        # 첫 번째 제목(#) 발견
+        if stripped.startswith("#") and not stripped.startswith("##"):
+            found_first_heading = True
+            continue
+
+        # 두 번째 제목(##) 발견 시 프론트매터 영역 종료, 본문 시작
+        if stripped.startswith("##"):
+            content_start_idx = i
+            break
+
+        # 프론트매터 라인 매칭 (첫 번째 제목 이후)
+        if found_first_heading:
+            match = _FRONTMATTER_LINE_PATTERN.match(stripped)
+            if match:
+                key = match.group(1)
+                value = match.group(2).strip()
+                metadata[key] = value
+
+    # 본문 추출 (두 번째 제목부터)
+    content = "\n".join(lines[content_start_idx:]).strip()
+
+    return metadata, content
+
+
+def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """메타데이터와 본문을 파싱합니다 (XML 우선, 레거시 폴백).
+
+    U-046 Q2 결정: XML 태그 파싱 실패 시 레거시 폴백 후 진행
+
+    파싱 우선순위:
+        1. XML 태그 기반 (<prompt_meta>, <prompt_body>)
+        2. 레거시 프론트매터 (- key: value)
+
+    Args:
+        text: 원본 텍스트
+
+    Returns:
+        (메타데이터 딕셔너리, 본문 텍스트) 튜플
+    """
+    # 1. XML 태그 파싱 시도
+    xml_result = _parse_xml_meta(text)
+    if xml_result is not None:
+        metadata, content = xml_result
+        logger.debug(
+            "[PromptLoader] XML 태그 기반 파싱 완료",
+            extra={"format": "xml", "meta_keys": list(metadata.keys())},
+        )
+        return metadata, content
+
+    # 2. 레거시 폴백 (U-046 Q2: Option A)
+    logger.debug(
+        "[PromptLoader] 레거시 프론트매터 파싱으로 폴백",
+        extra={"format": "legacy"},
+    )
+    return _parse_legacy_frontmatter(text)
+
+
+# =============================================================================
+# 프롬프트 로더 함수
+# =============================================================================
+
+
+def _get_prompt_path(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> Path:
+    """프롬프트 파일 경로를 반환합니다.
+
+    Args:
+        category: 프롬프트 카테고리 (system, turn, image)
+        name: 프롬프트 파일 이름 (확장자 제외)
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        프롬프트 파일 경로
+
+    Example:
+        >>> _get_prompt_path("system", "game_master", Language.KO)
+        Path(".../prompts/system/game_master.ko.md")
+    """
+    lang_code = _LANGUAGE_CODE_MAP.get(language, "ko")
+    return _PROMPTS_ROOT / category / f"{name}.{lang_code}.md"
+
+
+def _load_prompt_file(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> str:
+    """프롬프트 파일을 직접 로드합니다 (캐싱 없음).
+
+    핫리로드 모드에서 사용됩니다.
+
+    Args:
+        category: 프롬프트 카테고리
+        name: 프롬프트 이름
+        language: 언어
+
+    Returns:
+        프롬프트 텍스트
+
+    Raises:
+        FileNotFoundError: 프롬프트 파일이 없는 경우
+    """
+    path = _get_prompt_path(category, name, language)
+
+    if not path.exists():
+        # 폴백: 반대 언어 시도
+        fallback_lang = Language.EN if language == Language.KO else Language.KO
+        fallback_path = _get_prompt_path(category, name, fallback_lang)
+
+        if fallback_path.exists():
+            logger.warning(
+                "[PromptLoader] 폴백 언어 사용",
+                extra={
+                    "original_language": language.value,
+                    "fallback_language": fallback_lang.value,
+                },
+            )
+            return fallback_path.read_text(encoding="utf-8")
+
+        raise FileNotFoundError(f"프롬프트 파일을 찾을 수 없습니다: {path}")
+
+    return path.read_text(encoding="utf-8")
+
+
+@lru_cache(maxsize=32)
+def _load_prompt_cached(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> str:
+    """프롬프트 파일을 캐싱하여 로드합니다.
+
+    운영 모드에서 사용됩니다.
+
+    Args:
+        category: 프롬프트 카테고리
+        name: 프롬프트 이름
+        language: 언어
+
+    Returns:
+        프롬프트 텍스트
+    """
+    return _load_prompt_file(category, name, language)
+
+
+def load_prompt(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> str:
+    """프롬프트 파일을 로드합니다.
+
+    개발 모드(ENVIRONMENT=development)에서는 매 호출 시 파일을 다시 읽습니다 (핫리로드).
+    운영 모드에서는 캐싱을 통해 반복 로드를 방지합니다.
+    프롬프트 원문은 로그에 기록하지 않습니다 (RULE-007/008).
+
+    Args:
+        category: 프롬프트 카테고리 (system, turn, image)
+        name: 프롬프트 파일 이름 (확장자 제외)
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        프롬프트 텍스트
+
+    Raises:
+        FileNotFoundError: 프롬프트 파일이 없는 경우
+
+    Example:
+        >>> prompt = load_prompt("system", "game_master", Language.KO)
+    """
+    # 로그에는 경로/메타만 기록 (원문 금지)
+    logger.debug(
+        "[PromptLoader] 프롬프트 로드",
+        extra={
+            "category": category,
+            "name": name,
+            "language": language.value,
+            "hot_reload": _is_development_mode(),
+        },
+    )
+
+    # U-036 Q1 결정: 개발 모드에서만 핫리로드
+    if _is_development_mode():
+        return _load_prompt_file(category, name, language)
+    else:
+        return _load_prompt_cached(category, name, language)
+
+
+def load_prompt_with_metadata(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> PromptData:
+    """프롬프트 파일을 메타데이터와 함께 로드합니다.
+
+    프론트매터를 파싱하여 메타데이터와 본문을 분리합니다.
+    JSON 형태로 프롬프트를 전달할 때 유용합니다.
+
+    Args:
+        category: 프롬프트 카테고리 (system, turn, image)
+        name: 프롬프트 파일 이름 (확장자 제외)
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        PromptData: 메타데이터와 본문이 분리된 프롬프트 데이터
+
+    Example:
+        >>> data = load_prompt_with_metadata("system", "game_master", Language.KO)
+        >>> print(data.metadata.get("version"))
+        >>> print(data.content[:100])
+    """
+    raw_text = load_prompt(category, name, language)
+    metadata, content = _parse_frontmatter(raw_text)
+
+    logger.debug(
+        "[PromptLoader] 프롬프트 메타데이터 파싱 완료",
+        extra={
+            "category": category,
+            "name": name,
+            "language": language.value,
+            "prompt_id": metadata.get("prompt_id", "unknown"),
+            "version": metadata.get("version", "unknown"),
+        },
+    )
+
+    return PromptData(
+        content=content,
+        metadata=metadata,
+        raw=raw_text,
+    )
+
+
+def load_prompt_as_json(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> dict[str, str | dict[str, str]]:
+    """프롬프트를 JSON 직렬화 가능한 딕셔너리로 로드합니다.
+
+    API 응답이나 모델 입력으로 프롬프트를 전달할 때 유용합니다.
+
+    Args:
+        category: 프롬프트 카테고리 (system, turn, image)
+        name: 프롬프트 파일 이름 (확장자 제외)
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        프롬프트 딕셔너리 (content, metadata 포함)
+
+    Example:
+        >>> prompt_json = load_prompt_as_json("image", "scene_prompt", Language.KO)
+        >>> print(prompt_json["metadata"]["prompt_id"])
+    """
+    data = load_prompt_with_metadata(category, name, language)
+    return data.to_dict()
+
+
+def load_system_prompt(language: Language) -> str:
+    """Game Master 시스템 프롬프트를 로드합니다.
+
+    Args:
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        시스템 프롬프트 텍스트
+    """
+    return load_prompt("system", "game_master", language)
+
+
+def load_turn_instructions(language: Language) -> str:
+    """TurnOutput 지시 프롬프트를 로드합니다.
+
+    Args:
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        TurnOutput 지시 텍스트
+    """
+    return load_prompt("turn", "turn_output_instructions", language)
+
+
+def load_image_prompt(language: Language) -> str:
+    """이미지 생성 프롬프트를 로드합니다.
+
+    Args:
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        이미지 생성 프롬프트 텍스트
+    """
+    return load_prompt("image", "scene_prompt", language)
+
+
+def load_image_prompt_with_metadata(language: Language) -> PromptData:
+    """이미지 생성 프롬프트를 메타데이터와 함께 로드합니다.
+
+    Args:
+        language: 언어 (ko-KR, en-US)
+
+    Returns:
+        PromptData: 메타데이터와 본문이 분리된 이미지 프롬프트 데이터
+    """
+    return load_prompt_with_metadata("image", "scene_prompt", language)
+
+
+def clear_prompt_cache() -> None:
+    """프롬프트 캐시를 초기화합니다.
+
+    개발 중 핫리로드 또는 테스트 시 사용합니다.
+    """
+    _load_prompt_cached.cache_clear()
+    logger.info("[PromptLoader] 프롬프트 캐시 초기화됨")
+
+
+def get_prompt_metadata(
+    category: PromptCategory,
+    name: str,
+    language: Language,
+) -> dict[str, str]:
+    """프롬프트의 메타데이터만 반환합니다.
+
+    본문 없이 버전, 언어, 업데이트 날짜 등 메타정보만 필요할 때 사용합니다.
+
+    Args:
+        category: 프롬프트 카테고리
+        name: 프롬프트 이름
+        language: 언어
+
+    Returns:
+        메타데이터 딕셔너리
+    """
+    data = load_prompt_with_metadata(category, name, language)
+    return data.metadata
+
+
+def is_hot_reload_enabled() -> bool:
+    """핫리로드가 활성화되어 있는지 확인합니다.
+
+    Returns:
+        핫리로드 활성화 여부
+    """
+    return _is_development_mode()
 </file>
 
 <file path="backend/src/unknown_world/services/image_generation.py">
