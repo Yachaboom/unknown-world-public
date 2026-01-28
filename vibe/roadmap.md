@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 52/74 (70%) | **MVP**: 52/61 (85%) | **MMP**: 0/13 (0%)
+**전체**: 52/75 (69%) | **MVP**: 52/61 (85%) | **MMP**: 0/14 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-7  
+**예상 완료(가정)**: MVP D-4 | MMP D-8  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -66,7 +66,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-24 | -      | ⏸️   |
 | MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
 | MMP  | CP-MMP-01 | **✓ 체크포인트: 배포/관측 게이트**     | 2026-02-01 | -      | ⏸️   |
-| MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/6    | ⏸️   |
+| MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/7    | ⏸️   |
 | MMP  | CP-MMP-02 | **✓ 체크포인트: 시나리오 회귀 100%**   | 2026-02-12 | -      | ⏸️   |
 
 ## 핵심 기능 (MVP)
@@ -113,6 +113,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | R-006 | 통합 구간(M3)에서 체크포인트 부족으로 기술 부채/회귀 누적 | Medium | 30% | 중간 CP 추가(CP-MVP-04~06) + debt-log 기록 + 리플레이로 Hard Gate 회귀 확인 |
 | R-007 | ko/en 혼합 출력(내러티브/룰/퀘스트/UI)이 한 화면에 노출되어 데모 신뢰도 붕괴 | High | 20% | 세션 언어 SSOT(언어 전환=리셋) + 언어 게이트/Repair + i18n/폴백/하드코딩 정리 |
 | R-008 | 프롬프트 포맷 드리프트(프론트매터/태그 혼재)로 메타 추적/튜닝/검증이 흔들림 | Medium | 25% | 분리 프롬프트(.md) XML 태그 규격 통일 + (권장) 로더 파싱/검증 단일화(U-046) |
+| R-009 | Agentic Vision(코드 실행) 추가 호출로 비용/지연이 커져 UX가 악화되거나, 생성 이미지-행동/핫스팟 정합이 깨질 수 있음 | Medium | 20% | Key scene 제한 + Economy 게이트/예상비용 + 실패/차단 시 텍스트 폴백 + (Dev) 시각적 증거(annotated crop) 아티팩트로 디버그 |
 
 ## 메트릭
 
@@ -156,6 +157,7 @@ ID=[U-100[Mmp]](unit-plans/U-100[Mmp].md) | ⚡Dockerfile/로컬 실행(프론�
 ID=[U-101[Mmp]](unit-plans/U-101[Mmp].md) | ⚡Cloud Run 배포 구성 + env/secret 가이드 | Depends=U-100 | ⏸️
 ID=[U-102[Mmp]](unit-plans/U-102[Mmp].md) | ⚡GCS 스토리지 어댑터(이미지/아티팩트) | Depends=U-100 | ⏸️
 ID=[U-103[Mmp]](unit-plans/U-103[Mmp].md) | 이미지 편집(멀티턴, REF 유지) | Depends=U-019,U-102 | ⏸️
+ID=[U-109[Mmp]](unit-plans/U-109[Mmp].md) | Agentic Vision: 생성된 장면 이미지 기반 행동/핫스팟 근거화 | Depends=U-019,U-020,RU-005 | ⏸️
 ID=[U-104[Mmp]](unit-plans/U-104[Mmp].md) | 장기 세션 메모리 요약/핀 추천 고도화 | Depends=U-025 | ⏸️
 ID=[U-105[Mmp]](unit-plans/U-105[Mmp].md) | ⚡Scenario Library(5) + 자동 리플레이 확장 | Depends=U-026 | ⏸️
 ID=[RU-010[Mmp]](unit-plans/RU-010[Mmp].md) | 리팩토링: 스키마/상수 SSOT 강화 + 파일 분리 | Depends=U-105 | ⏸️

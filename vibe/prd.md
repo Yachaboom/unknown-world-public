@@ -168,6 +168,9 @@
 - **Action Deck(행동 카드)**: (✅ 레이아웃 확보)
   - 매 턴 AI가 추천 행동을 3~6장 카드로 제시(각 카드에 **Signal/Shard 비용**, 위험/보상 힌트 포함)
   - 사용자는 카드를 클릭해 즉시 실행하거나, 커스텀 입력으로 변형 실행
+  - (MMP) **Agentic Vision 기반 행동 근거화(생성 이미지)**:
+    - 생성된 Scene Canvas 이미지를 `gemini-3-flash-preview`(Code Execution 활성화)로 “줌/크롭/주석”하며 재검증하여, **장면에 실제로 존재하는 오브젝트/단서/텍스트**를 근거로 행동 카드를 더 구체적/사실적으로 생성한다(환각 감소, 정합성↑).
+    - 비전 호출은 비용/지연이 있으므로 Economy HUD에 **예상 비용(최소/최대)** 를 노출하고, 실패/차단 시 기존 텍스트 기반 추천으로 안전 폴백한다. (RULE-004/005)
 - **Inventory(인벤토리) + Drag & Drop(드래그 사용)**:
   - 아이템은 슬롯/칩 형태로 상시 표시
   - 아이템을 **장면 오브젝트(핫스팟)**로 드래그해 “사용/조합/해체”를 수행(예: 열쇠 → 자물쇠)
@@ -309,6 +312,11 @@
   - 캡셔닝/요약
   - 오브젝트 감지(bbox) 및 (선택) 세그멘테이션(mask)
   - “이 이미지 스타일을 유지해 장면 생성” 같은 참조 흐름을 지원
+- **(MMP) Agentic Vision(생성된 장면 이미지 기반 ‘행동/핫스팟 후보’ 추출)**:
+  - 목적: “생성된 이미지”를 다시 입력으로 분석하여, Action Deck/Hotspots가 **텍스트 환각**이 아니라 “화면에 실제로 보이는 증거”에 기반하도록 한다.
+  - 방식: `gemini-3-flash-preview` + built-in `code_execution`을 활성화해 Think→Act→Observe 루프로 이미지 패치를 반복 검사(zoom/crop/annotate)하고, 최종 결과를 구조화(JSON Schema)로 받는다.
+  - 출력(예시): `affordances[] { label, box_2d: [ymin,xmin,ymax,xmax], suggested_actions[], confidence? }` 형태로 반환하고, bbox는 0~1000 정규화 규약을 준수한다. (RULE-009)
+  - 적용 정책: Key scene만(예: “장면 생성 직후 1회”), 또는 Assist/Autopilot에서만 실행 등 **비용/지연 제어**를 기본으로 두고, 실패/차단 시 텍스트-only로 폴백한다. (RULE-004/005/008)
 - **입력 방식**
   - 작은 파일: inline base64(총 요청 20MB 제한)
   - 재사용/큰 파일: Files API 업로드 후 URI 참조
