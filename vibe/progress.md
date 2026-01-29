@@ -1,6 +1,39 @@
 # 프로젝트 진행 상황
 
-## [2026-01-28 23:50] [U-047[Mvp]] Backend `.env` 자동 로딩(로컬) + 모드/ENV 가드(프롬프트/Vertex) 완료
+## [2026-01-30 14:30] [U-048[Mvp]] Mock Orchestrator - 액션 echo/내러티브 템플릿 개선 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Mock 모드 내러티브의 "말했습니다" 템플릿 제거 및 입력 타입별(DROP, CLICK, ACTION, FREE_TEXT) 행동 로그 프리픽스 도입
+- **추가 컴포넌트**: `backend/src/unknown_world/orchestrator/mock.py` (로직 개선), `backend/tests/unit/orchestrator/test_mock_orchestrator.py` (종합 테스트), `vibe/unit-runbooks/U-048-mock-narrative-improvement-runbook.md` (런북), `vibe/unit-results/U-048[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-002] 채팅 UX 금지(게임 시스템 강화), [RULE-008] 과정 가시화, [PRD 9.0] 행동 로그 규격 준수
+
+### 기술적 구현 세부사항
+
+**내러티브 엔진 고도화**:
+- **Action Log Prefixes**: `[조사]`, `[실행]`, `[사용]` 등 입력 행위에 특화된 프리픽스를 도입하여 "채팅 래퍼" 오해를 불식시키고 게임 로그로서의 정체성 강화.
+- **Deterministic Diversity**: base seed와 입력 특징(text, ID 등)을 SHA-256 해시하여 per-turn seed를 생성. 동일 입력에 대해서는 재현성을 유지하되, 입력이 달라지면 문장과 비용/리스크가 결정적으로 변화하도록 개선.
+- **Priority Detection**: `TurnInput` 내의 여러 필드 중 유의미한 입력을 우선순위(DROP > CLICK > ACTION > FREE_TEXT)에 따라 자동 감지하여 적절한 템플릿 선택.
+
+**안정성 및 검증**:
+- **Comprehensive Testing**: 600라인 이상의 단위 테스트를 통해 4가지 입력 타입별 프리픽스 출력, 결정적 다양성, 언어 일관성, 경제/좌표 인바리언트 회귀 여부를 전수 검증.
+- **Graceful Truncation**: 자유 입력(Free Text) 프리픽스 생성 시 30자 초과분에 대한 자동 생략(...) 처리를 통해 로그 가독성 유지.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/orchestrator/
+│   └── mock.py (내러티브 템플릿 및 per-turn RNG 구현)
+├── backend/tests/unit/orchestrator/
+│   └── test_mock_orchestrator.py (프리픽스 및 결정적 다양성 검증)
+└── vibe/unit-runbooks/
+    └── U-048-mock-narrative-improvement-runbook.md (시나리오별 수동 검증 가이드)
+
+### 다음 단계
+- [U-049[Mvp]] UI Narrative Feed 컴포넌트 개선 (프리픽스 강조 렌더링)
+- [CP-MVP-06] 체크포인트: Scanner 업로드 게이트(안전/좌표/비용)
+
+---
+
 
 ### 구현 완료 항목
 

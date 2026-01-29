@@ -32,6 +32,7 @@ D:\Dev\unknown-world\
 │   │       │   │   ├── validate.py
 │   │       │   │   └── ... (7대 단계 모듈)
 │   │       │   ├── fallback.py
+│   │       │   ├── mock.py (U-007, U-048: 결정적 다양성 구현)
 │   │       │   ├── prompt_loader.py (U-017, U-036)
 │   │       │   ├── repair_loop.py
 │   │       │   └── validator.py (U-018)
@@ -49,6 +50,8 @@ D:\Dev\unknown-world\
 │   │   ├── integration/
 │   │   │   └── test_real_mode_gate.py (신규: real 모드 통합 테스트, CP-MVP-07)
 │   │   └── unit/
+│   │       ├── orchestrator/
+│   │       │   └── test_mock_orchestrator.py (신규: U-048)
 │   │       ├── test_dotenv_autoload.py (신규: U-047)
 │   │       ├── test_u043_language_gate.py
 │   │       └── services/
@@ -67,8 +70,8 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-07, CP-MVP-05, U-040, U-045, U-047 포함)
-    └── unit-runbooks/     # 검증 런북 (CP-MVP-07, U-040, U-045, U-047 포함)
+    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-07, CP-MVP-05, U-040, U-045, U-047, U-048 포함)
+    └── unit-runbooks/     # 검증 런북 (CP-MVP-07, U-040, U-045, U-047, U-048 포함)
 ```
 
 ### 주요 디렉토리 책임
@@ -104,6 +107,8 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - Pydantic 스키마 검증 및 비즈니스 룰 검증(`validator.py`)을 통한 이중 하드 게이트.
     - **Badge Consistency (RU-005-S1)**: 모든 비즈니스 룰 위반(경제, 안전, 언어/좌표)은 누락 없이 각각 `ECONOMY_FAIL`, `SAFETY_BLOCKED`, `CONSISTENCY_FAIL` 배지로 매핑되어야 함.
     - 검증 실패 시 모델에게 실패 사유를 피드백으로 전달하여 스스로 수정하게 하는 **Repair Loop**(최대 2회) 실행.
+    - **Deterministic Diversity (U-048[Mvp])**: Mock 모드에서 동일한 입력에 대해 재현 가능한 결과를 보장하면서도, 입력 특징(text, action_id 등)과 base seed를 조합한 per-turn RNG를 사용하여 내러티브와 카드 생성의 다양성을 확보함.
+    - **Narrative Log Identity**: "말했습니다"와 같은 대화형 템플릿을 제거하고 `[조사]`, `[실행]` 등 행동 기반 로그 프리픽스를 도입하여 게임 시스템의 정체성을 강화함.
 4. **Guaranteed Safe Fallback (RU-005-Q1)**: 
     - **Fallback SSOT**: `orchestrator/fallback.py:create_safe_fallback`이 모든 생성 실패 상황의 단일 폴백 생성 창구임. 실모델 생성기(`TurnOutputGenerator`)와 모의 생성기(`MockOrchestrator`) 모두 이 함수로 로직을 위임함.
     - 모든 복구 시도 실패 또는 예외 상황 시, 입력 시점의 재화 스냅샷을 보존하고 스키마를 100% 준수하는 **안전 폴백 TurnOutput** 강제 생성 및 반환.
