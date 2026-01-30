@@ -1,5 +1,37 @@
 # 프로젝트 진행 상황
 
+## [2026-01-31 17:30] [U-022[Mvp]] Scanner 슬롯 UI + 업로드→아이템화 반영 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 이미지 드랍/업로드 UI, 백엔드 `/api/scan` 연동, 분석 결과 기반 아이템 선택 및 인벤토리 추가(Option B) 기능 구현
+- **추가 컴포넌트**: `frontend/src/components/ScannerSlot.tsx` (UI), `frontend/src/api/scanner.ts` (클라이언트), `vibe/unit-runbooks/U-022-scanner-slot-ui-runbook.md` (런북), `vibe/unit-results/U-022[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-002] 게임 UI 고정, [RULE-004] 안전 폴백, [RULE-009] bbox 좌표 규약, [PRD 6.7] Scanner 슬롯 멀티모달 조작
+
+### 기술적 구현 세부사항
+
+**멀티모달 조작 파이프라인**:
+- **Scanner Slot UI**: 드래그 앤 드롭 및 파일 입력을 지원하는 고정 패널 UI를 구현하고, 업로드-분석-결과 전 과정을 시각적 피드백(로딩, 에러, 프리뷰)과 함께 제공.
+- **User-Confirmed Integration (Option B)**: 분석 결과를 즉시 반영하지 않고 사용자가 아이템 후보를 직접 선택하여 인벤토리에 추가하도록 하여 게임 플레이의 의도적 통제권 확보.
+- **Strict Verification**: 백엔드 응답을 Zod 스키마로 런타임 검증하고, 정규화된 bbox(0~1000) 좌표 규약을 유지하여 비전 데이터의 무결성 보호.
+
+**UX 및 안정성**:
+- **State Machine Pattern**: 업로드 라이프사이클을 5단계 상태(`idle`, `uploading`, `analyzing`, `result`, `error`)로 관리하여 예외 상황(형식 오류, 크기 초과 등)에서도 안전한 폴백 UX 제공.
+- **Contextual Awareness**: 턴 스트리밍 중에는 스캐너 슬롯을 자동으로 비활성화하여 턴 간의 상호작용 충돌 방지.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/ScannerSlot.tsx (드랍존 및 결과 UI)
+    ├── api/scanner.ts (Zod 검증 및 API 클라이언트)
+    └── App.tsx (오른쪽 사이드바 배치 및 세션 연동)
+
+### 다음 단계
+- [RU-006[Mvp]] media/artifacts 저장/제한/보안 정책 정리
+- [CP-MVP-03] 체크포인트: 10분 데모 루프 (업로드 조작 포함)
+
+---
+
 ## [2026-01-31 16:50] [U-021[Mvp]] 이미지 이해(Scanner) 백엔드 엔드포인트 구현 완료
 
 ### 구현 완료 항목

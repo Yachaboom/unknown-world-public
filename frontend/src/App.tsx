@@ -48,6 +48,8 @@ import { InventoryPanel } from './components/InventoryPanel';
 import { QuestPanel } from './components/QuestPanel';
 import { RuleBoard } from './components/RuleBoard';
 import { MutationTimeline } from './components/MutationTimeline';
+// U-022: Scanner Slot
+import { ScannerSlot } from './components/ScannerSlot';
 // U-015: SaveGame + Demo Profiles
 import { DemoProfileSelect } from './components/DemoProfileSelect';
 import { ResetButton, ChangeProfileButton } from './components/ResetButton';
@@ -434,9 +436,7 @@ function App() {
               <EconomyHud />
             </Panel>
             <Panel title={t('panel.scanner.title')} hasChrome>
-              <div className="scanner-slot has-chrome">
-                <p className="panel-placeholder">{t('panel.scanner.placeholder')}</p>
-              </div>
+              <ScannerSlot language={sessionLanguage} disabled={isStreaming} />
             </Panel>
           </aside>
 

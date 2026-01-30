@@ -303,6 +303,37 @@
       "placeholder": "[ Image Upload Slot ]"
     }
   },
+  "scanner": {
+    "dropzone_label": "Drop image or click to upload",
+    "dropzone_text": "Drop Image Here",
+    "dropzone_hint": "Or click to browse files",
+    "upload_label": "Upload image",
+    "preview_alt": "Upload image preview",
+    "uploading": "Uploading...",
+    "analyzing": "Analyzing...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "select_items": "Select items to add to inventory",
+    "add_to_inventory": "Add ({{count}})",
+    "detected_objects": "Objects detected: {{count}}",
+    "item_candidates": "Item candidates: {{count}}",
+    "no_candidates": "No item candidates found",
+    "error": {
+      "unsupported_format": "Unsupported image format",
+      "file_too_large": "File too large (max 20MB)",
+      "unknown": "An unknown error occurred"
+    },
+    "item_type": {
+      "key": "Key",
+      "weapon": "Weapon",
+      "tool": "Tool",
+      "clue": "Clue",
+      "material": "Material",
+      "consumable": "Consumable",
+      "document": "Document",
+      "artifact": "Artifact"
+    }
+  },
   "action": {
     "default": {
       "explore": {

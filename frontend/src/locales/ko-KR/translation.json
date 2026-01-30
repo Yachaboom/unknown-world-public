@@ -303,6 +303,37 @@
       "placeholder": "[ 이미지 업로드 슬롯 ]"
     }
   },
+  "scanner": {
+    "dropzone_label": "이미지를 드롭하거나 클릭하여 업로드",
+    "dropzone_text": "이미지를 드롭하세요",
+    "dropzone_hint": "또는 클릭하여 파일 선택",
+    "upload_label": "이미지 업로드",
+    "preview_alt": "업로드 이미지 미리보기",
+    "uploading": "업로드 중...",
+    "analyzing": "분석 중...",
+    "retry": "다시 시도",
+    "cancel": "취소",
+    "select_items": "인벤토리에 추가할 아이템을 선택하세요",
+    "add_to_inventory": "추가 ({{count}}개)",
+    "detected_objects": "감지된 오브젝트: {{count}}개",
+    "item_candidates": "아이템 후보: {{count}}개",
+    "no_candidates": "아이템 후보를 찾지 못했습니다",
+    "error": {
+      "unsupported_format": "지원하지 않는 이미지 형식입니다",
+      "file_too_large": "파일이 너무 큽니다 (최대 20MB)",
+      "unknown": "알 수 없는 오류가 발생했습니다"
+    },
+    "item_type": {
+      "key": "열쇠",
+      "weapon": "무기",
+      "tool": "도구",
+      "clue": "단서",
+      "material": "재료",
+      "consumable": "소모품",
+      "document": "문서",
+      "artifact": "유물"
+    }
+  },
   "action": {
     "default": {
       "explore": {

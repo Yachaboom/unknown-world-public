@@ -63,8 +63,12 @@ D:\Dev\unknown-world\
 │   └── pyproject.toml
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
-│   │   ├── api/            # HTTP Streaming 클라이언트 (U-044: 클라이언트 에러 i18n 적용)
+│   │   ├── api/            # HTTP Streaming 및 Scanner API 클라이언트
+│   │   │   ├── scanner.ts (이미지 업로드 및 분석, U-022)
+│   │   │   └── turnStream.ts (U-044: i18n 적용)
 │   │   ├── components/     # 게임 UI 컴포넌트
+│   │   │   ├── ScannerSlot.tsx (이미지 드랍존 UI, U-022)
+│   │   │   └── ...
 │   │   ├── locales/        # i18n 리소스 (U-044: 에러 및 언어 키 추가)
 │   │   ├── save/           # 세션 및 저장 (U-044: 세션 언어 SSOT 추가)
 │   │   ├── stores/         # 상태 관리 (Zustand)
@@ -74,18 +78,18 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (U-021, CP-MVP-07, CP-MVP-05, U-040, U-045, U-047, U-048 포함)
-    └── unit-runbooks/     # 검증 런북 (U-021, CP-MVP-07, U-040, U-045, U-047, U-048 포함)
+    ├── unit-results/      # 개발 완료 보고서 (U-022, U-021, CP-MVP-07, CP-MVP-05 포함)
+    └── unit-runbooks/     # 검증 런북 (U-022, U-021, CP-MVP-07 포함)
 ```
 
 ### 주요 디렉토리 책임
 
-- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. U-044를 통해 세션 언어 SSOT와 클라이언트 에러 i18n을 내재화함.
+- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. U-044를 통해 세션 언어 SSOT와 클라이언트 에러 i18n을 내재화함. U-022를 통해 Scanner 슬롯(드랍존) 및 업로드 아이템화 인터랙션 구현.
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini(Vertex AI) 연동 담당. 서비스 계정 인증을 통한 보안 모델 호출 관리. `main.py`에서 `.env` 자동 로딩(U-047)을 통해 로컬 개발 편의성 및 운영 환경 SSOT 보호를 수행함.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
 - **`vibe/`**: 프로젝트의 모든 명세, 진행 상황, 개발 계획 및 결과 보고서를 기록하는 단일 진실 공급원(SSOT).
     - `unit-plans/`: 각 개발 유닛의 목표, 범위, 완료 기준을 사전에 정의.
-    - `unit-results/`: 개발 완료 후 실제 구현 결과 및 검증 데이터를 기록하는 공식 보고서 (U-044 포함).
+    - `unit-results/`: 개발 완료 후 실제 구현 결과 및 검증 데이터를 기록하는 공식 보고서.
     - `unit-runbooks/`: 기능 검증을 위한 재현 가능한 수동/자동 절차 명세.
 
 
@@ -165,6 +169,19 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - 미준비 상태인 경우 즉시 원본 이미지를 반환하는 안전 폴백을 수행함.
 4. **상태 관측성 (Observability)**:
     - `/health` 엔드포인트에 `rembg` 상세 상태(ready/degraded/unavailable)를 노출하여 운영 및 디버깅 시 환경 준비 상태를 즉시 진단 가능하게 함.
+
+## 18. Scanner 및 멀티모달 조작 정책 (U-022[Mvp])
+
+1. **Scanner 슬롯 아키텍처**:
+    - **이미지 업로드 및 분석**: 사용자가 이미지를 드롭하거나 업로드하면 프론트엔드가 `/api/scan`을 호출하여 비전 기반 분석을 수행함.
+    - **상태 관리**: `idle`, `uploading`, `analyzing`, `result`, `error`의 명확한 상태 머신을 통해 사용자에게 현재 진행 상황을 시각적으로 전달함.
+2. **아이템화 및 조작 정책 (Option B: User Confirmation)**:
+    - **확인 후 추가**: 분석 결과로 나온 아이템 후보들을 자동으로 인벤토리에 넣지 않고, 사용자가 선택하여 추가하게 함으로써 게임 내러티브의 개연성과 플레이어의 의도를 보호함.
+    - **스토어 연동**: 추가된 아이템은 즉시 `inventoryStore`에 반영되어 드래그 앤 드롭(U-011) 조작이 가능해짐.
+3. **안정성 및 보안**:
+    - **클라이언트 측 검증**: 업로드 전 파일 형식(JPEG/PNG/GIF/WebP)과 크기(20MB)를 선행 검증하여 불필요한 서버 호출을 방지함.
+    - **좌표 규약 준수 (RULE-009)**: 감지된 오브젝트의 `box_2d`는 항상 0~1000 정규화 좌표계를 유지하며, 분석 결과 UI에서만 변환하여 표시함.
+    - **비활성화 가드**: 스트리밍 중에는 스캐너 조작을 차단하여 비동기적인 상태 오염을 방지함.
 
 ## 9. Economy/재화 관리 정책 (U-014[Mvp])
 

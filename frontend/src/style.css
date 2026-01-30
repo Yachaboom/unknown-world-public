@@ -2564,6 +2564,418 @@ button:disabled,
   background-color: rgba(0, 0, 0, 0.4);
 }
 
+/* ============================================
+   31. Scanner Slot 스타일 (U-022[Mvp])
+   - PRD 6.7: 이미지 드랍/업로드 → 아이템화
+   - RULE-002: 게임 UI로 상시 노출
+   - Q1 Option B: 사용자 확인 후 인벤토리 추가
+   ============================================ */
+
+.scanner-slot-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-height: 120px;
+  padding: var(--spacing-xs);
+}
+
+/* 드랍존 기본 스타일 */
+.scanner-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-height: 100px;
+  padding: var(--spacing-md);
+  border: 2px dashed var(--text-dim);
+  border-radius: var(--border-radius);
+  background-color: rgba(0, 20, 0, 0.5);
+  /* 격자 무늬 배경 추가 (기존 배경의 느낌을 계승) */
+  background-image:
+    linear-gradient(rgba(0, 255, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 0, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 스캔라인 애니메이션 추가 (장치 느낌) */
+.scanner-dropzone::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, rgba(0, 255, 0, 0.05) 50%, transparent);
+  animation: scanning-idle 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scanning-idle {
+  0% {
+    top: -100%;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+.scanner-dropzone:hover:not(.disabled) {
+  border-color: var(--text-color);
+  background-color: rgba(0, 30, 0, 0.6);
+  background-image:
+    linear-gradient(rgba(0, 255, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 0, 0.08) 1px, transparent 1px);
+}
+
+.scanner-dropzone:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* 드래그 오버 상태 */
+.scanner-dropzone.drag-over {
+  border-color: var(--accent-color);
+  background-color: rgba(40, 0, 40, 0.4);
+  box-shadow:
+    0 0 15px var(--accent-color),
+    inset 0 0 10px rgba(255, 0, 255, 0.1);
+}
+
+/* 비활성화 상태 */
+.scanner-dropzone.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-color: var(--text-dim);
+}
+
+.scanner-dropzone.disabled:hover {
+  border-color: var(--text-dim);
+  background-color: rgba(0, 20, 0, 0.5);
+}
+
+.scanner-dropzone-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+.scanner-dropzone-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.scanner-dropzone-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* 프리뷰 이미지 */
+.scanner-preview {
+  width: 100%;
+  max-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.scanner-preview-img {
+  max-width: 100%;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.scanner-preview-small {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.scanner-preview-img-small {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+}
+
+/* 로딩 상태 */
+.scanner-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.scanner-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.scanner-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--text-dim);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.scanner-loading-text {
+  font-size: var(--font-size-sm);
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 에러 상태 */
+.scanner-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.scanner-error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.scanner-error-icon {
+  font-size: 1.5rem;
+}
+
+.scanner-error-message {
+  font-size: var(--font-size-sm);
+  color: var(--warning-color);
+  text-align: center;
+}
+
+/* 결과 상태 */
+.scanner-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs);
+}
+
+.scanner-result-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.scanner-result-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scanner-caption {
+  font-size: var(--font-size-sm);
+  color: var(--text-color);
+  line-height: 1.3;
+}
+
+.scanner-stats {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+}
+
+/* 아이템 후보 목록 */
+.scanner-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.scanner-candidates-title {
+  font-size: var(--font-size-xs);
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid rgba(51, 255, 0, 0.2);
+}
+
+.scanner-candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.scanner-candidate {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  background-color: rgba(0, 20, 0, 0.5);
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-main);
+}
+
+.scanner-candidate:hover {
+  border-color: var(--text-color);
+  background-color: rgba(0, 30, 0, 0.7);
+}
+
+.scanner-candidate.selected {
+  border-color: var(--accent-color);
+  background-color: rgba(40, 0, 40, 0.4);
+}
+
+.scanner-candidate-checkbox {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  flex-shrink: 0;
+}
+
+.scanner-candidate.selected .scanner-candidate-checkbox {
+  color: var(--accent-color);
+}
+
+.scanner-candidate-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.scanner-candidate-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.scanner-candidate-name {
+  font-size: var(--font-size-sm);
+  color: var(--text-color);
+  font-weight: bold;
+}
+
+.scanner-candidate-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scanner-candidate-type {
+  font-size: 0.625rem;
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scanner-no-candidates {
+  font-size: var(--font-size-sm);
+  color: var(--text-dim);
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+/* 액션 버튼 */
+.scanner-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.scanner-btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-family: var(--font-main);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.scanner-btn-cancel,
+.scanner-btn-retry {
+  background: transparent;
+  border: 1px solid var(--text-dim);
+  color: var(--text-color);
+}
+
+.scanner-btn-cancel:hover,
+.scanner-btn-retry:hover {
+  border-color: var(--text-color);
+}
+
+.scanner-btn-add {
+  background: var(--text-color);
+  border: 1px solid var(--text-color);
+  color: var(--bg-color);
+}
+
+.scanner-btn-add:hover:not(:disabled) {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.scanner-btn-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .scanner-loading-spinner {
+    animation: none;
+    border-color: var(--accent-color);
+  }
+
+  .scanner-dropzone {
+    transition: none;
+  }
+
+  .scanner-candidate {
+    transition: none;
+  }
+}
+
 .scanner-slot.has-chrome::before {
   content: '';
   position: absolute;
