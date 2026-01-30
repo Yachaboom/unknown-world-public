@@ -18,6 +18,14 @@ Gemini Structured Outputs(JSON Schema)용으로 설계되었습니다.
     - .cursor/rules/00-core-critical.mdc (RULE-003, RULE-005)
 """
 
+from unknown_world.models.scanner import (
+    DetectedObject,
+    ItemCandidate,
+    ScanRequest,
+    ScanResponse,
+    ScanResult,
+    ScanStatus,
+)
 from unknown_world.models.turn import (
     ActionCard,
     ActionDeck,
@@ -80,4 +88,11 @@ __all__ = [
     "EconomyOutput",
     "SafetyOutput",
     "AgentConsole",
+    # Scanner 관련 (U-021)
+    "ScanStatus",
+    "DetectedObject",
+    "ItemCandidate",
+    "ScanResult",
+    "ScanRequest",
+    "ScanResponse",
 ]

@@ -29,6 +29,11 @@ from unknown_world.services.image_generation import (
     get_image_generator,
     reset_image_generator,
 )
+from unknown_world.services.image_understanding import (
+    ImageUnderstandingService,
+    get_image_understanding_service,
+    reset_image_understanding_service,
+)
 
 __all__ = [
     # GenAI 클라이언트
@@ -50,4 +55,8 @@ __all__ = [
     "create_fallback_response",
     "get_image_generator",
     "reset_image_generator",
+    # 이미지 이해/Scanner (U-021)
+    "ImageUnderstandingService",
+    "get_image_understanding_service",
+    "reset_image_understanding_service",
 ]

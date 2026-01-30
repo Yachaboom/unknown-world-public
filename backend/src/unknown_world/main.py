@@ -63,7 +63,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from unknown_world import __version__
-from unknown_world.api import image_router, turn_router
+from unknown_world.api import image_router, scanner_router, turn_router
 from unknown_world.services.image_generation import DEFAULT_OUTPUT_DIR
 from unknown_world.services.rembg_preflight import (
     RembgPreflightResult,
@@ -226,6 +226,9 @@ app.include_router(turn_router)
 
 # U-019: /api/image 이미지 생성 엔드포인트
 app.include_router(image_router)
+
+# U-021: /api/scan 이미지 이해(Scanner) 엔드포인트
+app.include_router(scanner_router)
 
 
 # =============================================================================

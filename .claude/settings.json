@@ -1,8 +1,5 @@
 {
-  "env": {
-    "PYTHONIOENCODING": "utf-8",
-    "LANG": "ko_KR.UTF-8"
-  },
+  "enabled": false,
   "permissions": {
     "allow": [
       "Read",
@@ -10,26 +7,25 @@
       "Edit",
       "Bash(ls:*)",
       "Bash(pwd)",
+      "Bash(cd:*)",
       "Bash(mkdir:*)",
+      "Bash(touch:*)",
       "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(tree:*)",
       "Bash(echo:*)",
-      "Bash(cd:*)",
-      "Bash(touch:*)",
       "Bash(rm:*)",
       "Bash(mv:*)",
       "Bash(cp:*)",
-      "Bash(git status)",
-      "Bash(git status:*)",
-      "Bash(git log:*)",
-      "Bash(git diff:*)",
-      "Bash(git branch:*)",
-      "Bash(git show:*)",
+      "Bash(git:*)",
       "Bash(pnpm:*)",
       "Bash(uv:*)",
+      "Bash(uvx:*)",
       "Bash(node:*)",
+      "Bash(npx:*)",
       "Bash(tsc:*)",
       "Bash(python:*)",
       "Bash(py:*)",
@@ -43,9 +39,10 @@
     ],
     "deny": [
       "Bash(git push:*)",
-      "Bash(git reset:*)",
-      "Bash(pnpm install:*)",
-      "Bash(pnpm add:*)"
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm -rf /*)"
     ]
   }
 }

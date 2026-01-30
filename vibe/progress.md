@@ -1,5 +1,37 @@
 # 프로젝트 진행 상황
 
+## [2026-01-31 16:50] [U-021[Mvp]] 이미지 이해(Scanner) 백엔드 엔드포인트 구현 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 이미지 업로드(`multipart/form-data`)를 통한 캡션, 오브젝트(bbox), 아이템 후보 추출 엔드포인트 구현
+- **추가 컴포넌트**: `backend/src/unknown_world/api/scanner.py` (API), `backend/src/unknown_world/models/scanner.py` (스키마), `backend/src/unknown_world/services/image_understanding.py` (서비스), `vibe/unit-runbooks/U-021-scanner-endpoint-runbook.md` (런북), `vibe/unit-results/U-021[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-004] 안전 폴백, [RULE-009] bbox 0~1000 정규화, [PRD 8.6] 이미지 이해 요구 충족
+
+### 기술적 구현 세부사항
+
+**이미지 스캐닝 파이프라인**:
+- **Vision Model Integration**: `gemini-3-flash-preview` 모델을 활용하여 이미지 내 사물 인식 및 게임 아이템화 로직 구축.
+- **Strict Normalization**: 모든 바운딩 박스 좌표를 `[ymin, xmin, ymax, xmax]` 형식의 0~1000 정규화 좌표계로 강제하여 비전-UI 간 정합성 확보.
+- **Safe Fallback**: 모델 호출 실패, 타임아웃, 또는 유효하지 않은 파일 형식 유입 시 스키마를 준수하는 빈 결과값과 에러 메시지를 반환하여 시스템 안정성 유지.
+
+**운영 및 보안**:
+- **Mock/Real Hybrid**: 개발 환경에서의 빠른 테스트를 위한 Mock 모드와 Vertex AI 기반 Real 모드 자동 전환 지원.
+- **Privacy Guard**: RULE-007에 따라 업로드된 이미지의 원본이나 내용을 로그에 남기지 않고 메타데이터(크기, 타입, 언어)만 기록.
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── api/scanner.py (POST /api/scan 엔드포인트)
+    ├── models/scanner.py (ScanResult/DetectedObject Pydantic 모델)
+    └── services/image_understanding.py (GenAI 비전 모델 호출 및 파싱)
+
+### 다음 단계
+- [U-022[Mvp]] Scanner 슬롯 UI + 업로드→아이템화 반영
+- [CP-MVP-06] 체크포인트: Scanner 업로드 게이트(안전/좌표/비용)
+
+---
+
 ## [2026-01-30 14:30] [U-048[Mvp]] Mock Orchestrator - 액션 echo/내러티브 템플릿 개선 완료
 
 ### 구현 완료 항목

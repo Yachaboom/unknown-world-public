@@ -19,6 +19,7 @@ D:\Dev\unknown-world\
 │   │   └── unknown_world/
 │   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
 │   │       │   ├── image.py (이미지 생성 API, U-019)
+│   │       │   ├── scanner.py (이미지 이해 API, U-021)
 │   │       │   ├── turn.py
 │   │       │   ├── turn_stream_events.py (U-044: 에러 메시지 i18n 상수 포함)
 │   │       │   └── turn_streaming_helpers.py
@@ -40,11 +41,14 @@ D:\Dev\unknown-world\
 │   │       │   ├── genai_client.py
 │   │       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
 │   │       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
+│   │       │   ├── image_understanding.py (이미지 이해 서비스, U-021)
 │   │       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
 │   │       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
 │   │       │   ├── business_rules.py
 │   │       │   └── language_gate.py (신규: 언어 혼합 검증)
 │   │       └── models/     # 데이터 모델 (TurnInput/Output)
+│   │           ├── scanner.py (U-021)
+│   │           └── turn.py
 │       └── main.py     # 엔트리포인트 (.env 자동 로딩, U-047)
 │   ├── tests/              # 백엔드 테스트 코드
 │   │   ├── integration/
@@ -70,8 +74,8 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (CP-MVP-07, CP-MVP-05, U-040, U-045, U-047, U-048 포함)
-    └── unit-runbooks/     # 검증 런북 (CP-MVP-07, U-040, U-045, U-047, U-048 포함)
+    ├── unit-results/      # 개발 완료 보고서 (U-021, CP-MVP-07, CP-MVP-05, U-040, U-045, U-047, U-048 포함)
+    └── unit-runbooks/     # 검증 런북 (U-021, CP-MVP-07, U-040, U-045, U-047, U-048 포함)
 ```
 
 ### 주요 디렉토리 책임

@@ -4,6 +4,7 @@
 """
 
 from unknown_world.api.image import router as image_router
+from unknown_world.api.scanner import router as scanner_router
 from unknown_world.api.turn import router as turn_router
 
-__all__ = ["image_router", "turn_router"]
+__all__ = ["image_router", "scanner_router", "turn_router"]
