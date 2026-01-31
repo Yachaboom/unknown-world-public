@@ -77,6 +77,9 @@ D:\Dev\unknown-world\
 │   │   │   └── ...
 │   │   ├── locales/        # i18n 리소스 (U-044: 에러 및 언어 키 추가)
 │   │   ├── save/           # 세션 및 저장 (U-044: 세션 언어 SSOT 추가)
+│   │   │   ├── migrations.ts (신규: 버전별 마이그레이션, U-041)
+│   │   │   ├── saveGame.ts
+│   │   │   └── ...
 │   │   ├── stores/         # 상태 관리 (Zustand)
 │   │   ├── turn/           # Turn Runner 모듈 (U-044: 세션 언어 주입 구조)
 │   │   └── ...
@@ -84,13 +87,13 @@ D:\Dev\unknown-world\
 │   └── schemas/turn/      # JSON Schema SSOT (Input/Output)
 └── vibe/                  # SSOT 문서 저장소
     ├── unit-plans/        # 개발 계획서
-    ├── unit-results/      # 개발 완료 보고서 (U-022, U-021, CP-MVP-07, CP-MVP-05 포함)
-    └── unit-runbooks/     # 검증 런북 (U-022, U-021, CP-MVP-07 포함)
+    ├── unit-results/      # 개발 완료 보고서 (U-041, U-022, U-021, CP-MVP-07, CP-MVP-05 포함)
+    └── unit-runbooks/     # 검증 런북 (U-041, U-022, U-021, CP-MVP-07 포함)
 ```
 
 ### 주요 디렉토리 책임
 
-- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. U-044를 통해 세션 언어 SSOT와 클라이언트 에러 i18n을 내재화함. U-022를 통해 Scanner 슬롯(드랍존) 및 업로드 아이템화 인터랙션 구현.
+- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. U-044를 통해 세션 언어 SSOT와 클라이언트 에러 i18n을 내재화함. U-022를 통해 Scanner 슬롯(드랍존) 및 업로드 아이템화 인터랙션 구현. **U-041을 통해 구버전 저장 데이터의 자동 마이그레이션 엔진을 포함함.**
 - **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 비즈니스 룰 및 Gemini(Vertex AI) 연동 담당. 서비스 계정 인증을 통한 보안 모델 호출 관리. `main.py`에서 `.env` 자동 로딩(U-047)을 통해 로컬 개발 편의성 및 운영 환경 SSOT 보호를 수행함.
 - **`shared/`**: 백엔드와 프론트엔드 간의 **데이터 계약(Data Contract)**을 정의하는 SSOT 디렉토리.
 - **`vibe/`**: 프로젝트의 모든 명세, 진행 상황, 개발 계획 및 결과 보고서를 기록하는 단일 진실 공급원(SSOT).
@@ -251,73 +254,19 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ## 11. 세션 및 세이브 관리 정책 (U-015[Mvp], RU-004)
 
-
 1. **정책 상수 및 초기값 SSOT (RU-004-Q5)**:
-
-    - **상수 중앙화**: `frontend/src/save/constants.ts`를 단일 진실 공급원(SSOT)으로 삼아 세이브 버전, 스토리지 키, 시드 정책, 재화 임계치 등을 집중 관리함.
-
-    - **초기값 주입 정책 (Injection-first)**: 스토어의 `createInitialState` 값은 "플레이 전 placeholder"로 정의하며, 실제 게임 데이터는 세션 진입 시 프로필 초기값 또는 세이브 데이터로부터 주입받아야 함.
-
-    - **시드 정책 (Seed Policy)**: `generateDemoSeed`를 통해 시드 생성 로직을 통일하고, 세션 유지 기간 동안 동일한 시드가 보존되도록 보장함.
-
-
-2. **무가입 즉시 시작 (Demo Profiles)**:
-
-    - 심사 및 데모 편의성을 위해 3종의 프리셋 프로필(Narrator, Explorer, Tech) 제공.
-
-    - 프로필 선택 시 해당 페르소나에 맞는 초기 상태(재화/아이템/퀘스트)로 즉시 게임 시작.
-
-
-3. **SaveGame 생성 SSOT 단일화 (RU-004-Q1)**:
-
-    - **단일 생성 창구**: 모든 `SaveGame` 객체는 `frontend/src/save/saveGame.ts`의 `createSaveGame` 함수를 통해서만 생성되어야 함.
-
-    - **Input Adapter 패턴**: 프로필 시작 등 다른 소스에서 `SaveGame`을 만들 경우, 직접 조립하지 않고 `SaveGameInput` 형태로 데이터를 변환(Adapt)하여 `createSaveGame`에 전달함.
-
-    - **드리프트 방지**: 스키마 변경, 기본값 설정, 버전 관리 로직을 `saveGame.ts` 한 곳으로 집중하여 생성 경로에 따른 데이터 불일치를 원천 차단함.
-
-
-4. **세션 라이프사이클 SSOT (RU-004-Q4)**:
-
-    - **중앙 집중화**: 부팅, 선택, 복원, 리셋, 변경 등 모든 세션 전환 이벤트를 `sessionLifecycle.ts` 모듈로 단일화.
-
-    - **App.tsx 의존성 제거**: App은 비즈니스 로직(스토어 주입 등)을 직접 수행하지 않고 세션 모듈의 API를 호출하는 얇은 인터페이스 역할만 수행.
-
-    - **원자적 초기화**: `resetAllSessionStores`를 통해 세션 전환 시 모든 관련 스토어를 일괄 초기화하여 이전 세션의 잔재를 완전히 제거.
-
-
-5. **유효성 기반 로컬 영속화 (SaveGame)**:
-
-    - **localStorage 기반**: 별도의 DB 없이 브라우저 로컬 저장소를 활용하여 세션 상태 영속화.
-
-    - **유효성 우선 로드**: `hasSaveGame()` 대신 `getValidSaveGameOrNull()`을 사용하여 스키마 검증 및 버전 마이그레이션이 완료된 데이터만 "세이브 있음"으로 취급.
-
-    - **자동 저장**: 턴 결과가 반영될 때마다 현재 월드 상태, 경제 원장, 인벤토리 등을 JSON으로 직렬화하여 저장.
-
-    - **버전 관리**: `SAVEGAME_VERSION`을 통한 스키마 하위 호환성 관리 및 `migrateSaveGame`을 통한 자동 마이그레이션 적용.
-
-
-6. **즉시 리셋 및 세션 초기화 (Reset)**:
-
-    - **스토어 초기화 표준화**: 세션 전환(Select/Continue/Reset) 시 `world`, `inventory`, `economy`, `actionDeck`, `agent` 스토어를 모두 리셋하여 이전 세션의 잔재를 완전히 제거.
-
-    - **안전 리셋**: 현재 세션을 폐기하고 선택된 프로필의 초기 상태로 복구. 실수 방지를 위해 2단계 확인 UI 적용.
-
-
-7. **ID 및 상태 SSOT (Single Source of Truth)**:
-
-    - **profileId SSOT**: `SaveGame.profileId`를 최우선 권위자로 설정. Continue/Load 시점에 브라우저 캐시 키(`CURRENT_PROFILE_KEY`)를 이 값으로 강제 동기화하여 드리프트 방지.
-
-    - **복원 실패 폴백**: 세이브 데이터 손상 시 자동 클린업 후 프로필 선택 화면(`profile_select`)으로 안전하게 이동.
-
-
+...
 8. **복원 정합성 보장 (RU-004-S1)**:
-
     - **비동기 언어 동기화**: `changeLanguage`를 `await` 하여 비동기 언어 리소스 로딩 완료 후 UI가 렌더링되도록 보장(혼합 출력 방지).
-
     - **원장(Ledger) 스냅샷 주입**: 턴 이벤트(`addLedgerEntry`) 대신 전용 `hydrateLedger` 경로를 통해 저장된 원장의 순서, 타임스탬프, 마지막 비용(`lastCost`)을 원본 그대로 복원.
-
     - **상태 재계산**: 복원된 잔액을 기준으로 `isBalanceLow` 등 유도된 상태(derived state)를 즉시 갱신하여 HUD 일관성 확보.
+
+9. **SaveGame 마이그레이션 정책 (U-041[Mvp])**:
+    - **Version-First Loading**: JSON 파싱 후 `extractVersion`을 통해 버전을 먼저 식별함. 최신 스키마와 일치하지 않더라도 마이그레이션 경로가 있다면 폐기하지 않고 변환을 시도함.
+    - **순차적 업그레이드 체인**: `migrations.ts`에 정의된 버전별 변환 함수(`0.9.0 → 1.0.0` 등)를 순차적으로 적용하여 최신 버전으로 상향 평준화함.
+    - **데이터 보정**: 마이그레이션 중 필드명 오타 수정, 누락된 필드 기본값 주입, 재화 잔액 보정(음수 금지) 등을 수행하여 스키마 정합성을 확보함.
+    - **안전 폴백**: 지원하지 않는 버전이거나 변환 중 오류 발생 시, 부분 복구 대신 안전하게 세이브를 폐기하고 프로필 선택 화면으로 유도하여 시스템 일관성을 보호함.
+
 
 ## 12. GenAI 연동 및 모델 정책 (U-016[Mvp])
 

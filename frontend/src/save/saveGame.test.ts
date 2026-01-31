@@ -82,6 +82,39 @@ describe('saveGame utility (U-015[Mvp])', () => {
     expect(loaded).toBeNull();
   });
 
+  it('구버전(0.9.0) 데이터가 저장되어 있으면 마이그레이션 후 로드해야 한다', () => {
+    const oldSave = {
+      version: '0.9.0',
+      language: 'ko-KR',
+      seed: 'old-seed',
+      profileId: 'narrator',
+      savedAt: new Date().toISOString(),
+      economy: {
+        signal: 120,
+        memory_shards: 8, // 구버전 오타 필드
+      },
+      turnCount: 5,
+      narrativeHistory: [],
+      inventory: [],
+      quests: [],
+      activeRules: [],
+      mutationTimeline: [],
+      // sceneObjects 누락
+    };
+
+    localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(oldSave));
+
+    const loaded = loadSaveGame();
+    expect(loaded).not.toBeNull();
+    expect(loaded?.version).toBe(SAVEGAME_VERSION);
+    expect(loaded?.economy.memory_shard).toBe(8); // 마이그레이션 확인
+    expect(Array.isArray(loaded?.sceneObjects)).toBe(true); // 필드 추가 확인
+    expect(loaded?.sceneObjects).toHaveLength(0);
+
+    // 저장소에도 최신 데이터로 업데이트되었는지 확인 (선택 사항: 현재 loadSaveGame은 메모리에서만 변환하고 저장소 업데이트는 하지 않음)
+    // 만약 loadSaveGame이 저장소 업데이트까지 수행한다면 아래 검증 추가 가능
+  });
+
   it('clearSaveGame은 저장된 데이터를 삭제해야 한다', () => {
     const saveGame = createSaveGame(mockInput);
     saveSaveGame(saveGame);

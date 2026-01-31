@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 64/82 (78.0%) | **MVP**: 64/66 (96.9%) | **MMP**: 0/16 (0%)
+**전체**: 65/82 (79.2%) | **MVP**: 65/66 (98.4%) | **MMP**: 0/16 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [CP-MVP-03](unit-plans/CP-MVP-03.md) / **최근 완료**: [CP-MVP-06](unit-results/CP-MVP-06.md) (2026-01-31)
+**진행 중(현재 포커스)**: [CP-MVP-03](unit-plans/CP-MVP-03.md) / **최근 완료**: [U-041[Mvp]](unit-results/U-041[Mvp].md) (2026-01-31)
 
 **블로커**: 없음
 
@@ -138,7 +138,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-041[Mvp]](unit-plans/U-041[Mvp].md) | SaveGame 마이그레이션: migrateSaveGame에 버전별 변환 로직 구현 | Depends=RU-004 | ⏸️
 ID=[U-042[Mvp]](unit-plans/U-042[Mvp].md) | 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 | Depends=U-014,U-039 | ⏸️
 ID=[U-049[Mvp]](unit-plans/U-049[Mvp].md) | UI/UX: 레이아웃/스크롤 설계 개선(첫 화면 과도 스크롤 제거, 카드 내부 스크롤) | Depends=U-004[Mvp],U-013[Mvp],U-014[Mvp] | ⏸️
 ID=[U-050[Mvp]](unit-plans/U-050[Mvp].md) | UI/UX: 오버레이 팔레트/강도 튜닝(덮임/쨍함 완화) + 반응형 폴리시(가이드 준수) | Depends=U-010[Mvp],U-037[Mvp] | ⏸️
@@ -172,6 +171,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-041[Mvp]](unit-results/U-041[Mvp].md): SaveGame 마이그레이션 - 버전별 변환 로직 구현 (2026-01-31)
 - ✅ [RU-006-S1](vibe/refactors/RU-006-S1.md): 리팩토링 - 업로드 이미지 임시 저장 정책 명확화 (2026-01-31)
 - ✅ [RU-006-Q5](vibe/refactors/RU-006-Q5.md): 리팩토링 - 저장 경로 및 URL 하드코딩 제거 (2026-01-31)
 - ✅ [RU-006-Q4](vibe/refactors/RU-006-Q4.md): 리팩토링 - 스토리지 인터페이스 추상화 도입 (2026-01-31)

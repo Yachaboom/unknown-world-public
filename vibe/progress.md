@@ -1,6 +1,36 @@
 # 프로젝트 진행 상황
 
-## [2026-01-31 22:20] [RU-006-S1] 업로드 이미지 임시 저장 정책 명확화 리팩토링 완료
+## [2026-01-31 23:30] [U-041[Mvp]] SaveGame 마이그레이션 - 버전별 변환 로직 구현 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: "버전 판별 → 마이그레이션 → 검증" 흐름의 SaveGame 복원 파이프라인 구축 및 0.9.0 → 1.0.0 변환 로직 구현
+- **추가 컴포넌트**: `frontend/src/save/migrations.ts` (엔진), `frontend/src/save/migrations.test.ts` (테스트), `vibe/unit-runbooks/U-041-runbook.md` (런북), `vibe/unit-results/U-041[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 6.6/8.7] SaveGame 버전/복원 정책 준수, [RULE-004] 안전 폴백, [RULE-005] 경제 인바리언트 보존
+
+### 기술적 구현 세부사항
+
+**마이그레이션 파이프라인**:
+- **Version Detection First**: JSON 파싱 후 `extractVersion`을 통해 버전을 먼저 식별하여, 최신 스키마와 맞지 않는 구버전 데이터가 검증 단계에서 영구 폐기되는 문제 해결.
+- **Migration Chain**: 0.9.0에서 1.0.0으로의 변환 단계(`sceneObjects` 등 누락 필드 추가, `memory_shards` 필드명 오타 보정)를 구현하여 하위 호환성 확보.
+- **Validation-Last**: 모든 변환이 완료된 후 최종적으로 `SaveGameSchema.safeParse`를 수행하여 런타임 데이터 무결성 보장.
+
+**안전성 및 운영**:
+- **Economy Invariant**: 마이그레이션 중 재화 데이터가 손상되었거나 음수인 경우 RULE-005에 따라 기본값(100/5)으로 강제 보정.
+- **Graceful Fallback**: 지원하지 않는 버전이거나 마이그레이션 실패 시 `null`을 반환하여 사용자가 안전하게 `profile_select` 화면에서 새로 시작할 수 있도록 유도.
+
+### 코드 구조
+repo-root/
+└── frontend/src/save/
+    ├── migrations.ts (신규: 버전별 변환 함수 SSOT)
+    ├── saveGame.ts (로딩 파이프라인 리팩토링 및 통합)
+    └── constants.ts (지원 버전 상수 업데이트)
+
+### 다음 단계
+- [U-042[Mvp]] 용어/카피 정리: 원장→거래 장부 등 게임 친화 용어 통일
+- [CP-MVP-03] 체크포인트: 10분 데모 루프 (복원/리셋 안정성 최종 점검)
+
+---
 
 ### 작업 내용
 

@@ -19,10 +19,15 @@
 /**
  * 현재 SaveGame 스키마 버전.
  *
- * 버전 변경 시 `migrateSaveGame()`에 마이그레이션 로직을 추가해야 합니다.
+ * 버전 변경 시:
+ * 1. migrations.ts에 마이그레이션 함수 추가
+ * 2. SUPPORTED_SAVEGAME_VERSIONS에 이전 버전 추가
+ * 3. migrations.ts의 VERSION_ORDER에 새 버전 추가
+ *
  * 버전 형식: semver (major.minor.patch)
  *
  * @see saveGame.ts#migrateSaveGame
+ * @see migrations.ts#upgradeToLatest
  */
 export const SAVEGAME_VERSION = '1.0.0' as const;
 
@@ -31,8 +36,22 @@ export const SAVEGAME_VERSION = '1.0.0' as const;
  *
  * 마이그레이션 가능한 이전 버전들을 포함합니다.
  * 이 목록에 없는 버전은 마이그레이션 불가로 처리됩니다.
+ *
+ * U-041: 마이그레이션 체인이 있는 모든 버전을 포함
+ * - 0.9.0: 테스트/데모용 구버전 (sceneObjects, economyLedger 등 누락)
+ * - 1.0.0: 현재 버전
  */
-export const SUPPORTED_SAVEGAME_VERSIONS: readonly string[] = ['1.0.0'] as const;
+export const SUPPORTED_SAVEGAME_VERSIONS: readonly string[] = ['0.9.0', '1.0.0'] as const;
+
+/**
+ * 마이그레이션 가능한 최소 버전.
+ *
+ * 이 버전보다 낮은 버전은 마이그레이션이 불가능하며,
+ * 저장 데이터가 폐기되고 새로 시작해야 합니다.
+ *
+ * U-041: migrations.ts의 VERSION_ORDER와 동기화 필요
+ */
+export const MIN_MIGRATABLE_VERSION = '0.9.0' as const;
 
 // =============================================================================
 // localStorage 키 (Storage Keys)

@@ -24,6 +24,14 @@ import type { SceneObject } from '../schemas/turn';
 // RU-004-Q5: 상수 중앙화 - constants.ts에서 import
 import { SAVEGAME_VERSION, SAVEGAME_STORAGE_KEY, CURRENT_PROFILE_KEY } from './constants';
 
+// U-041: 마이그레이션 모듈
+import {
+  upgradeToLatest,
+  extractVersion,
+  isMigratableVersion,
+  type MigrationResult,
+} from './migrations';
+
 // RU-004-Q5: 상수 re-export (기존 호출자 호환성 유지)
 export { SAVEGAME_VERSION, SAVEGAME_STORAGE_KEY, CURRENT_PROFILE_KEY };
 
@@ -280,7 +288,10 @@ export function saveSaveGame(saveGame: SaveGame): boolean {
 
 /**
  * localStorage에서 SaveGame을 로드합니다.
- * 마이그레이션이 필요한 경우 자동으로 적용합니다 (RU-004-S2).
+ *
+ * U-041: "버전 판별 → 마이그레이션 → 검증" 흐름으로 변경
+ * - 구버전 SaveGame도 마이그레이션 후 최신 스키마를 통과할 수 있음
+ * - 스키마 검증은 마이그레이션 완료 후 수행
  *
  * @returns SaveGame 객체 또는 null (없거나 유효하지 않은 경우)
  */
@@ -291,22 +302,43 @@ export function loadSaveGame(): SaveGame | null {
       return null;
     }
 
-    const parsed = JSON.parse(json);
-    const result = SaveGameSchema.safeParse(parsed);
+    // Step 1: JSON 파싱
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      console.warn('[SaveGame] JSON 파싱 실패');
+      return null;
+    }
 
+    // Step 2: 버전 추출 (U-041: 최소 파서로 버전만 먼저 확인)
+    const version = extractVersion(parsed);
+    if (!version) {
+      console.warn('[SaveGame] 버전 정보 없음');
+      return null;
+    }
+
+    // Step 3: 마이그레이션 수행 (버전 불일치 시)
+    let dataToValidate: unknown = parsed;
+
+    if (version !== SAVEGAME_VERSION) {
+      // 마이그레이션 시도
+      const migrationResult = migrateSaveGame(parsed, version);
+      if (!migrationResult) {
+        console.warn('[SaveGame] 마이그레이션 실패, 새로 시작 필요');
+        return null;
+      }
+      dataToValidate = migrationResult;
+    }
+
+    // Step 4: 최종 스키마 검증 (마이그레이션 후)
+    const result = SaveGameSchema.safeParse(dataToValidate);
     if (!result.success) {
       console.warn('[SaveGame] 스키마 검증 실패:', result.error);
       return null;
     }
 
-    // RU-004-S2: 버전 마이그레이션 적용
-    const migrated = migrateSaveGame(result.data);
-    if (!migrated) {
-      console.warn('[SaveGame] 마이그레이션 실패, 새로 시작 필요');
-      return null;
-    }
-
-    return migrated;
+    return result.data;
   } catch (error) {
     console.error('[SaveGame] 로드 실패:', error);
     return null;
@@ -389,25 +421,57 @@ export function clearCurrentProfileId(): void {
 }
 
 // =============================================================================
-// 버전 마이그레이션 (향후 확장)
+// 버전 마이그레이션 (U-041)
 // =============================================================================
 
 /**
- * SaveGame 버전을 확인하고 필요 시 마이그레이션합니다.
- * 현재는 v1.0.0만 지원하므로 패스스루입니다.
+ * SaveGame 데이터를 최신 버전으로 마이그레이션합니다.
  *
- * @param saveGame - 로드된 SaveGame
- * @returns 마이그레이션된 SaveGame 또는 null (마이그레이션 불가)
+ * U-041: migrations.ts의 upgradeToLatest를 사용하여 버전별 변환 수행
+ *
+ * @param data - 마이그레이션할 SaveGame 데이터 (unknown - 스키마 검증 전)
+ * @param version - 현재 데이터의 버전
+ * @returns 마이그레이션된 데이터 또는 null (마이그레이션 불가)
  */
-export function migrateSaveGame(saveGame: SaveGame): SaveGame | null {
+export function migrateSaveGame(data: unknown, version: string): unknown | null {
   // 현재 버전이면 그대로 반환
+  if (version === SAVEGAME_VERSION) {
+    return data;
+  }
+
+  // 마이그레이션 가능한 버전인지 확인
+  if (!isMigratableVersion(version)) {
+    console.warn(`[SaveGame] 지원하지 않는 버전: ${version}`);
+    return null;
+  }
+
+  // 마이그레이션 수행
+  console.log(`[SaveGame] 마이그레이션 시작: ${version} → ${SAVEGAME_VERSION}`);
+  const result = upgradeToLatest(data, version);
+
+  if (!result.success) {
+    console.warn(`[SaveGame] 마이그레이션 실패: ${result.error}`);
+    return null;
+  }
+
+  // 성공 로그
+  const migrationResult = result as MigrationResult;
+  console.log(`[SaveGame] 마이그레이션 완료: ${migrationResult.appliedMigrations.join(' → ')}`);
+
+  return migrationResult.data;
+}
+
+/**
+ * @deprecated U-041: 이전 버전 호환성을 위한 래퍼.
+ *             새 코드에서는 migrateSaveGame(data, version)을 직접 사용하세요.
+ *
+ * SaveGame 타입이 이미 확정된 경우 (최신 스키마로 검증된 경우)에만 사용합니다.
+ */
+export function migrateSaveGameLegacy(saveGame: SaveGame): SaveGame | null {
   if (saveGame.version === SAVEGAME_VERSION) {
     return saveGame;
   }
-
-  // 향후 버전 업그레이드 시 마이그레이션 로직 추가
-  console.warn(`[SaveGame] 버전 불일치: ${saveGame.version} -> ${SAVEGAME_VERSION}`);
-
-  // MVP에서는 버전 불일치 시 null 반환 (새로 시작 유도)
+  // 이미 SaveGame 타입이면 최신 스키마를 통과한 것이므로 버전만 체크
+  console.warn(`[SaveGame] 버전 불일치 (legacy): ${saveGame.version}`);
   return null;
 }
