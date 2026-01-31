@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 64/80 (80.0%) | **MVP**: 64/66 (96.9%) | **MMP**: 0/14 (0%)
+**전체**: 64/82 (78.0%) | **MVP**: 64/66 (96.9%) | **MMP**: 0/16 (0%)
 
-**예상 완료(가정)**: MVP D-2 | MMP D-6  
+**예상 완료(가정)**: MVP D-2 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -65,9 +65,9 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | MVP  | CP-MVP-07 | **✓ 체크포인트: real 모드 로컬 실행 게이트(.env/Vertex)** | 2026-01-22 | -      | ✅   |
 | MVP  | CP-MVP-06 | **✓ 체크포인트: Scanner 업로드 게이트** | 2026-01-31 | -      | ✅   |
 | MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-24 | -      | ⏸️   |
-| MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/7    | ⏸️   |
+| MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/8    | ⏸️   |
 | MMP  | CP-MMP-01 | **✓ 체크포인트: 배포/관측 게이트**     | 2026-02-01 | -      | ⏸️   |
-| MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/7    | ⏸️   |
+| MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/8    | ⏸️   |
 | MMP  | CP-MMP-02 | **✓ 체크포인트: 시나리오 회귀 100%**   | 2026-02-12 | -      | ⏸️   |
 
 ## 핵심 기능 (MVP)
@@ -165,8 +165,10 @@ ID=[CP-MMP-01](unit-plans/CP-MMP-01.md) | **체크포인트: 배포/관측 게�
 ID=[U-106[Mmp]](unit-plans/U-106[Mmp].md) | 관측 지표/대시보드(Agent Console 메트릭) 고도화 | Depends=CP-MMP-01 | ⏸️
 ID=[U-107[Mmp]](unit-plans/U-107[Mmp].md) | 접근성/단축키/모바일 UX 개선 | Depends=U-106 | ⏸️
 ID=[U-108[Mmp]](unit-plans/U-108[Mmp].md) | ⚡보안 하드닝(인젝션 케이스/secret scan) | Depends=CP-MMP-01 | ⏸️
+ID=[U-110[Mmp]](unit-plans/U-110[Mmp].md) | 프론트엔드 디버깅 모드 토글 UI(스트림 로그/상태 diff/스토리지 사용량) | Depends=U-106 | ⏸️
+ID=[U-111[Mmp]](unit-plans/U-111[Mmp].md) | 스토리지 TTL/정리 정책 정의(로컬/GCS Lifecycle) | Depends=U-102 | ⏸️
 ID=[RU-011[Mmp]](unit-plans/RU-011[Mmp].md) | 리팩토링: Autopilot/Replay 모듈 정리 | Depends=U-108 | ⏸️
-ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=RU-011,U-107 | ⏸️
+ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=RU-011,U-107,U-110,U-111 | ⏸️
 
 ### 완료
 
