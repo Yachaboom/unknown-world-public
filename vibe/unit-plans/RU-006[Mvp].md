@@ -82,9 +82,10 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: MVP 로컬 저장 경로 정책은?
+- [x] **Q1**: MVP 로컬 저장 경로 정책은?
   - Option A: `backend/.data/` 같은 전용 폴더(권장: 정리 용이, gitignore 필요)
   - Option B: OS temp 디렉토리(자동 정리되지만 디버깅 어려움)
+  **A1**: Option A
 
 ## 참고 자료
 
