@@ -95,7 +95,7 @@ describe('EconomyHud', () => {
     expect(screen.queryByText('economy.estimated_cost')).not.toBeInTheDocument();
   });
 
-  it('원장 이력이 있을 때 표시해야 한다', () => {
+  it('거래 장부 이력이 있을 때 표시해야 한다', () => {
     useEconomyStore.getState().addLedgerEntry({
       turnId: 1,
       reason: 'test reason',

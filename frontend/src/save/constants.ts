@@ -146,11 +146,8 @@ export function generateDemoSeed(profileId: string): string {
 export const LOW_BALANCE_THRESHOLD = 10 as const;
 
 /**
- * 원장(Ledger) 최대 보관 개수.
- *
- * 최근 N개의 턴 원장만 보관합니다 (메모리 최적화).
- * 세션 내에서만 유지되며, SaveGame에 함께 저장됩니다.
- *
+ * 거래 장부(Ledger) 최대 보관 개수.
+ * 최근 N개의 턴 거래 장부만 보관합니다 (메모리 최적화).
  * @see economyStore.ts#addLedgerEntry
  */
 export const LEDGER_MAX_ENTRIES = 20 as const;

@@ -259,7 +259,7 @@
     "alternatives_title": "Alternatives",
     "alternative_text_only": "Text-only (no images)",
     "alternative_low_quality": "Low quality / Fast response",
-    "ledger_title": "Recent Ledger",
+    "ledger_title": "Resource Log",
     "ledger_empty": "[ NO HISTORY ]",
     "model_label": {
       "FAST": "Fast",

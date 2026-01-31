@@ -16,7 +16,7 @@
 import { z } from 'zod';
 import type { SupportedLanguage } from '../i18n';
 import type { LedgerEntry } from '../stores/economyStore';
-import type { Quest, WorldRule } from '../schemas/turn';
+import { LedgerEntrySchema, type Quest, type WorldRule } from '../schemas';
 import type { InventoryItem } from '../stores/inventoryStore';
 import type { MutationEvent, NarrativeEntry, EconomyState } from '../stores/worldStore';
 import type { SceneObject } from '../schemas/turn';
@@ -64,27 +64,8 @@ export const SaveGameSchema = z
       })
       .describe('재화 상태'),
 
-    /** 경제 원장 이력 */
-    economyLedger: z
-      .array(
-        z.object({
-          turnId: z.number().int(),
-          actionId: z.string().optional(),
-          reason: z.string(),
-          cost: z.object({
-            signal: z.number().int().min(0),
-            memory_shard: z.number().int().min(0),
-          }),
-          balanceAfter: z.object({
-            signal: z.number().int().min(0),
-            memory_shard: z.number().int().min(0),
-          }),
-          modelLabel: z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']).optional(),
-          timestamp: z.number(),
-        }),
-      )
-      .default([])
-      .describe('경제 원장 이력'),
+    /** 경제 거래 장부 이력 */
+    economyLedger: z.array(LedgerEntrySchema).default([]).describe('경제 거래 장부 이력'),
 
     /** 현재 턴 카운트 */
     turnCount: z.number().int().min(0).default(0).describe('현재 턴 카운트'),

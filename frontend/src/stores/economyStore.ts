@@ -2,7 +2,7 @@
  * Unknown World - Economy 상태 관리 (Zustand) (U-014[Mvp]).
  *
  * Signal/Memory Shard 재화 HUD와 턴별 비용/잔액 변화를
- * **원장(ledger)**으로 추적하여 "비용/지연을 게임 메커닉"으로 UX에 반영합니다.
+ * **거래 장부(ledger)**로 추적하여 "비용/지연을 게임 메커닉"으로 UX에 반영합니다.
  *
  * 설계 원칙:
  *   - RULE-005: Economy 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
@@ -26,7 +26,7 @@ export { LEDGER_MAX_ENTRIES };
 // =============================================================================
 
 /**
- * 원장(Ledger) 엔트리.
+ * 거래 장부(Ledger) 엔트리.
  * 각 턴에서 발생한 비용과 잔액 변화를 기록합니다.
  */
 export interface LedgerEntry {
@@ -78,7 +78,7 @@ export interface LastCostState {
 
 /** Economy Store 상태 */
 export interface EconomyStoreState {
-  /** 원장 (최근 N개 엔트리, 최신순) */
+  /** 거래 장부 (최근 N개 엔트리, 최신순) */
   ledger: LedgerEntry[];
   /** 현재 예상 비용 (선택한 액션 기반) */
   costEstimate: CostEstimateState | null;
@@ -93,19 +93,19 @@ export interface EconomyStoreState {
 /** Economy Store 액션 */
 export interface EconomyStoreActions {
   /**
-   * 턴 완료 시 원장에 엔트리를 추가합니다.
+   * 턴 완료 시 거래 장부에 엔트리를 추가합니다.
    */
   addLedgerEntry: (entry: Omit<LedgerEntry, 'timestamp'>) => void;
 
   /**
-   * SaveGame 복원 시 원장을 그대로 주입합니다 (RU-004-S1).
+   * SaveGame 복원 시 거래 장부를 그대로 주입합니다 (RU-004-S1).
    *
    * - ledger는 저장된 순서(최신순)를 유지합니다.
    * - timestamp는 저장된 값을 보존합니다.
    * - lastCost는 최신 엔트리(첫 원소) 기준으로 설정합니다.
    * - isBalanceLow는 전달된 currentBalance로 재계산합니다.
    *
-   * @param ledger - 저장된 원장 배열 (최신순, timestamp 포함)
+   * @param ledger - 저장된 거래 장부 배열 (최신순, timestamp 포함)
    * @param currentBalance - 복원된 잔액 (isBalanceLow 계산용)
    */
   hydrateLedger: (ledger: LedgerEntry[], currentBalance: CurrencyAmount) => void;
@@ -141,7 +141,7 @@ export interface EconomyStoreActions {
   setLowBalanceThreshold: (threshold: number) => void;
 
   /**
-   * 원장을 초기화합니다.
+   * 거래 장부를 초기화합니다.
    */
   clearLedger: () => void;
 
@@ -175,7 +175,7 @@ function createInitialState(): EconomyStoreState {
 /**
  * Economy 상태 스토어.
  *
- * 턴별 비용/잔액 변화를 원장(ledger)으로 추적하고,
+ * 턴별 비용/잔액 변화를 거래 장부(ledger)으로 추적하고,
  * 예상 비용과 확정 비용을 UI에 제공합니다.
  *
  * @example
@@ -184,7 +184,7 @@ function createInitialState(): EconomyStoreState {
  * const setCostEstimateFromCard = useEconomyStore(s => s.setCostEstimateFromCard);
  * setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
  *
- * // 턴 완료 시 원장 기록
+ * // 턴 완료 시 거래 장부 기록
  * const addLedgerEntry = useEconomyStore(s => s.addLedgerEntry);
  * addLedgerEntry({
  *   turnId: turnCount,
@@ -304,7 +304,7 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
 // 셀렉터 (성능 최적화용)
 // =============================================================================
 
-/** 원장 셀렉터 */
+/** 거래 장부 셀렉터 */
 export const selectLedger = (state: EconomyStore) => state.ledger;
 
 /** 예상 비용 셀렉터 */
@@ -316,7 +316,7 @@ export const selectLastCost = (state: EconomyStore) => state.lastCost;
 /** 잔액 부족 상태 셀렉터 */
 export const selectIsBalanceLow = (state: EconomyStore) => state.isBalanceLow;
 
-/** 최근 N개 원장 엔트리 셀렉터 */
+/** 최근 N개 거래 장부 엔트리 셀렉터 */
 export const selectRecentLedger =
   (count: number) =>
   (state: EconomyStore): LedgerEntry[] =>

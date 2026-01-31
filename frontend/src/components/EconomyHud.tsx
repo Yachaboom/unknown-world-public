@@ -185,7 +185,7 @@ function CostDisplay({ type, min, max, cost, affordable, label }: CostDisplayPro
 }
 
 // =============================================================================
-// 원장(Ledger) 항목 컴포넌트
+// 거래 장부(Ledger) 항목 컴포넌트
 // =============================================================================
 
 function LedgerItem({ entry }: { entry: LedgerEntry }) {
@@ -252,7 +252,7 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
     );
   }
 
-  // Full 모드: 잔액 + 예상 비용 + 확정 비용 + 원장 이력
+  // Full 모드: 잔액 + 예상 비용 + 확정 비용 + 거래 장부 이력
   return (
     <div
       className={`economy-hud economy-hud-full ${className}`}
@@ -296,7 +296,7 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
         </div>
       )}
 
-      {/* 원장 이력 (Ledger) */}
+      {/* 거래 장부 이력 (Ledger) */}
       <div className="economy-ledger">
         <div className="ledger-header">
           <span className="ledger-title">{t('economy.ledger_title')}</span>

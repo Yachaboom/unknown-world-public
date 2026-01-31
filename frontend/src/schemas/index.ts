@@ -61,11 +61,11 @@ export {
   // Render
   ImageJobSchema,
   RenderOutputSchema,
-  // Economy
-  EconomyOutputSchema,
-  // Safety
-  SafetyOutputSchema,
-  // Agent Console
+      // Economy
+      LedgerEntrySchema,
+      EconomyOutputSchema,
+      // Safety
+      SafetyOutputSchema,  // Agent Console
   AgentConsoleSchema,
   // Main
   TurnOutputSchema,
@@ -85,11 +85,11 @@ export type {
   // Render
   ImageJob,
   RenderOutput,
-  // Economy
-  EconomyOutput,
-  // Safety
-  SafetyOutput,
-  // Agent Console
+      // Economy
+      LedgerEntry,
+      EconomyOutput,
+      // Safety
+      SafetyOutput,  // Agent Console
   AgentConsole,
   // Main
   TurnOutput,

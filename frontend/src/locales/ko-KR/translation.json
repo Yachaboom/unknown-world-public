@@ -259,7 +259,7 @@
     "alternatives_title": "대안 행동",
     "alternative_text_only": "텍스트만 생성 (이미지 없음)",
     "alternative_low_quality": "저품질/빠른 응답 선택",
-    "ledger_title": "최근 원장 이력",
+    "ledger_title": "거래 장부",
     "ledger_empty": "[ 이력 없음 ]",
     "model_label": {
       "FAST": "빠름",

@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 65/82 (79.2%) | **MVP**: 65/66 (98.4%) | **MMP**: 0/16 (0%)
+**전체**: 66/82 (80.5%) | **MVP**: 66/66 (100.0%) | **MMP**: 0/16 (0%)
 
-**예상 완료(가정)**: MVP D-2 | MMP D-7  
+**예상 완료(가정)**: MVP D-0 | MMP D-7  
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [CP-MVP-03](unit-plans/CP-MVP-03.md) / **최근 완료**: [U-041[Mvp]](unit-results/U-041[Mvp].md) (2026-01-31)
+**진행 중(현재 포커스)**: [CP-MVP-03](unit-plans/CP-MVP-03.md) / **최근 완료**: [U-042[Mvp]](unit-results/U-042[Mvp].md) (2026-01-31)
 
 **블로커**: 없음
 
@@ -32,7 +32,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 1. **Prompt-only wrapper / Generic chatbot 금지**: TurnInput/TurnOutput 계약 + State/Orchestrator/Artifacts 필수 (RULE-001/002)
 2. **구조화 출력 + 이중 검증 + Repair loop 필수**: Pydantic+Zod, 실패 시 안전 폴백, Hard Gate 준수 (RULE-003/004)
-3. **경제/보안/언어/좌표/버전 고정**: 잔액 음수 금지(ledger), Vertex 서비스계정(BYOK 금지), ko/en 혼합 금지, bbox 0~1000 규약, tech-stack 버전 고정 (RULE-005/006/007/009/010)
+3. **경제/보안/언어/좌표/버전 고정**: 잔액 음수 금지(거래 장부), Vertex 서비스계정(BYOK 금지), ko/en 혼합 금지, bbox 0~1000 규약, tech-stack 버전 고정 (RULE-005/006/007/009/010)
 
 ### 기술적 리스크 (TOP 3)
 
@@ -45,7 +45,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### MVP 완료 기준 (Definition of Done)
 
 - **Schema OK**: TurnOutput JSON이 스키마를 통과(서버 Pydantic + 클라 Zod)
-- **Economy OK**: 예상 비용 노출, ledger 일관성, 잔액 음수 불가
+- **Economy OK**: 예상 비용 노출, 거래 장부(ledger) 일관성, 잔액 음수 불가
 - **Safety OK**: 차단/실패 시 명시 + 안전한 대체 결과(텍스트-only 등) 제공
 - **Consistency OK**: 언어 정책(ko/en 혼합 금지), bbox 규약(0~1000, [ymin,xmin,ymax,xmax]) 준수
 - **Demo OK(10분 루프)**: 드래그→클릭→(스캐너)업로드→룰 변형/퀘스트→오토파일럿→엔딩 리포트까지 반복 가능(데모프로필+리셋 포함)
@@ -82,7 +82,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 - **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 “읽을 수 있는” 수준으로 유지된다
 - **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050
-- **상태**: 🚧
+- **상태**: ✅
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
 
@@ -94,7 +94,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 - **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**
 - **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06
-- **상태**: 🚧 (프롬프트 파일 분리/핫리로드/XML규격통일 ✅)
+- **상태**: ✅
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
 
@@ -138,7 +138,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-042[Mvp]](unit-plans/U-042[Mvp].md) | 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 | Depends=U-014,U-039 | ⏸️
 ID=[U-049[Mvp]](unit-plans/U-049[Mvp].md) | UI/UX: 레이아웃/스크롤 설계 개선(첫 화면 과도 스크롤 제거, 카드 내부 스크롤) | Depends=U-004[Mvp],U-013[Mvp],U-014[Mvp] | ⏸️
 ID=[U-050[Mvp]](unit-plans/U-050[Mvp].md) | UI/UX: 오버레이 팔레트/강도 튜닝(덮임/쨍함 완화) + 반응형 폴리시(가이드 준수) | Depends=U-010[Mvp],U-037[Mvp] | ⏸️
 
@@ -171,6 +170,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-042[Mvp]](unit-results/U-042[Mvp].md): 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 (2026-01-31)
 - ✅ [U-041[Mvp]](unit-results/U-041[Mvp].md): SaveGame 마이그레이션 - 버전별 변환 로직 구현 (2026-01-31)
 - ✅ [RU-006-S1](vibe/refactors/RU-006-S1.md): 리팩토링 - 업로드 이미지 임시 저장 정책 명확화 (2026-01-31)
 - ✅ [RU-006-Q5](vibe/refactors/RU-006-Q5.md): 리팩토링 - 저장 경로 및 URL 하드코딩 제거 (2026-01-31)
@@ -290,5 +290,3 @@ pnpm kill
 **진행중**: [U-018[Mvp]](unit-plans/U-018[Mvp].md) - ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백
 
 **블로커**: 없음
-
----

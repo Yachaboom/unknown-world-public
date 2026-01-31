@@ -418,6 +418,23 @@ export type RenderOutput = z.infer<typeof RenderOutputSchema>;
 // =============================================================================
 
 /**
+ * 거래 장부(Ledger) 엔트리 (RULE-005).
+ * 각 턴에서 발생한 비용과 잔액 변화를 기록합니다.
+ */
+export const LedgerEntrySchema = z
+  .object({
+    turnId: z.number().int().min(0).describe('턴 ID'),
+    actionId: z.string().optional().describe('액션 ID (선택)'),
+    reason: z.string().describe('비용 발생 사유'),
+    cost: CurrencyAmountSchema.describe('소비된 비용'),
+    balanceAfter: CurrencyAmountSchema.describe('소비 후 잔액'),
+    modelLabel: ModelLabelSchema.optional().describe('모델 라벨 (선택)'),
+    timestamp: z.number().describe('기록 시각 (timestamp)'),
+  })
+  .strict();
+export type LedgerEntry = z.infer<typeof LedgerEntrySchema>;
+
+/**
  * 경제 출력 데이터 (RULE-005).
  * 이번 턴의 비용과 잔액 정보입니다.
  * 잔액 음수는 절대 불가 (서버 Hard gate).
