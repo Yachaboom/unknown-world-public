@@ -25,29 +25,30 @@ D:\Dev\unknown-world\
 │   │       │   └── turn_streaming_helpers.py
 │   │       ├── config/     # 모델 및 시스템 설정 (U-016)
 │   │       │   └── models.py
-│   │       ├── orchestrator/ # 오케스트레이션 엔진
-│   │       │   ├── pipeline.py (파이프라인 실행기)
-│   │       │   ├── stages/    # 단계별 모듈 (RU-005)
-│   │       │   │   ├── types.py
-│   │       │   │   ├── parse.py
-│   │       │   │   ├── validate.py
-│   │       │   │   └── ... (7대 단계 모듈)
-│   │       │   ├── fallback.py
-│   │       │   ├── mock.py (U-007, U-048: 결정적 다양성 구현)
-│   │       │   ├── prompt_loader.py (U-017, U-036)
-│   │       │   ├── repair_loop.py
-│   │       │   └── validator.py (U-018)
-│   │       ├── services/   # 외부 서비스 연동 (U-016)
-│   │       │   ├── genai_client.py
-│   │       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
-│   │       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
-│   │       │   ├── image_understanding.py (이미지 이해 서비스, U-021)
-│   │       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
-│   │       ├── storage/    # 스토리지 추상화 (RU-006-Q4)
-│   │       │   ├── __init__.py (팩토리 및 내보내기)
-│   │       │   ├── storage.py (인터페이스 정의: StorageInterface)
-│   │       │   └── local_storage.py (MVP 구현체: LocalStorage)
-│   │       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
+│       ├── orchestrator/ # 오케스트레이션 엔진
+│       │   ├── pipeline.py (파이프라인 실행기)
+│       │   ├── stages/    # 단계별 모듈 (RU-005)
+│       │   │   ├── types.py
+│       │   │   ├── parse.py
+│       │   │   ├── validate.py
+│       │   │   └── ... (7대 단계 모듈)
+│       │   ├── fallback.py
+│       │   ├── mock.py (U-007, U-048: 결정적 다양성 구현)
+│       │   ├── prompt_loader.py (U-017, U-036)
+│       │   ├── repair_loop.py
+│       │   └── validator.py (U-018)
+│       ├── services/   # 외부 서비스 연동 (U-016)
+│       │   ├── genai_client.py
+│       │   ├── image_generation.py (Gemini 3 Pro Image 연동, U-019)
+│       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
+│       │   ├── image_understanding.py (이미지 이해 서비스, U-021)
+│       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
+│       ├── storage/    # 스토리지 추상화 및 검증 (RU-006-Q1/Q4)
+│       │   ├── __init__.py (팩토리 및 내보내기)
+│       │   ├── storage.py (인터페이스 정의: StorageInterface)
+│       │   ├── local_storage.py (MVP 구현체: LocalStorage)
+│       │   └── validation.py (신규: 파일 검증 및 제한 정책 SSOT)
+│       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
 │   │       │   ├── business_rules.py
 │   │       │   └── language_gate.py (신규: 언어 혼합 검증)
 │   │       └── models/     # 데이터 모델 (TurnInput/Output)

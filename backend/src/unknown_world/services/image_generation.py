@@ -34,11 +34,17 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
+from unknown_world.models.turn import Language
+from unknown_world.orchestrator.prompt_loader import load_image_prompt
+from unknown_world.storage.validation import (
+    DEFAULT_ASPECT_RATIO,
+    DEFAULT_IMAGE_SIZE,
+    SUPPORTED_IMAGE_SIZES,
+    validate_image_generation_request,
+)
 
 if TYPE_CHECKING:
     from google.genai import Client
-from unknown_world.models.turn import Language
-from unknown_world.orchestrator.prompt_loader import load_image_prompt
 
 # =============================================================================
 # 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
@@ -54,18 +60,12 @@ logger = logging.getLogger(__name__)
 # MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
 DEFAULT_OUTPUT_DIR = Path("generated_images")
 
-# 지원 이미지 크기 (Gemini 이미지 생성 지원 크기)
-SUPPORTED_SIZES: dict[str, tuple[int, int]] = {
-    "1024x1024": (1024, 1024),
-    "1280x768": (1280, 768),
-    "768x1280": (768, 1280),
-    "1536x1024": (1536, 1024),
-    "1024x1536": (1024, 1536),
-}
+# 호환성을 위한 상수 별칭
+SUPPORTED_SIZES = SUPPORTED_IMAGE_SIZES
+"""지원 이미지 크기 (호환성 별칭)."""
 
-# 기본 설정
-DEFAULT_SIZE = "1024x1024"
-DEFAULT_ASPECT_RATIO = "1:1"
+DEFAULT_SIZE = DEFAULT_IMAGE_SIZE
+"""기본 이미지 크기 (호환성 별칭)."""
 
 
 class ImageGenerationStatus(StrEnum):
@@ -646,21 +646,17 @@ def create_fallback_response(message: str | None = None) -> ImageGenerationRespo
 def validate_image_request(request: ImageGenerationRequest) -> str | None:
     """이미지 생성 요청을 검증합니다.
 
+    NOTE: 이 함수는 호환성을 위해 유지되며, 내부적으로
+    중앙화된 validate_image_generation_request를 호출합니다.
+
     Args:
         request: 검증할 요청
 
     Returns:
         오류 메시지 (유효하면 None)
     """
-    # 이미지 크기 검증
-    if request.image_size not in SUPPORTED_SIZES:
-        return f"지원하지 않는 이미지 크기: {request.image_size}"
-
-    # 프롬프트 길이 검증 (너무 짧거나 긴 경우)
-    if len(request.prompt) < 3:
-        return "프롬프트가 너무 짧습니다."
-
-    if len(request.prompt) > 2000:
-        return "프롬프트가 너무 깁니다 (최대 2000자)."
-
-    return None
+    return validate_image_generation_request(
+        prompt=request.prompt,
+        image_size=request.image_size,
+        language="ko-KR",
+    )

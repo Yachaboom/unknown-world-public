@@ -86,6 +86,7 @@ backend/src/unknown_world/services/rembg_preflight.py
 backend/src/unknown_world/storage/__init__.py
 backend/src/unknown_world/storage/local_storage.py
 backend/src/unknown_world/storage/storage.py
+backend/src/unknown_world/storage/validation.py
 backend/src/unknown_world/validation/__init__.py
 backend/src/unknown_world/validation/business_rules.py
 backend/src/unknown_world/validation/language_gate.py
@@ -444,6 +445,37 @@ def test_cors_policy():
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
+}
+</file>
+
+<file path="frontend/tsconfig.node.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+
+    /* Composite for project references */
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* Linting (엄격 모드) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
 }
 </file>
 
@@ -2291,707 +2323,6 @@ async def verify_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
     return ctx
 </file>
 
-<file path="backend/src/unknown_world/services/image_understanding.py">
-"""Unknown World - 이미지 이해(Scanner) 서비스.
-
-이 모듈은 사용자가 업로드한 이미지를 분석하여 캡션, 오브젝트(bbox),
-아이템 후보를 추출하는 서비스를 제공합니다.
-
-설계 원칙:
-    - RULE-004: 실패 시 안전한 폴백 (텍스트-only 캡션)
-    - RULE-007: 프롬프트 원문/비밀정보 노출 금지
-    - RULE-009: bbox는 0~1000 정규화 + [ymin, xmin, ymax, xmax]
-
-페어링 질문 결정:
-    - Q1: Option A (multipart 업로드로 처리)
-
-참조:
-    - vibe/unit-plans/U-021[Mvp].md
-    - vibe/tech-stack.md (비전 모델: gemini-3-flash-preview)
-    - .cursor/rules/00-core-critical.mdc
-"""
-
-from __future__ import annotations
-
-import json
-import logging
-import os
-import time
-import uuid
-from typing import TYPE_CHECKING, Any
-
-from unknown_world.config.models import ModelLabel, get_model_id
-from unknown_world.models.scanner import (
-    DetectedObject,
-    ItemCandidate,
-    ScanResult,
-    ScanStatus,
-)
-from unknown_world.models.turn import Box2D, Language
-from unknown_world.services.genai_client import ENV_UW_MODE, GenAIMode
-
-if TYPE_CHECKING:
-    from google.genai import Client
-
-# =============================================================================
-# 로거 설정 (프롬프트/비밀정보 노출 금지)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-# =============================================================================
-# 상수 정의
-# =============================================================================
-
-# 허용된 이미지 MIME 타입
-ALLOWED_MIME_TYPES = frozenset(
-    {
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-    }
-)
-
-# 최대 파일 크기 (20MB - Gemini inline 제한)
-MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
-
-# bbox 정규화 범위 (RULE-009)
-BBOX_MIN = 0
-BBOX_MAX = 1000
-
-# =============================================================================
-# 프롬프트 템플릿 (언어별)
-# =============================================================================
-
-SCAN_PROMPT_KO = """당신은 이미지 분석 전문가입니다. 주어진 이미지를 분석하여 다음 정보를 JSON 형식으로 추출하세요.
-
-## 작업 지시
-
-1. **캡션 (caption)**: 이미지 전체를 설명하는 한국어 문장 (1-2문장)
-2. **오브젝트 (objects)**: 이미지에서 발견된 주요 오브젝트 목록
-   - label: 오브젝트 이름 (한국어)
-   - box_2d: 바운딩 박스 좌표 [ymin, xmin, ymax, xmax] (0~1000 정규화)
-   - suggested_item_type: 게임 아이템으로 변환 시 적합한 유형 (key, weapon, tool, clue, material, container 등)
-3. **아이템 후보 (item_candidates)**: 게임에서 사용 가능한 아이템으로 변환된 목록
-   - id: 고유 ID (예: "item_001")
-   - label: 아이템 이름 (한국어)
-   - description: 아이템 설명 (한국어, 1문장)
-   - item_type: 아이템 유형
-   - source_object_index: 원본 오브젝트 인덱스
-
-## 출력 형식 (JSON)
-
-```json
-{
-  "caption": "이미지 설명...",
-  "objects": [
-    {
-      "label": "오브젝트명",
-      "box_2d": {"ymin": 100, "xmin": 200, "ymax": 400, "xmax": 500},
-      "suggested_item_type": "key"
-    }
-  ],
-  "item_candidates": [
-    {
-      "id": "item_001",
-      "label": "아이템명",
-      "description": "아이템 설명",
-      "item_type": "key",
-      "source_object_index": 0
-    }
-  ]
-}
-```
-
-## 주의사항
-
-- bbox 좌표는 반드시 0~1000 범위 내에서 정규화하세요.
-- 게임에 적합하지 않은 오브젝트(사람 얼굴, 민감한 콘텐츠 등)는 제외하세요.
-- 최대 10개의 오브젝트와 아이템 후보를 추출하세요.
-"""
-
-SCAN_PROMPT_EN = """You are an image analysis expert. Analyze the given image and extract the following information in JSON format.
-
-## Task Instructions
-
-1. **Caption**: A description of the entire image in English (1-2 sentences)
-2. **Objects**: List of main objects found in the image
-   - label: Object name (English)
-   - box_2d: Bounding box coordinates [ymin, xmin, ymax, xmax] (0~1000 normalized)
-   - suggested_item_type: Suitable type for game item conversion (key, weapon, tool, clue, material, container, etc.)
-3. **Item Candidates**: List of items converted for game use
-   - id: Unique ID (e.g., "item_001")
-   - label: Item name (English)
-   - description: Item description (English, 1 sentence)
-   - item_type: Item type
-   - source_object_index: Original object index
-
-## Output Format (JSON)
-
-```json
-{
-  "caption": "Image description...",
-  "objects": [
-    {
-      "label": "object_name",
-      "box_2d": {"ymin": 100, "xmin": 200, "ymax": 400, "xmax": 500},
-      "suggested_item_type": "key"
-    }
-  ],
-  "item_candidates": [
-    {
-      "id": "item_001",
-      "label": "item_name",
-      "description": "Item description",
-      "item_type": "key",
-      "source_object_index": 0
-    }
-  ]
-}
-```
-
-## Notes
-
-- bbox coordinates must be normalized within 0~1000 range.
-- Exclude objects not suitable for games (human faces, sensitive content, etc.).
-- Extract up to 10 objects and item candidates.
-"""
-
-SCAN_PROMPTS: dict[Language, str] = {
-    Language.KO: SCAN_PROMPT_KO,
-    Language.EN: SCAN_PROMPT_EN,
-}
-
-
-# =============================================================================
-# Mock 서비스 구현
-# =============================================================================
-
-
-def _create_mock_scan_result(language: Language) -> ScanResult:
-    """Mock 스캔 결과를 생성합니다.
-
-    Args:
-        language: 응답 언어
-
-    Returns:
-        고정된 Mock 스캔 결과
-    """
-    if language == Language.KO:
-        return ScanResult(
-            status=ScanStatus.COMPLETED,
-            caption="[Mock] 테스트 이미지입니다. 여러 오브젝트가 감지되었습니다.",
-            objects=[
-                DetectedObject(
-                    label="열쇠",
-                    box_2d=Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
-                    confidence=0.95,
-                    suggested_item_type="key",
-                ),
-                DetectedObject(
-                    label="상자",
-                    box_2d=Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
-                    confidence=0.88,
-                    suggested_item_type="container",
-                ),
-            ],
-            item_candidates=[
-                ItemCandidate(
-                    id="item_001",
-                    label="녹슨 열쇠",
-                    description="오래된 자물쇠를 열 수 있을 것 같은 열쇠입니다.",
-                    item_type="key",
-                    source_object_index=0,
-                ),
-                ItemCandidate(
-                    id="item_002",
-                    label="나무 상자",
-                    description="무언가 들어있을 것 같은 작은 상자입니다.",
-                    item_type="container",
-                    source_object_index=1,
-                ),
-            ],
-            message=None,
-            analysis_time_ms=150,
-        )
-    else:
-        return ScanResult(
-            status=ScanStatus.COMPLETED,
-            caption="[Mock] Test image. Multiple objects detected.",
-            objects=[
-                DetectedObject(
-                    label="Key",
-                    box_2d=Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
-                    confidence=0.95,
-                    suggested_item_type="key",
-                ),
-                DetectedObject(
-                    label="Box",
-                    box_2d=Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
-                    confidence=0.88,
-                    suggested_item_type="container",
-                ),
-            ],
-            item_candidates=[
-                ItemCandidate(
-                    id="item_001",
-                    label="Rusty Key",
-                    description="An old key that might open an ancient lock.",
-                    item_type="key",
-                    source_object_index=0,
-                ),
-                ItemCandidate(
-                    id="item_002",
-                    label="Wooden Box",
-                    description="A small box that might contain something.",
-                    item_type="container",
-                    source_object_index=1,
-                ),
-            ],
-            message=None,
-            analysis_time_ms=150,
-        )
-
-
-# =============================================================================
-# 유틸리티 함수
-# =============================================================================
-
-
-def validate_image(
-    content: bytes,
-    content_type: str,
-) -> str | None:
-    """이미지 파일을 검증합니다.
-
-    Args:
-        content: 이미지 바이트 데이터
-        content_type: MIME 타입
-
-    Returns:
-        에러 메시지 (없으면 None)
-    """
-    # MIME 타입 검증
-    if content_type.lower() not in ALLOWED_MIME_TYPES:
-        return f"지원하지 않는 이미지 형식입니다: {content_type}"
-
-    # 파일 크기 검증
-    if len(content) > MAX_FILE_SIZE_BYTES:
-        size_mb = len(content) / (1024 * 1024)
-        return f"파일이 너무 큽니다: {size_mb:.1f}MB (최대 20MB)"
-
-    # 최소 크기 검증 (빈 파일 방지)
-    if len(content) < 100:
-        return "이미지 파일이 손상되었거나 비어있습니다"
-
-    return None
-
-
-def normalize_bbox(bbox: dict[str, Any]) -> Box2D:
-    """bbox를 0~1000 범위로 정규화합니다.
-
-    Args:
-        bbox: 원본 bbox dict
-
-    Returns:
-        정규화된 Box2D
-    """
-    # 기본값
-    ymin_val: int = int(bbox.get("ymin", 0) or 0)
-    xmin_val: int = int(bbox.get("xmin", 0) or 0)
-    ymax_val: int = int(bbox.get("ymax", BBOX_MAX) or BBOX_MAX)
-    xmax_val: int = int(bbox.get("xmax", BBOX_MAX) or BBOX_MAX)
-
-    # 범위 클램핑 (RULE-009)
-    ymin_val = max(BBOX_MIN, min(BBOX_MAX, ymin_val))
-    xmin_val = max(BBOX_MIN, min(BBOX_MAX, xmin_val))
-    ymax_val = max(BBOX_MIN, min(BBOX_MAX, ymax_val))
-    xmax_val = max(BBOX_MIN, min(BBOX_MAX, xmax_val))
-
-    # ymin < ymax, xmin < xmax 보장
-    if ymin_val >= ymax_val:
-        ymax_val = min(ymin_val + 100, BBOX_MAX)
-    if xmin_val >= xmax_val:
-        xmax_val = min(xmin_val + 100, BBOX_MAX)
-
-    return Box2D(ymin=ymin_val, xmin=xmin_val, ymax=ymax_val, xmax=xmax_val)
-
-
-def _create_fallback_result(
-    message: str,
-    status: ScanStatus = ScanStatus.FAILED,
-) -> ScanResult:
-    """안전한 폴백 결과를 생성합니다 (RULE-004).
-
-    Args:
-        message: 에러/상태 메시지
-        status: 스캔 상태
-
-    Returns:
-        스키마를 준수하는 폴백 ScanResult
-    """
-    return ScanResult(
-        status=status,
-        caption="",
-        objects=[],
-        item_candidates=[],
-        message=message,
-        analysis_time_ms=0,
-    )
-
-
-def _parse_vision_response(
-    response_text: str,
-    language: Language,  # noqa: ARG001
-) -> ScanResult:
-    """비전 모델 응답을 파싱합니다.
-
-    Args:
-        response_text: 모델 응답 텍스트 (JSON 예상)
-        language: 응답 언어 (현재 사용되지 않음)
-
-    Returns:
-        파싱된 ScanResult
-    """
-    try:
-        # JSON 파싱
-        # 응답에 ```json ... ``` 마크다운이 포함된 경우 처리
-        text = response_text.strip()
-        if text.startswith("```"):
-            # 첫 번째 줄 제거 (```json)
-            lines = text.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            # 마지막 줄 제거 (```)
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            text = "\n".join(lines)
-
-        data: dict[str, Any] = json.loads(text)
-
-        # caption 추출
-        caption: str = str(data.get("caption", "") or "")
-
-        # objects 추출 및 정규화
-        objects: list[DetectedObject] = []
-        raw_objects: list[dict[str, Any]] = data.get("objects") or []  # type: ignore[assignment]
-        for i, obj in enumerate(raw_objects[:10]):  # 최대 10개
-            if not isinstance(obj, dict):  # type: ignore[reportUnnecessaryIsInstance]
-                continue
-
-            label_val = obj.get("label")
-            label: str = str(label_val) if label_val else f"Object_{i}"
-            bbox_raw: dict[str, Any] = obj.get("box_2d") or {}  # type: ignore[assignment]
-            bbox = normalize_bbox(bbox_raw)
-            confidence_raw = obj.get("confidence")
-            suggested_type_raw = obj.get("suggested_item_type")
-
-            objects.append(
-                DetectedObject(
-                    label=label,
-                    box_2d=bbox,
-                    confidence=float(confidence_raw) if confidence_raw is not None else None,  # type: ignore[arg-type]
-                    suggested_item_type=str(suggested_type_raw) if suggested_type_raw else None,  # type: ignore[arg-type]
-                )
-            )
-
-        # item_candidates 추출
-        item_candidates: list[ItemCandidate] = []
-        raw_items: list[dict[str, Any]] = data.get("item_candidates") or []  # type: ignore[assignment]
-        for i, item in enumerate(raw_items[:10]):  # 최대 10개
-            if not isinstance(item, dict):  # type: ignore[reportUnnecessaryIsInstance]
-                continue
-
-            id_val = item.get("id")
-            label_val = item.get("label")
-            desc_val = item.get("description")
-            type_val = item.get("item_type")
-            source_idx = item.get("source_object_index")
-
-            item_candidates.append(
-                ItemCandidate(
-                    id=str(id_val) if id_val else f"item_{uuid.uuid4().hex[:8]}",
-                    label=str(label_val) if label_val else f"Item_{i}",
-                    description=str(desc_val) if desc_val else "",
-                    item_type=str(type_val) if type_val else "material",
-                    source_object_index=int(source_idx) if source_idx is not None else None,  # type: ignore[arg-type]
-                )
-            )
-
-        return ScanResult(
-            status=ScanStatus.COMPLETED,
-            caption=caption,
-            objects=objects,
-            item_candidates=item_candidates,
-            message=None,
-            analysis_time_ms=0,  # 호출자에서 설정
-        )
-
-    except json.JSONDecodeError as e:
-        logger.warning(
-            "[ImageUnderstanding] JSON 파싱 실패",
-            extra={"error": str(e)},
-        )
-        # 부분 결과로 캡션만 반환 (RULE-004)
-        return ScanResult(
-            status=ScanStatus.PARTIAL,
-            caption=response_text[:500] if response_text else "",
-            objects=[],
-            item_candidates=[],
-            message="오브젝트 감지 결과를 파싱할 수 없습니다. 캡션만 제공됩니다.",
-            analysis_time_ms=0,
-        )
-    except Exception as e:
-        logger.error(
-            "[ImageUnderstanding] 응답 파싱 중 예외",
-            extra={"error_type": type(e).__name__},
-        )
-        return _create_fallback_result(f"응답 처리 중 오류: {type(e).__name__}")
-
-
-# =============================================================================
-# 이미지 이해 서비스 클래스
-# =============================================================================
-
-
-class ImageUnderstandingService:
-    """이미지 이해 서비스.
-
-    비전 모델을 사용하여 이미지를 분석하고
-    캡션, 오브젝트, 아이템 후보를 추출합니다.
-    """
-
-    def __init__(
-        self,
-        *,
-        force_mock: bool = False,
-    ) -> None:
-        """ImageUnderstandingService를 초기화합니다.
-
-        Args:
-            force_mock: True면 Mock 모드 강제
-        """
-        # 모드 결정
-        if force_mock:
-            self._is_mock = True
-        else:
-            mode_str = os.environ.get(ENV_UW_MODE, GenAIMode.REAL)
-            self._is_mock = mode_str == GenAIMode.MOCK
-
-        self._genai_client: Client | None = None
-
-        # Real 모드에서만 클라이언트 초기화
-        if not self._is_mock:
-            self._initialize_client()
-
-        logger.info(
-            "[ImageUnderstanding] 서비스 초기화",
-            extra={"mode": "mock" if self._is_mock else "real"},
-        )
-
-    def _initialize_client(self) -> None:
-        """google-genai 클라이언트를 초기화합니다."""
-        try:
-            from google.genai import Client
-
-            # Vertex AI 모드로 클라이언트 초기화
-            project = os.environ.get("VERTEX_PROJECT")
-            location = os.environ.get("VERTEX_LOCATION", "us-central1")
-
-            client_options: dict[str, Any] = {}
-            if project:
-                client_options["project"] = project
-            if location:
-                client_options["location"] = location
-
-            self._genai_client = Client(vertexai=True, **client_options)
-
-            logger.info(
-                "[ImageUnderstanding] Vertex AI 클라이언트 초기화 완료",
-                extra={
-                    "project": project or "(ADC 기본)",
-                    "location": location,
-                },
-            )
-        except Exception as e:
-            logger.warning(
-                "[ImageUnderstanding] 클라이언트 초기화 실패 - Mock 모드로 전환",
-                extra={"error_type": type(e).__name__},
-            )
-            self._is_mock = True
-            self._genai_client = None
-
-    @property
-    def is_mock(self) -> bool:
-        """Mock 모드 여부."""
-        return self._is_mock
-
-    async def analyze(
-        self,
-        image_content: bytes,
-        content_type: str,
-        language: Language = Language.KO,
-    ) -> ScanResult:
-        """이미지를 분석합니다.
-
-        Args:
-            image_content: 이미지 바이트 데이터
-            content_type: MIME 타입
-            language: 응답 언어
-
-        Returns:
-            ScanResult: 분석 결과
-        """
-        start_time = time.time()
-
-        # 이미지 검증
-        validation_error = validate_image(image_content, content_type)
-        if validation_error:
-            return _create_fallback_result(validation_error)
-
-        # Mock 모드 처리
-        if self._is_mock:
-            logger.debug("[ImageUnderstanding] Mock 분석 수행")
-            result = _create_mock_scan_result(language)
-            result.analysis_time_ms = int((time.time() - start_time) * 1000)
-            return result
-
-        # 실제 비전 모델 호출
-        try:
-            result = await self._call_vision_model(
-                image_content,
-                content_type,
-                language,
-            )
-            result.analysis_time_ms = int((time.time() - start_time) * 1000)
-            return result
-
-        except Exception as e:
-            error_type = type(e).__name__
-            logger.error(
-                "[ImageUnderstanding] 비전 모델 호출 실패",
-                extra={"error_type": error_type},
-            )
-            # 안전한 폴백 (RULE-004)
-            return _create_fallback_result(f"이미지 분석 중 오류가 발생했습니다: {error_type}")
-
-    async def _call_vision_model(
-        self,
-        image_content: bytes,
-        content_type: str,
-        language: Language,
-    ) -> ScanResult:
-        """비전 모델을 호출합니다.
-
-        Args:
-            image_content: 이미지 바이트 데이터
-            content_type: MIME 타입
-            language: 응답 언어
-
-        Returns:
-            ScanResult: 분석 결과
-        """
-        if self._genai_client is None:
-            return _create_fallback_result("비전 클라이언트가 초기화되지 않았습니다")
-
-        # 프롬프트 선택
-        prompt_text = SCAN_PROMPTS.get(language, SCAN_PROMPT_KO)
-
-        # 모델 ID 조회
-        model_id = get_model_id(ModelLabel.VISION)
-
-        logger.debug(
-            "[ImageUnderstanding] 비전 모델 호출",
-            extra={
-                "model_id": model_id,
-                "language": language.value,
-                "image_size_kb": len(image_content) // 1024,
-            },
-        )
-
-        # google-genai SDK 호출 (멀티모달 입력)
-        from google.genai.types import Content, GenerateContentConfig, Part
-
-        # 멀티모달 입력 구성 (이미지 먼저, 텍스트 뒤에 - PRD 8.6 권장)
-        contents = [
-            Content(
-                parts=[
-                    Part.from_bytes(
-                        data=image_content,
-                        mime_type=content_type,
-                    ),
-                    Part.from_text(text=prompt_text),
-                ]
-            )
-        ]
-
-        # JSON 응답 강제
-        config = GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-
-        response = await self._genai_client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
-            model=model_id,
-            contents=contents,
-            config=config,
-        )
-
-        # 응답 텍스트 추출
-        response_text: str = ""
-        if hasattr(response, "text") and response.text:
-            response_text = str(response.text)
-        else:
-            response_text = str(response)
-
-        if not response_text:
-            return _create_fallback_result("모델 응답이 비어있습니다")
-
-        # 응답 파싱
-        return _parse_vision_response(response_text, language)
-
-
-# =============================================================================
-# 팩토리 함수
-# =============================================================================
-
-# 싱글톤 인스턴스 캐시
-_service_instance: ImageUnderstandingService | None = None
-
-
-def get_image_understanding_service(
-    *,
-    force_new: bool = False,
-) -> ImageUnderstandingService:
-    """ImageUnderstandingService 인스턴스를 반환합니다.
-
-    싱글톤 패턴으로 동작합니다.
-
-    Args:
-        force_new: True면 캐시를 무시하고 새 인스턴스 생성
-
-    Returns:
-        ImageUnderstandingService 인스턴스
-    """
-    global _service_instance
-
-    if not force_new and _service_instance is not None:
-        return _service_instance
-
-    _service_instance = ImageUnderstandingService()
-    return _service_instance
-
-
-def reset_image_understanding_service() -> None:
-    """ImageUnderstandingService 캐시를 초기화합니다.
-
-    테스트 시 서비스를 재설정할 때 사용합니다.
-    """
-    global _service_instance
-    _service_instance = None
-</file>
-
 <file path="backend/src/unknown_world/services/rembg_preflight.py">
 """Unknown World - rembg 사전 점검 서비스 (preflight).
 
@@ -3519,69 +2850,6 @@ async def run_preflight_async(config: PreflightConfig | None = None) -> RembgPre
     return result
 </file>
 
-<file path="backend/src/unknown_world/storage/__init__.py">
-"""Unknown World - 스토리지 모듈.
-
-스토리지 추상화 계층을 제공합니다.
-MVP: LocalStorage, MMP: GCSStorage(예정)
-
-참조:
-    - vibe/refactors/RU-006-Q4.md
-"""
-
-from unknown_world.storage.local_storage import LocalStorage
-from unknown_world.storage.storage import (
-    PutResult,
-    StorageCategory,
-    StorageInterface,
-    StorageMetadata,
-)
-
-__all__ = [
-    "LocalStorage",
-    "PutResult",
-    "StorageCategory",
-    "StorageInterface",
-    "StorageMetadata",
-    "get_storage",
-]
-
-# 싱글톤 인스턴스 캐시
-_storage_instance: StorageInterface | None = None
-
-
-def get_storage(*, force_new: bool = False) -> StorageInterface:
-    """스토리지 인스턴스를 반환합니다.
-
-    환경변수에 따라 LocalStorage 또는 GCSStorage를 반환합니다.
-    MVP에서는 LocalStorage만 사용합니다.
-
-    Args:
-        force_new: True면 캐시를 무시하고 새 인스턴스 생성
-
-    Returns:
-        StorageInterface 구현체
-    """
-    global _storage_instance
-
-    if not force_new and _storage_instance is not None:
-        return _storage_instance
-
-    # MVP: LocalStorage만 사용
-    # MMP: 환경변수로 GCS 전환 예정
-    _storage_instance = LocalStorage()
-    return _storage_instance
-
-
-def reset_storage() -> None:
-    """스토리지 캐시를 초기화합니다.
-
-    테스트 시 스토리지를 재설정할 때 사용합니다.
-    """
-    global _storage_instance
-    _storage_instance = None
-</file>
-
 <file path="backend/src/unknown_world/storage/local_storage.py">
 """Unknown World - 로컬 파일 시스템 스토리지 구현.
 
@@ -3916,6 +3184,177 @@ class StorageInterface(ABC):
             접근 URL
         """
         ...
+</file>
+
+<file path="backend/src/unknown_world/storage/validation.py">
+"""Unknown World - 파일 검증 및 제한 정책.
+
+모든 이미지/아티팩트 관련 검증 로직과 상수를 중앙 관리합니다.
+
+설계 원칙:
+    - RULE-007: 에러 메시지에 파일 내용 노출 금지
+    - RULE-004: 검증 실패 시 명확한 에러 메시지 반환
+
+참조:
+    - vibe/refactors/RU-006-Q1.md
+"""
+
+from __future__ import annotations
+
+from typing import Final
+
+# =============================================================================
+# 이미지 업로드 제한 (Scanner/Vision 공통)
+# =============================================================================
+
+ALLOWED_IMAGE_MIME_TYPES: Final[frozenset[str]] = frozenset(
+    {
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+    }
+)
+"""지원하는 이미지 MIME 타입."""
+
+MAX_IMAGE_FILE_SIZE_BYTES: Final[int] = 20 * 1024 * 1024  # 20MB
+"""최대 이미지 파일 크기 (바이트)."""
+
+MIN_IMAGE_FILE_SIZE_BYTES: Final[int] = 100
+"""최소 이미지 파일 크기 (손상 파일 감지용)."""
+
+# =============================================================================
+# 이미지 생성 제한
+# =============================================================================
+
+SUPPORTED_IMAGE_SIZES: Final[dict[str, tuple[int, int]]] = {
+    "1024x1024": (1024, 1024),
+    "1280x768": (1280, 768),
+    "768x1280": (768, 1280),
+    "1536x1024": (1536, 1024),
+    "1024x1536": (1024, 1536),
+}
+"""지원하는 이미지 생성 크기."""
+
+DEFAULT_IMAGE_SIZE: Final[str] = "1024x1024"
+"""기본 이미지 생성 크기."""
+
+DEFAULT_ASPECT_RATIO: Final[str] = "1:1"
+"""기본 가로세로 비율."""
+
+MIN_PROMPT_LENGTH: Final[int] = 3
+"""최소 프롬프트 길이."""
+
+MAX_PROMPT_LENGTH: Final[int] = 2000
+"""최대 프롬프트 길이."""
+
+# =============================================================================
+# bbox 정규화 범위 (RULE-009)
+# =============================================================================
+
+BBOX_MIN: Final[int] = 0
+"""bbox 최소값."""
+
+BBOX_MAX: Final[int] = 1000
+"""bbox 최대값."""
+
+
+# =============================================================================
+# 검증 함수
+# =============================================================================
+
+
+def validate_image_upload(
+    content: bytes,
+    content_type: str,
+    *,
+    language: str = "ko-KR",
+) -> str | None:
+    """업로드 이미지를 검증합니다.
+
+    Args:
+        content: 이미지 바이트 데이터
+        content_type: MIME 타입
+        language: 에러 메시지 언어
+
+    Returns:
+        에러 메시지 (없으면 None)
+    """
+    is_ko = language == "ko-KR"
+
+    # MIME 타입 검증
+    if content_type.lower() not in ALLOWED_IMAGE_MIME_TYPES:
+        return (
+            f"지원하지 않는 이미지 형식입니다: {content_type}"
+            if is_ko
+            else f"Unsupported image format: {content_type}"
+        )
+
+    # 파일 크기 검증 (최대)
+    if len(content) > MAX_IMAGE_FILE_SIZE_BYTES:
+        size_mb = len(content) / (1024 * 1024)
+        return (
+            f"파일이 너무 큽니다: {size_mb:.1f}MB (최대 20MB)"
+            if is_ko
+            else f"File too large: {size_mb:.1f}MB (max 20MB)"
+        )
+
+    # 파일 크기 검증 (최소 - 손상 파일 감지)
+    if len(content) < MIN_IMAGE_FILE_SIZE_BYTES:
+        return (
+            "이미지 파일이 손상되었거나 비어있습니다"
+            if is_ko
+            else "Image file is corrupted or empty"
+        )
+
+    return None
+
+
+def validate_image_generation_request(
+    prompt: str,
+    image_size: str,
+    *,
+    language: str = "ko-KR",
+) -> str | None:
+    """이미지 생성 요청을 검증합니다.
+
+    Args:
+        prompt: 이미지 생성 프롬프트
+        image_size: 요청된 이미지 크기
+        language: 에러 메시지 언어
+
+    Returns:
+        에러 메시지 (없으면 None)
+    """
+    is_ko = language == "ko-KR"
+
+    # 이미지 크기 검증
+    if image_size not in SUPPORTED_IMAGE_SIZES:
+        return (
+            f"지원하지 않는 이미지 크기: {image_size}"
+            if is_ko
+            else f"Unsupported image size: {image_size}"
+        )
+
+    # 프롬프트 길이 검증 (너무 짧음)
+    if len(prompt) < MIN_PROMPT_LENGTH:
+        return "프롬프트가 너무 짧습니다." if is_ko else "Prompt is too short."
+
+    # 프롬프트 길이 검증 (너무 김)
+    if len(prompt) > MAX_PROMPT_LENGTH:
+        return (
+            f"프롬프트가 너무 깁니다 (최대 {MAX_PROMPT_LENGTH}자)."
+            if is_ko
+            else f"Prompt is too long (max {MAX_PROMPT_LENGTH} chars)."
+        )
+
+    return None
+
+
+def get_max_file_size_mb() -> int:
+    """최대 파일 크기를 MB 단위로 반환합니다."""
+    return MAX_IMAGE_FILE_SIZE_BYTES // (1024 * 1024)
 </file>
 
 <file path="backend/src/unknown_world/validation/language_gate.py">
@@ -11246,39 +10685,71 @@ export function box2dCenter(box: Box2D): { x: number; y: number } {
 }
 </file>
 
-<file path="frontend/tsconfig.node.json">
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-
-    /* Composite for project references */
-    "composite": true,
-    "emitDeclarationOnly": true,
-    "declaration": true,
-    "declarationMap": true,
-
-    /* Linting (엄격 모드) */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["vite.config.ts"]
-}
-</file>
-
 <file path="request.json">
 {"language": "ko-KR", "text": "모험을 시작한다", "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"}, "economy_snapshot": {"signal": 5, "memory_shard": 0}}
+</file>
+
+<file path="shared/README.md">
+# shared/
+
+이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
+
+## 📁 구조
+
+```
+shared/
+├── schemas/
+│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
+│       ├── turn_input.schema.json    # Client → Server 요청 스키마
+│       └── turn_output.schema.json   # Server → Client 응답 스키마
+└── README.md
+```
+
+## 🔄 SSOT 원칙 (RU-001-Q4)
+
+- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
+- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
+- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
+
+### 소비 전략 (Option B: 생성물 기반 동기화)
+
+| 소비자 | 도구/방식 | 생성물 경로 (권장) |
+|--------|-----------|-------------------|
+| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
+| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
+
+> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
+
+## 📋 스키마 파일 목록
+
+### Turn 계약 (MVP)
+
+| 파일 | 용도 | PRD 참조 |
+|------|------|----------|
+| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
+| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
+
+## ✅ 스키마 작성 가이드라인
+
+- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
+- **권장 속성**: `required`, `enum`, `description`을 적극 사용
+- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
+- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
+- **참조**: `vibe/ref/structured-outputs-guide.md`
+
+## ⚠️ 보안 주의사항 (RULE-007)
+
+- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
+- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
+- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
+
+## 📚 관련 문서
+
+- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
+- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
+- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
+- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
+- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
 </file>
 
 <file path="backend/prompts/image/scene_prompt.en.md">
@@ -13457,6 +12928,786 @@ async def remove_background_if_needed(
 
     # 성공/실패 모두 output_path 반환 (폴백 포함)
     return result.output_path
+</file>
+
+<file path="backend/src/unknown_world/services/image_understanding.py">
+"""Unknown World - 이미지 이해(Scanner) 서비스.
+
+이 모듈은 사용자가 업로드한 이미지를 분석하여 캡션, 오브젝트(bbox),
+아이템 후보를 추출하는 서비스를 제공합니다.
+
+설계 원칙:
+    - RULE-004: 실패 시 안전한 폴백 (텍스트-only 캡션)
+    - RULE-007: 프롬프트 원문/비밀정보 노출 금지
+    - RULE-009: bbox는 0~1000 정규화 + [ymin, xmin, ymax, xmax]
+
+페어링 질문 결정:
+    - Q1: Option A (multipart 업로드로 처리)
+
+참조:
+    - vibe/unit-plans/U-021[Mvp].md
+    - vibe/tech-stack.md (비전 모델: gemini-3-flash-preview)
+    - .cursor/rules/00-core-critical.mdc
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import time
+import uuid
+from typing import TYPE_CHECKING, Any
+
+from unknown_world.config.models import ModelLabel, get_model_id
+from unknown_world.models.scanner import (
+    DetectedObject,
+    ItemCandidate,
+    ScanResult,
+    ScanStatus,
+)
+from unknown_world.models.turn import Box2D, Language
+from unknown_world.services.genai_client import ENV_UW_MODE, GenAIMode
+from unknown_world.storage.validation import (
+    ALLOWED_IMAGE_MIME_TYPES,
+    BBOX_MAX,
+    BBOX_MIN,
+    MAX_IMAGE_FILE_SIZE_BYTES,
+    validate_image_upload,
+)
+
+if TYPE_CHECKING:
+    from google.genai import Client
+
+# =============================================================================
+# 로거 설정 (프롬프트/비밀정보 노출 금지)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# 호환성을 위한 상수 별칭 (api/scanner.py에서 import)
+# =============================================================================
+
+ALLOWED_MIME_TYPES = ALLOWED_IMAGE_MIME_TYPES
+"""지원하는 이미지 MIME 타입 (호환성 별칭)."""
+
+MAX_FILE_SIZE_BYTES = MAX_IMAGE_FILE_SIZE_BYTES
+"""최대 이미지 파일 크기 (호환성 별칭)."""
+
+# =============================================================================
+# 프롬프트 템플릿 (언어별)
+# =============================================================================
+
+SCAN_PROMPT_KO = """당신은 이미지 분석 전문가입니다. 주어진 이미지를 분석하여 다음 정보를 JSON 형식으로 추출하세요.
+
+## 작업 지시
+
+1. **캡션 (caption)**: 이미지 전체를 설명하는 한국어 문장 (1-2문장)
+2. **오브젝트 (objects)**: 이미지에서 발견된 주요 오브젝트 목록
+   - label: 오브젝트 이름 (한국어)
+   - box_2d: 바운딩 박스 좌표 [ymin, xmin, ymax, xmax] (0~1000 정규화)
+   - suggested_item_type: 게임 아이템으로 변환 시 적합한 유형 (key, weapon, tool, clue, material, container 등)
+3. **아이템 후보 (item_candidates)**: 게임에서 사용 가능한 아이템으로 변환된 목록
+   - id: 고유 ID (예: "item_001")
+   - label: 아이템 이름 (한국어)
+   - description: 아이템 설명 (한국어, 1문장)
+   - item_type: 아이템 유형
+   - source_object_index: 원본 오브젝트 인덱스
+
+## 출력 형식 (JSON)
+
+```json
+{
+  "caption": "이미지 설명...",
+  "objects": [
+    {
+      "label": "오브젝트명",
+      "box_2d": {"ymin": 100, "xmin": 200, "ymax": 400, "xmax": 500},
+      "suggested_item_type": "key"
+    }
+  ],
+  "item_candidates": [
+    {
+      "id": "item_001",
+      "label": "아이템명",
+      "description": "아이템 설명",
+      "item_type": "key",
+      "source_object_index": 0
+    }
+  ]
+}
+```
+
+## 주의사항
+
+- bbox 좌표는 반드시 0~1000 범위 내에서 정규화하세요.
+- 게임에 적합하지 않은 오브젝트(사람 얼굴, 민감한 콘텐츠 등)는 제외하세요.
+- 최대 10개의 오브젝트와 아이템 후보를 추출하세요.
+"""
+
+SCAN_PROMPT_EN = """You are an image analysis expert. Analyze the given image and extract the following information in JSON format.
+
+## Task Instructions
+
+1. **Caption**: A description of the entire image in English (1-2 sentences)
+2. **Objects**: List of main objects found in the image
+   - label: Object name (English)
+   - box_2d: Bounding box coordinates [ymin, xmin, ymax, xmax] (0~1000 normalized)
+   - suggested_item_type: Suitable type for game item conversion (key, weapon, tool, clue, material, container, etc.)
+3. **Item Candidates**: List of items converted for game use
+   - id: Unique ID (e.g., "item_001")
+   - label: Item name (English)
+   - description: Item description (English, 1 sentence)
+   - item_type: Item type
+   - source_object_index: Original object index
+
+## Output Format (JSON)
+
+```json
+{
+  "caption": "Image description...",
+  "objects": [
+    {
+      "label": "object_name",
+      "box_2d": {"ymin": 100, "xmin": 200, "ymax": 400, "xmax": 500},
+      "suggested_item_type": "key"
+    }
+  ],
+  "item_candidates": [
+    {
+      "id": "item_001",
+      "label": "item_name",
+      "description": "Item description",
+      "item_type": "key",
+      "source_object_index": 0
+    }
+  ]
+}
+```
+
+## Notes
+
+- bbox coordinates must be normalized within 0~1000 range.
+- Exclude objects not suitable for games (human faces, sensitive content, etc.).
+- Extract up to 10 objects and item candidates.
+"""
+
+SCAN_PROMPTS: dict[Language, str] = {
+    Language.KO: SCAN_PROMPT_KO,
+    Language.EN: SCAN_PROMPT_EN,
+}
+
+
+# =============================================================================
+# Mock 서비스 구현
+# =============================================================================
+
+
+def _create_mock_scan_result(language: Language) -> ScanResult:
+    """Mock 스캔 결과를 생성합니다.
+
+    Args:
+        language: 응답 언어
+
+    Returns:
+        고정된 Mock 스캔 결과
+    """
+    if language == Language.KO:
+        return ScanResult(
+            status=ScanStatus.COMPLETED,
+            caption="[Mock] 테스트 이미지입니다. 여러 오브젝트가 감지되었습니다.",
+            objects=[
+                DetectedObject(
+                    label="열쇠",
+                    box_2d=Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
+                    confidence=0.95,
+                    suggested_item_type="key",
+                ),
+                DetectedObject(
+                    label="상자",
+                    box_2d=Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
+                    confidence=0.88,
+                    suggested_item_type="container",
+                ),
+            ],
+            item_candidates=[
+                ItemCandidate(
+                    id="item_001",
+                    label="녹슨 열쇠",
+                    description="오래된 자물쇠를 열 수 있을 것 같은 열쇠입니다.",
+                    item_type="key",
+                    source_object_index=0,
+                ),
+                ItemCandidate(
+                    id="item_002",
+                    label="나무 상자",
+                    description="무언가 들어있을 것 같은 작은 상자입니다.",
+                    item_type="container",
+                    source_object_index=1,
+                ),
+            ],
+            message=None,
+            analysis_time_ms=150,
+        )
+    else:
+        return ScanResult(
+            status=ScanStatus.COMPLETED,
+            caption="[Mock] Test image. Multiple objects detected.",
+            objects=[
+                DetectedObject(
+                    label="Key",
+                    box_2d=Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
+                    confidence=0.95,
+                    suggested_item_type="key",
+                ),
+                DetectedObject(
+                    label="Box",
+                    box_2d=Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
+                    confidence=0.88,
+                    suggested_item_type="container",
+                ),
+            ],
+            item_candidates=[
+                ItemCandidate(
+                    id="item_001",
+                    label="Rusty Key",
+                    description="An old key that might open an ancient lock.",
+                    item_type="key",
+                    source_object_index=0,
+                ),
+                ItemCandidate(
+                    id="item_002",
+                    label="Wooden Box",
+                    description="A small box that might contain something.",
+                    item_type="container",
+                    source_object_index=1,
+                ),
+            ],
+            message=None,
+            analysis_time_ms=150,
+        )
+
+
+# =============================================================================
+# 유틸리티 함수
+# =============================================================================
+
+
+def validate_image(
+    content: bytes,
+    content_type: str,
+) -> str | None:
+    """이미지 파일을 검증합니다.
+
+    NOTE: 이 함수는 호환성을 위해 유지되며, 내부적으로
+    중앙화된 validate_image_upload를 호출합니다.
+
+    Args:
+        content: 이미지 바이트 데이터
+        content_type: MIME 타입
+
+    Returns:
+        에러 메시지 (없으면 None)
+    """
+    return validate_image_upload(content, content_type, language="ko-KR")
+
+
+def normalize_bbox(bbox: dict[str, Any]) -> Box2D:
+    """bbox를 0~1000 범위로 정규화합니다.
+
+    Args:
+        bbox: 원본 bbox dict
+
+    Returns:
+        정규화된 Box2D
+    """
+    # 기본값
+    ymin_val: int = int(bbox.get("ymin", 0) or 0)
+    xmin_val: int = int(bbox.get("xmin", 0) or 0)
+    ymax_val: int = int(bbox.get("ymax", BBOX_MAX) or BBOX_MAX)
+    xmax_val: int = int(bbox.get("xmax", BBOX_MAX) or BBOX_MAX)
+
+    # 범위 클램핑 (RULE-009)
+    ymin_val = max(BBOX_MIN, min(BBOX_MAX, ymin_val))
+    xmin_val = max(BBOX_MIN, min(BBOX_MAX, xmin_val))
+    ymax_val = max(BBOX_MIN, min(BBOX_MAX, ymax_val))
+    xmax_val = max(BBOX_MIN, min(BBOX_MAX, xmax_val))
+
+    # ymin < ymax, xmin < xmax 보장
+    if ymin_val >= ymax_val:
+        ymax_val = min(ymin_val + 100, BBOX_MAX)
+    if xmin_val >= xmax_val:
+        xmax_val = min(xmin_val + 100, BBOX_MAX)
+
+    return Box2D(ymin=ymin_val, xmin=xmin_val, ymax=ymax_val, xmax=xmax_val)
+
+
+def _create_fallback_result(
+    message: str,
+    status: ScanStatus = ScanStatus.FAILED,
+) -> ScanResult:
+    """안전한 폴백 결과를 생성합니다 (RULE-004).
+
+    Args:
+        message: 에러/상태 메시지
+        status: 스캔 상태
+
+    Returns:
+        스키마를 준수하는 폴백 ScanResult
+    """
+    return ScanResult(
+        status=status,
+        caption="",
+        objects=[],
+        item_candidates=[],
+        message=message,
+        analysis_time_ms=0,
+    )
+
+
+def _parse_vision_response(
+    response_text: str,
+    language: Language,  # noqa: ARG001
+) -> ScanResult:
+    """비전 모델 응답을 파싱합니다.
+
+    Args:
+        response_text: 모델 응답 텍스트 (JSON 예상)
+        language: 응답 언어 (현재 사용되지 않음)
+
+    Returns:
+        파싱된 ScanResult
+    """
+    try:
+        # JSON 파싱
+        # 응답에 ```json ... ``` 마크다운이 포함된 경우 처리
+        text = response_text.strip()
+        if text.startswith("```"):
+            # 첫 번째 줄 제거 (```json)
+            lines = text.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            # 마지막 줄 제거 (```)
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            text = "\n".join(lines)
+
+        data: dict[str, Any] = json.loads(text)
+
+        # caption 추출
+        caption: str = str(data.get("caption", "") or "")
+
+        # objects 추출 및 정규화
+        objects: list[DetectedObject] = []
+        raw_objects: list[dict[str, Any]] = data.get("objects") or []  # type: ignore[assignment]
+        for i, obj in enumerate(raw_objects[:10]):  # 최대 10개
+            if not isinstance(obj, dict):  # type: ignore[reportUnnecessaryIsInstance]
+                continue
+
+            label_val = obj.get("label")
+            label: str = str(label_val) if label_val else f"Object_{i}"
+            bbox_raw: dict[str, Any] = obj.get("box_2d") or {}  # type: ignore[assignment]
+            bbox = normalize_bbox(bbox_raw)
+            confidence_raw = obj.get("confidence")
+            suggested_type_raw = obj.get("suggested_item_type")
+
+            objects.append(
+                DetectedObject(
+                    label=label,
+                    box_2d=bbox,
+                    confidence=float(confidence_raw) if confidence_raw is not None else None,  # type: ignore[arg-type]
+                    suggested_item_type=str(suggested_type_raw) if suggested_type_raw else None,  # type: ignore[arg-type]
+                )
+            )
+
+        # item_candidates 추출
+        item_candidates: list[ItemCandidate] = []
+        raw_items: list[dict[str, Any]] = data.get("item_candidates") or []  # type: ignore[assignment]
+        for i, item in enumerate(raw_items[:10]):  # 최대 10개
+            if not isinstance(item, dict):  # type: ignore[reportUnnecessaryIsInstance]
+                continue
+
+            id_val = item.get("id")
+            label_val = item.get("label")
+            desc_val = item.get("description")
+            type_val = item.get("item_type")
+            source_idx = item.get("source_object_index")
+
+            item_candidates.append(
+                ItemCandidate(
+                    id=str(id_val) if id_val else f"item_{uuid.uuid4().hex[:8]}",
+                    label=str(label_val) if label_val else f"Item_{i}",
+                    description=str(desc_val) if desc_val else "",
+                    item_type=str(type_val) if type_val else "material",
+                    source_object_index=int(source_idx) if source_idx is not None else None,  # type: ignore[arg-type]
+                )
+            )
+
+        return ScanResult(
+            status=ScanStatus.COMPLETED,
+            caption=caption,
+            objects=objects,
+            item_candidates=item_candidates,
+            message=None,
+            analysis_time_ms=0,  # 호출자에서 설정
+        )
+
+    except json.JSONDecodeError as e:
+        logger.warning(
+            "[ImageUnderstanding] JSON 파싱 실패",
+            extra={"error": str(e)},
+        )
+        # 부분 결과로 캡션만 반환 (RULE-004)
+        return ScanResult(
+            status=ScanStatus.PARTIAL,
+            caption=response_text[:500] if response_text else "",
+            objects=[],
+            item_candidates=[],
+            message="오브젝트 감지 결과를 파싱할 수 없습니다. 캡션만 제공됩니다.",
+            analysis_time_ms=0,
+        )
+    except Exception as e:
+        logger.error(
+            "[ImageUnderstanding] 응답 파싱 중 예외",
+            extra={"error_type": type(e).__name__},
+        )
+        return _create_fallback_result(f"응답 처리 중 오류: {type(e).__name__}")
+
+
+# =============================================================================
+# 이미지 이해 서비스 클래스
+# =============================================================================
+
+
+class ImageUnderstandingService:
+    """이미지 이해 서비스.
+
+    비전 모델을 사용하여 이미지를 분석하고
+    캡션, 오브젝트, 아이템 후보를 추출합니다.
+    """
+
+    def __init__(
+        self,
+        *,
+        force_mock: bool = False,
+    ) -> None:
+        """ImageUnderstandingService를 초기화합니다.
+
+        Args:
+            force_mock: True면 Mock 모드 강제
+        """
+        # 모드 결정
+        if force_mock:
+            self._is_mock = True
+        else:
+            mode_str = os.environ.get(ENV_UW_MODE, GenAIMode.REAL)
+            self._is_mock = mode_str == GenAIMode.MOCK
+
+        self._genai_client: Client | None = None
+
+        # Real 모드에서만 클라이언트 초기화
+        if not self._is_mock:
+            self._initialize_client()
+
+        logger.info(
+            "[ImageUnderstanding] 서비스 초기화",
+            extra={"mode": "mock" if self._is_mock else "real"},
+        )
+
+    def _initialize_client(self) -> None:
+        """google-genai 클라이언트를 초기화합니다."""
+        try:
+            from google.genai import Client
+
+            # Vertex AI 모드로 클라이언트 초기화
+            project = os.environ.get("VERTEX_PROJECT")
+            location = os.environ.get("VERTEX_LOCATION", "us-central1")
+
+            client_options: dict[str, Any] = {}
+            if project:
+                client_options["project"] = project
+            if location:
+                client_options["location"] = location
+
+            self._genai_client = Client(vertexai=True, **client_options)
+
+            logger.info(
+                "[ImageUnderstanding] Vertex AI 클라이언트 초기화 완료",
+                extra={
+                    "project": project or "(ADC 기본)",
+                    "location": location,
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                "[ImageUnderstanding] 클라이언트 초기화 실패 - Mock 모드로 전환",
+                extra={"error_type": type(e).__name__},
+            )
+            self._is_mock = True
+            self._genai_client = None
+
+    @property
+    def is_mock(self) -> bool:
+        """Mock 모드 여부."""
+        return self._is_mock
+
+    async def analyze(
+        self,
+        image_content: bytes,
+        content_type: str,
+        language: Language = Language.KO,
+    ) -> ScanResult:
+        """이미지를 분석합니다.
+
+        Args:
+            image_content: 이미지 바이트 데이터
+            content_type: MIME 타입
+            language: 응답 언어
+
+        Returns:
+            ScanResult: 분석 결과
+        """
+        start_time = time.time()
+
+        # 이미지 검증
+        validation_error = validate_image(image_content, content_type)
+        if validation_error:
+            return _create_fallback_result(validation_error)
+
+        # Mock 모드 처리
+        if self._is_mock:
+            logger.debug("[ImageUnderstanding] Mock 분석 수행")
+            result = _create_mock_scan_result(language)
+            result.analysis_time_ms = int((time.time() - start_time) * 1000)
+            return result
+
+        # 실제 비전 모델 호출
+        try:
+            result = await self._call_vision_model(
+                image_content,
+                content_type,
+                language,
+            )
+            result.analysis_time_ms = int((time.time() - start_time) * 1000)
+            return result
+
+        except Exception as e:
+            error_type = type(e).__name__
+            logger.error(
+                "[ImageUnderstanding] 비전 모델 호출 실패",
+                extra={"error_type": error_type},
+            )
+            # 안전한 폴백 (RULE-004)
+            return _create_fallback_result(f"이미지 분석 중 오류가 발생했습니다: {error_type}")
+
+    async def _call_vision_model(
+        self,
+        image_content: bytes,
+        content_type: str,
+        language: Language,
+    ) -> ScanResult:
+        """비전 모델을 호출합니다.
+
+        Args:
+            image_content: 이미지 바이트 데이터
+            content_type: MIME 타입
+            language: 응답 언어
+
+        Returns:
+            ScanResult: 분석 결과
+        """
+        if self._genai_client is None:
+            return _create_fallback_result("비전 클라이언트가 초기화되지 않았습니다")
+
+        # 프롬프트 선택
+        prompt_text = SCAN_PROMPTS.get(language, SCAN_PROMPT_KO)
+
+        # 모델 ID 조회
+        model_id = get_model_id(ModelLabel.VISION)
+
+        logger.debug(
+            "[ImageUnderstanding] 비전 모델 호출",
+            extra={
+                "model_id": model_id,
+                "language": language.value,
+                "image_size_kb": len(image_content) // 1024,
+            },
+        )
+
+        # google-genai SDK 호출 (멀티모달 입력)
+        from google.genai.types import Content, GenerateContentConfig, Part
+
+        # 멀티모달 입력 구성 (이미지 먼저, 텍스트 뒤에 - PRD 8.6 권장)
+        contents = [
+            Content(
+                parts=[
+                    Part.from_bytes(
+                        data=image_content,
+                        mime_type=content_type,
+                    ),
+                    Part.from_text(text=prompt_text),
+                ]
+            )
+        ]
+
+        # JSON 응답 강제
+        config = GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+
+        response = await self._genai_client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
+            model=model_id,
+            contents=contents,
+            config=config,
+        )
+
+        # 응답 텍스트 추출
+        response_text: str = ""
+        if hasattr(response, "text") and response.text:
+            response_text = str(response.text)
+        else:
+            response_text = str(response)
+
+        if not response_text:
+            return _create_fallback_result("모델 응답이 비어있습니다")
+
+        # 응답 파싱
+        return _parse_vision_response(response_text, language)
+
+
+# =============================================================================
+# 팩토리 함수
+# =============================================================================
+
+# 싱글톤 인스턴스 캐시
+_service_instance: ImageUnderstandingService | None = None
+
+
+def get_image_understanding_service(
+    *,
+    force_new: bool = False,
+) -> ImageUnderstandingService:
+    """ImageUnderstandingService 인스턴스를 반환합니다.
+
+    싱글톤 패턴으로 동작합니다.
+
+    Args:
+        force_new: True면 캐시를 무시하고 새 인스턴스 생성
+
+    Returns:
+        ImageUnderstandingService 인스턴스
+    """
+    global _service_instance
+
+    if not force_new and _service_instance is not None:
+        return _service_instance
+
+    _service_instance = ImageUnderstandingService()
+    return _service_instance
+
+
+def reset_image_understanding_service() -> None:
+    """ImageUnderstandingService 캐시를 초기화합니다.
+
+    테스트 시 서비스를 재설정할 때 사용합니다.
+    """
+    global _service_instance
+    _service_instance = None
+</file>
+
+<file path="backend/src/unknown_world/storage/__init__.py">
+"""Unknown World - 스토리지 모듈.
+
+스토리지 추상화 계층을 제공합니다.
+MVP: LocalStorage, MMP: GCSStorage(예정)
+
+참조:
+    - vibe/refactors/RU-006-Q4.md
+"""
+
+from unknown_world.storage.local_storage import LocalStorage
+from unknown_world.storage.storage import (
+    PutResult,
+    StorageCategory,
+    StorageInterface,
+    StorageMetadata,
+)
+from unknown_world.storage.validation import (
+    ALLOWED_IMAGE_MIME_TYPES,
+    BBOX_MAX,
+    BBOX_MIN,
+    DEFAULT_ASPECT_RATIO,
+    DEFAULT_IMAGE_SIZE,
+    MAX_IMAGE_FILE_SIZE_BYTES,
+    MAX_PROMPT_LENGTH,
+    MIN_IMAGE_FILE_SIZE_BYTES,
+    MIN_PROMPT_LENGTH,
+    SUPPORTED_IMAGE_SIZES,
+    get_max_file_size_mb,
+    validate_image_generation_request,
+    validate_image_upload,
+)
+
+__all__ = [
+    # Storage
+    "LocalStorage",
+    "PutResult",
+    "StorageCategory",
+    "StorageInterface",
+    "StorageMetadata",
+    "get_storage",
+    # Validation constants
+    "ALLOWED_IMAGE_MIME_TYPES",
+    "BBOX_MAX",
+    "BBOX_MIN",
+    "DEFAULT_ASPECT_RATIO",
+    "DEFAULT_IMAGE_SIZE",
+    "MAX_IMAGE_FILE_SIZE_BYTES",
+    "MAX_PROMPT_LENGTH",
+    "MIN_IMAGE_FILE_SIZE_BYTES",
+    "MIN_PROMPT_LENGTH",
+    "SUPPORTED_IMAGE_SIZES",
+    # Validation functions
+    "get_max_file_size_mb",
+    "validate_image_generation_request",
+    "validate_image_upload",
+]
+
+# 싱글톤 인스턴스 캐시
+_storage_instance: StorageInterface | None = None
+
+
+def get_storage(*, force_new: bool = False) -> StorageInterface:
+    """스토리지 인스턴스를 반환합니다.
+
+    환경변수에 따라 LocalStorage 또는 GCSStorage를 반환합니다.
+    MVP에서는 LocalStorage만 사용합니다.
+
+    Args:
+        force_new: True면 캐시를 무시하고 새 인스턴스 생성
+
+    Returns:
+        StorageInterface 구현체
+    """
+    global _storage_instance
+
+    if not force_new and _storage_instance is not None:
+        return _storage_instance
+
+    # MVP: LocalStorage만 사용
+    # MMP: 환경변수로 GCS 전환 예정
+    _storage_instance = LocalStorage()
+    return _storage_instance
+
+
+def reset_storage() -> None:
+    """스토리지 캐시를 초기화합니다.
+
+    테스트 시 스토리지를 재설정할 때 사용합니다.
+    """
+    global _storage_instance
+    _storage_instance = None
 </file>
 
 <file path="backend/src/unknown_world/validation/__init__.py">
@@ -15902,69 +16153,6 @@ export interface PlaceholderInfo {
   fallbackEmoji: string;
   labelKey: string;
 }
-</file>
-
-<file path="shared/README.md">
-# shared/
-
-이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
-
-## 📁 구조
-
-```
-shared/
-├── schemas/
-│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
-│       ├── turn_input.schema.json    # Client → Server 요청 스키마
-│       └── turn_output.schema.json   # Server → Client 응답 스키마
-└── README.md
-```
-
-## 🔄 SSOT 원칙 (RU-001-Q4)
-
-- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
-- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
-- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
-
-### 소비 전략 (Option B: 생성물 기반 동기화)
-
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
-| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
-
-> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
-
-## 📋 스키마 파일 목록
-
-### Turn 계약 (MVP)
-
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
-| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
-
-## ✅ 스키마 작성 가이드라인
-
-- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
-- **권장 속성**: `required`, `enum`, `description`을 적극 사용
-- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
-- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
-- **참조**: `vibe/ref/structured-outputs-guide.md`
-
-## ⚠️ 보안 주의사항 (RULE-007)
-
-- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
-- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
-- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
-
-## 📚 관련 문서
-
-- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
-- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
-- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
-- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
-- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
 </file>
 
 <file path="backend/src/unknown_world/api/__init__.py">
@@ -20213,675 +20401,6 @@ def add_business_badges(
         badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
-<file path="backend/src/unknown_world/services/image_generation.py">
-"""Unknown World - 이미지 생성 서비스.
-
-이 모듈은 Gemini 이미지 생성 모델을 호출하고 결과를 로컬에 저장하는 서비스입니다.
-텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
-
-설계 원칙:
-    - RULE-004: 실패 시 안전한 폴백 제공 (should_generate=false)
-    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
-    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
-    - RULE-007: 프롬프트 원문 노출 금지
-
-페어링 질문 결정:
-    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
-
-참조:
-    - vibe/tech-stack.md (모델 ID 고정)
-    - vibe/unit-plans/U-019[Mvp].md
-    - .cursor/rules/20-backend-orchestrator.mdc
-"""
-
-from __future__ import annotations
-
-import base64
-import hashlib
-import logging
-import os
-import uuid
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from enum import StrEnum
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-from pydantic import BaseModel, ConfigDict, Field
-
-from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
-
-if TYPE_CHECKING:
-    from google.genai import Client
-from unknown_world.models.turn import Language
-from unknown_world.orchestrator.prompt_loader import load_image_prompt
-
-# =============================================================================
-# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 상수 정의
-# =============================================================================
-
-# MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
-DEFAULT_OUTPUT_DIR = Path("generated_images")
-
-# 지원 이미지 크기 (Gemini 이미지 생성 지원 크기)
-SUPPORTED_SIZES: dict[str, tuple[int, int]] = {
-    "1024x1024": (1024, 1024),
-    "1280x768": (1280, 768),
-    "768x1280": (768, 1280),
-    "1536x1024": (1536, 1024),
-    "1024x1536": (1024, 1536),
-}
-
-# 기본 설정
-DEFAULT_SIZE = "1024x1024"
-DEFAULT_ASPECT_RATIO = "1:1"
-
-
-class ImageGenerationStatus(StrEnum):
-    """이미지 생성 상태."""
-
-    PENDING = "pending"
-    """생성 대기 중"""
-
-    GENERATING = "generating"
-    """생성 중"""
-
-    COMPLETED = "completed"
-    """생성 완료"""
-
-    FAILED = "failed"
-    """생성 실패"""
-
-    SKIPPED = "skipped"
-    """생성 건너뜀 (잔액 부족 등)"""
-
-
-# =============================================================================
-# 요청/응답 Pydantic 모델
-# =============================================================================
-
-
-class ImageGenerationRequest(BaseModel):
-    """이미지 생성 요청.
-
-    TurnOutput의 render.image_job과 정합되도록 필드를 설계합니다.
-
-    Attributes:
-        prompt: 이미지 생성 프롬프트 (필수)
-        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
-        image_size: 이미지 크기 (예: "1024x1024")
-        reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
-        session_id: 세션 ID (파일 그룹화용)
-        remove_background: 배경 제거 여부 (U-035, rembg 사용)
-        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    prompt: str = Field(min_length=1, description="이미지 생성 프롬프트")
-    aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
-    image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
-    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
-    session_id: str | None = Field(default=None, description="세션 ID")
-    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
-    image_type_hint: str | None = Field(
-        default=None,
-        description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
-    )
-
-
-class ImageGenerationResponse(BaseModel):
-    """이미지 생성 응답.
-
-    Attributes:
-        status: 생성 상태
-        image_id: 생성된 이미지 ID (성공 시)
-        image_url: 생성된 이미지 URL (성공 시)
-        message: 상태 메시지 (실패 시 오류 설명)
-        generation_time_ms: 생성 소요 시간 (밀리초)
-        background_removed: 배경 제거 수행 여부 (U-035)
-        rembg_model_used: 사용된 rembg 모델 (배경 제거 시)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    status: ImageGenerationStatus
-    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
-    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
-    message: str | None = Field(default=None, description="상태 메시지")
-    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
-    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
-    rembg_model_used: str | None = Field(default=None, description="사용된 rembg 모델")
-
-
-# =============================================================================
-# 내부 데이터 클래스
-# =============================================================================
-
-
-@dataclass
-class GeneratedImage:
-    """생성된 이미지 정보.
-
-    Attributes:
-        id: 이미지 고유 ID
-        path: 로컬 파일 경로
-        url: 서빙 URL
-        prompt_hash: 프롬프트 해시 (로그용, 원문 노출 금지)
-        created_at: 생성 시각
-        size: 파일 크기 (bytes)
-        metadata: 추가 메타데이터
-    """
-
-    id: str
-    path: Path
-    url: str
-    prompt_hash: str
-    created_at: datetime
-    size: int = 0
-
-    def __post_init__(self) -> None:
-        """초기화 후 메타데이터 필드 설정."""
-        self._metadata: dict[str, str] = {}
-
-    @property
-    def metadata(self) -> dict[str, str]:
-        """추가 메타데이터."""
-        if not hasattr(self, "_metadata"):
-            self._metadata = {}
-        return self._metadata
-
-
-# =============================================================================
-# Mock 이미지 생성기
-# =============================================================================
-
-
-class MockImageGenerator:
-    """테스트/개발용 모의 이미지 생성기.
-
-    실제 API를 호출하지 않고 플레이스홀더 이미지를 생성합니다.
-    """
-
-    def __init__(self, output_dir: Path | None = None) -> None:
-        """MockImageGenerator를 초기화합니다.
-
-        Args:
-            output_dir: 이미지 저장 디렉토리 (기본값: generated_images)
-        """
-        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
-        self._output_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(
-            "[ImageGen] Mock 모드로 초기화됨",
-            extra={"output_dir": str(self._output_dir)},
-        )
-
-    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
-        """모의 이미지를 생성합니다.
-
-        Args:
-            request: 이미지 생성 요청
-
-        Returns:
-            ImageGenerationResponse: 생성 결과
-        """
-        start_time = datetime.now(UTC)
-
-        # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
-        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
-        logger.debug(
-            "[ImageGen] Mock 이미지 생성 요청",
-            extra={
-                "prompt_hash": prompt_hash,
-                "size": request.image_size,
-                "aspect_ratio": request.aspect_ratio,
-                "remove_background": request.remove_background,
-            },
-        )
-
-        # 고유 이미지 ID 생성
-        image_id = f"img_{uuid.uuid4().hex[:12]}"
-
-        # 플레이스홀더 이미지 생성 (1x1 투명 PNG)
-        # 실제 환경에서는 Gemini API 응답으로 대체됨
-        placeholder_png = self._create_placeholder_png(request.image_size)
-
-        # 파일 저장
-        file_name = f"{image_id}.png"
-        file_path = self._output_dir / file_name
-        file_path.write_bytes(placeholder_png)
-
-        # U-035: 배경 제거 후처리 (조건부)
-        background_removed = False
-        rembg_model_used: str | None = None
-        final_file_path = file_path
-        final_file_name = file_name
-
-        if request.remove_background:
-            from unknown_world.services.image_postprocess import get_image_postprocessor
-
-            postprocessor = get_image_postprocessor()
-            result = postprocessor.remove_background(
-                input_path=file_path,
-                image_type_hint=request.image_type_hint,
-            )
-
-            if result.status.value == "success":
-                background_removed = True
-                rembg_model_used = result.model_used
-                final_file_path = result.output_path
-                final_file_name = final_file_path.name
-
-                logger.debug(
-                    "[ImageGen] Mock 이미지 배경 제거 완료",
-                    extra={
-                        "image_id": image_id,
-                        "model": rembg_model_used,
-                        "rembg_time_ms": result.processing_time_ms,
-                    },
-                )
-            else:
-                logger.warning(
-                    "[ImageGen] Mock 이미지 배경 제거 실패, 원본 사용",
-                    extra={"image_id": image_id, "message": result.message},
-                )
-                final_file_path = result.output_path
-                final_file_name = final_file_path.name
-
-        # 서빙 URL 생성 (MVP: 로컬 static 경로)
-        image_url = f"/static/images/{final_file_name}"
-
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-        logger.info(
-            "[ImageGen] Mock 이미지 생성 완료",
-            extra={
-                "image_id": image_id,
-                "elapsed_ms": elapsed_ms,
-                "background_removed": background_removed,
-            },
-        )
-
-        return ImageGenerationResponse(
-            status=ImageGenerationStatus.COMPLETED,
-            image_id=image_id,
-            image_url=image_url,
-            message="Mock 이미지가 생성되었습니다.",
-            generation_time_ms=elapsed_ms,
-            background_removed=background_removed,
-            rembg_model_used=rembg_model_used,
-        )
-
-    def _create_placeholder_png(self, size_str: str) -> bytes:
-        """플레이스홀더 PNG를 생성합니다.
-
-        Args:
-            size_str: 이미지 크기 문자열 (예: "1024x1024")
-
-        Returns:
-            PNG 바이트 데이터
-        """
-        # 최소한의 유효한 PNG (1x1 회색 픽셀)
-        # 실제 크기는 무시하고 플레이스홀더만 반환
-        # 16x16 회색 PNG (mock 식별용)
-        # Base64로 인코딩된 미니멀 PNG
-        minimal_png = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAADklEQVQ4y2NgGAWjAAcA"
-            "CHABAMXKQ5oAAAAASUVORK5CYII="
-        )
-        return minimal_png
-
-    def is_available(self) -> bool:
-        """Mock 생성기는 항상 사용 가능합니다."""
-        return True
-
-
-# =============================================================================
-# 실제 이미지 생성기
-# =============================================================================
-
-
-class ImageGenerator:
-    """Gemini 기반 실제 이미지 생성기.
-
-    gemini-3-pro-image-preview 모델을 사용하여 이미지를 생성합니다.
-    모델 ID는 RULE-010에 따라 고정됩니다.
-    """
-
-    def __init__(
-        self,
-        output_dir: Path | None = None,
-        project: str | None = None,
-        location: str | None = None,
-    ) -> None:
-        """ImageGenerator를 초기화합니다.
-
-        Args:
-            output_dir: 이미지 저장 디렉토리
-            project: Vertex AI 프로젝트 ID
-            location: Vertex AI 리전
-        """
-        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
-        self._output_dir.mkdir(parents=True, exist_ok=True)
-        self._project = project or os.environ.get("VERTEX_PROJECT")
-        self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
-        self._client: Client | None = None
-        self._available = False
-
-        self._initialize_client()
-
-    def _initialize_client(self) -> None:
-        """google-genai 클라이언트를 초기화합니다."""
-        try:
-            from google.genai import Client
-
-            client_options: dict[str, Any] = {}
-            if self._project:
-                client_options["project"] = self._project
-            if self._location:
-                client_options["location"] = self._location
-
-            self._client = Client(vertexai=True, **client_options)
-            self._available = True
-
-            logger.info(
-                "[ImageGen] Vertex AI 이미지 생성기 초기화 완료",
-                extra={
-                    "model": MODEL_IMAGE,
-                    "project": self._project or "(ADC 기본)",
-                    "location": self._location,
-                },
-            )
-        except Exception as e:
-            logger.warning(
-                "[ImageGen] Vertex AI 클라이언트 초기화 실패 - Mock 모드 권장",
-                extra={"error_type": type(e).__name__},
-            )
-            self._available = False
-
-    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
-        """이미지를 생성합니다.
-
-        Args:
-            request: 이미지 생성 요청
-
-        Returns:
-            ImageGenerationResponse: 생성 결과
-        """
-        if not self._available or self._client is None:
-            return ImageGenerationResponse(
-                status=ImageGenerationStatus.FAILED,
-                message="이미지 생성 클라이언트가 초기화되지 않았습니다.",
-            )
-
-        start_time = datetime.now(UTC)
-
-        # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
-        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
-
-        # U-036: 프롬프트 로더에서 스타일 가이드라인 로드 (선택적 참고용)
-        # 실제 모델은 Imagen이므로 지시사항보다는 텍스트 생성 모델(U-019)에서 이 가이드라인을 활용해
-        # 최적화된 영어 프롬프트를 생성하는 것이 권장됩니다.
-        try:
-            # 현재 요청의 언어 정보를 알 수 없으므로 기본 KO 사용 (또는 요청에 언어 추가 필요)
-            _style_guidelines = load_image_prompt(Language.KO)
-            logger.debug("[ImageGen] 스타일 가이드라인 로드 완료 (U-036)")
-        except Exception:
-            logger.warning("[ImageGen] 스타일 가이드라인 로드 실패")
-
-        logger.debug(
-            "[ImageGen] 이미지 생성 요청",
-            extra={
-                "prompt_hash": prompt_hash,
-                "size": request.image_size,
-                "model": MODEL_IMAGE,
-                "remove_background": request.remove_background,
-            },
-        )
-
-        try:
-            from google.genai.types import GenerateImagesConfig
-
-            # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
-            _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
-
-            # Gemini 이미지 생성 호출
-            # 참고: gemini-3-pro-image-preview 모델 사용 (RULE-010 고정)
-            response = await self._client.aio.models.generate_images(
-                model=get_model_id(ModelLabel.IMAGE),
-                prompt=request.prompt,
-                config=GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/png",
-                    # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
-                    # 실제 API 스펙에 맞게 조정 필요
-                ),
-            )
-
-            # 이미지 데이터 추출 및 저장
-            if response and hasattr(response, "generated_images") and response.generated_images:
-                image_data = response.generated_images[0]
-                image_bytes: bytes | None = None
-                if (
-                    hasattr(image_data, "image")
-                    and image_data.image
-                    and hasattr(image_data.image, "image_bytes")
-                ):
-                    image_bytes = image_data.image.image_bytes
-
-                if image_bytes is None:
-                    raise ValueError("이미지 데이터를 추출할 수 없습니다.")
-
-                # 고유 ID 및 파일 저장
-                image_id = f"img_{uuid.uuid4().hex[:12]}"
-                file_name = f"{image_id}.png"
-                file_path = self._output_dir / file_name
-                file_path.write_bytes(image_bytes)
-
-                # U-035: 배경 제거 후처리 (조건부)
-                background_removed = False
-                rembg_model_used: str | None = None
-                final_file_path = file_path
-                final_file_name = file_name
-
-                if request.remove_background:
-                    from unknown_world.services.image_postprocess import (
-                        get_image_postprocessor,
-                    )
-
-                    postprocessor = get_image_postprocessor()
-                    result = postprocessor.remove_background(
-                        input_path=file_path,
-                        image_type_hint=request.image_type_hint,
-                    )
-
-                    if result.status.value == "success":
-                        background_removed = True
-                        rembg_model_used = result.model_used
-                        final_file_path = result.output_path
-                        final_file_name = final_file_path.name
-
-                        logger.debug(
-                            "[ImageGen] 이미지 배경 제거 완료",
-                            extra={
-                                "image_id": image_id,
-                                "model": rembg_model_used,
-                                "rembg_time_ms": result.processing_time_ms,
-                            },
-                        )
-                    else:
-                        logger.warning(
-                            "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
-                            extra={"image_id": image_id, "message": result.message},
-                        )
-                        final_file_path = result.output_path
-                        final_file_name = final_file_path.name
-
-                image_url = f"/static/images/{final_file_name}"
-                elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-                logger.info(
-                    "[ImageGen] 이미지 생성 완료",
-                    extra={
-                        "image_id": image_id,
-                        "elapsed_ms": elapsed_ms,
-                        "size_bytes": len(image_bytes),
-                        "background_removed": background_removed,
-                    },
-                )
-
-                return ImageGenerationResponse(
-                    status=ImageGenerationStatus.COMPLETED,
-                    image_id=image_id,
-                    image_url=image_url,
-                    message="이미지가 성공적으로 생성되었습니다.",
-                    generation_time_ms=elapsed_ms,
-                    background_removed=background_removed,
-                    rembg_model_used=rembg_model_used,
-                )
-            else:
-                return ImageGenerationResponse(
-                    status=ImageGenerationStatus.FAILED,
-                    message="이미지 생성 응답이 비어있습니다.",
-                )
-
-        except Exception as e:
-            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-            error_type = type(e).__name__
-
-            logger.error(
-                "[ImageGen] 이미지 생성 실패",
-                extra={
-                    "error_type": error_type,
-                    "elapsed_ms": elapsed_ms,
-                },
-            )
-
-            # 실패 시에도 안전한 응답 반환 (RULE-004)
-            return ImageGenerationResponse(
-                status=ImageGenerationStatus.FAILED,
-                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
-                generation_time_ms=elapsed_ms,
-            )
-
-    def is_available(self) -> bool:
-        """생성기가 사용 가능한 상태인지 확인합니다."""
-        return self._available
-
-
-# =============================================================================
-# 팩토리 함수
-# =============================================================================
-
-# 생성기 타입
-ImageGeneratorType = MockImageGenerator | ImageGenerator
-
-# 싱글톤 인스턴스 캐시
-_generator_instance: ImageGeneratorType | None = None
-
-
-def get_image_generator(
-    *,
-    force_mock: bool = False,
-    force_new: bool = False,
-    output_dir: Path | None = None,
-) -> ImageGeneratorType:
-    """이미지 생성기 인스턴스를 반환합니다.
-
-    환경변수 UW_MODE에 따라 실제 생성기 또는 Mock 생성기를 반환합니다.
-
-    Args:
-        force_mock: True면 환경변수와 무관하게 Mock 생성기 반환
-        force_new: True면 캐시를 무시하고 새 인스턴스 생성
-        output_dir: 이미지 저장 디렉토리
-
-    Returns:
-        이미지 생성기 인스턴스
-    """
-    global _generator_instance
-
-    if not force_new and _generator_instance is not None:
-        return _generator_instance
-
-    # 모드 결정
-    mode = os.environ.get("UW_MODE", "real")
-
-    if force_mock or mode == "mock":
-        generator: ImageGeneratorType = MockImageGenerator(output_dir)
-    else:
-        real_gen = ImageGenerator(output_dir)
-        # 실제 생성기 초기화 실패 시 Mock으로 폴백
-        if not real_gen.is_available():
-            logger.warning("[ImageGen] 실제 생성기 초기화 실패, Mock 모드로 폴백")
-            generator = MockImageGenerator(output_dir)
-        else:
-            generator = real_gen
-
-    _generator_instance = generator
-    return generator
-
-
-def reset_image_generator() -> None:
-    """이미지 생성기 캐시를 초기화합니다.
-
-    테스트 시 생성기를 재설정할 때 사용합니다.
-    """
-    global _generator_instance
-    _generator_instance = None
-
-
-# =============================================================================
-# 헬퍼 함수
-# =============================================================================
-
-
-def create_fallback_response(message: str | None = None) -> ImageGenerationResponse:
-    """실패 시 안전한 폴백 응답을 생성합니다.
-
-    RULE-004: 검증 실패나 오류 시에도 안전한 응답 제공
-
-    Args:
-        message: 오류 메시지 (선택)
-
-    Returns:
-        ImageGenerationResponse: 폴백 응답
-    """
-    return ImageGenerationResponse(
-        status=ImageGenerationStatus.SKIPPED,
-        message=message or "이미지 생성을 건너뛰었습니다. 텍스트로 진행합니다.",
-    )
-
-
-def validate_image_request(request: ImageGenerationRequest) -> str | None:
-    """이미지 생성 요청을 검증합니다.
-
-    Args:
-        request: 검증할 요청
-
-    Returns:
-        오류 메시지 (유효하면 None)
-    """
-    # 이미지 크기 검증
-    if request.image_size not in SUPPORTED_SIZES:
-        return f"지원하지 않는 이미지 크기: {request.image_size}"
-
-    # 프롬프트 길이 검증 (너무 짧거나 긴 경우)
-    if len(request.prompt) < 3:
-        return "프롬프트가 너무 짧습니다."
-
-    if len(request.prompt) > 2000:
-        return "프롬프트가 너무 깁니다 (최대 2000자)."
-
-    return None
-</file>
-
 <file path="frontend/public/ui/README.md">
 # UI 에셋 가이드 (nanobanana mcp SSOT)
 
@@ -23110,6 +22629,671 @@ class MockOrchestrator:
             repair_count=1,  # Mock에서는 기본 복구 시도 1회로 표시
             is_blocked=False,
         )
+</file>
+
+<file path="backend/src/unknown_world/services/image_generation.py">
+"""Unknown World - 이미지 생성 서비스.
+
+이 모듈은 Gemini 이미지 생성 모델을 호출하고 결과를 로컬에 저장하는 서비스입니다.
+텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
+
+설계 원칙:
+    - RULE-004: 실패 시 안전한 폴백 제공 (should_generate=false)
+    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
+    - RULE-007: 프롬프트 원문 노출 금지
+
+페어링 질문 결정:
+    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
+
+참조:
+    - vibe/tech-stack.md (모델 ID 고정)
+    - vibe/unit-plans/U-019[Mvp].md
+    - .cursor/rules/20-backend-orchestrator.mdc
+"""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import logging
+import os
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
+from unknown_world.models.turn import Language
+from unknown_world.orchestrator.prompt_loader import load_image_prompt
+from unknown_world.storage.validation import (
+    DEFAULT_ASPECT_RATIO,
+    DEFAULT_IMAGE_SIZE,
+    SUPPORTED_IMAGE_SIZES,
+    validate_image_generation_request,
+)
+
+if TYPE_CHECKING:
+    from google.genai import Client
+
+# =============================================================================
+# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007/008)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 상수 정의
+# =============================================================================
+
+# MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
+DEFAULT_OUTPUT_DIR = Path("generated_images")
+
+# 호환성을 위한 상수 별칭
+SUPPORTED_SIZES = SUPPORTED_IMAGE_SIZES
+"""지원 이미지 크기 (호환성 별칭)."""
+
+DEFAULT_SIZE = DEFAULT_IMAGE_SIZE
+"""기본 이미지 크기 (호환성 별칭)."""
+
+
+class ImageGenerationStatus(StrEnum):
+    """이미지 생성 상태."""
+
+    PENDING = "pending"
+    """생성 대기 중"""
+
+    GENERATING = "generating"
+    """생성 중"""
+
+    COMPLETED = "completed"
+    """생성 완료"""
+
+    FAILED = "failed"
+    """생성 실패"""
+
+    SKIPPED = "skipped"
+    """생성 건너뜀 (잔액 부족 등)"""
+
+
+# =============================================================================
+# 요청/응답 Pydantic 모델
+# =============================================================================
+
+
+class ImageGenerationRequest(BaseModel):
+    """이미지 생성 요청.
+
+    TurnOutput의 render.image_job과 정합되도록 필드를 설계합니다.
+
+    Attributes:
+        prompt: 이미지 생성 프롬프트 (필수)
+        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
+        image_size: 이미지 크기 (예: "1024x1024")
+        reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
+        session_id: 세션 ID (파일 그룹화용)
+        remove_background: 배경 제거 여부 (U-035, rembg 사용)
+        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=1, description="이미지 생성 프롬프트")
+    aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
+    image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
+    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    session_id: str | None = Field(default=None, description="세션 ID")
+    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
+    image_type_hint: str | None = Field(
+        default=None,
+        description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
+    )
+
+
+class ImageGenerationResponse(BaseModel):
+    """이미지 생성 응답.
+
+    Attributes:
+        status: 생성 상태
+        image_id: 생성된 이미지 ID (성공 시)
+        image_url: 생성된 이미지 URL (성공 시)
+        message: 상태 메시지 (실패 시 오류 설명)
+        generation_time_ms: 생성 소요 시간 (밀리초)
+        background_removed: 배경 제거 수행 여부 (U-035)
+        rembg_model_used: 사용된 rembg 모델 (배경 제거 시)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: ImageGenerationStatus
+    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
+    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
+    message: str | None = Field(default=None, description="상태 메시지")
+    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
+    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
+    rembg_model_used: str | None = Field(default=None, description="사용된 rembg 모델")
+
+
+# =============================================================================
+# 내부 데이터 클래스
+# =============================================================================
+
+
+@dataclass
+class GeneratedImage:
+    """생성된 이미지 정보.
+
+    Attributes:
+        id: 이미지 고유 ID
+        path: 로컬 파일 경로
+        url: 서빙 URL
+        prompt_hash: 프롬프트 해시 (로그용, 원문 노출 금지)
+        created_at: 생성 시각
+        size: 파일 크기 (bytes)
+        metadata: 추가 메타데이터
+    """
+
+    id: str
+    path: Path
+    url: str
+    prompt_hash: str
+    created_at: datetime
+    size: int = 0
+
+    def __post_init__(self) -> None:
+        """초기화 후 메타데이터 필드 설정."""
+        self._metadata: dict[str, str] = {}
+
+    @property
+    def metadata(self) -> dict[str, str]:
+        """추가 메타데이터."""
+        if not hasattr(self, "_metadata"):
+            self._metadata = {}
+        return self._metadata
+
+
+# =============================================================================
+# Mock 이미지 생성기
+# =============================================================================
+
+
+class MockImageGenerator:
+    """테스트/개발용 모의 이미지 생성기.
+
+    실제 API를 호출하지 않고 플레이스홀더 이미지를 생성합니다.
+    """
+
+    def __init__(self, output_dir: Path | None = None) -> None:
+        """MockImageGenerator를 초기화합니다.
+
+        Args:
+            output_dir: 이미지 저장 디렉토리 (기본값: generated_images)
+        """
+        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(
+            "[ImageGen] Mock 모드로 초기화됨",
+            extra={"output_dir": str(self._output_dir)},
+        )
+
+    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+        """모의 이미지를 생성합니다.
+
+        Args:
+            request: 이미지 생성 요청
+
+        Returns:
+            ImageGenerationResponse: 생성 결과
+        """
+        start_time = datetime.now(UTC)
+
+        # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
+        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+        logger.debug(
+            "[ImageGen] Mock 이미지 생성 요청",
+            extra={
+                "prompt_hash": prompt_hash,
+                "size": request.image_size,
+                "aspect_ratio": request.aspect_ratio,
+                "remove_background": request.remove_background,
+            },
+        )
+
+        # 고유 이미지 ID 생성
+        image_id = f"img_{uuid.uuid4().hex[:12]}"
+
+        # 플레이스홀더 이미지 생성 (1x1 투명 PNG)
+        # 실제 환경에서는 Gemini API 응답으로 대체됨
+        placeholder_png = self._create_placeholder_png(request.image_size)
+
+        # 파일 저장
+        file_name = f"{image_id}.png"
+        file_path = self._output_dir / file_name
+        file_path.write_bytes(placeholder_png)
+
+        # U-035: 배경 제거 후처리 (조건부)
+        background_removed = False
+        rembg_model_used: str | None = None
+        final_file_path = file_path
+        final_file_name = file_name
+
+        if request.remove_background:
+            from unknown_world.services.image_postprocess import get_image_postprocessor
+
+            postprocessor = get_image_postprocessor()
+            result = postprocessor.remove_background(
+                input_path=file_path,
+                image_type_hint=request.image_type_hint,
+            )
+
+            if result.status.value == "success":
+                background_removed = True
+                rembg_model_used = result.model_used
+                final_file_path = result.output_path
+                final_file_name = final_file_path.name
+
+                logger.debug(
+                    "[ImageGen] Mock 이미지 배경 제거 완료",
+                    extra={
+                        "image_id": image_id,
+                        "model": rembg_model_used,
+                        "rembg_time_ms": result.processing_time_ms,
+                    },
+                )
+            else:
+                logger.warning(
+                    "[ImageGen] Mock 이미지 배경 제거 실패, 원본 사용",
+                    extra={"image_id": image_id, "message": result.message},
+                )
+                final_file_path = result.output_path
+                final_file_name = final_file_path.name
+
+        # 서빙 URL 생성 (MVP: 로컬 static 경로)
+        image_url = f"/static/images/{final_file_name}"
+
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+        logger.info(
+            "[ImageGen] Mock 이미지 생성 완료",
+            extra={
+                "image_id": image_id,
+                "elapsed_ms": elapsed_ms,
+                "background_removed": background_removed,
+            },
+        )
+
+        return ImageGenerationResponse(
+            status=ImageGenerationStatus.COMPLETED,
+            image_id=image_id,
+            image_url=image_url,
+            message="Mock 이미지가 생성되었습니다.",
+            generation_time_ms=elapsed_ms,
+            background_removed=background_removed,
+            rembg_model_used=rembg_model_used,
+        )
+
+    def _create_placeholder_png(self, size_str: str) -> bytes:
+        """플레이스홀더 PNG를 생성합니다.
+
+        Args:
+            size_str: 이미지 크기 문자열 (예: "1024x1024")
+
+        Returns:
+            PNG 바이트 데이터
+        """
+        # 최소한의 유효한 PNG (1x1 회색 픽셀)
+        # 실제 크기는 무시하고 플레이스홀더만 반환
+        # 16x16 회색 PNG (mock 식별용)
+        # Base64로 인코딩된 미니멀 PNG
+        minimal_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAADklEQVQ4y2NgGAWjAAcA"
+            "CHABAMXKQ5oAAAAASUVORK5CYII="
+        )
+        return minimal_png
+
+    def is_available(self) -> bool:
+        """Mock 생성기는 항상 사용 가능합니다."""
+        return True
+
+
+# =============================================================================
+# 실제 이미지 생성기
+# =============================================================================
+
+
+class ImageGenerator:
+    """Gemini 기반 실제 이미지 생성기.
+
+    gemini-3-pro-image-preview 모델을 사용하여 이미지를 생성합니다.
+    모델 ID는 RULE-010에 따라 고정됩니다.
+    """
+
+    def __init__(
+        self,
+        output_dir: Path | None = None,
+        project: str | None = None,
+        location: str | None = None,
+    ) -> None:
+        """ImageGenerator를 초기화합니다.
+
+        Args:
+            output_dir: 이미지 저장 디렉토리
+            project: Vertex AI 프로젝트 ID
+            location: Vertex AI 리전
+        """
+        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        self._project = project or os.environ.get("VERTEX_PROJECT")
+        self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
+        self._client: Client | None = None
+        self._available = False
+
+        self._initialize_client()
+
+    def _initialize_client(self) -> None:
+        """google-genai 클라이언트를 초기화합니다."""
+        try:
+            from google.genai import Client
+
+            client_options: dict[str, Any] = {}
+            if self._project:
+                client_options["project"] = self._project
+            if self._location:
+                client_options["location"] = self._location
+
+            self._client = Client(vertexai=True, **client_options)
+            self._available = True
+
+            logger.info(
+                "[ImageGen] Vertex AI 이미지 생성기 초기화 완료",
+                extra={
+                    "model": MODEL_IMAGE,
+                    "project": self._project or "(ADC 기본)",
+                    "location": self._location,
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                "[ImageGen] Vertex AI 클라이언트 초기화 실패 - Mock 모드 권장",
+                extra={"error_type": type(e).__name__},
+            )
+            self._available = False
+
+    async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+        """이미지를 생성합니다.
+
+        Args:
+            request: 이미지 생성 요청
+
+        Returns:
+            ImageGenerationResponse: 생성 결과
+        """
+        if not self._available or self._client is None:
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message="이미지 생성 클라이언트가 초기화되지 않았습니다.",
+            )
+
+        start_time = datetime.now(UTC)
+
+        # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
+        prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+
+        # U-036: 프롬프트 로더에서 스타일 가이드라인 로드 (선택적 참고용)
+        # 실제 모델은 Imagen이므로 지시사항보다는 텍스트 생성 모델(U-019)에서 이 가이드라인을 활용해
+        # 최적화된 영어 프롬프트를 생성하는 것이 권장됩니다.
+        try:
+            # 현재 요청의 언어 정보를 알 수 없으므로 기본 KO 사용 (또는 요청에 언어 추가 필요)
+            _style_guidelines = load_image_prompt(Language.KO)
+            logger.debug("[ImageGen] 스타일 가이드라인 로드 완료 (U-036)")
+        except Exception:
+            logger.warning("[ImageGen] 스타일 가이드라인 로드 실패")
+
+        logger.debug(
+            "[ImageGen] 이미지 생성 요청",
+            extra={
+                "prompt_hash": prompt_hash,
+                "size": request.image_size,
+                "model": MODEL_IMAGE,
+                "remove_background": request.remove_background,
+            },
+        )
+
+        try:
+            from google.genai.types import GenerateImagesConfig
+
+            # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
+            _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
+
+            # Gemini 이미지 생성 호출
+            # 참고: gemini-3-pro-image-preview 모델 사용 (RULE-010 고정)
+            response = await self._client.aio.models.generate_images(
+                model=get_model_id(ModelLabel.IMAGE),
+                prompt=request.prompt,
+                config=GenerateImagesConfig(
+                    number_of_images=1,
+                    output_mime_type="image/png",
+                    # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
+                    # 실제 API 스펙에 맞게 조정 필요
+                ),
+            )
+
+            # 이미지 데이터 추출 및 저장
+            if response and hasattr(response, "generated_images") and response.generated_images:
+                image_data = response.generated_images[0]
+                image_bytes: bytes | None = None
+                if (
+                    hasattr(image_data, "image")
+                    and image_data.image
+                    and hasattr(image_data.image, "image_bytes")
+                ):
+                    image_bytes = image_data.image.image_bytes
+
+                if image_bytes is None:
+                    raise ValueError("이미지 데이터를 추출할 수 없습니다.")
+
+                # 고유 ID 및 파일 저장
+                image_id = f"img_{uuid.uuid4().hex[:12]}"
+                file_name = f"{image_id}.png"
+                file_path = self._output_dir / file_name
+                file_path.write_bytes(image_bytes)
+
+                # U-035: 배경 제거 후처리 (조건부)
+                background_removed = False
+                rembg_model_used: str | None = None
+                final_file_path = file_path
+                final_file_name = file_name
+
+                if request.remove_background:
+                    from unknown_world.services.image_postprocess import (
+                        get_image_postprocessor,
+                    )
+
+                    postprocessor = get_image_postprocessor()
+                    result = postprocessor.remove_background(
+                        input_path=file_path,
+                        image_type_hint=request.image_type_hint,
+                    )
+
+                    if result.status.value == "success":
+                        background_removed = True
+                        rembg_model_used = result.model_used
+                        final_file_path = result.output_path
+                        final_file_name = final_file_path.name
+
+                        logger.debug(
+                            "[ImageGen] 이미지 배경 제거 완료",
+                            extra={
+                                "image_id": image_id,
+                                "model": rembg_model_used,
+                                "rembg_time_ms": result.processing_time_ms,
+                            },
+                        )
+                    else:
+                        logger.warning(
+                            "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
+                            extra={"image_id": image_id, "message": result.message},
+                        )
+                        final_file_path = result.output_path
+                        final_file_name = final_file_path.name
+
+                image_url = f"/static/images/{final_file_name}"
+                elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+                logger.info(
+                    "[ImageGen] 이미지 생성 완료",
+                    extra={
+                        "image_id": image_id,
+                        "elapsed_ms": elapsed_ms,
+                        "size_bytes": len(image_bytes),
+                        "background_removed": background_removed,
+                    },
+                )
+
+                return ImageGenerationResponse(
+                    status=ImageGenerationStatus.COMPLETED,
+                    image_id=image_id,
+                    image_url=image_url,
+                    message="이미지가 성공적으로 생성되었습니다.",
+                    generation_time_ms=elapsed_ms,
+                    background_removed=background_removed,
+                    rembg_model_used=rembg_model_used,
+                )
+            else:
+                return ImageGenerationResponse(
+                    status=ImageGenerationStatus.FAILED,
+                    message="이미지 생성 응답이 비어있습니다.",
+                )
+
+        except Exception as e:
+            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+            error_type = type(e).__name__
+
+            logger.error(
+                "[ImageGen] 이미지 생성 실패",
+                extra={
+                    "error_type": error_type,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
+
+            # 실패 시에도 안전한 응답 반환 (RULE-004)
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
+                generation_time_ms=elapsed_ms,
+            )
+
+    def is_available(self) -> bool:
+        """생성기가 사용 가능한 상태인지 확인합니다."""
+        return self._available
+
+
+# =============================================================================
+# 팩토리 함수
+# =============================================================================
+
+# 생성기 타입
+ImageGeneratorType = MockImageGenerator | ImageGenerator
+
+# 싱글톤 인스턴스 캐시
+_generator_instance: ImageGeneratorType | None = None
+
+
+def get_image_generator(
+    *,
+    force_mock: bool = False,
+    force_new: bool = False,
+    output_dir: Path | None = None,
+) -> ImageGeneratorType:
+    """이미지 생성기 인스턴스를 반환합니다.
+
+    환경변수 UW_MODE에 따라 실제 생성기 또는 Mock 생성기를 반환합니다.
+
+    Args:
+        force_mock: True면 환경변수와 무관하게 Mock 생성기 반환
+        force_new: True면 캐시를 무시하고 새 인스턴스 생성
+        output_dir: 이미지 저장 디렉토리
+
+    Returns:
+        이미지 생성기 인스턴스
+    """
+    global _generator_instance
+
+    if not force_new and _generator_instance is not None:
+        return _generator_instance
+
+    # 모드 결정
+    mode = os.environ.get("UW_MODE", "real")
+
+    if force_mock or mode == "mock":
+        generator: ImageGeneratorType = MockImageGenerator(output_dir)
+    else:
+        real_gen = ImageGenerator(output_dir)
+        # 실제 생성기 초기화 실패 시 Mock으로 폴백
+        if not real_gen.is_available():
+            logger.warning("[ImageGen] 실제 생성기 초기화 실패, Mock 모드로 폴백")
+            generator = MockImageGenerator(output_dir)
+        else:
+            generator = real_gen
+
+    _generator_instance = generator
+    return generator
+
+
+def reset_image_generator() -> None:
+    """이미지 생성기 캐시를 초기화합니다.
+
+    테스트 시 생성기를 재설정할 때 사용합니다.
+    """
+    global _generator_instance
+    _generator_instance = None
+
+
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
+
+
+def create_fallback_response(message: str | None = None) -> ImageGenerationResponse:
+    """실패 시 안전한 폴백 응답을 생성합니다.
+
+    RULE-004: 검증 실패나 오류 시에도 안전한 응답 제공
+
+    Args:
+        message: 오류 메시지 (선택)
+
+    Returns:
+        ImageGenerationResponse: 폴백 응답
+    """
+    return ImageGenerationResponse(
+        status=ImageGenerationStatus.SKIPPED,
+        message=message or "이미지 생성을 건너뛰었습니다. 텍스트로 진행합니다.",
+    )
+
+
+def validate_image_request(request: ImageGenerationRequest) -> str | None:
+    """이미지 생성 요청을 검증합니다.
+
+    NOTE: 이 함수는 호환성을 위해 유지되며, 내부적으로
+    중앙화된 validate_image_generation_request를 호출합니다.
+
+    Args:
+        request: 검증할 요청
+
+    Returns:
+        오류 메시지 (유효하면 None)
+    """
+    return validate_image_generation_request(
+        prompt=request.prompt,
+        image_size=request.image_size,
+        language="ko-KR",
+    )
 </file>
 
 <file path="frontend/package.json">

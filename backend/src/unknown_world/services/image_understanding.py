@@ -35,6 +35,13 @@ from unknown_world.models.scanner import (
 )
 from unknown_world.models.turn import Box2D, Language
 from unknown_world.services.genai_client import ENV_UW_MODE, GenAIMode
+from unknown_world.storage.validation import (
+    ALLOWED_IMAGE_MIME_TYPES,
+    BBOX_MAX,
+    BBOX_MIN,
+    MAX_IMAGE_FILE_SIZE_BYTES,
+    validate_image_upload,
+)
 
 if TYPE_CHECKING:
     from google.genai import Client
@@ -46,26 +53,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # =============================================================================
-# 상수 정의
+# 호환성을 위한 상수 별칭 (api/scanner.py에서 import)
 # =============================================================================
 
-# 허용된 이미지 MIME 타입
-ALLOWED_MIME_TYPES = frozenset(
-    {
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-    }
-)
+ALLOWED_MIME_TYPES = ALLOWED_IMAGE_MIME_TYPES
+"""지원하는 이미지 MIME 타입 (호환성 별칭)."""
 
-# 최대 파일 크기 (20MB - Gemini inline 제한)
-MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
-
-# bbox 정규화 범위 (RULE-009)
-BBOX_MIN = 0
-BBOX_MAX = 1000
+MAX_FILE_SIZE_BYTES = MAX_IMAGE_FILE_SIZE_BYTES
+"""최대 이미지 파일 크기 (호환성 별칭)."""
 
 # =============================================================================
 # 프롬프트 템플릿 (언어별)
@@ -272,6 +267,9 @@ def validate_image(
 ) -> str | None:
     """이미지 파일을 검증합니다.
 
+    NOTE: 이 함수는 호환성을 위해 유지되며, 내부적으로
+    중앙화된 validate_image_upload를 호출합니다.
+
     Args:
         content: 이미지 바이트 데이터
         content_type: MIME 타입
@@ -279,20 +277,7 @@ def validate_image(
     Returns:
         에러 메시지 (없으면 None)
     """
-    # MIME 타입 검증
-    if content_type.lower() not in ALLOWED_MIME_TYPES:
-        return f"지원하지 않는 이미지 형식입니다: {content_type}"
-
-    # 파일 크기 검증
-    if len(content) > MAX_FILE_SIZE_BYTES:
-        size_mb = len(content) / (1024 * 1024)
-        return f"파일이 너무 큽니다: {size_mb:.1f}MB (최대 20MB)"
-
-    # 최소 크기 검증 (빈 파일 방지)
-    if len(content) < 100:
-        return "이미지 파일이 손상되었거나 비어있습니다"
-
-    return None
+    return validate_image_upload(content, content_type, language="ko-KR")
 
 
 def normalize_bbox(bbox: dict[str, Any]) -> Box2D:

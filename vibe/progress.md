@@ -1,5 +1,27 @@
 # 프로젝트 진행 상황
 
+## [2026-01-31 18:45] [RU-006-Q1] 파일 검증/제한 로직 중앙화 리팩토링 완료
+
+### 작업 내용
+
+- **제안서**: [ID: RU-006-Q1] 파일 검증/제한 로직 중앙화
+- **개선 사항**: `image_generation.py`와 `image_understanding.py`에 분산되어 있던 파일 크기, MIME 타입, 프롬프트 길이, bbox 좌표 범위 등의 검증 로직 및 상수를 `storage/validation.py`로 중앙화.
+- **영향 범위**: `backend/src/unknown_world/storage/validation.py` (신규), `services/image_generation.py`, `services/image_understanding.py`, `api/scanner.py`
+
+### 기술적 세부사항
+
+- **SSOT(Single Source of Truth) 확보**: 모든 파일 관련 제한 정책을 한 곳에서 관리하여 정책 불일치 위험 제거.
+- **i18n 에러 메시지 통합**: 검증 실패 시 언어(`ko-KR`, `en-US`)에 따른 일관된 에러 메시지 반환 로직 구현.
+- **코드 중복 제거**: 약 40줄의 중복 검증 코드를 제거하고 중앙 함수 호출 방식으로 전환.
+- **기존 호환성 유지**: `image_understanding.py` 등 기존 모듈에서 별칭(alias)을 사용하여 기존 import 경로와의 호환성 확보.
+
+### 검증
+
+- **정합성 확인**: 중앙화된 상수값이 기존 정책(20MB, 지원 MIME 타입 등)과 일치함을 확인.
+- **시나리오 검증**: Scanner 업로드 시 파일 크기 초과 에러 및 이미지 생성 시 프롬프트 길이 부족 에러가 동일하게 발생하는지 확인.
+
+---
+
 ## [2026-01-31 18:15] [RU-006-Q4] 스토리지 인터페이스 추상화 도입 리팩토링 완료
 
 ### 작업 내용
