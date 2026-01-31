@@ -82,6 +82,8 @@ class ScannerResponse(BaseModel):
         message: 상태/에러 메시지
         analysis_time_ms: 분석 소요 시간 (ms)
         language: 응답 언어
+        original_image_key: 저장된 원본 이미지 스토리지 키 (RU-006-S1)
+        original_image_url: 저장된 원본 이미지 URL (RU-006-S1)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -100,6 +102,14 @@ class ScannerResponse(BaseModel):
     message: str | None = Field(default=None, description="상태/에러 메시지")
     analysis_time_ms: int = Field(default=0, description="분석 소요 시간 (ms)")
     language: Language = Field(description="응답 언어")
+    original_image_key: str | None = Field(
+        default=None,
+        description="저장된 원본 이미지 스토리지 키",
+    )
+    original_image_url: str | None = Field(
+        default=None,
+        description="저장된 원본 이미지 URL",
+    )
 
 
 class ScannerHealthResponse(BaseModel):
@@ -139,6 +149,14 @@ async def scan_image(
         str,
         Form(description="응답 언어 (ko-KR 또는 en-US)"),
     ] = "ko-KR",
+    preserve_original: Annotated[
+        bool,
+        Form(description="원본 이미지 저장 여부 (디버깅/재분석용, RU-006-S1)"),
+    ] = False,
+    session_id: Annotated[
+        str | None,
+        Form(description="세션 ID (이미지 그룹화용)"),
+    ] = None,
     service: ImageUnderstandingService = Depends(get_scanner_service),
 ) -> ScannerResponse:
     """이미지를 스캔하여 오브젝트와 아이템 후보를 추출합니다.
@@ -149,6 +167,8 @@ async def scan_image(
     Args:
         file: 분석할 이미지 파일 (multipart/form-data)
         language: 응답 언어 (ko-KR 또는 en-US)
+        preserve_original: 원본 이미지 저장 여부 (RU-006-S1)
+        session_id: 세션 ID (이미지 그룹화용)
         service: Scanner 서비스 (의존성 주입)
 
     Returns:
@@ -223,6 +243,8 @@ async def scan_image(
             image_content=content,
             content_type=content_type,
             language=lang,
+            preserve_original=preserve_original,
+            session_id=session_id,
         )
 
         # 성공 여부 결정
@@ -237,6 +259,8 @@ async def scan_image(
             message=result.message,
             analysis_time_ms=result.analysis_time_ms,
             language=lang,
+            original_image_key=result.original_image_key,
+            original_image_url=result.original_image_url,
         )
 
     except Exception as e:

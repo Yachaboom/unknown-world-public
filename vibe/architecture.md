@@ -43,7 +43,7 @@ D:\Dev\unknown-world\
 │       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
 │       │   ├── image_understanding.py (이미지 이해 서비스, U-021)
 │       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
-│       ├── storage/    # 스토리지 추상화 및 검증 (RU-006-Q1/Q4/Q5)
+│       ├── storage/    # 스토리지 추상화 및 검증 (RU-006-Q1/Q4/Q5, S1)
 │       │   ├── __init__.py (팩토리 및 내보내기)
 │       │   ├── storage.py (인터페이스 정의: StorageInterface)
 │       │   ├── local_storage.py (MVP 구현체: LocalStorage)
@@ -184,7 +184,10 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 2. **아이템화 및 조작 정책 (Option B: User Confirmation)**:
     - **확인 후 추가**: 분석 결과로 나온 아이템 후보들을 자동으로 인벤토리에 넣지 않고, 사용자가 선택하여 추가하게 함으로써 게임 내러티브의 개연성과 플레이어의 의도를 보호함.
     - **스토어 연동**: 추가된 아이템은 즉시 `inventoryStore`에 반영되어 드래그 앤 드롭(U-011) 조작이 가능해짐.
-3. **안정성 및 보안**:
+3. **이미지 임시 저장 정책 (RU-006-S1)**:
+    - **선택적 저장**: 기본적으로 업로드 이미지는 메모리 처리 후 폐기되나, `preserve_original` 플래그가 true인 경우 디버깅/재분석을 위해 `.data/images/uploaded/`에 저장함.
+    - **참조 제공**: 저장 시 응답 스키마의 `original_image_key` 및 `url` 필드를 통해 저장된 데이터에 대한 접근 수단을 제공함.
+4. **안정성 및 보안**:
     - **클라이언트 측 검증**: 업로드 전 파일 형식(JPEG/PNG/GIF/WebP)과 크기(20MB)를 선행 검증하여 불필요한 서버 호출을 방지함.
     - **좌표 규약 준수 (RULE-009)**: 감지된 오브젝트의 `box_2d`는 항상 0~1000 정규화 좌표계를 유지하며, 분석 결과 UI에서만 변환하여 표시함.
     - **비활성화 가드**: 스트리밍 중에는 스캐너 조작을 차단하여 비동기적인 상태 오염을 방지함.

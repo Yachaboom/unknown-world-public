@@ -1,5 +1,28 @@
 # 프로젝트 진행 상황
 
+## [2026-01-31 22:20] [RU-006-S1] 업로드 이미지 임시 저장 정책 명확화 리팩토링 완료
+
+### 작업 내용
+
+- **제안서**: [ID: RU-006-S1] 업로드 이미지 임시 저장 정책 명확화
+- **개선 사항**: Scanner API(`POST /api/scan`) 호출 시 업로드된 이미지를 메모리에서 즉시 처리 후 폐기하던 방식에서, `preserve_original` 플래그를 통해 선택적으로 `.data/images/uploaded/`에 저장할 수 있도록 개선.
+- **영향 범위**: `backend/src/unknown_world/api/scanner.py`, `backend/src/unknown_world/models/scanner.py`, `backend/src/unknown_world/services/image_understanding.py`, `frontend/src/api/scanner.ts`
+
+### 기술적 세부사항
+
+- **선택적 저장 로직 도입**: `preserve_original` 플래그와 `session_id`를 분석 요청(Multipart Form)에 추가하여 디버깅 및 재분석이 필요한 경우에만 저장소(StorageInterface)에 저장.
+- **응답 스키마 확장**: `ScanResult` 및 `ScannerResponse`에 `original_image_key`와 `original_image_url` 필드를 추가하여 저장된 이미지에 대한 참조 제공.
+- **스토리지 추상화 연동**: `RU-006-Q4`에서 도입된 `StorageInterface`를 활용하여 `StorageCategory.UPLOADED_IMAGE` 카테고리로 저장.
+- **안전 폴백 유지**: 이미지 저장 실패 시에도 분석 프로세스가 중단되지 않도록 예외 처리(RULE-004) 적용.
+
+### 검증
+
+- **정합성 확인**: `preserve_original=true` 요청 시 이미지가 올바른 경로에 저장되고 응답에 유효한 URL이 포함됨을 확인.
+- **하위 호환성 검증**: 플래그 미전달 시 기존과 동일하게 저장 없이 분석만 수행됨을 확인.
+- **프론트엔드 연동**: `api/scanner.ts`의 Zod 스키마 및 호출 함수 업데이트 완료.
+
+---
+
 ## [2026-01-31 18:55] [RU-006-Q5] 저장 경로 및 URL 하드코딩 제거 리팩토링 완료
 
 ### 작업 내용

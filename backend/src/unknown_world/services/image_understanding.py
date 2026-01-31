@@ -524,6 +524,9 @@ class ImageUnderstandingService:
         image_content: bytes,
         content_type: str,
         language: Language = Language.KO,
+        *,
+        preserve_original: bool = False,
+        session_id: str | None = None,
     ) -> ScanResult:
         """이미지를 분석합니다.
 
@@ -531,9 +534,11 @@ class ImageUnderstandingService:
             image_content: 이미지 바이트 데이터
             content_type: MIME 타입
             language: 응답 언어
+            preserve_original: 원본 이미지 저장 여부 (RU-006-S1)
+            session_id: 세션 ID (저장 시 그룹화용)
 
         Returns:
-            ScanResult: 분석 결과
+            ScanResult: 분석 결과 (저장 시 original_image_key/url 포함)
         """
         start_time = time.time()
 
@@ -542,11 +547,46 @@ class ImageUnderstandingService:
         if validation_error:
             return _create_fallback_result(validation_error)
 
+        # 원본 이미지 저장 (선택적, RU-006-S1)
+        original_image_key: str | None = None
+        original_image_url: str | None = None
+
+        if preserve_original:
+            try:
+                from unknown_world.storage import StorageCategory, get_storage
+
+                storage = get_storage()
+                put_result = await storage.put(
+                    data=image_content,
+                    category=StorageCategory.UPLOADED_IMAGE,
+                    content_type=content_type,
+                    session_id=session_id,
+                )
+
+                if put_result.success:
+                    original_image_key = put_result.key
+                    original_image_url = put_result.url
+                    logger.debug(
+                        "[ImageUnderstanding] 원본 이미지 저장 완료",
+                        extra={
+                            "key": original_image_key,
+                            "size_kb": len(image_content) // 1024,
+                        },
+                    )
+            except Exception as e:
+                # 저장 실패해도 분석은 계속 (RULE-004)
+                logger.warning(
+                    "[ImageUnderstanding] 원본 이미지 저장 실패",
+                    extra={"error_type": type(e).__name__},
+                )
+
         # Mock 모드 처리
         if self._is_mock:
             logger.debug("[ImageUnderstanding] Mock 분석 수행")
             result = _create_mock_scan_result(language)
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
+            result.original_image_key = original_image_key
+            result.original_image_url = original_image_url
             return result
 
         # 실제 비전 모델 호출
@@ -557,6 +597,8 @@ class ImageUnderstandingService:
                 language,
             )
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
+            result.original_image_key = original_image_key
+            result.original_image_url = original_image_url
             return result
 
         except Exception as e:

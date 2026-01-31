@@ -106,6 +106,8 @@ class ScanResult(BaseModel):
         item_candidates: 아이템 후보 목록
         message: 상태 메시지 (에러/경고 시)
         analysis_time_ms: 분석 소요 시간 (ms)
+        original_image_key: 저장된 원본 이미지의 스토리지 키 (RU-006-S1)
+        original_image_url: 저장된 원본 이미지의 접근 URL (RU-006-S1)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -122,6 +124,14 @@ class ScanResult(BaseModel):
     )
     message: str | None = Field(default=None, description="상태 메시지")
     analysis_time_ms: int = Field(default=0, description="분석 소요 시간 (ms)")
+    original_image_key: str | None = Field(
+        default=None,
+        description="저장된 원본 이미지의 스토리지 키 (선택적 저장 시)",
+    )
+    original_image_url: str | None = Field(
+        default=None,
+        description="저장된 원본 이미지의 접근 URL (선택적 저장 시)",
+    )
 
 
 class ScanRequest(BaseModel):

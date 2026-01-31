@@ -65,6 +65,7 @@ export type ItemCandidate = z.infer<typeof ItemCandidateSchema>;
 
 /**
  * Scanner API 응답.
+ * RU-006-S1: original_image_key, original_image_url 추가
  */
 export const ScannerResponseSchema = z.object({
   success: z.boolean(),
@@ -75,6 +76,8 @@ export const ScannerResponseSchema = z.object({
   message: z.string().nullable().optional(),
   analysis_time_ms: z.number().int().min(0).default(0),
   language: z.enum(['ko-KR', 'en-US']),
+  original_image_key: z.string().nullable().optional(),
+  original_image_url: z.string().nullable().optional(),
 });
 export type ScannerResponse = z.infer<typeof ScannerResponseSchema>;
 
@@ -90,13 +93,29 @@ export type ScanResult =
   | { success: false; error: string; status: ScanStatus };
 
 /**
+ * 스캔 옵션.
+ * RU-006-S1: preserve_original 옵션 추가
+ */
+export interface ScanOptions {
+  /** 원본 이미지 저장 여부 (디버깅/재분석용) */
+  preserveOriginal?: boolean;
+  /** 세션 ID (이미지 그룹화용) */
+  sessionId?: string;
+}
+
+/**
  * 이미지를 스캔하여 오브젝트와 아이템 후보를 추출합니다.
  *
  * @param file - 분석할 이미지 파일
  * @param language - 응답 언어
+ * @param options - 스캔 옵션 (RU-006-S1)
  * @returns 스캔 결과
  */
-export async function scanImage(file: File, language: Language): Promise<ScanResult> {
+export async function scanImage(
+  file: File,
+  language: Language,
+  options?: ScanOptions,
+): Promise<ScanResult> {
   // 클라이언트 측 파일 검증
   const validationError = validateFile(file);
   if (validationError) {
@@ -111,6 +130,14 @@ export async function scanImage(file: File, language: Language): Promise<ScanRes
   const formData = new FormData();
   formData.append('file', file);
   formData.append('language', language);
+
+  // RU-006-S1: 선택적 파라미터 추가
+  if (options?.preserveOriginal) {
+    formData.append('preserve_original', 'true');
+  }
+  if (options?.sessionId) {
+    formData.append('session_id', options.sessionId);
+  }
 
   try {
     const response = await fetch(SCANNER_API_BASE, {
