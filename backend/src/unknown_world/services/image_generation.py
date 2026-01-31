@@ -36,6 +36,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from unknown_world.config.models import MODEL_IMAGE, ModelLabel, get_model_id
 from unknown_world.models.turn import Language
 from unknown_world.orchestrator.prompt_loader import load_image_prompt
+from unknown_world.storage.paths import (
+    LEGACY_OUTPUT_DIR,
+    build_image_url,
+    get_generated_images_dir,
+)
 from unknown_world.storage.validation import (
     DEFAULT_ASPECT_RATIO,
     DEFAULT_IMAGE_SIZE,
@@ -57,8 +62,9 @@ logger = logging.getLogger(__name__)
 # 상수 정의
 # =============================================================================
 
-# MVP에서는 로컬 디렉토리에 저장 (MMP에서 GCS 확장 예정)
-DEFAULT_OUTPUT_DIR = Path("generated_images")
+# 하위 호환성을 위한 레거시 경로 별칭 (RU-006-Q5)
+# 신규 코드에서는 get_generated_images_dir() 사용 권장
+DEFAULT_OUTPUT_DIR = LEGACY_OUTPUT_DIR
 
 # 호환성을 위한 상수 별칭
 SUPPORTED_SIZES = SUPPORTED_IMAGE_SIZES
@@ -198,9 +204,9 @@ class MockImageGenerator:
         """MockImageGenerator를 초기화합니다.
 
         Args:
-            output_dir: 이미지 저장 디렉토리 (기본값: generated_images)
+            output_dir: 이미지 저장 디렉토리 (기본값: .data/images/generated)
         """
-        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir = output_dir or get_generated_images_dir()
         self._output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(
             "[ImageGen] Mock 모드로 초기화됨",
@@ -279,8 +285,8 @@ class MockImageGenerator:
                 final_file_path = result.output_path
                 final_file_name = final_file_path.name
 
-        # 서빙 URL 생성 (MVP: 로컬 static 경로)
-        image_url = f"/static/images/{final_file_name}"
+        # 서빙 URL 생성 (RU-006-Q5: 중앙화된 URL 빌더 사용)
+        image_url = build_image_url(final_file_name, category="generated")
 
         elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
@@ -348,11 +354,11 @@ class ImageGenerator:
         """ImageGenerator를 초기화합니다.
 
         Args:
-            output_dir: 이미지 저장 디렉토리
+            output_dir: 이미지 저장 디렉토리 (기본값: .data/images/generated)
             project: Vertex AI 프로젝트 ID
             location: Vertex AI 리전
         """
-        self._output_dir = output_dir or DEFAULT_OUTPUT_DIR
+        self._output_dir = output_dir or get_generated_images_dir()
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._project = project or os.environ.get("VERTEX_PROJECT")
         self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
@@ -508,7 +514,8 @@ class ImageGenerator:
                         final_file_path = result.output_path
                         final_file_name = final_file_path.name
 
-                image_url = f"/static/images/{final_file_name}"
+                # 서빙 URL 생성 (RU-006-Q5: 중앙화된 URL 빌더 사용)
+                image_url = build_image_url(final_file_name, category="generated")
                 elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
                 logger.info(

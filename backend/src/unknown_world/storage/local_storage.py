@@ -5,6 +5,7 @@ MVP 단계에서 사용하는 로컬 저장소 구현체.
 
 참조:
     - vibe/refactors/RU-006-Q4.md
+    - vibe/refactors/RU-006-Q5.md
 """
 
 from __future__ import annotations
@@ -14,6 +15,13 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+from unknown_world.storage.paths import (
+    ARTIFACTS_SUBDIR,
+    BASE_DATA_DIR,
+    IMAGES_GENERATED_SUBDIR,
+    IMAGES_UPLOADED_SUBDIR,
+    STATIC_URL_PREFIX,
+)
 from unknown_world.storage.storage import (
     PutResult,
     StorageCategory,
@@ -23,18 +31,12 @@ from unknown_world.storage.storage import (
 
 logger = logging.getLogger(__name__)
 
-# MVP 기본 저장 경로 (Option A: backend/.data/)
-DEFAULT_BASE_DIR = Path(".data")
-
-# 카테고리별 서브디렉토리 매핑
+# 카테고리별 서브디렉토리 매핑 (RU-006-Q5: paths.py 상수 참조)
 CATEGORY_DIRS: dict[StorageCategory, str] = {
-    StorageCategory.GENERATED_IMAGE: "images/generated",
-    StorageCategory.UPLOADED_IMAGE: "images/uploaded",
-    StorageCategory.ARTIFACT: "artifacts",
+    StorageCategory.GENERATED_IMAGE: IMAGES_GENERATED_SUBDIR,
+    StorageCategory.UPLOADED_IMAGE: IMAGES_UPLOADED_SUBDIR,
+    StorageCategory.ARTIFACT: ARTIFACTS_SUBDIR,
 }
-
-# 정적 파일 서빙 URL 프리픽스
-STATIC_URL_PREFIX = "/static"
 
 
 class LocalStorage(StorageInterface):
@@ -49,7 +51,7 @@ class LocalStorage(StorageInterface):
         Args:
             base_dir: 기본 저장 디렉토리 (기본값: .data)
         """
-        self._base_dir = base_dir or DEFAULT_BASE_DIR
+        self._base_dir = base_dir or BASE_DATA_DIR
         self._ensure_directories()
 
         logger.info(

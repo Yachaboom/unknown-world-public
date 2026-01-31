@@ -1,5 +1,30 @@
 # 프로젝트 진행 상황
 
+## [2026-01-31 18:55] [RU-006-Q5] 저장 경로 및 URL 하드코딩 제거 리팩토링 완료
+
+### 작업 내용
+
+- **제안서**: [ID: RU-006-Q5] 저장 경로 및 URL 하드코딩 제거
+- **개선 사항**: `image_generation.py`, `api/image.py`, `main.py`, `local_storage.py` 등에 분산되어 있던 저장 경로(`generated_images/`), URL 프리픽스(`/static/images/`), 파일 확장자(`.png`) 등의 하드코딩을 `storage/paths.py`로 중앙화.
+- **영향 범위**: `backend/src/unknown_world/storage/paths.py` (신규), `storage/__init__.py`, `storage/local_storage.py`, `services/image_generation.py`, `api/image.py`, `main.py`
+
+### 기술적 세부사항
+
+- **경로 상수 SSOT 확보**: `BASE_DATA_DIR`, `STATIC_URL_PREFIX`, 카테고리별 서브디렉토리(`IMAGES_GENERATED_SUBDIR`, `IMAGES_UPLOADED_SUBDIR`, `ARTIFACTS_SUBDIR`) 등 모든 경로/URL 관련 상수를 `paths.py` 한 곳에서 관리.
+- **URL 빌더 함수 도입**: `build_image_url(filename, category)` 함수를 통해 일관된 URL 생성 보장. 기존 레거시 URL 호환을 위한 `build_legacy_image_url()` 함수도 제공.
+- **경로 헬퍼 함수 통일**: `get_generated_images_dir()`, `get_uploaded_images_dir()`, `get_artifacts_dir()` 함수로 디렉토리 경로 접근 표준화.
+- **StaticFiles 마운트 개선**: `.data/` 전체 디렉토리를 `/static`으로 마운트하여 카테고리별 경로(`/static/images/generated/`, `/static/images/uploaded/`) 자동 지원.
+- **하드코딩 제거**: 경로 하드코딩 6곳 → 1곳(-83%), URL 하드코딩 4곳 → 0곳(-100%), 경로 변경 시 수정 파일 4개 → 1개(-75%) 달성.
+
+### 검증
+
+- **린트/타입 체크 통과**: `ruff check`, `pyright` 모든 수정 파일에서 0 에러 확인.
+- **이미지 생성 API 테스트**: Mock 모드에서 `/api/image/generate` 호출 시 이미지가 `.data/images/generated/` 경로에 저장되고 `/static/images/generated/{id}.png` URL이 정상 반환됨을 확인.
+- **정적 파일 서빙 검증**: 생성된 이미지 URL로 브라우저 접근 시 HTTP 200 응답 및 이미지 정상 표시.
+- **이미지 상태 조회 API 검증**: `/api/image/status/{image_id}` 호출 시 새로운 URL 형식으로 정상 응답.
+
+---
+
 ## [2026-01-31 18:45] [RU-006-Q1] 파일 검증/제한 로직 중앙화 리팩토링 완료
 
 ### 작업 내용

@@ -5,9 +5,25 @@ MVP: LocalStorage, MMP: GCSStorage(예정)
 
 참조:
     - vibe/refactors/RU-006-Q4.md
+    - vibe/refactors/RU-006-Q5.md
 """
 
 from unknown_world.storage.local_storage import LocalStorage
+from unknown_world.storage.paths import (
+    ARTIFACTS_SUBDIR,
+    BASE_DATA_DIR,
+    DEFAULT_IMAGE_EXTENSION,
+    IMAGES_GENERATED_SUBDIR,
+    IMAGES_UPLOADED_SUBDIR,
+    LEGACY_OUTPUT_DIR,
+    STATIC_IMAGES_URL_PREFIX,
+    STATIC_URL_PREFIX,
+    build_image_url,
+    build_legacy_image_url,
+    get_artifacts_dir,
+    get_generated_images_dir,
+    get_uploaded_images_dir,
+)
 from unknown_world.storage.storage import (
     PutResult,
     StorageCategory,
@@ -38,6 +54,21 @@ __all__ = [
     "StorageInterface",
     "StorageMetadata",
     "get_storage",
+    "reset_storage",
+    # Paths (RU-006-Q5)
+    "ARTIFACTS_SUBDIR",
+    "BASE_DATA_DIR",
+    "DEFAULT_IMAGE_EXTENSION",
+    "IMAGES_GENERATED_SUBDIR",
+    "IMAGES_UPLOADED_SUBDIR",
+    "LEGACY_OUTPUT_DIR",
+    "STATIC_IMAGES_URL_PREFIX",
+    "STATIC_URL_PREFIX",
+    "build_image_url",
+    "build_legacy_image_url",
+    "get_artifacts_dir",
+    "get_generated_images_dir",
+    "get_uploaded_images_dir",
     # Validation constants
     "ALLOWED_IMAGE_MIME_TYPES",
     "BBOX_MAX",

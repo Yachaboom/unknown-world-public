@@ -26,13 +26,17 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from unknown_world.services.image_generation import (
-    DEFAULT_OUTPUT_DIR,
     ImageGenerationRequest,
     ImageGenerationStatus,
     ImageGeneratorType,
     create_fallback_response,
     get_image_generator,
     validate_image_request,
+)
+from unknown_world.storage.paths import (
+    DEFAULT_IMAGE_EXTENSION,
+    build_image_url,
+    get_generated_images_dir,
 )
 
 # =============================================================================
@@ -246,14 +250,16 @@ async def get_image_status(
     Returns:
         ImageStatusResponse: 이미지 상태
     """
-    # 파일 존재 확인
-    file_path = DEFAULT_OUTPUT_DIR / f"{image_id}.png"
+    # 파일 존재 확인 (RU-006-Q5: 중앙화된 경로 함수 사용)
+    output_dir = get_generated_images_dir()
+    filename = f"{image_id}.{DEFAULT_IMAGE_EXTENSION}"
+    file_path = output_dir / filename
     exists = file_path.exists()
 
     return ImageStatusResponse(
         image_id=image_id,
         exists=exists,
-        image_url=f"/static/images/{image_id}.png" if exists else None,
+        image_url=build_image_url(filename, category="generated") if exists else None,
     )
 
 
@@ -277,7 +283,10 @@ async def get_image_file(
     Returns:
         FileResponse: 이미지 파일
     """
-    file_path = DEFAULT_OUTPUT_DIR / f"{image_id}.png"
+    # RU-006-Q5: 중앙화된 경로 함수 사용
+    output_dir = get_generated_images_dir()
+    filename = f"{image_id}.{DEFAULT_IMAGE_EXTENSION}"
+    file_path = output_dir / filename
 
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
@@ -285,7 +294,7 @@ async def get_image_file(
     return FileResponse(
         path=str(file_path),
         media_type="image/png",
-        filename=f"{image_id}.png",
+        filename=filename,
     )
 
 

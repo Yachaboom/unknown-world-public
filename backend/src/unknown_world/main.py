@@ -64,13 +64,13 @@ from pydantic import BaseModel, Field
 
 from unknown_world import __version__
 from unknown_world.api import image_router, scanner_router, turn_router
-from unknown_world.services.image_generation import DEFAULT_OUTPUT_DIR
 from unknown_world.services.rembg_preflight import (
     RembgPreflightResult,
     RembgReadyStatus,
     get_rembg_status,
     run_preflight_async,
 )
+from unknown_world.storage.paths import BASE_DATA_DIR, STATIC_URL_PREFIX
 
 # =============================================================================
 # 로거 설정
@@ -190,11 +190,13 @@ app = FastAPI(
 )
 
 # =============================================================================
-# 정적 파일 서빙 (U-019)
+# 정적 파일 서빙 (U-019, RU-006-Q5)
 # =============================================================================
-# 생성된 이미지를 /static/images 경로로 서빙합니다.
-DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static/images", StaticFiles(directory=str(DEFAULT_OUTPUT_DIR)), name="images")
+# 데이터 디렉토리 생성 및 정적 파일 서빙
+# 전체 .data 디렉토리를 /static으로 서빙하여 카테고리별 경로 지원
+# 예: /static/images/generated/img_xxx.png
+BASE_DATA_DIR.mkdir(parents=True, exist_ok=True)
+app.mount(STATIC_URL_PREFIX, StaticFiles(directory=str(BASE_DATA_DIR)), name="static")
 
 # =============================================================================
 # CORS 설정 (개발 환경용)

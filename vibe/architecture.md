@@ -43,11 +43,12 @@ D:\Dev\unknown-world\
 │       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
 │       │   ├── image_understanding.py (이미지 이해 서비스, U-021)
 │       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
-│       ├── storage/    # 스토리지 추상화 및 검증 (RU-006-Q1/Q4)
+│       ├── storage/    # 스토리지 추상화 및 검증 (RU-006-Q1/Q4/Q5)
 │       │   ├── __init__.py (팩토리 및 내보내기)
 │       │   ├── storage.py (인터페이스 정의: StorageInterface)
 │       │   ├── local_storage.py (MVP 구현체: LocalStorage)
-│       │   └── validation.py (신규: 파일 검증 및 제한 정책 SSOT)
+│       │   ├── paths.py (RU-006-Q5: 경로/URL 상수 SSOT)
+│       │   └── validation.py (RU-006-Q1: 파일 검증 및 제한 정책 SSOT)
 │       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
 │   │       │   ├── business_rules.py
 │   │       │   └── language_gate.py (신규: 언어 혼합 검증)
@@ -345,9 +346,10 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **자동 모델 선택 (Option B)**: 이미지 유형 힌트(`icon`, `character`, `portrait` 등)에 따라 `birefnet-general`, `isnet-anime` 등 최적의 `rembg` 모델을 자동으로 선택하여 후처리 품질을 극대화함.
     - **안전 폴백 (RULE-004)**: `rembg` 처리 중 오류나 타임아웃 발생 시 원본 이미지를 그대로 사용하여 사용자 경험 중단을 방지함.
     - **조건부 실행**: `ImageJob.remove_background` 플래그가 true인 경우에만 후처리 파이프라인이 동작함.
-4. **아티팩트 저장 및 서빙 (Option A)**:
-    - MVP에서는 생성된 이미지를 백엔드의 `generated_images/` 디렉토리에 로컬 PNG 파일로 저장함.
-    - FastAPI의 `StaticFiles`를 통해 `/static/images/` 경로로 브라우저에 직접 서빙함.
+4. **아티팩트 저장 및 서빙 (RU-006-Q5)**:
+    - 생성된 이미지를 백엔드의 `.data/images/generated/` 디렉토리에 로컬 PNG 파일로 저장함.
+    - FastAPI의 `StaticFiles`를 통해 `.data/` 전체를 `/static`으로 마운트하여 카테고리별 경로 지원 (예: `/static/images/generated/xxx.png`).
+    - **경로/URL SSOT**: `storage/paths.py`에서 `BASE_DATA_DIR`, `STATIC_URL_PREFIX`, 카테고리 서브경로, `build_image_url()` 함수 등을 중앙 관리하여 하드코딩 제거.
 5. **스토리지 추상화 (RU-006-Q4)**:
     - **인터페이스 분리**: `StorageInterface` 추상 클래스를 통해 `put/get/exists/delete` 인터페이스를 정의함.
     - **MVP 구현체**: `LocalStorage` 구현체가 `backend/.data/` 디렉토리에 카테고리별로 파일을 저장함.
