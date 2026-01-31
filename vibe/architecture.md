@@ -43,6 +43,10 @@ D:\Dev\unknown-world\
 │   │       │   ├── image_postprocess.py (rembg 배경 제거, U-035)
 │   │       │   ├── image_understanding.py (이미지 이해 서비스, U-021)
 │   │       │   └── rembg_preflight.py (신규: rembg 프리플라이트, U-045)
+│   │       ├── storage/    # 스토리지 추상화 (RU-006-Q4)
+│   │       │   ├── __init__.py (팩토리 및 내보내기)
+│   │       │   ├── storage.py (인터페이스 정의: StorageInterface)
+│   │       │   └── local_storage.py (MVP 구현체: LocalStorage)
 │   │       ├── validation/ # 비즈니스 룰 및 언어 검증 (U-043)
 │   │       │   ├── business_rules.py
 │   │       │   └── language_gate.py (신규: 언어 혼합 검증)
@@ -343,6 +347,11 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **아티팩트 저장 및 서빙 (Option A)**:
     - MVP에서는 생성된 이미지를 백엔드의 `generated_images/` 디렉토리에 로컬 PNG 파일로 저장함.
     - FastAPI의 `StaticFiles`를 통해 `/static/images/` 경로로 브라우저에 직접 서빙함.
+5. **스토리지 추상화 (RU-006-Q4)**:
+    - **인터페이스 분리**: `StorageInterface` 추상 클래스를 통해 `put/get/exists/delete` 인터페이스를 정의함.
+    - **MVP 구현체**: `LocalStorage` 구현체가 `backend/.data/` 디렉토리에 카테고리별로 파일을 저장함.
+    - **카테고리 분류**: `StorageCategory`를 통해 생성 이미지(`images/generated`), 업로드 이미지(`images/uploaded`), 아티팩트(`artifacts`)를 구분함.
+    - **MMP 확장성**: 환경변수로 `GCSStorage` 구현체 전환 예정, 서비스 코드 변경 없이 확장 가능.
 4. **안전 폴백 (RULE-004)**:
     - 이미지 생성 실패(모델 오류, 정책 차단, 잔액 부족 등) 시에도 텍스트-only로 게임을 계속 진행할 수 있도록 `ImageGenerationStatus.FAILED` 또는 `SKIPPED` 상태와 함께 적절한 메시지를 반환함.
 

@@ -1,11 +1,58 @@
 # AI 필수 준수 규칙 (Critical Rules) - Unknown World
 
-> 이 문서는 Unknown World 레포에서 작업하는 AI 에이전트가 **절대 위반하면 안 되는 규칙**을 모은 “레드라인(금지선)”입니다.  
+> 이 문서는 Unknown World 레포에서 작업하는 AI 에이전트가 **절대 위반하면 안 되는 규칙**을 모은 "레드라인(금지선)"입니다.
 > SSOT 우선순위: `vibe/prd.md` → `vibe/tech-stack.md` → `vibe/ref/*` → `.cursor/rules/*.mdc` → `.gemini/rules/*`
 
 ---
 
-## RULE-001: “채팅 앱”으로 보이게 만드는 UI 변경 금지
+## RULE-000: Shell/Terminal 조합 연산자 사용 절대 금지 (최우선)
+
+AI 에이전트가 Shell, Bash, Terminal 도구를 사용할 때 **명령어 조합 연산자를 절대 사용하지 않습니다**.
+
+❌ **금지 연산자:**
+
+- `&&` (AND 연산자)
+- `||` (OR 연산자)
+- `;` (순차 실행)
+- `|` (파이프)
+
+❌ Bad:
+
+```bash
+cd /app && npm install
+git add . && git commit -m "msg"
+npm run build || echo "failed"
+cat file.txt | grep pattern
+```
+
+✅ Good:
+
+```bash
+# 각 명령을 개별적으로 실행
+cd /app
+npm install
+
+# 별도의 도구 호출로 분리
+git add .
+git commit -m "msg"
+```
+
+**이유:**
+
+- Windows 환경에서 shell 연산자 호환성 문제 방지
+- 각 명령의 성공/실패를 개별적으로 확인 가능
+- 디버깅 및 오류 추적 용이
+
+**위반 시 AI의 응답:**
+
+```
+⚠️ 경고: Shell 조합 연산자(&&, ||, ;, |) 사용이 감지되었습니다 (RULE-000).
+각 명령을 개별적으로 실행해야 합니다.
+```
+
+---
+
+## RULE-001: "채팅 앱"으로 보이게 만드는 UI 변경 금지
 
 Unknown World는 “대화 앱”이 아니라 **상태 기반 게임 UI**입니다. 메신저형 채팅 버블/대화창 중심 UI로 회귀하는 변경은 금지합니다.
 
