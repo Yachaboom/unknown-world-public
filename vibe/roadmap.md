@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 67/88 (76.1%) | **MVP**: 67/71 (94.4%) | **MMP**: 0/17 (0%)
+**전체**: 68/88 (77.2%) | **MVP**: 68/71 (95.7%) | **MMP**: 0/17 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP D-8
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) / **최근 완료**: [U-049[Mvp]](unit-results/U-049[Mvp].md) (2026-02-01)
+**진행 중(현재 포커스)**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) / **최근 완료**: [U-050[Mvp]](unit-results/U-050[Mvp].md) (2026-02-01)
 
 **블로커**: 없음
 
@@ -138,8 +138,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-050[Mvp]](unit-plans/U-050[Mvp].md) | UI/UX: 오버레이 팔레트/강도 튜닝(덮임/쨍함 완화) + 반응형 폴리시(가이드 준수) | Depends=U-010[Mvp],U-037[Mvp] | ⏸️
-
 ID=[U-051[Mvp]](unit-plans/U-051[Mvp].md) | ⚡렌더링 단계-이미지 생성 서비스 브릿지 구축 | Depends=U-019[Mvp],RU-005[Mvp] | ⏸️
 ID=[U-052[Mvp]](unit-plans/U-052[Mvp].md) | 조건부 이미지 생성 제어 로직(should_generate 판정) | Depends=U-051[Mvp],U-017[Mvp] | ⏸️
 ID=[U-053[Mvp]](unit-plans/U-053[Mvp].md) | 비동기 이미지 생성 및 결과 데이터 동기화 | Depends=U-052[Mvp] | ⏸️
@@ -176,6 +174,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-050[Mvp]](unit-results/U-050[Mvp].md): UI/UX - 오버레이 팔레트/강도 튜닝 및 반응형 폴리시(가이드 준수) (2026-02-01)
 - ✅ [U-049[Mvp]](unit-results/U-049[Mvp].md): UI/UX - 레이아웃/스크롤 설계 개선(첫 화면 과도 스크롤 제거, 카드 내부 스크롤) (2026-02-01)
 - ✅ [U-042[Mvp]](unit-results/U-042[Mvp].md): 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 (2026-01-31)
 - ✅ [U-041[Mvp]](unit-results/U-041[Mvp].md): SaveGame 마이그레이션 - 버전별 변환 로직 구현 (2026-01-31)

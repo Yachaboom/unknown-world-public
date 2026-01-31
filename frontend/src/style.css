@@ -57,7 +57,7 @@
 
   /* 그리드 레이아웃 */
   --header-height: 60px;
-  --footer-height: 160px; /* U-049: 카드 비용/위험도 정보가 잘리지 않도록 높이 증가 */
+  --footer-height: 140px; /* U-050 v6: 컴팩트 카드에 맞춰 높이 조정 */
   --sidebar-width: 320px;
 }
 
@@ -121,18 +121,20 @@ body {
    4. CRT 오버레이 효과
    ============================================ */
 
-/* 스캔라인 오버레이 */
+/* 스캔라인 오버레이 - U-050 v6: 스캔라인 강도 완화 */
 .crt-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-  background-size: 100% 4px;
+  /* 스캔라인: 적당히 (0.35) - 분위기와 가독성 균형 */
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+  background-size: 100% 2px;
   pointer-events: none;
-  z-index: 9999; /* 최상단 배치 (로고/헤더 등 일반 요소 덮음) */
-  animation: flicker 0.15s infinite;
+  z-index: 9999;
+  /* 플리커: 느리게 (0.5s), 미세한 변화만 */
+  animation: flicker 0.5s infinite;
 }
 
 /* 
@@ -164,16 +166,20 @@ body {
   min-height: 100vh;
 }
 
-/* 플리커(깜빡임) 애니메이션 */
+/* 플리커(깜빡임) 애니메이션 - U-050 v5: 미세한 깜빡임 */
 @keyframes flicker {
-  0% {
-    opacity: 0.97;
+  0%,
+  100% {
+    opacity: 0.95;
   }
-  50% {
+  25% {
     opacity: 1;
   }
-  100% {
-    opacity: 0.98;
+  50% {
+    opacity: 0.97;
+  }
+  75% {
+    opacity: 0.99;
   }
 }
 
@@ -698,31 +704,37 @@ body {
 }
 
 /* 개별 핫스팟 오버레이 */
+/* U-050: Option A - 면 최소화, 테두리/outline 중심 강조 */
 .hotspot-overlay {
   position: absolute;
   pointer-events: auto;
   cursor: pointer;
-  border: 2px solid var(--text-color);
+  /* 면: 거의 투명 (콘텐츠 보호) */
+  background-color: rgba(51, 255, 0, 0.02);
+  /* 테두리: 대시 패턴으로 시각적 구분 + 존재감 */
+  border: 1.5px dashed var(--text-color);
   border-radius: 2px;
-  background-color: rgba(51, 255, 0, 0.05);
-  box-shadow:
-    0 0 8px rgba(51, 255, 0, 0.3),
-    inset 0 0 4px rgba(51, 255, 0, 0.1);
+  /* 글로우: 매우 얕고 좁게 (4px blur, 낮은 opacity) */
+  box-shadow: 0 0 4px rgba(51, 255, 0, 0.15);
   transition:
     border-color 0.2s,
+    border-style 0.2s,
     background-color 0.2s,
-    box-shadow 0.2s,
-    transform 0.15s;
+    box-shadow 0.2s;
 }
 
-/* 핫스팟 호버 효과 - 게임스러운 하이라이트 */
+/* 핫스팟 호버 효과 - U-050: 테두리 중심, 면 최소화 */
 .hotspot-overlay.hovered {
-  border-color: var(--accent-color);
-  background-color: rgba(255, 0, 255, 0.15);
+  /* 면: 아주 미세한 틴트만 (덮임 방지) */
+  background-color: rgba(255, 0, 255, 0.04);
+  /* 테두리: solid로 전환 + 강조색 */
+  border: 2px solid var(--accent-color);
+  /* 글로우: 컴팩트하게 (6px blur) */
   box-shadow:
-    0 0 15px var(--accent-color),
-    inset 0 0 10px rgba(255, 0, 255, 0.2);
-  transform: scale(1.02);
+    0 0 6px rgba(255, 0, 255, 0.35),
+    inset 0 0 2px rgba(255, 0, 255, 0.1);
+  /* scale 제거 - 덮임 방지 */
+  transform: none;
 }
 
 /* 핫스팟 포커스 효과 (접근성) */
@@ -753,29 +765,34 @@ body {
    ============================================ */
 
 /* 드롭 타겟 활성 상태 (아이템이 위에 있을 때) */
+/* U-050: 면 최소화, 글로우 축소, 펄스 느리게 */
 .hotspot-overlay.drop-target-active {
-  border-color: var(--warning-color);
-  border-width: 3px;
-  background-color: rgba(255, 170, 0, 0.25);
+  /* 면: 미세한 경고 틴트 */
+  background-color: rgba(255, 170, 0, 0.06);
+  /* 테두리: 두껍게 + solid */
+  border: 2.5px solid var(--warning-color);
+  /* 글로우: 적당히 (8px blur) */
   box-shadow:
-    0 0 20px rgba(255, 170, 0, 0.6),
-    inset 0 0 15px rgba(255, 170, 0, 0.3);
-  transform: scale(1.05);
-  animation: drop-target-pulse 0.6s ease-in-out infinite;
+    0 0 8px rgba(255, 170, 0, 0.4),
+    inset 0 0 3px rgba(255, 170, 0, 0.15);
+  /* scale 축소 */
+  transform: scale(1.01);
+  /* 펄스: 느리게 (0.6s → 1.2s) */
+  animation: drop-target-pulse 1.2s ease-in-out infinite;
 }
 
-/* 드롭 타겟 펄스 애니메이션 */
+/* 드롭 타겟 펄스 애니메이션 - U-050: 부드럽게 */
 @keyframes drop-target-pulse {
   0%,
   100% {
     box-shadow:
-      0 0 20px rgba(255, 170, 0, 0.6),
-      inset 0 0 15px rgba(255, 170, 0, 0.3);
+      0 0 8px rgba(255, 170, 0, 0.4),
+      inset 0 0 3px rgba(255, 170, 0, 0.15);
   }
   50% {
     box-shadow:
-      0 0 30px rgba(255, 170, 0, 0.8),
-      inset 0 0 20px rgba(255, 170, 0, 0.4);
+      0 0 12px rgba(255, 170, 0, 0.5),
+      inset 0 0 4px rgba(255, 170, 0, 0.2);
   }
 }
 
@@ -801,12 +818,12 @@ body {
   }
 }
 
-/* 드롭 타겟 활성화 시 툴팁 테두리 변경 */
+/* 드롭 타겟 활성화 시 툴팁 테두리 변경 - U-050: 글로우 축소 */
 .hotspot-overlay.drop-target-active .hotspot-tooltip {
   border-color: var(--warning-color);
   box-shadow:
-    0 0 15px rgba(255, 170, 0, 0.5),
-    0 4px 12px rgba(0, 0, 0, 0.8);
+    0 0 6px rgba(255, 170, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 .hotspot-overlay.drop-target-active .hotspot-tooltip::after {
@@ -825,7 +842,7 @@ body {
   }
 }
 
-/* 핫스팟 툴팁 */
+/* 핫스팟 툴팁 - U-050: 글로우 축소, 가독성 개선 */
 .hotspot-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -834,12 +851,14 @@ body {
   min-width: 100px;
   max-width: 200px;
   padding: var(--spacing-xs) var(--spacing-sm);
-  background-color: rgba(0, 20, 0, 0.95);
+  /* 배경: 약간 더 불투명하게 (가독성) */
+  background-color: rgba(0, 15, 0, 0.92);
   border: 1px solid var(--accent-color);
   border-radius: 2px;
+  /* 글로우: 축소 (10px → 5px) */
   box-shadow:
-    0 0 10px rgba(255, 0, 255, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.8);
+    0 0 5px rgba(255, 0, 255, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.7);
   z-index: 20;
   white-space: nowrap;
   animation: tooltip-fade-in 0.15s ease-out;
@@ -892,7 +911,7 @@ body {
   position: relative;
 }
 
-/* 모바일에서 핫스팟 터치 영역 확대 */
+/* 모바일에서 핫스팟 터치 영역 확대 - U-050: 툴팁 위치 조정 */
 @media (max-width: 768px) {
   .hotspot-overlay {
     /* 터치 영역 최소 44px 보장 */
@@ -901,8 +920,30 @@ body {
   }
 
   .hotspot-tooltip {
-    font-size: 0.875rem;
-    max-width: 160px;
+    /* 화면 상단 가림 방지: 아래로 표시 */
+    bottom: auto;
+    top: calc(100% + 6px);
+    max-width: 140px;
+    font-size: 0.8rem;
+  }
+
+  .hotspot-tooltip::after {
+    /* 화살표 방향 반전 */
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--accent-color);
+  }
+
+  .hotspot-overlay.drop-target-active .hotspot-tooltip::after {
+    border-bottom-color: var(--warning-color);
+  }
+}
+
+/* 태블릿 중간 크기 - U-050 */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .hotspot-tooltip {
+    max-width: 170px;
   }
 }
 
@@ -976,7 +1017,8 @@ body {
   grid-area: footer;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  /* U-050 v5: 카드와 입력창 사이 간격 축소 */
+  gap: 2px;
   padding: var(--spacing-sm);
   border: 1px solid var(--border-color);
   background-color: var(--panel-bg);
@@ -991,11 +1033,15 @@ body {
 
 .action-deck {
   display: flex;
+  /* U-050 v5: 카드가 콘텐츠 높이에 맞게 조절되도록 (stretch 대신) */
+  align-items: flex-start;
   gap: var(--spacing-sm);
-  padding: var(--spacing-xs) 0;
+  /* U-050 v6: 카드 높이 축소에 맞춰 min-height 감소 */
+  min-height: 85px;
+  padding: var(--spacing-xs) 0 0;
   /* U-049: 드래그 스크롤 - 스크롤바 숨김 */
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
   /* 터치 디바이스 부드러운 스크롤 */
@@ -1034,7 +1080,8 @@ body {
   position: relative;
   min-width: 160px;
   max-width: 200px;
-  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+  /* U-050 v6: padding 축소 - 컴팩트한 카드 */
+  padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-sm);
   border: 2px solid var(--border-color);
   border-radius: var(--border-radius);
   /* U-049: 배경 대비 강화 - 더 불투명한 배경 */
@@ -1050,7 +1097,7 @@ body {
     transform 0.15s;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 2px;
 }
 
 /* 위험도별 테두리 색상 */
@@ -1075,44 +1122,47 @@ body {
   transform: translateY(-4px);
 }
 
-/* 카드 타이틀 - U-049: 가독성 강화 */
+/* 카드 타이틀 - U-050 v6: 컴팩트 카드에 맞춰 크기 축소 */
 .action-card-title {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: bold;
   color: var(--text-color);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   /* U-049: 강한 텍스트 그림자로 배경과 분리 */
   text-shadow:
     0 0 10px var(--text-color),
     0 0 20px rgba(51, 255, 0, 0.5),
     0 2px 4px rgba(0, 0, 0, 0.9);
-  padding-bottom: var(--spacing-xs);
+  padding-bottom: 2px;
   border-bottom: 1px solid var(--text-dim);
 }
 
-/* 카드 설명 */
+/* 카드 설명 - U-050 v6: 컴팩트 카드에 맞춰 축소 */
 .action-card-description {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-dim);
-  line-height: 1.3;
-  min-height: 2em;
+  line-height: 1.2;
+  min-height: 1.5em;
 }
 
-/* 비용 표시 영역 - U-049: 가독성 및 대비 강화 */
+/* 비용 표시 영역 - U-050 v6: 컴팩트 너비, 가운데 정렬 */
 .action-card-cost {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--warning-color);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 2px var(--spacing-xs);
+  /* U-050 v6: 컨텐츠에 맞는 너비 + 카드 내 가운데 배치 */
+  width: fit-content;
+  margin: 0 auto;
   /* U-049: 더 강한 배경 대비 */
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.85) 100%);
   border: 1px solid rgba(51, 255, 0, 0.2);
   border-radius: 2px;
-  margin-top: auto;
   /* U-049: 텍스트 그림자 */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
@@ -1389,10 +1439,16 @@ button,
     color 0.2s;
 }
 
+/* U-050 v3: 버튼 호버 - 아이콘 식별성 + 테두리 끊김 방지 */
 button:hover,
 .btn:hover {
-  background: var(--accent-color);
-  color: white;
+  /* 면: 약한 틴트로 변경 (아이콘 덮임 방지) */
+  background: rgba(255, 0, 255, 0.15);
+  color: var(--accent-color);
+  /* box-shadow로 테두리 효과 (outline 끊김 방지) */
+  box-shadow:
+    inset 0 0 0 2px var(--accent-color),
+    0 0 8px rgba(255, 0, 255, 0.4);
 }
 
 button:disabled,
@@ -2032,10 +2088,9 @@ button:disabled,
    - 전역 오버레이 대신 Scene Canvas에 효과 집중
    ============================================ */
 
-/* 전역 CRT 오버레이: 강도 약화 (critical 영역 보호) */
+/* 전역 CRT 오버레이: 강도 약화 (critical 영역 보호) - U-050: 0.3 → 0.25 */
 .crt-overlay {
-  opacity: 0.3;
-  /* 기존 애니메이션 유지하되 강도 낮춤 */
+  opacity: 0.25;
 }
 
 /* Scene Canvas: CRT 분위기 강화 (ambient 영역) */
@@ -2043,6 +2098,7 @@ button:disabled,
   position: relative;
 }
 
+/* U-050 v5: Scene Canvas CRT 효과 - 스캔라인 강조, 깜빡임 완화 */
 .scene-canvas::after {
   content: '';
   position: absolute;
@@ -2050,12 +2106,14 @@ button:disabled,
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
-  background-size: 100% 4px;
+  /* 스캔라인: 적당히 */
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+  background-size: 100% 2px;
   pointer-events: none;
   z-index: 1;
-  animation: flicker 0.15s infinite;
-  opacity: 0.7;
+  /* 플리커: 느리게 */
+  animation: flicker 0.5s infinite;
+  opacity: 0.8;
 }
 
 /* Scene Canvas placeholder는 분위기 유지하면서 텍스트 읽힘 보장 */
@@ -2133,15 +2191,15 @@ button:disabled,
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  /* 플리커 애니메이션 비활성화 */
+  /* 플리커 애니메이션 비활성화 - U-050: opacity 더 낮춤 */
   .crt-overlay {
     animation: none;
-    opacity: 0.15;
+    opacity: 0.12;
   }
 
   .scene-canvas::after {
     animation: none;
-    opacity: 0.3;
+    opacity: 0.2;
   }
 
   /* 글리치 효과 비활성화 */
