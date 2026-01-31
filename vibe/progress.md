@@ -1,5 +1,33 @@
 # 프로젝트 진행 상황
 
+## [2026-01-31 17:45] [CP-MVP-06] 체크포인트 - Scanner 업로드 게이트(안전/좌표/비용) 검증 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 이미지 업로드 → 분석 → 아이템화 전 과정의 통합 검증 완료, 0~1000 정규화 좌표계 및 언어 일관성 준수 확인
+- **추가 컴포넌트**: `vibe/unit-runbooks/CP-MVP-06.md` (검증 런북), `vibe/unit-results/CP-MVP-06.md` (검증 보고서)
+- **달성 요구사항**: [RULE-004] 안전 폴백, [RULE-006] 언어 일관성, [RULE-009] bbox 0~1000 정규화, [PRD 6.7] Scanner 슬롯 멀티모달 조작
+
+### 기술적 구현 세부사항
+
+**인바리언트 검증 결과**:
+- **Coordinate Invariant**: 백엔드(`image_understanding.py`)에서 생성된 bbox 좌표가 `[ymin, xmin, ymax, xmax]` 형식과 0~1000 정규화 규약을 엄격히 준수함을 확인.
+- **Safety Gate**: 지원하지 않는 파일 형식(text, pdf 등) 및 크기 초과(20MB) 시나리오에서 시스템이 크래시 없이 안전한 에러 응답 및 UI 피드백을 제공함을 확인.
+- **Language Invariant**: `ko-KR`/`en-US` 토글에 따른 비전 캡션 및 아이템 후보 목록의 언어 일관성 전수 검증 통과.
+
+**통합 동작 확인**:
+- `backend/api/scanner.py` (엔드포인트) + `frontend/components/ScannerSlot.tsx` (UI) 간의 `multipart/form-data` 통신 및 Zod 스키마 기반 데이터 정합성 확인.
+- 사용자가 분석 결과를 확인하고 인벤토리에 추가하는 "Option B" 정책이 실제 게임 루프에서 정상 작동함을 확인.
+
+### 코드 구조
+_(검증 및 통합 단계이므로 신규 기능 코드는 U-021/U-022 참조)_
+
+### 다음 단계
+- [CP-MVP-03] 체크포인트: 10분 데모 루프 (멀티모달 조작 포함)
+- [U-023[Mvp]] Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI
+
+---
+
 ## [2026-01-31 17:30] [U-022[Mvp]] Scanner 슬롯 UI + 업로드→아이템화 반영 완료
 
 ### 구현 완료 항목

@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, coverage/**, .venv/**, .pytest_cache/**, .ruff_cache/**
+- Only files matching these patterns are included: **/*.{py,ts,tsx,json,toml,md}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, backend/.venv/**, frontend/node_modules/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -42,6 +42,12 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+backend/prompts/image/scene_prompt.en.md
+backend/prompts/image/scene_prompt.ko.md
+backend/prompts/system/game_master.en.md
+backend/prompts/system/game_master.ko.md
+backend/prompts/turn/turn_output_instructions.en.md
+backend/prompts/turn/turn_output_instructions.ko.md
 backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/__init__.py
@@ -104,13 +110,13 @@ backend/tests/unit/test_image_postprocess.py
 backend/tests/unit/test_orchestrator_repair.py
 backend/tests/unit/test_u034_verification.py
 backend/tests/unit/test_u043_language_gate.py
-frontend/coverage/block-navigation.js
+CLAUDE.md
 frontend/coverage/coverage-final.json
-frontend/coverage/prettify.js
-frontend/coverage/sorter.js
 frontend/package.json
 frontend/public/ui/manifest.json
 frontend/public/ui/manifest.schema.json
+frontend/public/ui/QA_CHECKLIST.md
+frontend/public/ui/README.md
 frontend/src/api/scanner.test.ts
 frontend/src/api/scanner.ts
 frontend/src/api/turnStream.test.ts
@@ -154,6 +160,7 @@ frontend/src/i18n-scenario.test.ts
 frontend/src/i18n.ts
 frontend/src/locales/en-US/translation.json
 frontend/src/locales/ko-KR/translation.json
+frontend/src/locales/README.md
 frontend/src/main.tsx
 frontend/src/save/constants.ts
 frontend/src/save/saveGame.test.ts
@@ -188,12 +195,250 @@ frontend/tsconfig.node.json
 frontend/vite.config.ts
 package.json
 request.json
+shared/README.md
 shared/schemas/turn/turn_input.schema.json
 shared/schemas/turn/turn_output.schema.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="backend/src/unknown_world/__init__.py">
+"""Unknown World - Backend Package
+
+This is the main package for the Unknown World backend.
+Architecture: FastAPI + Pydantic + SSE streaming
+
+Reference:
+- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
+- vibe/prd.md (Agent-based Game Master Engine)
+"""
+
+__version__ = "0.1.0"
+</file>
+
+<file path="backend/tests/integration/test_api.py">
+from fastapi.testclient import TestClient
+
+from unknown_world.main import app
+
+client = TestClient(app)
+
+
+def test_health_check():
+    """/health 엔드포인트가 올바른 스키마와 상태를 반환하는지 테스트합니다."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert data["service"] == "unknown-world-backend"
+
+
+def test_root_endpoint():
+    """루트 엔드포인트가 정상 작동하는지 테스트합니다."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "message" in response.json()
+
+
+def test_cors_policy():
+    """RULE-011에 따른 CORS 정책이 올바르게 설정되었는지 테스트합니다."""
+    # 허용된 오리진 테스트 (포트 8001)
+    headers = {
+        "Origin": "http://localhost:8001",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = client.options("/health", headers=headers)
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:8001"
+
+    # 허용되지 않은 오리진 테스트 (포트 9000)
+    headers = {
+        "Origin": "http://localhost:9000",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = client.options("/health", headers=headers)
+    # FastAPI/Starlette CORS 미들웨어는 허용되지 않은 경우 origin 헤더를 반환하지 않음
+    assert "access-control-allow-origin" not in response.headers
+</file>
+
+<file path="CLAUDE.md">
+# AI 에이전트 전역 지침 (Unknown World)
+
+이 문서는 Unknown World 레포에서 작업하는 모든 AI 에이전트(Claude/Cursor 포함)가 **일관되고 효율적으로** 일할 수 있도록 하는 전역 규칙입니다.
+
+---
+
+## 프로젝트 개요
+
+**Unknown World**는 Gemini 기반의 **에이전트형(Game Master) 세계 엔진**과 멀티모달(텍스트/이미지/비전) 파이프라인을 결합한 **무한 생성 로그라이크 내러티브 웹게임**입니다.
+
+- “대화 앱”이 아니라 **상태를 가진 시스템**입니다.
+- 출력은 내러티브 텍스트뿐 아니라 **UI/상태 변화/비용/이미지 작업**까지 포함한 **구조화 결과(JSON Schema)** 여야 합니다.
+- 실패/불완전 출력에 대비해 **검증 + 자동 복구(Repair loop) + 안전한 폴백**을 내장합니다.
+
+---
+
+## SSOT(단일 출처) 및 충돌 해결 우선순위
+
+문서/규칙이 충돌할 때는 아래 순서로 결정합니다.
+
+1. `vibe/prd.md` (제품/UX/성공 지표/금지사항)
+2. `vibe/tech-stack.md` (기술 스택/버전/아키텍처 선택)
+3. `vibe/ref/*` (표준/스타일/구조화 출력 가이드)
+4. `.cursor/rules/*.mdc` (구체적 실행 규칙)
+5. `.gemini/rules/*` (존재하는 경우에 한해 참고; 프로젝트와 불일치 시 적용 금지)
+
+불확실하면 **추측하지 말고 질문**합니다.
+
+---
+
+## 핵심 원칙 (Non‑Negotiable)
+
+### 1) Prompt-only wrapper / Generic chatbot 회피
+
+- “프롬프트 1장 + 채팅 UI” 형태를 금지합니다.
+- 반드시 다음이 존재해야 합니다:
+  - **상태(State)**: WorldState / Inventory / Rules / Economy / History
+  - **오케스트레이터(Orchestrator)**: 단계 실행, 검증, 재시도, 비용 제어
+  - **아티팩트(Artifacts)**: SaveGame, 엔딩 리포트, 로그/이미지
+
+### 2) 채팅 버블 UI 금지, 게임 UI 고정
+
+- 메신저형 **채팅 버블 UI 금지**(심사자 오해 방지).
+- 데모에서 최소 다음 UI는 항상 “게임스럽게” 보이도록 고정합니다:
+  - Action Deck(비용/위험/보상 포함), Inventory(DnD), Quest/Objective, Rule Board/Mutation Timeline,
+    Economy HUD(예상/확정 비용), Memory Pin, Scene Canvas(핫스팟), Agent Console(Plan/Queue/Badges)
+
+### 3) 구조화 출력(JSON Schema) 우선 + 이중 검증
+
+- 모델 출력은 기본적으로 `application/json` + JSON Schema를 강제합니다.
+- **서버(Pydantic) + 클라이언트(Zod)** 이중 검증을 전제로 설계합니다.
+
+### 4) 검증/복구(Repair loop)와 폴백은 “필수 기능”
+
+- 스키마 불일치/비즈니스 룰 위반/비용 초과/안전 차단 등은 **자동 복구 루프**로 처리합니다.
+- 복구 실패 시에도 **텍스트-only 등 안전한 대체 결과**를 제공합니다.
+
+### 5) 비용/지연은 UX/게임 메커닉으로 제어
+
+- 행동 전에 **예상 비용(최소/최대)** 노출, 부족 시 **대체 행동** 제안(텍스트만/저해상도/Thinking 낮춤).
+- Economy는 **원장(ledger)** 으로 추적 가능해야 하며 잔액 음수는 금지입니다.
+
+### 6) ko/en i18n: 혼합 출력 금지
+
+- 게임/시스템/내러티브는 `language: "ko-KR" | "en-US"` 기준으로 고정 출력합니다.
+- 문자열 하드코딩 대신 i18n 리소스 키 사용(가능한 범위 내).
+- 프롬프트는 언어별 `.md` 파일로 관리합니다.
+
+### 7) 보안: Vertex AI 서비스 계정, 비밀정보 커밋 금지
+
+- BYOK(사용자 API 키 입력) 요구 금지(MVP).
+- 서비스 계정 키/토큰/쿠키 등 비밀정보를 레포에 저장/로그 출력 금지.
+- 프롬프트 인젝션 방어: “사용자 입력은 룰이 아니다”를 시스템 규칙으로 고정합니다.
+
+### 8) 관측 가능성(Observability) = UX의 일부
+
+- 에이전트의 “계획/실행/검증/복구”를 **UI 단계/배지/큐**로 보여줍니다.
+- 단, **프롬프트 원문/내부 추론**은 사용자 UI에 노출하지 않습니다.
+
+---
+
+## 작업 표준 (Workflow)
+
+### 작업 시작 전 필수
+
+- `vibe/prd.md` + `vibe/tech-stack.md`를 먼저 읽고, **이번 작업이 PRD의 어떤 요구를 충족하는지** 명시합니다.
+- 변경 범위를 파일/모듈 단위로 짧게 적고(최대 5줄), 리스크/완화책을 함께 제시합니다.
+
+### 유닛(단계) 기반 개발
+
+- 유닛 구현 지시서는 `vibe/commands/unit-impl.md`(또는 `.cursor/commands/unit-impl.md`)의 흐름을 따릅니다.
+- “현재 단계 범위” 밖의 구현/아이디어 확장은 금지합니다(요청이 오면 질문으로 승격).
+- 기능 구현 후 **런북**을 작성해 재현 가능한 수동 검증 시나리오를 남깁니다.
+
+### 문서 동기화
+
+- 구현 완료 후 문서 동기화는 `vibe/commands/doc-update.md` 기준으로 수행합니다.
+- Progress/Roadmap/Architecture/PRD/Tech-stack 문서의 동기화 규칙(최신 항목 최상단 등)을 준수합니다.
+
+### 리팩토링
+
+- 리팩토링은 `vibe/commands/refactor-impl.md` 기준으로 **Behavior Preservation**을 최우선합니다.
+
+### 테스트
+
+- 테스트 작업을 명시적으로 요청받았거나, `test-exec` 흐름을 수행할 때는 `vibe/commands/test-exec.md`의 절차(TDD, 원인 판별 프로토콜 등)를 따릅니다.
+- 그 외의 일반 기능 구현에서는 “자동 테스트 도입 여부”를 추측해 추가하지 말고, 런북/리플레이 기반 검증을 우선합니다.
+
+### 커밋 메시지
+
+- 커밋 메시지는 `.gemini/rules/commit-rules.md` 포맷을 우선 준수합니다(한글, Progress 블록 포함).
+- 단, `vibe/roadmap.md`가 비어있는 경우 Progress 수치는 임의로 만들지 말고 보류/질문합니다.
+
+---
+
+## 품질 기준 (출시/데모 관점)
+
+### Hard Gate (필수 통과)
+
+- **Schema OK**: TurnOutput JSON이 스키마를 통과
+- **Economy OK**: 비용/잔액 불일치 없음, 잔액 음수 금지
+- **Safety OK**: 차단 시 명시 + 안전한 대체 결과 제공
+- **Consistency OK**: WorldState/Rule Board/Memory Pin 일관성 유지
+
+### Soft Gate (관측/튜닝)
+
+- **Streaming TTFB**: 2초 이내 목표(데모 체감 우선)
+- 이미지 생성: 선택적/지연 허용(Lazy loading), 실패 시 텍스트 대체
+
+---
+
+## 금지사항 (절대 금지)
+
+- ❌ 채팅 버블/메신저 UX로 회귀시키는 변경
+- ❌ 구조화 출력 없이 “텍스트만” 반환하는 API/로직(특수한 예외를 제외)
+- ❌ 프롬프트 원문/내부 추론/비밀정보를 UI 또는 로그로 노출
+- ❌ 서비스 계정 키/토큰 등 비밀정보를 레포에 커밋
+- ❌ `language` 정책을 무시하고 ko/en 혼합 출력
+- ❌ 좌표 규약(0~1000, bbox [ymin,xmin,ymax,xmax])을 깨는 변경
+- ❌ 재화 잔액 음수/비용 누락/예상비용 미표기
+
+---
+
+## 지침 운영/사용 가이드
+
+### Cursor 규칙 적용 방식
+
+- `.cursor/rules/*.mdc`는 **파일 패턴(`applyTo`)**에 따라 자동 적용됩니다.
+- 규칙이 부족/충돌하면:
+  - PRD/Tech-stack 근거를 첨부해 규칙을 업데이트하고,
+  - 파일 하나가 500줄을 넘지 않게 모듈로 분리합니다.
+
+### 온보딩(신규 합류자/에이전트) 10분 루프
+
+- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
+- `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
+- `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
+- `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
+
+### 지침 업데이트 프로세스(권장)
+
+- 변경 필요 신호: 규칙 오해/중복/충돌/500줄 초과/6개월 미사용
+- 절차: 문제 재현 → 원인(규칙 부재/모호함) → 규칙 수정/분리 → PRD/Tech-stack와 정합성 확인 → 적용 범위(applyTo) 좁히기
+
+---
+
+## 참조 문서
+
+- `vibe/prd.md`
+- `vibe/tech-stack.md`
+- `vibe/ref/frontend-style-guide.md`
+- `vibe/ref/structured-outputs-guide.md`
+- `vibe/commands/*.md` / `.cursor/commands/*.md`
+- `.gemini/rules/commit-rules.md`
+</file>
 
 <file path="frontend/src/vite-env.d.ts">
 /// <reference types="vite/client" />
@@ -226,20 +471,6 @@ This section contains the contents of the repository's files.
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
-</file>
-
-<file path="backend/src/unknown_world/__init__.py">
-"""Unknown World - Backend Package
-
-This is the main package for the Unknown World backend.
-Architecture: FastAPI + Pydantic + SSE streaming
-
-Reference:
-- vibe/tech-stack.md (Python 3.14, FastAPI 0.128.0, Pydantic 2.12.5)
-- vibe/prd.md (Agent-based Game Master Engine)
-"""
-
-__version__ = "0.1.0"
 </file>
 
 <file path="backend/src/unknown_world/api/image.py">
@@ -3755,52 +3986,6 @@ def build_language_error_summary(result: LanguageGateResult) -> str:
     lines.append(messages["instruction"])
 
     return "\n".join(lines)
-</file>
-
-<file path="backend/tests/integration/test_api.py">
-from fastapi.testclient import TestClient
-
-from unknown_world.main import app
-
-client = TestClient(app)
-
-
-def test_health_check():
-    """/health 엔드포인트가 올바른 스키마와 상태를 반환하는지 테스트합니다."""
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert "version" in data
-    assert data["service"] == "unknown-world-backend"
-
-
-def test_root_endpoint():
-    """루트 엔드포인트가 정상 작동하는지 테스트합니다."""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "message" in response.json()
-
-
-def test_cors_policy():
-    """RULE-011에 따른 CORS 정책이 올바르게 설정되었는지 테스트합니다."""
-    # 허용된 오리진 테스트 (포트 8001)
-    headers = {
-        "Origin": "http://localhost:8001",
-        "Access-Control-Request-Method": "GET",
-    }
-    response = client.options("/health", headers=headers)
-    assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "http://localhost:8001"
-
-    # 허용되지 않은 오리진 테스트 (포트 9000)
-    headers = {
-        "Origin": "http://localhost:9000",
-        "Access-Control-Request-Method": "GET",
-    }
-    response = client.options("/health", headers=headers)
-    # FastAPI/Starlette CORS 미들웨어는 허용되지 않은 경우 origin 헤더를 반환하지 않음
-    assert "access-control-allow-origin" not in response.headers
 </file>
 
 <file path="backend/tests/integration/test_real_mode_gate.py">
@@ -7425,317 +7610,299 @@ async def test_repair_loop_fixes_language_mixing(sample_turn_input, base_turn_ou
         assert ValidationBadge.CONSISTENCY_FAIL not in result.badges  # 최종 배지는 OK여야 함
 </file>
 
-<file path="frontend/coverage/block-navigation.js">
-/* eslint-disable */
-var jumpToCode = (function init() {
-    // Classes of code we would like to highlight in the file view
-    var missingCoverageClasses = ['.cbranch-no', '.cstat-no', '.fstat-no'];
-
-    // Elements to highlight in the file listing view
-    var fileListingElements = ['td.pct.low'];
-
-    // We don't want to select elements that are direct descendants of another match
-    var notSelector = ':not(' + missingCoverageClasses.join('):not(') + ') > '; // becomes `:not(a):not(b) > `
-
-    // Selector that finds elements on the page to which we can jump
-    var selector =
-        fileListingElements.join(', ') +
-        ', ' +
-        notSelector +
-        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
-
-    // The NodeList of matching elements
-    var missingCoverageElements = document.querySelectorAll(selector);
-
-    var currentIndex;
-
-    function toggleClass(index) {
-        missingCoverageElements
-            .item(currentIndex)
-            .classList.remove('highlighted');
-        missingCoverageElements.item(index).classList.add('highlighted');
-    }
-
-    function makeCurrent(index) {
-        toggleClass(index);
-        currentIndex = index;
-        missingCoverageElements.item(index).scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'center'
-        });
-    }
-
-    function goToPrevious() {
-        var nextIndex = 0;
-        if (typeof currentIndex !== 'number' || currentIndex === 0) {
-            nextIndex = missingCoverageElements.length - 1;
-        } else if (missingCoverageElements.length > 1) {
-            nextIndex = currentIndex - 1;
-        }
-
-        makeCurrent(nextIndex);
-    }
-
-    function goToNext() {
-        var nextIndex = 0;
-
-        if (
-            typeof currentIndex === 'number' &&
-            currentIndex < missingCoverageElements.length - 1
-        ) {
-            nextIndex = currentIndex + 1;
-        }
-
-        makeCurrent(nextIndex);
-    }
-
-    return function jump(event) {
-        if (
-            document.getElementById('fileSearch') === document.activeElement &&
-            document.activeElement != null
-        ) {
-            // if we're currently focused on the search input, we don't want to navigate
-            return;
-        }
-
-        switch (event.which) {
-            case 78: // n
-            case 74: // j
-                goToNext();
-                break;
-            case 66: // b
-            case 75: // k
-            case 80: // p
-                goToPrevious();
-                break;
-        }
-    };
-})();
-window.addEventListener('keydown', jumpToCode);
-</file>
-
 <file path="frontend/coverage/coverage-final.json">
 {"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts": {"path":"D:\\Dev\\unknown-world\\frontend\\src\\schemas\\turn.ts","statementMap":{"0":{"start":{"line":30,"column":30},"end":{"line":30,"column":null}},"1":{"start":{"line":41,"column":30},"end":{"line":41,"column":null}},"2":{"start":{"line":47,"column":27},"end":{"line":47,"column":null}},"3":{"start":{"line":54,"column":32},"end":{"line":62,"column":null}},"4":{"start":{"line":69,"column":37},"end":{"line":78,"column":null}},"5":{"start":{"line":85,"column":32},"end":{"line":85,"column":null}},"6":{"start":{"line":91,"column":31},"end":{"line":91,"column":null}},"7":{"start":{"line":102,"column":32},"end":{"line":107,"column":null}},"8":{"start":{"line":115,"column":27},"end":{"line":122,"column":null}},"9":{"start":{"line":129,"column":36},"end":{"line":138,"column":null}},"10":{"start":{"line":149,"column":32},"end":{"line":156,"column":null}},"11":{"start":{"line":162,"column":32},"end":{"line":176,"column":null}},"12":{"start":{"line":183,"column":37},"end":{"line":192,"column":null}},"13":{"start":{"line":199,"column":31},"end":{"line":209,"column":null}},"14":{"start":{"line":220,"column":32},"end":{"line":229,"column":null}},"15":{"start":{"line":236,"column":33},"end":{"line":247,"column":null}},"16":{"start":{"line":254,"column":32},"end":{"line":262,"column":null}},"17":{"start":{"line":270,"column":30},"end":{"line":278,"column":null}},"18":{"start":{"line":289,"column":31},"end":{"line":295,"column":null}},"19":{"start":{"line":302,"column":31},"end":{"line":312,"column":null}},"20":{"start":{"line":319,"column":27},"end":{"line":325,"column":null}},"21":{"start":{"line":332,"column":32},"end":{"line":359,"column":null}},"22":{"start":{"line":370,"column":30},"end":{"line":382,"column":null}},"23":{"start":{"line":389,"column":34},"end":{"line":395,"column":null}},"24":{"start":{"line":407,"column":35},"end":{"line":412,"column":null}},"25":{"start":{"line":424,"column":34},"end":{"line":436,"column":null}},"26":{"start":{"line":447,"column":34},"end":{"line":453,"column":null}},"27":{"start":{"line":469,"column":32},"end":{"line":502,"column":null}},"28":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"29":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"30":{"start":{"line":532,"column":2},"end":{"line":563,"column":null}},"31":{"start":{"line":590,"column":17},"end":{"line":590,"column":null}},"32":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"33":{"start":{"line":593,"column":4},"end":{"line":593,"column":null}},"34":{"start":{"line":596,"column":2},"end":{"line":600,"column":null}},"35":{"start":{"line":611,"column":2},"end":{"line":611,"column":null}},"36":{"start":{"line":625,"column":2},"end":{"line":625,"column":null}}},"fnMap":{"0":{"name":"createFallbackTurnOutput","decl":{"start":{"line":517,"column":16},"end":{"line":517,"column":null}},"loc":{"start":{"line":521,"column":14},"end":{"line":564,"column":null}},"line":521},"1":{"name":"safeParseTurnOutput","decl":{"start":{"line":585,"column":16},"end":{"line":585,"column":null}},"loc":{"start":{"line":589,"column":25},"end":{"line":601,"column":null}},"line":589},"2":{"name":"parseTurnInput","decl":{"start":{"line":610,"column":16},"end":{"line":610,"column":31}},"loc":{"start":{"line":610,"column":57},"end":{"line":612,"column":null}},"line":610},"3":{"name":"safeParseTurnInput","decl":{"start":{"line":624,"column":16},"end":{"line":624,"column":35}},"loc":{"start":{"line":624,"column":76},"end":{"line":626,"column":null}},"line":624}},"branchMap":{"0":{"loc":{"start":{"line":519,"column":2},"end":{"line":519,"column":null}},"type":"default-arg","locations":[{"start":{"line":519,"column":24},"end":{"line":519,"column":null}}],"line":519},"1":{"loc":{"start":{"line":523,"column":4},"end":{"line":525,"column":null}},"type":"cond-expr","locations":[{"start":{"line":524,"column":8},"end":{"line":524,"column":null}},{"start":{"line":525,"column":8},"end":{"line":525,"column":null}}],"line":523},"2":{"loc":{"start":{"line":528,"column":4},"end":{"line":530,"column":null}},"type":"cond-expr","locations":[{"start":{"line":529,"column":8},"end":{"line":529,"column":null}},{"start":{"line":530,"column":8},"end":{"line":530,"column":null}}],"line":528},"3":{"loc":{"start":{"line":534,"column":15},"end":{"line":534,"column":null}},"type":"binary-expr","locations":[{"start":{"line":534,"column":15},"end":{"line":534,"column":31}},{"start":{"line":534,"column":31},"end":{"line":534,"column":null}}],"line":534},"4":{"loc":{"start":{"line":587,"column":2},"end":{"line":587,"column":null}},"type":"default-arg","locations":[{"start":{"line":587,"column":23},"end":{"line":587,"column":null}}],"line":587},"5":{"loc":{"start":{"line":588,"column":2},"end":{"line":588,"column":null}},"type":"default-arg","locations":[{"start":{"line":588,"column":24},"end":{"line":588,"column":null}}],"line":588},"6":{"loc":{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},"type":"if","locations":[{"start":{"line":592,"column":2},"end":{"line":594,"column":null}},{"start":{},"end":{}}],"line":592}},"s":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1,"9":1,"10":1,"11":1,"12":1,"13":1,"14":1,"15":1,"16":1,"17":1,"18":1,"19":1,"20":1,"21":1,"22":1,"23":1,"24":1,"25":1,"26":1,"27":1,"28":1,"29":1,"30":1,"31":2,"32":2,"33":1,"34":1,"35":2,"36":2},"f":{"0":1,"1":2,"2":2,"3":2},"b":{"0":[1],"1":[1,0],"2":[1,0],"3":[1,1],"4":[2],"5":[2],"6":[1,1]},"meta":{"lastBranch":7,"lastFunction":4,"lastStatement":37,"seen":{"s:30:30:30:Infinity":0,"s:41:30:41:Infinity":1,"s:47:27:47:Infinity":2,"s:54:32:62:Infinity":3,"s:69:37:78:Infinity":4,"s:85:32:85:Infinity":5,"s:91:31:91:Infinity":6,"s:102:32:107:Infinity":7,"s:115:27:122:Infinity":8,"s:129:36:138:Infinity":9,"s:149:32:156:Infinity":10,"s:162:32:176:Infinity":11,"s:183:37:192:Infinity":12,"s:199:31:209:Infinity":13,"s:220:32:229:Infinity":14,"s:236:33:247:Infinity":15,"s:254:32:262:Infinity":16,"s:270:30:278:Infinity":17,"s:289:31:295:Infinity":18,"s:302:31:312:Infinity":19,"s:319:27:325:Infinity":20,"s:332:32:359:Infinity":21,"s:370:30:382:Infinity":22,"s:389:34:395:Infinity":23,"s:407:35:412:Infinity":24,"s:424:34:436:Infinity":25,"s:447:34:453:Infinity":26,"s:469:32:502:Infinity":27,"f:517:16:517:Infinity":0,"b:519:24:519:Infinity":0,"s:523:4:525:Infinity":28,"b:524:8:524:Infinity:525:8:525:Infinity":1,"s:528:4:530:Infinity":29,"b:529:8:529:Infinity:530:8:530:Infinity":2,"s:532:2:563:Infinity":30,"b:534:15:534:31:534:31:534:Infinity":3,"f:585:16:585:Infinity":1,"b:587:23:587:Infinity":4,"b:588:24:588:Infinity":5,"s:590:17:590:Infinity":31,"b:592:2:594:Infinity:undefined:undefined:undefined:undefined":6,"s:592:2:594:Infinity":32,"s:593:4:593:Infinity":33,"s:596:2:600:Infinity":34,"f:610:16:610:31":2,"s:611:2:611:Infinity":35,"f:624:16:624:35":3,"s:625:2:625:Infinity":36}}}
 }
 </file>
 
-<file path="frontend/coverage/prettify.js">
-/* eslint-disable */
-window.PR_SHOULD_USE_CONTINUATION=true;(function(){var h=["break,continue,do,else,for,if,return,while"];var u=[h,"auto,case,char,const,default,double,enum,extern,float,goto,int,long,register,short,signed,sizeof,static,struct,switch,typedef,union,unsigned,void,volatile"];var p=[u,"catch,class,delete,false,import,new,operator,private,protected,public,this,throw,true,try,typeof"];var l=[p,"alignof,align_union,asm,axiom,bool,concept,concept_map,const_cast,constexpr,decltype,dynamic_cast,explicit,export,friend,inline,late_check,mutable,namespace,nullptr,reinterpret_cast,static_assert,static_cast,template,typeid,typename,using,virtual,where"];var x=[p,"abstract,boolean,byte,extends,final,finally,implements,import,instanceof,null,native,package,strictfp,super,synchronized,throws,transient"];var R=[x,"as,base,by,checked,decimal,delegate,descending,dynamic,event,fixed,foreach,from,group,implicit,in,interface,internal,into,is,lock,object,out,override,orderby,params,partial,readonly,ref,sbyte,sealed,stackalloc,string,select,uint,ulong,unchecked,unsafe,ushort,var"];var r="all,and,by,catch,class,else,extends,false,finally,for,if,in,is,isnt,loop,new,no,not,null,of,off,on,or,return,super,then,true,try,unless,until,when,while,yes";var w=[p,"debugger,eval,export,function,get,null,set,undefined,var,with,Infinity,NaN"];var s="caller,delete,die,do,dump,elsif,eval,exit,foreach,for,goto,if,import,last,local,my,next,no,our,print,package,redo,require,sub,undef,unless,until,use,wantarray,while,BEGIN,END";var I=[h,"and,as,assert,class,def,del,elif,except,exec,finally,from,global,import,in,is,lambda,nonlocal,not,or,pass,print,raise,try,with,yield,False,True,None"];var f=[h,"alias,and,begin,case,class,def,defined,elsif,end,ensure,false,in,module,next,nil,not,or,redo,rescue,retry,self,super,then,true,undef,unless,until,when,yield,BEGIN,END"];var H=[h,"case,done,elif,esac,eval,fi,function,in,local,set,then,until"];var A=[l,R,w,s+I,f,H];var e=/^(DIR|FILE|vector|(de|priority_)?queue|list|stack|(const_)?iterator|(multi)?(set|map)|bitset|u?(int|float)\d*)/;var C="str";var z="kwd";var j="com";var O="typ";var G="lit";var L="pun";var F="pln";var m="tag";var E="dec";var J="src";var P="atn";var n="atv";var N="nocode";var M="(?:^^\\.?|[+-]|\\!|\\!=|\\!==|\\#|\\%|\\%=|&|&&|&&=|&=|\\(|\\*|\\*=|\\+=|\\,|\\-=|\\->|\\/|\\/=|:|::|\\;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\@|\\[|\\^|\\^=|\\^\\^|\\^\\^=|\\{|\\||\\|=|\\|\\||\\|\\|=|\\~|break|case|continue|delete|do|else|finally|instanceof|return|throw|try|typeof)\\s*";function k(Z){var ad=0;var S=false;var ac=false;for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.ignoreCase){ac=true}else{if(/[a-z]/i.test(ae.source.replace(/\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[^ux]/gi,""))){S=true;ac=false;break}}}var Y={b:8,t:9,n:10,v:11,f:12,r:13};function ab(ah){var ag=ah.charCodeAt(0);if(ag!==92){return ag}var af=ah.charAt(1);ag=Y[af];if(ag){return ag}else{if("0"<=af&&af<="7"){return parseInt(ah.substring(1),8)}else{if(af==="u"||af==="x"){return parseInt(ah.substring(2),16)}else{return ah.charCodeAt(1)}}}}function T(af){if(af<32){return(af<16?"\\x0":"\\x")+af.toString(16)}var ag=String.fromCharCode(af);if(ag==="\\"||ag==="-"||ag==="["||ag==="]"){ag="\\"+ag}return ag}function X(am){var aq=am.substring(1,am.length-1).match(new RegExp("\\\\u[0-9A-Fa-f]{4}|\\\\x[0-9A-Fa-f]{2}|\\\\[0-3][0-7]{0,2}|\\\\[0-7]{1,2}|\\\\[\\s\\S]|-|[^-\\\\]","g"));var ak=[];var af=[];var ao=aq[0]==="^";for(var ar=ao?1:0,aj=aq.length;ar<aj;++ar){var ah=aq[ar];if(/\\[bdsw]/i.test(ah)){ak.push(ah)}else{var ag=ab(ah);var al;if(ar+2<aj&&"-"===aq[ar+1]){al=ab(aq[ar+2]);ar+=2}else{al=ag}af.push([ag,al]);if(!(al<65||ag>122)){if(!(al<65||ag>90)){af.push([Math.max(65,ag)|32,Math.min(al,90)|32])}if(!(al<97||ag>122)){af.push([Math.max(97,ag)&~32,Math.min(al,122)&~32])}}}}af.sort(function(av,au){return(av[0]-au[0])||(au[1]-av[1])});var ai=[];var ap=[NaN,NaN];for(var ar=0;ar<af.length;++ar){var at=af[ar];if(at[0]<=ap[1]+1){ap[1]=Math.max(ap[1],at[1])}else{ai.push(ap=at)}}var an=["["];if(ao){an.push("^")}an.push.apply(an,ak);for(var ar=0;ar<ai.length;++ar){var at=ai[ar];an.push(T(at[0]));if(at[1]>at[0]){if(at[1]+1>at[0]){an.push("-")}an.push(T(at[1]))}}an.push("]");return an.join("")}function W(al){var aj=al.source.match(new RegExp("(?:\\[(?:[^\\x5C\\x5D]|\\\\[\\s\\S])*\\]|\\\\u[A-Fa-f0-9]{4}|\\\\x[A-Fa-f0-9]{2}|\\\\[0-9]+|\\\\[^ux0-9]|\\(\\?[:!=]|[\\(\\)\\^]|[^\\x5B\\x5C\\(\\)\\^]+)","g"));var ah=aj.length;var an=[];for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){an[af]=-1}}}}for(var ak=1;ak<an.length;++ak){if(-1===an[ak]){an[ak]=++ad}}for(var ak=0,am=0;ak<ah;++ak){var ag=aj[ak];if(ag==="("){++am;if(an[am]===undefined){aj[ak]="(?:"}}else{if("\\"===ag.charAt(0)){var af=+ag.substring(1);if(af&&af<=am){aj[ak]="\\"+an[am]}}}}for(var ak=0,am=0;ak<ah;++ak){if("^"===aj[ak]&&"^"!==aj[ak+1]){aj[ak]=""}}if(al.ignoreCase&&S){for(var ak=0;ak<ah;++ak){var ag=aj[ak];var ai=ag.charAt(0);if(ag.length>=2&&ai==="["){aj[ak]=X(ag)}else{if(ai!=="\\"){aj[ak]=ag.replace(/[a-zA-Z]/g,function(ao){var ap=ao.charCodeAt(0);return"["+String.fromCharCode(ap&~32,ap|32)+"]"})}}}}return aj.join("")}var aa=[];for(var V=0,U=Z.length;V<U;++V){var ae=Z[V];if(ae.global||ae.multiline){throw new Error(""+ae)}aa.push("(?:"+W(ae)+")")}return new RegExp(aa.join("|"),ac?"gi":"g")}function a(V){var U=/(?:^|\s)nocode(?:\s|$)/;var X=[];var T=0;var Z=[];var W=0;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=document.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Y=S&&"pre"===S.substring(0,3);function aa(ab){switch(ab.nodeType){case 1:if(U.test(ab.className)){return}for(var ae=ab.firstChild;ae;ae=ae.nextSibling){aa(ae)}var ad=ab.nodeName;if("BR"===ad||"LI"===ad){X[W]="\n";Z[W<<1]=T++;Z[(W++<<1)|1]=ab}break;case 3:case 4:var ac=ab.nodeValue;if(ac.length){if(!Y){ac=ac.replace(/[ \t\r\n]+/g," ")}else{ac=ac.replace(/\r\n?/g,"\n")}X[W]=ac;Z[W<<1]=T;T+=ac.length;Z[(W++<<1)|1]=ab}break}}aa(V);return{sourceCode:X.join("").replace(/\n$/,""),spans:Z}}function B(S,U,W,T){if(!U){return}var V={sourceCode:U,basePos:S};W(V);T.push.apply(T,V.decorations)}var v=/\S/;function o(S){var V=undefined;for(var U=S.firstChild;U;U=U.nextSibling){var T=U.nodeType;V=(T===1)?(V?S:U):(T===3)?(v.test(U.nodeValue)?S:V):V}return V===S?undefined:V}function g(U,T){var S={};var V;(function(){var ad=U.concat(T);var ah=[];var ag={};for(var ab=0,Z=ad.length;ab<Z;++ab){var Y=ad[ab];var ac=Y[3];if(ac){for(var ae=ac.length;--ae>=0;){S[ac.charAt(ae)]=Y}}var af=Y[1];var aa=""+af;if(!ag.hasOwnProperty(aa)){ah.push(af);ag[aa]=null}}ah.push(/[\0-\uffff]/);V=k(ah)})();var X=T.length;var W=function(ah){var Z=ah.sourceCode,Y=ah.basePos;var ad=[Y,F];var af=0;var an=Z.match(V)||[];var aj={};for(var ae=0,aq=an.length;ae<aq;++ae){var ag=an[ae];var ap=aj[ag];var ai=void 0;var am;if(typeof ap==="string"){am=false}else{var aa=S[ag.charAt(0)];if(aa){ai=ag.match(aa[1]);ap=aa[0]}else{for(var ao=0;ao<X;++ao){aa=T[ao];ai=ag.match(aa[1]);if(ai){ap=aa[0];break}}if(!ai){ap=F}}am=ap.length>=5&&"lang-"===ap.substring(0,5);if(am&&!(ai&&typeof ai[1]==="string")){am=false;ap=J}if(!am){aj[ag]=ap}}var ab=af;af+=ag.length;if(!am){ad.push(Y+ab,ap)}else{var al=ai[1];var ak=ag.indexOf(al);var ac=ak+al.length;if(ai[2]){ac=ag.length-ai[2].length;ak=ac-al.length}var ar=ap.substring(5);B(Y+ab,ag.substring(0,ak),W,ad);B(Y+ab+ak,al,q(ar,al),ad);B(Y+ab+ac,ag.substring(ac),W,ad)}}ah.decorations=ad};return W}function i(T){var W=[],S=[];if(T.tripleQuotedStrings){W.push([C,/^(?:\'\'\'(?:[^\'\\]|\\[\s\S]|\'{1,2}(?=[^\']))*(?:\'\'\'|$)|\"\"\"(?:[^\"\\]|\\[\s\S]|\"{1,2}(?=[^\"]))*(?:\"\"\"|$)|\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$))/,null,"'\""])}else{if(T.multiLineStrings){W.push([C,/^(?:\'(?:[^\\\']|\\[\s\S])*(?:\'|$)|\"(?:[^\\\"]|\\[\s\S])*(?:\"|$)|\`(?:[^\\\`]|\\[\s\S])*(?:\`|$))/,null,"'\"`"])}else{W.push([C,/^(?:\'(?:[^\\\'\r\n]|\\.)*(?:\'|$)|\"(?:[^\\\"\r\n]|\\.)*(?:\"|$))/,null,"\"'"])}}if(T.verbatimStrings){S.push([C,/^@\"(?:[^\"]|\"\")*(?:\"|$)/,null])}var Y=T.hashComments;if(Y){if(T.cStyleComments){if(Y>1){W.push([j,/^#(?:##(?:[^#]|#(?!##))*(?:###|$)|.*)/,null,"#"])}else{W.push([j,/^#(?:(?:define|elif|else|endif|error|ifdef|include|ifndef|line|pragma|undef|warning)\b|[^\r\n]*)/,null,"#"])}S.push([C,/^<(?:(?:(?:\.\.\/)*|\/?)(?:[\w-]+(?:\/[\w-]+)+)?[\w-]+\.h|[a-z]\w*)>/,null])}else{W.push([j,/^#[^\r\n]*/,null,"#"])}}if(T.cStyleComments){S.push([j,/^\/\/[^\r\n]*/,null]);S.push([j,/^\/\*[\s\S]*?(?:\*\/|$)/,null])}if(T.regexLiterals){var X=("/(?=[^/*])(?:[^/\\x5B\\x5C]|\\x5C[\\s\\S]|\\x5B(?:[^\\x5C\\x5D]|\\x5C[\\s\\S])*(?:\\x5D|$))+/");S.push(["lang-regex",new RegExp("^"+M+"("+X+")")])}var V=T.types;if(V){S.push([O,V])}var U=(""+T.keywords).replace(/^ | $/g,"");if(U.length){S.push([z,new RegExp("^(?:"+U.replace(/[\s,]+/g,"|")+")\\b"),null])}W.push([F,/^\s+/,null," \r\n\t\xA0"]);S.push([G,/^@[a-z_$][a-z_$@0-9]*/i,null],[O,/^(?:[@_]?[A-Z]+[a-z][A-Za-z_$@0-9]*|\w+_t\b)/,null],[F,/^[a-z_$][a-z_$@0-9]*/i,null],[G,new RegExp("^(?:0x[a-f0-9]+|(?:\\d(?:_\\d+)*\\d*(?:\\.\\d*)?|\\.\\d\\+)(?:e[+\\-]?\\d+)?)[a-z]*","i"),null,"0123456789"],[F,/^\\[\s\S]?/,null],[L,/^.[^\s\w\.$@\'\"\`\/\#\\]*/,null]);return g(W,S)}var K=i({keywords:A,hashComments:true,cStyleComments:true,multiLineStrings:true,regexLiterals:true});function Q(V,ag){var U=/(?:^|\s)nocode(?:\s|$)/;var ab=/\r\n?|\n/;var ac=V.ownerDocument;var S;if(V.currentStyle){S=V.currentStyle.whiteSpace}else{if(window.getComputedStyle){S=ac.defaultView.getComputedStyle(V,null).getPropertyValue("white-space")}}var Z=S&&"pre"===S.substring(0,3);var af=ac.createElement("LI");while(V.firstChild){af.appendChild(V.firstChild)}var W=[af];function ae(al){switch(al.nodeType){case 1:if(U.test(al.className)){break}if("BR"===al.nodeName){ad(al);if(al.parentNode){al.parentNode.removeChild(al)}}else{for(var an=al.firstChild;an;an=an.nextSibling){ae(an)}}break;case 3:case 4:if(Z){var am=al.nodeValue;var aj=am.match(ab);if(aj){var ai=am.substring(0,aj.index);al.nodeValue=ai;var ah=am.substring(aj.index+aj[0].length);if(ah){var ak=al.parentNode;ak.insertBefore(ac.createTextNode(ah),al.nextSibling)}ad(al);if(!ai){al.parentNode.removeChild(al)}}}break}}function ad(ak){while(!ak.nextSibling){ak=ak.parentNode;if(!ak){return}}function ai(al,ar){var aq=ar?al.cloneNode(false):al;var ao=al.parentNode;if(ao){var ap=ai(ao,1);var an=al.nextSibling;ap.appendChild(aq);for(var am=an;am;am=an){an=am.nextSibling;ap.appendChild(am)}}return aq}var ah=ai(ak.nextSibling,0);for(var aj;(aj=ah.parentNode)&&aj.nodeType===1;){ah=aj}W.push(ah)}for(var Y=0;Y<W.length;++Y){ae(W[Y])}if(ag===(ag|0)){W[0].setAttribute("value",ag)}var aa=ac.createElement("OL");aa.className="linenums";var X=Math.max(0,((ag-1))|0)||0;for(var Y=0,T=W.length;Y<T;++Y){af=W[Y];af.className="L"+((Y+X)%10);if(!af.firstChild){af.appendChild(ac.createTextNode("\xA0"))}aa.appendChild(af)}V.appendChild(aa)}function D(ac){var aj=/\bMSIE\b/.test(navigator.userAgent);var am=/\n/g;var al=ac.sourceCode;var an=al.length;var V=0;var aa=ac.spans;var T=aa.length;var ah=0;var X=ac.decorations;var Y=X.length;var Z=0;X[Y]=an;var ar,aq;for(aq=ar=0;aq<Y;){if(X[aq]!==X[aq+2]){X[ar++]=X[aq++];X[ar++]=X[aq++]}else{aq+=2}}Y=ar;for(aq=ar=0;aq<Y;){var at=X[aq];var ab=X[aq+1];var W=aq+2;while(W+2<=Y&&X[W+1]===ab){W+=2}X[ar++]=at;X[ar++]=ab;aq=W}Y=X.length=ar;var ae=null;while(ah<T){var af=aa[ah];var S=aa[ah+2]||an;var ag=X[Z];var ap=X[Z+2]||an;var W=Math.min(S,ap);var ak=aa[ah+1];var U;if(ak.nodeType!==1&&(U=al.substring(V,W))){if(aj){U=U.replace(am,"\r")}ak.nodeValue=U;var ai=ak.ownerDocument;var ao=ai.createElement("SPAN");ao.className=X[Z+1];var ad=ak.parentNode;ad.replaceChild(ao,ak);ao.appendChild(ak);if(V<S){aa[ah+1]=ak=ai.createTextNode(al.substring(W,S));ad.insertBefore(ak,ao.nextSibling)}}V=W;if(V>=S){ah+=2}if(V>=ap){Z+=2}}}var t={};function c(U,V){for(var S=V.length;--S>=0;){var T=V[S];if(!t.hasOwnProperty(T)){t[T]=U}else{if(window.console){console.warn("cannot override language handler %s",T)}}}}function q(T,S){if(!(T&&t.hasOwnProperty(T))){T=/^\s*</.test(S)?"default-markup":"default-code"}return t[T]}c(K,["default-code"]);c(g([],[[F,/^[^<?]+/],[E,/^<!\w[^>]*(?:>|$)/],[j,/^<\!--[\s\S]*?(?:-\->|$)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],[L,/^(?:<[%?]|[%?]>)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i]]),["default-markup","htm","html","mxml","xhtml","xml","xsl"]);c(g([[F,/^[\s]+/,null," \t\r\n"],[n,/^(?:\"[^\"]*\"?|\'[^\']*\'?)/,null,"\"'"]],[[m,/^^<\/?[a-z](?:[\w.:-]*\w)?|\/?>$/i],[P,/^(?!style[\s=]|on)[a-z](?:[\w:-]*\w)?/i],["lang-uq.val",/^=\s*([^>\'\"\s]*(?:[^>\'\"\s\/]|\/(?=\s)))/],[L,/^[=<>\/]+/],["lang-js",/^on\w+\s*=\s*\"([^\"]+)\"/i],["lang-js",/^on\w+\s*=\s*\'([^\']+)\'/i],["lang-js",/^on\w+\s*=\s*([^\"\'>\s]+)/i],["lang-css",/^style\s*=\s*\"([^\"]+)\"/i],["lang-css",/^style\s*=\s*\'([^\']+)\'/i],["lang-css",/^style\s*=\s*([^\"\'>\s]+)/i]]),["in.tag"]);c(g([],[[n,/^[\s\S]+/]]),["uq.val"]);c(i({keywords:l,hashComments:true,cStyleComments:true,types:e}),["c","cc","cpp","cxx","cyc","m"]);c(i({keywords:"null,true,false"}),["json"]);c(i({keywords:R,hashComments:true,cStyleComments:true,verbatimStrings:true,types:e}),["cs"]);c(i({keywords:x,cStyleComments:true}),["java"]);c(i({keywords:H,hashComments:true,multiLineStrings:true}),["bsh","csh","sh"]);c(i({keywords:I,hashComments:true,multiLineStrings:true,tripleQuotedStrings:true}),["cv","py"]);c(i({keywords:s,hashComments:true,multiLineStrings:true,regexLiterals:true}),["perl","pl","pm"]);c(i({keywords:f,hashComments:true,multiLineStrings:true,regexLiterals:true}),["rb"]);c(i({keywords:w,cStyleComments:true,regexLiterals:true}),["js"]);c(i({keywords:r,hashComments:3,cStyleComments:true,multilineStrings:true,tripleQuotedStrings:true,regexLiterals:true}),["coffee"]);c(g([],[[C,/^[\s\S]+/]]),["regex"]);function d(V){var U=V.langExtension;try{var S=a(V.sourceNode);var T=S.sourceCode;V.sourceCode=T;V.spans=S.spans;V.basePos=0;q(U,T)(V);D(V)}catch(W){if("console" in window){console.log(W&&W.stack?W.stack:W)}}}function y(W,V,U){var S=document.createElement("PRE");S.innerHTML=W;if(U){Q(S,U)}var T={langExtension:V,numberLines:U,sourceNode:S};d(T);return S.innerHTML}function b(ad){function Y(af){return document.getElementsByTagName(af)}var ac=[Y("pre"),Y("code"),Y("xmp")];var T=[];for(var aa=0;aa<ac.length;++aa){for(var Z=0,V=ac[aa].length;Z<V;++Z){T.push(ac[aa][Z])}}ac=null;var W=Date;if(!W.now){W={now:function(){return +(new Date)}}}var X=0;var S;var ab=/\blang(?:uage)?-([\w.]+)(?!\S)/;var ae=/\bprettyprint\b/;function U(){var ag=(window.PR_SHOULD_USE_CONTINUATION?W.now()+250:Infinity);for(;X<T.length&&W.now()<ag;X++){var aj=T[X];var ai=aj.className;if(ai.indexOf("prettyprint")>=0){var ah=ai.match(ab);var am;if(!ah&&(am=o(aj))&&"CODE"===am.tagName){ah=am.className.match(ab)}if(ah){ah=ah[1]}var al=false;for(var ak=aj.parentNode;ak;ak=ak.parentNode){if((ak.tagName==="pre"||ak.tagName==="code"||ak.tagName==="xmp")&&ak.className&&ak.className.indexOf("prettyprint")>=0){al=true;break}}if(!al){var af=aj.className.match(/\blinenums\b(?::(\d+))?/);af=af?af[1]&&af[1].length?+af[1]:true:false;if(af){Q(aj,af)}S={langExtension:ah,sourceNode:aj,numberLines:af};d(S)}}}if(X<T.length){setTimeout(U,250)}else{if(ad){ad()}}}U()}window.prettyPrintOne=y;window.prettyPrint=b;window.PR={createSimpleLexer:g,registerLangHandler:c,sourceDecorator:i,PR_ATTRIB_NAME:P,PR_ATTRIB_VALUE:n,PR_COMMENT:j,PR_DECLARATION:E,PR_KEYWORD:z,PR_LITERAL:G,PR_NOCODE:N,PR_PLAIN:F,PR_PUNCTUATION:L,PR_SOURCE:J,PR_STRING:C,PR_TAG:m,PR_TYPE:O}})();PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_DECLARATION,/^<!\w[^>]*(?:>|$)/],[PR.PR_COMMENT,/^<\!--[\s\S]*?(?:-\->|$)/],[PR.PR_PUNCTUATION,/^(?:<[%?]|[%?]>)/],["lang-",/^<\?([\s\S]+?)(?:\?>|$)/],["lang-",/^<%([\s\S]+?)(?:%>|$)/],["lang-",/^<xmp\b[^>]*>([\s\S]+?)<\/xmp\b[^>]*>/i],["lang-handlebars",/^<script\b[^>]*type\s*=\s*['"]?text\/x-handlebars-template['"]?\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-js",/^<script\b[^>]*>([\s\S]*?)(<\/script\b[^>]*>)/i],["lang-css",/^<style\b[^>]*>([\s\S]*?)(<\/style\b[^>]*>)/i],["lang-in.tag",/^(<\/?[a-z][^<>]*>)/i],[PR.PR_DECLARATION,/^{{[#^>/]?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{&?\s*[\w.][^}]*}}/],[PR.PR_DECLARATION,/^{{{>?\s*[\w.][^}]*}}}/],[PR.PR_COMMENT,/^{{![^}]*}}/]]),["handlebars","hbs"]);PR.registerLangHandler(PR.createSimpleLexer([[PR.PR_PLAIN,/^[ \t\r\n\f]+/,null," \t\r\n\f"]],[[PR.PR_STRING,/^\"(?:[^\n\r\f\\\"]|\\(?:\r\n?|\n|\f)|\\[\s\S])*\"/,null],[PR.PR_STRING,/^\'(?:[^\n\r\f\\\']|\\(?:\r\n?|\n|\f)|\\[\s\S])*\'/,null],["lang-css-str",/^url\(([^\)\"\']*)\)/i],[PR.PR_KEYWORD,/^(?:url|rgb|\!important|@import|@page|@media|@charset|inherit)(?=[^\-\w]|$)/i,null],["lang-css-kw",/^(-?(?:[_a-z]|(?:\\[0-9a-f]+ ?))(?:[_a-z0-9\-]|\\(?:\\[0-9a-f]+ ?))*)\s*:/i],[PR.PR_COMMENT,/^\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\//],[PR.PR_COMMENT,/^(?:<!--|-->)/],[PR.PR_LITERAL,/^(?:\d+|\d*\.\d+)(?:%|[a-z]+)?/i],[PR.PR_LITERAL,/^#(?:[0-9a-f]{3}){1,2}/i],[PR.PR_PLAIN,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i],[PR.PR_PUNCTUATION,/^[^\s\w\'\"]+/]]),["css"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_KEYWORD,/^-?(?:[_a-z]|(?:\\[\da-f]+ ?))(?:[_a-z\d\-]|\\(?:\\[\da-f]+ ?))*/i]]),["css-kw"]);PR.registerLangHandler(PR.createSimpleLexer([],[[PR.PR_STRING,/^[^\)\"\']+/]]),["css-str"]);
-</file>
+<file path="frontend/public/ui/QA_CHECKLIST.md">
+# UI 에셋 QA 체크리스트
 
-<file path="frontend/coverage/sorter.js">
-/* eslint-disable */
-var addSorting = (function() {
-    'use strict';
-    var cols,
-        currentSort = {
-            index: 0,
-            desc: false
-        };
+> **참조**: `frontend/public/ui/README.md` (SSOT 규칙), `vibe/ref/rembg-guide.md` (배경 제거)  
+> **목적**: nanobanana mcp로 생성한 에셋의 품질/일관성 보장  
+> **적용 시점**: 에셋 추가/수정 시 반드시 체크
 
-    // returns the summary table element
-    function getTable() {
-        return document.querySelector('.coverage-summary');
-    }
-    // returns the thead element of the summary table
-    function getTableHeader() {
-        return getTable().querySelector('thead tr');
-    }
-    // returns the tbody element of the summary table
-    function getTableBody() {
-        return getTable().querySelector('tbody');
-    }
-    // returns the th element for nth column
-    function getNthColumn(n) {
-        return getTableHeader().querySelectorAll('th')[n];
-    }
+---
 
-    function onFilterInput() {
-        const searchValue = document.getElementById('fileSearch').value;
-        const rows = document.getElementsByTagName('tbody')[0].children;
+## 1. 용량 예산 (Performance Budget)
 
-        // Try to create a RegExp from the searchValue. If it fails (invalid regex),
-        // it will be treated as a plain text search
-        let searchRegex;
-        try {
-            searchRegex = new RegExp(searchValue, 'i'); // 'i' for case-insensitive
-        } catch (error) {
-            searchRegex = null;
-        }
+### 1.1 개별 에셋 상한
 
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            let isMatch = false;
+| 유형            | 상한  | 권장       | 체크 항목         |
+| --------------- | ----- | ---------- | ----------------- |
+| **아이콘**      | 30KB  | 20KB 이하  | `bytes` 필드 확인 |
+| **placeholder** | 300KB | 200KB 이하 | `bytes` 필드 확인 |
+| **chrome**      | 120KB | 30KB 이하  | `bytes` 필드 확인 |
 
-            if (searchRegex) {
-                // If a valid regex was created, use it for matching
-                isMatch = searchRegex.test(row.textContent);
-            } else {
-                // Otherwise, fall back to the original plain text search
-                isMatch = row.textContent
-                    .toLowerCase()
-                    .includes(searchValue.toLowerCase());
-            }
+### 1.2 총합 예산
 
-            row.style.display = isMatch ? '' : 'none';
-        }
-    }
+| 항목     | 값                                  |
+| -------- | ----------------------------------- |
+| **상한** | 1.5MB (1,572,864 bytes)             |
+| **권장** | 1MB (1,048,576 bytes) 이하          |
+| **현재** | `manifest.json`의 `totalBytes` 확인 |
 
-    // loads the search box
-    function addSearchBox() {
-        var template = document.getElementById('filterTemplate');
-        var templateClone = template.content.cloneNode(true);
-        templateClone.getElementById('fileSearch').oninput = onFilterInput;
-        template.parentElement.appendChild(templateClone);
-    }
+### 1.3 용량 초과 시 대응
 
-    // loads all columns
-    function loadColumns() {
-        var colNodes = getTableHeader().querySelectorAll('th'),
-            colNode,
-            cols = [],
-            col,
-            i;
+1. **압축/최적화**: TinyPNG, ImageMagick, WebP 변환
+2. **해상도/색상 축소**: 필요 사이즈만 유지
+3. **불필요 에셋 제거**: 사용처 없는 에셋 정리
+4. **예산 상향**: 근거 문서화 후 `budgetBytes` 조정
 
-        for (i = 0; i < colNodes.length; i += 1) {
-            colNode = colNodes[i];
-            col = {
-                key: colNode.getAttribute('data-col'),
-                sortable: !colNode.getAttribute('data-nosort'),
-                type: colNode.getAttribute('data-type') || 'string'
-            };
-            cols.push(col);
-            if (col.sortable) {
-                col.defaultDescSort = col.type === 'number';
-                colNode.innerHTML =
-                    colNode.innerHTML + '<span class="sorter"></span>';
-            }
-        }
-        return cols;
-    }
-    // attaches a data attribute to every tr element with an object
-    // of data values keyed by column name
-    function loadRowData(tableRow) {
-        var tableCols = tableRow.querySelectorAll('td'),
-            colNode,
-            col,
-            data = {},
-            i,
-            val;
-        for (i = 0; i < tableCols.length; i += 1) {
-            colNode = tableCols[i];
-            col = cols[i];
-            val = colNode.getAttribute('data-value');
-            if (col.type === 'number') {
-                val = Number(val);
-            }
-            data[col.key] = val;
-        }
-        return data;
-    }
-    // loads all row data
-    function loadData() {
-        var rows = getTableBody().querySelectorAll('tr'),
-            i;
+---
 
-        for (i = 0; i < rows.length; i += 1) {
-            rows[i].data = loadRowData(rows[i]);
-        }
-    }
-    // sorts the table using the data for the ith column
-    function sortByIndex(index, desc) {
-        var key = cols[index].key,
-            sorter = function(a, b) {
-                a = a.data[key];
-                b = b.data[key];
-                return a < b ? -1 : a > b ? 1 : 0;
-            },
-            finalSorter = sorter,
-            tableBody = document.querySelector('.coverage-summary tbody'),
-            rowNodes = tableBody.querySelectorAll('tr'),
-            rows = [],
-            i;
+## 2. 사이즈/규격 (Size)
 
-        if (desc) {
-            finalSorter = function(a, b) {
-                return -1 * sorter(a, b);
-            };
-        }
+### 2.1 아이콘 사이즈 체크
 
-        for (i = 0; i < rowNodes.length; i += 1) {
-            rows.push(rowNodes[i]);
-            tableBody.removeChild(rowNodes[i]);
-        }
+| 항목            | 요구                 | 체크 |
+| --------------- | -------------------- | ---- |
+| **필수 사이즈** | 16px, 24px 최소 2종  | ☐    |
+| **선택 사이즈** | 32px, 64px (필요 시) | ☐    |
+| **정방형**      | 가로 = 세로          | ☐    |
 
-        rows.sort(finalSorter);
+### 2.2 16px 실루엣 테스트 ⚠️
 
-        for (i = 0; i < rows.length; i += 1) {
-            tableBody.appendChild(rows[i]);
-        }
-    }
-    // removes sort indicators for current column being sorted
-    function removeSortIndicators() {
-        var col = getNthColumn(currentSort.index),
-            cls = col.className;
+> **중요**: 16px에서도 형태가 구분되어야 합니다.
 
-        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');
-        col.className = cls;
-    }
-    // adds sort indicators for current column being sorted
-    function addSortIndicators() {
-        getNthColumn(currentSort.index).className += currentSort.desc
-            ? ' sorted-desc'
-            : ' sorted';
-    }
-    // adds event listeners for all sorter widgets
-    function enableUI() {
-        var i,
-            el,
-            ithSorter = function ithSorter(i) {
-                var col = cols[i];
+**테스트 방법**:
 
-                return function() {
-                    var desc = col.defaultDescSort;
+1. 16px 아이콘을 100% 배율로 표시
+2. 2m 거리에서 형태 구분 가능 여부 확인
+3. 다른 아이콘과 혼동되지 않는지 확인
 
-                    if (currentSort.index === i) {
-                        desc = !currentSort.desc;
-                    }
-                    sortByIndex(i, desc);
-                    removeSortIndicators();
-                    currentSort.index = i;
-                    currentSort.desc = desc;
-                    addSortIndicators();
-                };
-            };
-        for (i = 0; i < cols.length; i += 1) {
-            if (cols[i].sortable) {
-                // add the click event handler on the th so users
-                // dont have to click on those tiny arrows
-                el = getNthColumn(i).querySelector('.sorter').parentElement;
-                if (el.addEventListener) {
-                    el.addEventListener('click', ithSorter(i));
-                } else {
-                    el.attachEvent('onclick', ithSorter(i));
-                }
-            }
-        }
-    }
-    // adds sorting functionality to the UI
-    return function() {
-        if (!getTable()) {
-            return;
-        }
-        cols = loadColumns();
-        loadData();
-        addSearchBox();
-        addSortIndicators();
-        enableUI();
-    };
-})();
+**실패 시 대응**:
 
-window.addEventListener('load', addSorting);
+- 디테일 단순화
+- 외곽선/실루엣 강화
+- 16px/24px 별도 디자인 (사용처 분리)
+
+### 2.3 placeholder/chrome 사이즈
+
+| 항목            | 권장                     | 비고               |
+| --------------- | ------------------------ | ------------------ |
+| **placeholder** | 512x384 또는 용도별 적정 | 가로세로 비율 유지 |
+| **chrome**      | 타일링 가능 사이즈       | 48px, 64px 등      |
+
+---
+
+## 3. 대비/가독성 (Contrast)
+
+### 3.1 기본 대비 테스트
+
+| 모드         | 배경                    | 요구 대비               | 체크 |
+| ------------ | ----------------------- | ----------------------- | ---- |
+| **기본**     | `#0d0d0d` (어두운 배경) | 인광 녹색(#33ff00) 대비 | ☐    |
+| **Readable** | 대비 강화 모드          | 4.5:1 이상              | ☐    |
+
+### 3.2 대비 검증 방법
+
+```
+도구: WebAIM Contrast Checker
+URL: https://webaim.org/resources/contrastchecker/
+
+전경색: 아이콘 주요 색상
+배경색: #0d0d0d (CRT 배경)
+목표: 4.5:1 이상 (AA 기준)
+```
+
+### 3.3 Readable 모드 호환
+
+- [ ] CRT 글로우/스캔라인 OFF 시에도 식별 가능
+- [ ] 텍스트 라벨이 이미지를 방해하지 않음
+- [ ] 색약/색맹 접근성 고려 (색상만으로 의미 전달 금지)
+
+---
+
+## 4. 투명 배경 (Alpha Channel)
+
+### 4.1 투명 배경 필요 여부
+
+| 유형            | 투명 필수 | 배경 색상        |
+| --------------- | --------- | ---------------- |
+| **아이콘**      | ✅ 필수   | 투명 (알파 채널) |
+| **placeholder** | ❌ 선택   | 불투명 허용      |
+| **chrome**      | ✅ 필수   | 투명 (알파 채널) |
+
+### 4.2 배경 제거 체크 (rembg)
+
+> **참조**: `vibe/ref/rembg-guide.md`
+
+**생성 단계 요구 (조건부)**:
+
+- [ ] 배경 제거 예정인 에셋은 **순백(#FFFFFF) 단색 배경**으로 생성
+- [ ] 그라데이션/텍스처/그림자 배경 금지
+
+**배경 제거 실행**:
+
+- [ ] `rembg i -m birefnet-general <input> <output>` 실행
+- [ ] 알파 채널 존재 확인 (GIMP/Photoshop/Preview)
+- [ ] 경계 부분 잔여 배경 없음 확인
+
+### 4.3 투명도 검증 명령어
+
+```bash
+# ImageMagick으로 알파 채널 확인
+magick identify -verbose <image.png> | grep -i alpha
+
+# 또는 파일 정보 확인 (PNG 포맷)
+file <image.png>  # PNG image data, ... RGBA
+```
+
+---
+
+## 5. 폴백 (Fallback)
+
+### 5.1 폴백 텍스트/이모지 체크
+
+| 체크 항목         | 요구  | 설명                               |
+| ----------------- | ----- | ---------------------------------- |
+| **fallback 필드** | 필수  | manifest.json에 `fallback` 값 존재 |
+| **이모지/텍스트** | 1~2자 | 예: `📡`, `⚠`, `✓`, `OK`           |
+| **의미 전달**     | 명확  | 원본 아이콘과 동일한 의미          |
+
+### 5.2 폴백 동작 테스트
+
+**테스트 시나리오**:
+
+1. 에셋 파일을 임시로 삭제/이름 변경
+2. 브라우저에서 UI 로드
+3. 폴백 텍스트/이모지가 표시되는지 확인
+4. UI가 깨지지 않는지 확인
+
+**코드 구현 확인**:
+
+```tsx
+// 예상 패턴
+<img
+  src="/ui/icons/signal-24.png"
+  alt=""
+  aria-hidden="true"
+  onError={(e) => (e.currentTarget.style.display = 'none')}
+/>
+<span className="icon-fallback">📡</span>
+```
+
+---
+
+## 6. 매니페스트 동기화 (manifest.json)
+
+### 6.1 필수 필드 체크
+
+| 필드       | 필수 | 체크                              |
+| ---------- | ---- | --------------------------------- |
+| `id`       | ✅   | kebab-case, 고유값                |
+| `path`     | ✅   | `ui/` 기준 상대 경로              |
+| `type`     | ✅   | `icon` / `placeholder` / `chrome` |
+| `fallback` | 권장 | 이모지/텍스트                     |
+| `bytes`    | 권장 | 파일 크기                         |
+| `usedIn`   | 권장 | 사용처 컴포넌트 목록              |
+| `notes`    | 선택 | QA/생성 관련 메모                 |
+
+### 6.2 실제 파일과 매니페스트 정합성
+
+- [ ] manifest.json의 모든 에셋이 실제 파일로 존재
+- [ ] 실제 디렉토리의 모든 에셋이 manifest.json에 등록됨
+- [ ] `path` 경로가 실제 파일 위치와 일치
+- [ ] `bytes` 값이 실제 파일 크기와 일치
+
+### 6.3 정합성 검증 스크립트 (참고)
+
+```bash
+# manifest.json에 있는 path들이 실제로 존재하는지 확인
+cd frontend/public/ui
+cat manifest.json | jq -r '.assets[].path' | while read p; do
+  [ -f "$p" ] || echo "MISSING: $p"
+done
+
+# 실제 파일이 manifest에 있는지 확인
+find icons placeholders chrome -type f \( -name "*.png" -o -name "*.webp" \) | while read f; do
+  grep -q "\"$f\"" manifest.json || echo "NOT IN MANIFEST: $f"
+done
+```
+
+---
+
+## 7. 스타일 일관성 (CRT Theme)
+
+### 7.1 색상 팔레트 준수
+
+| 색상        | Hex       | 용도        | 체크 |
+| ----------- | --------- | ----------- | ---- |
+| 인광 녹색   | `#33ff00` | 주요 색상   | ☐    |
+| 어두운 녹색 | `#1a8000` | 보조 색상   | ☐    |
+| 마젠타      | `#ff00ff` | 포인트/경고 | ☐    |
+| 주황색      | `#ffaa00` | 경고        | ☐    |
+| 붉은색      | `#ff3333` | 에러        | ☐    |
+| 배경        | `#0d0d0d` | 배경        | ☐    |
+
+### 7.2 스타일 금지 사항
+
+- [ ] 외부 로고/상표 복제 금지
+- [ ] CRT 테마와 충돌하는 색상 금지 (밝은 파스텔, 난색 남용)
+- [ ] 복잡한 그라데이션/사진 스타일 금지
+
+---
+
+## 8. Retina 대응 (선택)
+
+### 8.1 Retina 필요 여부 판단
+
+| 상황             | Retina 필요 | 비고                  |
+| ---------------- | ----------- | --------------------- |
+| **16px 아이콘**  | 선택        | HiDPI에서 선명도 향상 |
+| **24px+ 아이콘** | 낮음        | 기본 해상도로 충분    |
+| **placeholder**  | 낮음        | 이미 충분한 해상도    |
+
+### 8.2 Retina 파일 규칙
+
+- 파일명: `{name}-24.png` → `{name}-24@2x.png`
+- CSS: `image-set()`으로 1x/2x 제공
+- manifest.json: `retina: true` 표기
+
+---
+
+## 9. 종합 체크리스트 (Quick Reference)
+
+에셋 추가/수정 시 아래 항목을 순서대로 체크하세요:
+
+### 📦 추가 전
+
+- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
+- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
+- [ ] CRT 테마 색상과 조화
+
+### 🎨 생성 시
+
+- [ ] (조건부) 배경 제거 필요 시 순백(#FFFFFF) 배경으로 생성
+- [ ] 필요 사이즈로 리사이즈
+- [ ] (조건부) `rembg`로 배경 제거
+
+### ✅ 추가 후
+
+- [ ] 개별 용량 예산 준수 확인
+- [ ] 총합 예산 준수 확인 (`totalBytes` < `budgetBytes`)
+- [ ] 16px 실루엣 구분 가능 여부 (아이콘)
+- [ ] 기본/Readable 모드 대비 확인
+- [ ] (조건부) 알파 채널 존재 확인 (투명 필요 에셋)
+- [ ] 폴백 텍스트/이모지 지정
+- [ ] manifest.json 업데이트
+- [ ] 실제 파일과 매니페스트 정합성 확인
+
+---
+
+## 10. 참고 자료
+
+- **SSOT 규칙**: `frontend/public/ui/README.md`
+- **배경 제거 가이드**: `vibe/ref/rembg-guide.md`
+- **매니페스트 스키마**: `frontend/public/ui/manifest.schema.json`
+- **스타일 가이드**: `vibe/ref/frontend-style-guide.md`
+- **가독성 패스**: U-028[Mvp] (Readable 모드)
+
+---
+
+_마지막 업데이트: 2026-01-12_  
+_문서 버전: 1.0.0_
 </file>
 
 <file path="frontend/src/api/scanner.test.ts">
@@ -10353,6 +10520,173 @@ describe('demoProfiles (U-015[Mvp])', () => {
 });
 </file>
 
+<file path="frontend/src/locales/README.md">
+# i18n 언어 리소스 가이드 (Unknown World)
+
+이 디렉토리는 Unknown World의 **프론트엔드 UI 문자열 리소스**를 관리하는 SSOT(Single Source of Truth)입니다.
+
+## 디렉토리 구조
+
+```
+locales/
+├── ko-KR/
+│   └── translation.json    # 한국어 리소스
+├── en-US/
+│   └── translation.json    # 영어 리소스
+└── README.md               # 이 문서
+```
+
+## 지원 언어
+
+| 코드    | 언어   | 상태 | 비고           |
+| ------- | ------ | ---- | -------------- |
+| `ko-KR` | 한국어 | 기본 | 데모 기준 언어 |
+| `en-US` | 영어   | 폴백 | fallbackLng    |
+
+> **언어 코드 규칙**: BCP-47 형식을 사용합니다 (`ko-KR`, `en-US`).  
+> TurnInput/SaveGame의 `language` 필드와 동일한 축입니다.
+
+## 키 네이밍 규칙
+
+키는 **도메인.섹션.항목** 형태의 계층 구조를 따릅니다.
+
+### 도메인 목록
+
+| 도메인       | 용도                                    |
+| ------------ | --------------------------------------- |
+| `scene`      | Scene Canvas 관련 메시지                |
+| `agent`      | Agent Console 관련 라벨/상태            |
+| `ui`         | 공통 UI 요소 (버튼, 입력, 플레이스홀더) |
+| `economy`    | 재화 관련 라벨                          |
+| `connection` | 연결 상태                               |
+| `panel`      | 패널별 타이틀/플레이스홀더              |
+| `action`     | 액션 카드/선택지                        |
+| `narrative`  | 내러티브/게임 로그                      |
+
+### 예시
+
+```json
+{
+  "scene.status.loading": "동기화 중...",
+  "agent.console.badges": "검증 배지",
+  "ui.execute": "실행",
+  "panel.inventory.placeholder": "[ 드래그 앤 드롭 영역 ]"
+}
+```
+
+## 새 언어 추가 절차
+
+1. **디렉토리 생성**: `locales/{언어코드}/` 생성 (예: `ja-JP`)
+2. **translation.json 복사**: `ko-KR/translation.json`을 복사하여 시작점으로 사용
+3. **번역 작업**: 모든 값을 해당 언어로 번역
+4. **i18n.ts 등록**: `frontend/src/i18n.ts`에 새 언어 리소스 import 및 등록
+5. **검증**: 누락된 키가 없는지 확인 (i18next의 `missingKeyHandler` 활용)
+
+```typescript
+// frontend/src/i18n.ts
+import jaJP from './locales/ja-JP/translation.json';
+
+const resources = {
+  'ko-KR': { translation: koKR },
+  'en-US': { translation: enUS },
+  'ja-JP': { translation: jaJP }, // 새 언어 추가
+};
+```
+
+## 사용 방법
+
+### 기본 사용
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+
+  return <button>{t('ui.execute')}</button>;
+}
+```
+
+### 보간 (Interpolation)
+
+```tsx
+// JSON
+{ "narrative.turn_label": "[TURN {{turn}}]" }
+
+// 컴포넌트
+<span>{t('narrative.turn_label', { turn: 5 })}</span>
+// 결과: "[TURN 5]"
+```
+
+### 언어 변경 (향후)
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function LanguageToggle() {
+  const { i18n } = useTranslation();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.resolvedLanguage === 'ko-KR' ? 'en-US' : 'ko-KR';
+    i18n.changeLanguage(newLang);
+  };
+
+  return <button onClick={toggleLanguage}>🌐</button>;
+}
+```
+
+## 금지사항
+
+### ❌ 텍스트를 이미지에 포함하지 마세요
+
+이미지에 텍스트를 박으면:
+
+- 언어 변경 시 이미지를 교체해야 함
+- 리사이즈 시 가독성 저하
+- 접근성 문제 (스크린 리더)
+
+**대신**: 이미지와 텍스트를 분리하고, 텍스트는 i18n 키로 관리
+
+### ❌ 하드코딩 문자열 금지
+
+```tsx
+// ❌ Bad
+<button>실행</button>
+
+// ✅ Good
+<button>{t('ui.execute')}</button>
+```
+
+### ❌ ko/en 혼합 출력 금지 (RULE-006)
+
+동일 화면에서 한국어와 영어가 섞여 나오면 안 됩니다.
+모든 UI 문자열은 현재 선택된 언어로 일관되게 표시되어야 합니다.
+
+### ❌ 키 임의 삭제/변경 금지
+
+키를 삭제하거나 이름을 변경하면 기존 코드에서 참조 오류가 발생합니다.
+
+- 삭제: deprecated 마킹 후 충분한 기간을 두고 제거
+- 변경: 새 키 추가 → 마이그레이션 → 구 키 제거
+
+## 검증 체크리스트
+
+새 리소스 추가/수정 시:
+
+- [ ] 모든 지원 언어에 동일한 키가 존재하는지 확인
+- [ ] 보간 변수명이 일치하는지 확인 (`{{variable}}`)
+- [ ] 빌드 및 린트 통과
+- [ ] 실제 UI에서 문자열이 올바르게 표시되는지 확인
+
+## 참고 문서
+
+- `vibe/prd.md` - 3.1(지원 언어), 8.7(TurnInput.language)
+- `vibe/tech-stack.md` - i18next/react-i18next 버전
+- `.cursor/rules/00-core-critical.mdc` - RULE-006(i18n/언어 혼합 금지)
+- [i18next 공식 문서](https://www.i18next.com/)
+- [react-i18next 공식 문서](https://react.i18next.com/)
+</file>
+
 <file path="frontend/src/main.tsx">
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -12420,6 +12754,550 @@ export function box2dCenter(box: Box2D): { x: number; y: number } {
 
 <file path="request.json">
 {"language": "ko-KR", "text": "모험을 시작한다", "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"}, "economy_snapshot": {"signal": 5, "memory_shard": 0}}
+</file>
+
+<file path="backend/prompts/image/scene_prompt.en.md">
+<prompt_meta>
+  <prompt_id>scene_image_generation</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## Purpose
+
+Prompt template for generating in-game scene images.
+Creates visual representations that match the text narrative in a consistent style.
+
+## Inputs
+
+- narrative: Current turn's narrative text
+- scene_description: Scene description (optional)
+- style_hints: Style hints (optional)
+- previous_scene_context: Previous scene context (for consistency)
+
+## Output Contract (Summary)
+
+- Image generation prompts are written in **English** (model optimization).
+- Always include base style keywords for consistency.
+- Minimize negative prompts; describe the desired scene positively.
+
+---
+
+## System Instructions
+
+You are the image prompt generator for "Unknown World" game.
+Based on the given narrative and scene description, create prompts for the Gemini image generation model.
+
+### Base Style Guidelines
+
+1. **Art Style**: Dark fantasy, mystery, roguelike atmosphere
+2. **Color Palette**: Dark and muted tones, neon accents (harmonizing with CRT theme)
+3. **Lighting**: Dramatic contrast, rim lighting, atmospheric illumination
+4. **Composition**: Cinematic, prefer wide or medium shots
+
+### Prompt Structure
+
+```
+[Subject/Scene Description], [Art Style], [Lighting/Mood], [Color Tones], [Camera/Composition], [Quality Keywords]
+```
+
+### Quality Keywords (Always Include)
+
+- highly detailed
+- cinematic lighting
+- atmospheric
+- dark fantasy aesthetic
+- 4k quality
+
+### Prohibited Elements
+
+- Avoid photorealistic style (difficult to maintain consistency)
+- No violent/sexual/discriminatory imagery
+- Avoid text/letters in images (readability issues)
+
+---
+
+## Example Prompts
+
+### Example 1: Mysterious Forest Entrance
+
+**Input Narrative**: "The old door creaks open. Cold air rushes out from within."
+
+**Generated Prompt**:
+```
+An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
+```
+
+### Example 2: Interior of a Ruined Castle
+
+**Input Narrative**: "The throne of the crumbling castle gleams under the moonlight."
+
+**Generated Prompt**:
+```
+A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
+```
+
+---
+
+## Important Constraints
+
+- **Prompts in English**: For image generation model optimization
+- **Maintain Consistent Style**: Always include base style keywords
+- **Safety Policy Compliance**: Exclude inappropriate content elements
+</prompt_body>
+</file>
+
+<file path="backend/prompts/image/scene_prompt.ko.md">
+<prompt_meta>
+  <prompt_id>scene_image_generation</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+
+게임 내 장면(Scene) 이미지를 생성하기 위한 프롬프트 템플릿입니다.
+텍스트 내러티브에 맞는 시각적 표현을 일관된 스타일로 생성합니다.
+
+## 입력
+
+- narrative: 현재 턴의 내러티브 텍스트
+- scene_description: 장면 설명 (선택)
+- style_hints: 스타일 힌트 (선택)
+- previous_scene_context: 이전 장면 맥락 (일관성 유지용)
+
+## 출력 계약 (요약)
+
+- 이미지 생성 프롬프트는 **영어**로 작성됩니다 (모델 최적화).
+- 스타일 일관성을 위해 기본 스타일 키워드를 항상 포함합니다.
+- 부정 프롬프트는 최소화하고, 원하는 장면을 긍정적으로 서술합니다.
+
+---
+
+## 시스템 지시
+
+당신은 "Unknown World" 게임의 이미지 프롬프트 생성기입니다.
+주어진 내러티브와 장면 설명을 바탕으로 Gemini 이미지 생성 모델에 전달할 프롬프트를 작성합니다.
+
+### 기본 스타일 가이드라인
+
+1. **아트 스타일**: 다크 판타지, 미스터리, 로그라이크 분위기
+2. **색상 팔레트**: 어둡고 차분한 톤, 네온 악센트 (CRT 테마와 조화)
+3. **조명**: 극적인 명암 대비, 림 라이트, 분위기 있는 조명
+4. **구도**: 시네마틱, 와이드 샷 또는 중간 샷 선호
+
+### 프롬프트 구조
+
+```
+[주제/장면 설명], [아트 스타일], [조명/분위기], [색상 톤], [카메라/구도], [품질 키워드]
+```
+
+### 품질 키워드 (기본 포함)
+
+- highly detailed
+- cinematic lighting
+- atmospheric
+- dark fantasy aesthetic
+- 4k quality
+
+### 금지 사항
+
+- 실사 스타일 (photorealistic) 지양 (일관성 유지 어려움)
+- 폭력적/성적/차별적 이미지 요소 금지
+- 텍스트/글자 포함 지양 (가독성 문제)
+
+---
+
+## 예시 프롬프트
+
+### 예시 1: 신비로운 숲 입구
+
+**입력 내러티브**: "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다."
+
+**생성된 프롬프트**:
+```
+An ancient wooden door creaking open in a misty forest, cold air flowing out, dark fantasy style, dramatic rim lighting, deep shadows, muted colors with cyan accents, wide shot, atmospheric fog, highly detailed, cinematic composition, 4k quality
+```
+
+### 예시 2: 폐허가 된 성의 내부
+
+**입력 내러티브**: "무너진 성의 왕좌가 달빛 아래 빛나고 있습니다."
+
+**생성된 프롬프트**:
+```
+A crumbling throne in a ruined castle bathed in moonlight, broken pillars and debris, dark fantasy aesthetic, silver and blue tones, dramatic chiaroscuro lighting, medium shot from below, dust particles in light beams, highly detailed, cinematic atmosphere, 4k quality
+```
+
+---
+
+## 중요 제약
+
+- **프롬프트는 영어로 작성**: 이미지 생성 모델 최적화를 위해
+- **일관된 스타일 유지**: 기본 스타일 키워드를 항상 포함
+- **안전 정책 준수**: 부적절한 콘텐츠 생성 요소 배제
+</prompt_body>
+</file>
+
+<file path="backend/prompts/system/game_master.en.md">
+<prompt_meta>
+  <prompt_id>game_master_system</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## Purpose
+
+Act as an agent-style Game Master to generate TurnOutput (JSON).
+"Unknown World" is an infinite generative roguelike narrative web game.
+
+## Input
+
+- TurnInput: language, text, action_id, click, client, economy_snapshot
+- WorldState: world rules, inventory, quests, relationships, history summary
+
+## Output Contract (Summary)
+
+- Output must satisfy the TurnOutput JSON Schema.
+- language is fixed to "en-US" matching the input.
+- All text (narrative, label, description, etc.) must be in English.
+
+---
+
+## System Instructions
+
+You are the Game Master of "Unknown World". React to player actions, evolve the world, and generate engaging narratives.
+
+### Core Principles
+
+1. **Consistency**: Adhere to world rules and established settings.
+2. **Creativity**: Create unpredictable yet logical developments.
+3. **Responsiveness**: Provide meaningful consequences for player choices.
+4. **Economy**: Calculate cost and balance_after accurately.
+
+### Narrative Style
+
+- 2-3 sentences of concise, immersive description
+- Use present tense
+- Include sensory details (sounds, smells, textures)
+- Address the player as "you"
+
+### Action Card Generation Rules
+
+- Provide 3-6 choice cards
+- Include cost, risk level, and hint for each card
+- At least 1 low-cost alternative (is_alternative: true)
+- Disable cards (enabled: false) when balance is insufficient
+
+### Safety Policy
+
+- Do not generate violent/sexual/discriminatory content
+- On violation requests: safety.blocked=true, provide safe alternative narrative
+
+---
+
+## Critical Constraints
+
+- **Output must be valid JSON.**
+- **language field is fixed to "en-US".**
+- **economy.cost and economy.balance_after are required.**
+- **balance_after must be >= 0.**
+</prompt_body>
+</file>
+
+<file path="backend/prompts/system/game_master.ko.md">
+<prompt_meta>
+  <prompt_id>game_master_system</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+
+에이전트형 Game Master로서 TurnOutput(JSON)을 생성합니다.
+"Unknown World"는 무한 생성 로그라이크 내러티브 웹게임입니다.
+
+## 입력
+
+- TurnInput: language, text, action_id, click, client, economy_snapshot
+- WorldState: 세계 규칙, 인벤토리, 퀘스트, 관계, 히스토리 요약
+
+## 출력 계약 (요약)
+
+- 반드시 JSON Schema를 만족하는 TurnOutput만 출력합니다.
+- language는 입력과 동일하게 "ko-KR"로 고정합니다.
+- 모든 텍스트(narrative, label, description 등)는 한국어로 작성합니다.
+
+---
+
+## 시스템 지시
+
+당신은 "Unknown World"의 Game Master입니다. 플레이어의 행동에 반응하여 세계를 변화시키고, 흥미로운 내러티브를 생성합니다.
+
+### 핵심 원칙
+
+1. **일관성**: 세계 규칙(rules)과 기존 설정을 준수합니다.
+2. **창의성**: 예측 불가능하되 논리적인 전개를 만들어냅니다.
+3. **반응성**: 플레이어의 선택에 의미 있는 결과를 제공합니다.
+4. **경제성**: 비용(cost)과 잔액(balance_after)을 정확히 계산합니다.
+
+### 내러티브 스타일
+
+- 2~3문장의 간결하고 몰입감 있는 묘사
+- 현재 시제 사용
+- 감각적 디테일 포함 (소리, 냄새, 촉감 등)
+- 플레이어를 "당신"으로 지칭
+
+### 액션 카드 생성 규칙
+
+- 3~6장의 선택지 제공
+- 각 카드에 비용(cost), 위험도(risk), 힌트(hint) 포함
+- 최소 1장은 저비용 대안(is_alternative: true) 포함
+- 잔액 부족 시 해당 카드 비활성화(enabled: false)
+
+### 안전 정책
+
+- 폭력적/성적/차별적 콘텐츠 생성 금지
+- 위반 요청 시 safety.blocked=true, 안전한 대체 내러티브 제공
+
+---
+
+## 중요 제약
+
+- **출력은 반드시 유효한 JSON이어야 합니다.**
+- **language 필드는 "ko-KR"로 고정합니다.**
+- **economy.cost와 economy.balance_after는 필수입니다.**
+- **잔액(balance_after)은 0 이상이어야 합니다.**
+</prompt_body>
+</file>
+
+<file path="backend/prompts/turn/turn_output_instructions.en.md">
+<prompt_meta>
+  <prompt_id>turn_output_instructions</prompt_id>
+  <language>en-US</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## Purpose
+
+Specify the rules for each field in the TurnOutput JSON schema.
+
+---
+
+## Required Fields (Hard Gate)
+
+### language
+- Value: "en-US" (fixed to match input)
+- No mixed language output
+
+### narrative
+- Type: string (required)
+- Narrative text shown to the player
+- 2-3 sentences, written in English
+- Present tense, address as "you"
+
+### economy
+- Type: object (required)
+- cost: Resources consumed this turn {signal: int, memory_shard: int}
+- balance_after: Balance after consumption {signal: int, memory_shard: int}
+- **Important**: balance_after.signal >= 0, balance_after.memory_shard >= 0
+
+### safety
+- Type: object (required)
+- blocked: boolean (whether blocked by safety policy)
+- message: string | null (message to display when blocked)
+
+---
+
+## Optional Fields
+
+### ui
+- action_deck.cards[]: Action card array (3-6 recommended)
+  - id: Unique card ID
+  - label: Display label (English)
+  - cost: {signal, memory_shard}
+  - risk: "low" | "medium" | "high"
+  - enabled: boolean
+  - is_alternative: boolean (low-cost alternative flag)
+- objects[]: Clickable scene objects
+  - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
+
+### world
+- rules_changed[]: Changed world rules
+- inventory_added[]: Added item IDs
+- inventory_removed[]: Removed item IDs
+- quests_updated[]: Updated quests
+- memory_pins[]: Pin candidates
+
+### render
+- image_job: Image generation job (optional)
+  - should_generate: boolean
+  - prompt: Image prompt (English preferred)
+
+### agent_console
+- current_phase: Current phase
+- badges[]: Validation badges
+- repair_count: Number of repair attempts
+
+---
+
+## Coordinate Convention (RULE-009)
+
+- All coordinates use 0-1000 normalized coordinate system
+- bbox order: [ymin, xmin, ymax, xmax]
+- Do not use pixel coordinates
+
+---
+
+## Example Output
+
+```json
+{
+  "language": "en-US",
+  "narrative": "The old door creaks open. Cold air rushes out from within.",
+  "economy": {
+    "cost": {"signal": 5, "memory_shard": 0},
+    "balance_after": {"signal": 95, "memory_shard": 5}
+  },
+  "safety": {"blocked": false, "message": null},
+  "ui": {
+    "action_deck": {
+      "cards": [
+        {"id": "enter", "label": "Step inside", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
+        {"id": "peek", "label": "Peek cautiously", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
+      ]
+    },
+    "objects": []
+  },
+  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
+  "render": {"image_job": null},
+  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
+}
+```
+</prompt_body>
+</file>
+
+<file path="backend/prompts/turn/turn_output_instructions.ko.md">
+<prompt_meta>
+  <prompt_id>turn_output_instructions</prompt_id>
+  <language>ko-KR</language>
+  <version>0.2.0</version>
+  <last_updated>2026-01-28</last_updated>
+  <policy_preset>default</policy_preset>
+</prompt_meta>
+
+<prompt_body>
+## 목적
+
+TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
+
+---
+
+## 필수 필드 (Hard Gate)
+
+### language
+- 값: "ko-KR" (입력과 동일하게 고정)
+- 혼합 출력 금지
+
+### narrative
+- 타입: string (필수)
+- 플레이어에게 보여줄 내러티브 텍스트
+- 2~3문장, 한국어로 작성
+- 현재 시제, "당신" 지칭
+
+### economy
+- 타입: object (필수)
+- cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
+- balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
+- **중요**: balance_after.signal >= 0, balance_after.memory_shard >= 0
+
+### safety
+- 타입: object (필수)
+- blocked: boolean (안전 정책 차단 여부)
+- message: string | null (차단 시 표시할 메시지)
+
+---
+
+## 선택 필드
+
+### ui
+- action_deck.cards[]: 액션 카드 배열 (3~6장 권장)
+  - id: 카드 고유 ID
+  - label: 표시 라벨 (한국어)
+  - cost: {signal, memory_shard}
+  - risk: "low" | "medium" | "high"
+  - enabled: boolean
+  - is_alternative: boolean (저비용 대안 여부)
+- objects[]: 클릭 가능한 장면 오브젝트
+  - box_2d: {ymin, xmin, ymax, xmax} (0~1000 정규화 좌표)
+
+### world
+- rules_changed[]: 변경된 세계 규칙
+- inventory_added[]: 추가된 아이템 ID
+- inventory_removed[]: 제거된 아이템 ID
+- quests_updated[]: 업데이트된 퀘스트
+- memory_pins[]: 고정 후보
+
+### render
+- image_job: 이미지 생성 작업 (선택)
+  - should_generate: boolean
+  - prompt: 이미지 프롬프트 (영어 권장)
+
+### agent_console
+- current_phase: 현재 단계
+- badges[]: 검증 배지
+- repair_count: 복구 시도 횟수
+
+---
+
+## 좌표 규약 (RULE-009)
+
+- 모든 좌표는 0~1000 정규화 좌표계
+- bbox 순서: [ymin, xmin, ymax, xmax]
+- 픽셀 좌표 사용 금지
+
+---
+
+## 예시 출력
+
+```json
+{
+  "language": "ko-KR",
+  "narrative": "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다.",
+  "economy": {
+    "cost": {"signal": 5, "memory_shard": 0},
+    "balance_after": {"signal": 95, "memory_shard": 5}
+  },
+  "safety": {"blocked": false, "message": null},
+  "ui": {
+    "action_deck": {
+      "cards": [
+        {"id": "enter", "label": "안으로 들어간다", "cost": {"signal": 10, "memory_shard": 0}, "risk": "medium", "enabled": true, "is_alternative": false},
+        {"id": "peek", "label": "조심스럽게 엿본다", "cost": {"signal": 3, "memory_shard": 0}, "risk": "low", "enabled": true, "is_alternative": true}
+      ]
+    },
+    "objects": []
+  },
+  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
+  "render": {"image_job": null},
+  "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
+}
+```
+</prompt_body>
 </file>
 
 <file path="backend/src/unknown_world/api/turn_stream_events.py">
@@ -16962,6 +17840,69 @@ export interface PlaceholderInfo {
 }
 </file>
 
+<file path="shared/README.md">
+# shared/
+
+이 디렉토리는 **프론트엔드와 백엔드 간 공유되는 스키마/타입 정의**를 위한 SSOT(Single Source of Truth) 디렉토리입니다.
+
+## 📁 구조
+
+```
+shared/
+├── schemas/
+│   └── turn/                         # Turn 계약 스키마 (TurnInput/TurnOutput)
+│       ├── turn_input.schema.json    # Client → Server 요청 스키마
+│       └── turn_output.schema.json   # Server → Client 응답 스키마
+└── README.md
+```
+
+## 🔄 SSOT 원칙 (RU-001-Q4)
+
+- **SSOT는 `shared/schemas/`의 JSON Schema 파일**입니다.
+- 백엔드(Python/Pydantic)와 프론트엔드(TS/Zod)의 타입/검증 코드는 **이 스키마로부터 생성 또는 동기화**됩니다.
+- 스키마 변경 시 양쪽(backend/frontend)에 영향이 있음을 반드시 인지해야 합니다.
+
+### 소비 전략 (Option B: 생성물 기반 동기화)
+
+| 소비자 | 도구/방식 | 생성물 경로 (권장) |
+|--------|-----------|-------------------|
+| **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
+| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
+
+> **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
+
+## 📋 스키마 파일 목록
+
+### Turn 계약 (MVP)
+
+| 파일 | 용도 | PRD 참조 |
+|------|------|----------|
+| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
+| `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
+
+## ✅ 스키마 작성 가이드라인
+
+- **지원 타입**: `string`, `number`, `integer`, `boolean`, `object`, `array`, `null`
+- **권장 속성**: `required`, `enum`, `description`을 적극 사용
+- **엄격 모드**: `additionalProperties: false`로 예측 가능성 확보
+- **평평한 구조**: 과도한 중첩을 피하고 단순한 스키마 유지
+- **참조**: `vibe/ref/structured-outputs-guide.md`
+
+## ⚠️ 보안 주의사항 (RULE-007)
+
+- **절대로 서비스 계정 키, 크리덴셜, 비밀정보를 이 디렉토리에 배치하지 마세요.**
+- 키 파일은 반드시 `secrets/` 디렉토리에만 배치합니다 (`.gitignore`로 차단됨).
+- 스키마 파일은 "계약 문서"이므로 커밋해도 보안 위험이 없습니다 (단, 비밀값 포함 금지).
+
+## 📚 관련 문서
+
+- `vibe/refactors/RU-001-Q4.md` - JSON Schema SSOT 도입 근거
+- `vibe/refactors/RU-001-S1.md` - .gitignore JSON 정책 변경 근거
+- `vibe/ref/structured-outputs-guide.md` - Gemini Structured Output 가이드
+- `vibe/prd.md` (8.7절) - TurnInput/TurnOutput 설계 방향
+- `.cursor/rules/00-core-critical.mdc` - RULE-003 (이중 검증), RULE-007 (보안)
+</file>
+
 <file path="backend/src/unknown_world/api/__init__.py">
 """Unknown World - API 패키지.
 
@@ -20767,6 +21708,38 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 export const selectError = (state: AgentStore) => state.error;
 </file>
 
+<file path="frontend/vite.config.ts">
+/// <reference types="vitest" />
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
+    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
+    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
+    proxy: {
+      // 백엔드 API 프록시 (RULE-011: 백엔드는 8011~8020)
+      '/api': {
+        target: 'http://localhost:8011',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
+  },
+});
+</file>
+
 <file path="shared/schemas/turn/turn_input.schema.json">
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -22558,6 +23531,341 @@ def validate_image_request(request: ImageGenerationRequest) -> str | None:
         return "프롬프트가 너무 깁니다 (최대 2000자)."
 
     return None
+</file>
+
+<file path="frontend/public/ui/README.md">
+# UI 에셋 가이드 (nanobanana mcp SSOT)
+
+> **SSOT 경로**: `frontend/public/ui/`  
+> **도구**: `nanobanana mcp` (개발 전용, 런타임 의존 금지)  
+> **참조**: `.gemini/rules/red-line.md` RULE-006/007, `vibe/prd.md` 9.7, `vibe/ref/rembg-guide.md`
+
+---
+
+## 1. 핵심 원칙
+
+### 1.1 Dev-only 원칙 (RULE-007)
+
+- `nanobanana mcp`는 **개발 과정에서 정적 에셋을 제작**하는 도구입니다.
+- 제품 런타임(프론트/백엔드)에서 MCP에 의존하는 설계는 **금지**합니다.
+- 생성된 에셋은 이 디렉토리(`frontend/public/ui/`)에 커밋하여 정적 배포합니다.
+
+### 1.2 용어 SSOT (RULE-006)
+
+- 이 도구는 반드시 **`nanobanana mcp`** 로 표기합니다.
+- "나노바나나 MCP", "Nano Banana MCP", "banana mcp" 등 혼용 금지.
+- 모델 별칭("Nano Banana / Nano Banana Pro")은 문서 인용 시에만 제한적 사용.
+
+### 1.3 보안 (RULE-005)
+
+- 키/토큰 등 비밀정보를 레포/로그/문서에 남기지 않습니다.
+- 생성 과정에서 사용한 API 키나 인증 정보는 절대 커밋하지 않습니다.
+
+---
+
+## 2. 디렉토리 구조
+
+```
+frontend/public/ui/
+├── README.md              # 이 파일 (SSOT 규칙)
+├── manifest.schema.json   # 에셋 매니페스트 스키마
+├── manifest.json          # (생성 시) 실제 에셋 목록
+├── icons/                 # 아이콘 에셋
+│   ├── signal-16.png
+│   ├── signal-24.png
+│   ├── badge-ok-16.png
+│   └── ...
+├── placeholders/          # 상태/장면 placeholder
+│   ├── scene-loading.webp
+│   ├── scene-error.webp
+│   └── ...
+└── chrome/                # UI 프레임/장식
+    ├── panel-corner-tl.png
+    ├── panel-border-h.png
+    └── ...
+```
+
+---
+
+## 3. 네이밍 규칙
+
+### 3.1 기본 포맷
+
+```
+{용도}-{크기}.{확장자}
+{용도}-{상태}-{크기}.{확장자}
+```
+
+**예시**:
+
+- `signal-24.png` — Signal 아이콘, 24px
+- `badge-ok-16.png` — OK 배지, 16px
+- `scene-loading.webp` — 로딩 상태 placeholder
+
+### 3.2 규칙
+
+| 항목       | 규칙                                              |
+| ---------- | ------------------------------------------------- |
+| **케이스** | `kebab-case` (소문자 + 하이픈)                    |
+| **용도**   | 명확한 역할 표현 (signal, badge, scene, panel 등) |
+| **상태**   | 필요 시 상태 포함 (ok, fail, loading, error 등)   |
+| **크기**   | 픽셀 단위 숫자 (16, 24, 32, 64 등)                |
+| **확장자** | 용도에 맞게 선택 (아래 참조)                      |
+
+---
+
+## 4. 포맷 및 사이즈 규칙
+
+### 4.1 포맷 선택
+
+| 용도            | 기본 포맷  | 대안 | 비고                               |
+| --------------- | ---------- | ---- | ---------------------------------- |
+| **아이콘**      | PNG (투명) | -    | 작은 크기, 투명도 필수             |
+| **placeholder** | WebP       | PNG  | 용량 절감 우선 (Q1 결정: Option B) |
+| **chrome**      | PNG (투명) | -    | 프레임/장식, 투명도 필수           |
+
+> **배경 제거(필수 조건부)**: 아이콘/chrome 등 투명 배경이 필요한 에셋은 생성 결과에 배경이 남아 있으면 `rembg`로 배경을 제거해 투명 PNG로 정리합니다. (가이드: `vibe/ref/rembg-guide.md`)
+
+### 4.2 사이즈 규격
+
+| 용도            | 필수 사이즈 | 선택 사이즈 | 비고             |
+| --------------- | ----------- | ----------- | ---------------- |
+| **아이콘**      | 16, 24      | 32, 64      | 최소 2종 필수    |
+| **placeholder** | 가변        | -           | 용도별 적정 크기 |
+| **chrome**      | 가변        | -           | 타일링/반복 고려 |
+
+### 4.3 Retina 대응 (선택)
+
+- 필요 시 `image-set()`으로 1x/2x 제공
+- 파일명: `{name}-24.png`, `{name}-24@2x.png`
+
+---
+
+## 5. 성능 예산
+
+| 항목                | 상한  | 권장       |
+| ------------------- | ----- | ---------- |
+| **아이콘 1개**      | 30KB  | 20KB 이하  |
+| **placeholder 1개** | 300KB | 200KB 이하 |
+| **chrome 1개**      | 50KB  | 30KB 이하  |
+| **`ui/` 폴더 총합** | 1.5MB | 1MB 이하   |
+
+**초과 시 대응**:
+
+1. 압축/최적화 (TinyPNG, ImageOptim 등)
+2. 해상도/색상 축소
+3. 불필요 에셋 제거
+4. 예산 상향 시 근거 문서화 필요
+
+---
+
+## 6. 스타일 가이드
+
+### 6.1 CRT 테마 연동
+
+에셋은 `frontend/src/style.css`의 CSS 변수/테마와 조화를 이뤄야 합니다.
+
+```css
+/* 참조: CRT 테마 색상 */
+--bg-color: #0d0d0d; /* 배경 */
+--text-color: #33ff00; /* 인광 녹색 */
+--text-dim: #1a8000; /* 어두운 녹색 */
+--accent-color: #ff00ff; /* 마젠타 */
+--warning-color: #ffaa00; /* 주황색 */
+--error-color: #ff3333; /* 붉은색 */
+```
+
+### 6.2 스타일 원칙
+
+| 원칙                  | 설명                          |
+| --------------------- | ----------------------------- |
+| **레트로 퓨처리즘**   | CRT/터미널 미학과 조화        |
+| **기능적 미니멀리즘** | 불필요한 장식 배제            |
+| **톤 일관성**         | 인광 녹색 기반, 마젠타 포인트 |
+| **고대비**            | Readable 모드에서도 식별 가능 |
+
+### 6.3 금지 사항
+
+- ❌ 프로젝트 외부 로고/상표 복제
+- ❌ CRT 테마와 충돌하는 색상 (밝은 파스텔, 난색 계열 남용)
+- ❌ 복잡한 그라데이션/사진 스타일
+
+---
+
+## 7. 폴백 원칙 (필수)
+
+### 7.1 텍스트/이모지 폴백 유지
+
+에셋 로딩 실패/미지원 시에도 **UI가 깨지지 않도록** 텍스트/이모지 라벨을 유지해야 합니다.
+
+**예시** (React):
+
+```tsx
+<span className="icon-wrapper" aria-label="Signal">
+  <img
+    src="/ui/icons/signal-24.png"
+    alt=""
+    aria-hidden="true"
+    onError={(e) => (e.currentTarget.style.display = 'none')}
+  />
+  <span className="icon-fallback">📡</span>
+</span>
+```
+
+**CSS**:
+
+```css
+.icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+.icon-wrapper img + .icon-fallback {
+  display: none;
+}
+.icon-wrapper img[style*='display: none'] + .icon-fallback {
+  display: inline;
+}
+```
+
+### 7.2 폴백 요구사항
+
+| 에셋 유형       | 폴백 방식                |
+| --------------- | ------------------------ |
+| **아이콘**      | 이모지 또는 텍스트 라벨  |
+| **placeholder** | CSS 배경색 + 텍스트      |
+| **chrome**      | CSS border/shadow로 대체 |
+
+---
+
+## 8. 접근성 가이드
+
+### 8.1 필수 사항
+
+| 항목                          | 요구사항                            |
+| ----------------------------- | ----------------------------------- |
+| **색상만으로 의미 전달 금지** | 텍스트/라벨 병행                    |
+| **장식성 이미지**             | `aria-hidden="true"` 적용           |
+| **기능성 이미지**             | `alt` 텍스트 제공 또는 `aria-label` |
+| **대비**                      | Readable 모드에서도 4.5:1 이상      |
+
+### 8.2 예시
+
+```html
+<!-- 장식용 아이콘 (의미 없음) -->
+<img src="/ui/chrome/corner.png" alt="" aria-hidden="true" />
+
+<!-- 기능용 아이콘 (의미 있음) -->
+<button aria-label="신호 전송">
+  <img src="/ui/icons/signal-24.png" alt="Signal" />
+</button>
+```
+
+---
+
+## 9. 에셋 제작 워크플로우
+
+### 9.1 요청 → 제작 → 적용
+
+```
+1. 요청 정의
+   └── 용도, 사이즈, 스타일 명세 작성
+
+2. nanobanana mcp로 제작
+   └── 프롬프트에 CRT 스타일 키워드 포함
+   └── 색상 팔레트 준수
+   └── (필수 조건부) 배경 제거(rembg) 예정이면 **배경은 순백(#FFFFFF) 단색**으로 생성(그라데이션/텍스처/그림자 금지)
+
+3. (필수 조건부) rembg로 배경 제거
+   └── 아이콘/chrome 등 투명 배경이 필요한 에셋에서 배경이 남아 있으면 rembg로 제거
+   └── 모델 선택/옵션은 `vibe/ref/rembg-guide.md` 준수
+
+4. 리사이즈/압축
+   └── 성능 예산 확인
+   └── 필요 사이즈로 리사이즈
+
+5. 디렉토리 반영
+   └── 네이밍 규칙 준수
+   └── manifest.json 업데이트
+
+6. UI 적용 + 폴백 확인
+   └── 컴포넌트에 적용
+   └── 폴백 동작 테스트
+
+7. QA
+   └── 크기/대비/폴백/Readable 모드 확인
+```
+
+### 9.2 프롬프트 가이드 (예시)
+
+```
+CRT 터미널 스타일 아이콘,
+인광 녹색(#33ff00) 기반,
+검은 배경(#0d0d0d)에 어울리는 톤,
+심플한 라인 아트,
+픽셀 아트 또는 레트로 스타일,
+24x24 픽셀, 투명 배경
+(배경 제거 필요 시) solid white background (#FFFFFF), no gradient/texture/shadow
+```
+
+---
+
+## 10. 매니페스트 관리
+
+### 10.1 manifest.json
+
+모든 에셋은 `manifest.json`에 등록하여 추적합니다.
+
+```json
+{
+  "$schema": "./manifest.schema.json",
+  "version": "1.0.0",
+  "assets": [
+    {
+      "id": "signal-24",
+      "path": "icons/signal-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "📡",
+      "usedIn": ["EconomyHUD"],
+      "bytes": 1234
+    }
+  ]
+}
+```
+
+### 10.2 업데이트 시점
+
+- 에셋 추가/제거 시 manifest.json 동기화
+- U-033에서 QA 자동화 예정
+
+---
+
+## 11. 라이선스
+
+- 모든 에셋은 **프로젝트 내부 용도**로 제작됩니다.
+- 외부 로고/상표를 복제하지 않습니다.
+- `nanobanana mcp`로 생성된 에셋은 도구의 라이선스 정책을 따릅니다.
+- 에셋에 **SynthID 워터마크**가 포함될 수 있습니다 (AI 생성 표기).
+
+---
+
+## 12. 체크리스트 (에셋 추가 시)
+
+- [ ] 네이밍 규칙 준수 (`kebab-case` + 용도 + 크기)
+- [ ] 포맷 규칙 준수 (아이콘=PNG, placeholder=WebP)
+- [ ] 성능 예산 준수 (개별/총합)
+- [ ] (조건부) 투명 배경이 필요한 에셋은 `rembg`로 배경 제거 완료(알파 채널 확인)
+- [ ] (조건부) 배경 제거(rembg) 예정이면 원본 생성 단계에서 배경이 순백(#FFFFFF) 단색인지 확인(그라데이션/텍스처/그림자 금지)
+- [ ] CRT 테마 색상과 조화
+- [ ] 폴백 구현 확인
+- [ ] 접근성 속성 적용 (`aria-hidden` 또는 `alt`)
+- [ ] manifest.json 업데이트
+- [ ] Readable 모드에서 대비 확인
+
+---
+
+_마지막 업데이트: 2026-01-11_
+_문서 버전: 1.1.0_
 </file>
 
 <file path="frontend/src/api/turnStream.test.ts">
@@ -24701,36 +26009,25 @@ export interface StreamCallbacks {
 }
 </file>
 
-<file path="frontend/vite.config.ts">
-/// <reference types="vitest" />
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 8001, // RULE-011: 프론트엔드는 8001~8010 사용
-    strictPort: true, // 포트 충돌 시 fail-fast (대역 밖 이동 방지)
-    // 충돌 시: pnpm -C frontend dev --port 8002 (8002~8010 중 선택)
-    proxy: {
-      // 백엔드 API 프록시 (RULE-011: 백엔드는 8011~8020)
-      '/api': {
-        target: 'http://localhost:8011',
-        changeOrigin: true,
-      },
-    },
+<file path="package.json">
+{
+  "name": "unknown-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": "24.12.0"
   },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.ts',
-  },
-});
+  "scripts": {
+    "kill": "pnpm kill:port",
+    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
+    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
+    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
+    "dev:front": "pnpm -C frontend dev"
+  }
+}
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/mock.py">
@@ -26143,27 +27440,6 @@ export function useTurnRunner(deps: {
 }
 </file>
 
-<file path="package.json">
-{
-  "name": "unknown-world",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Unknown World - Gemini 기반 에이전트형 게임 엔진",
-  "packageManager": "pnpm@10.27.0",
-  "engines": {
-    "node": "24.12.0"
-  },
-  "scripts": {
-    "kill": "pnpm kill:port",
-    "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
-    "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
-    "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
-    "dev:front": "pnpm -C frontend dev"
-  }
-}
-</file>
-
 <file path="shared/schemas/turn/turn_output.schema.json">
 {
   "$defs": {
@@ -27041,6 +28317,422 @@ export function useTurnRunner(deps: {
 }
 </file>
 
+<file path="backend/pyproject.toml">
+# backend/pyproject.toml
+# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unknown-world-backend"
+version = "0.1.0"
+description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+    "google-genai==1.60.0",
+    "google-cloud-aiplatform==1.132.0",
+    "google-cloud-storage==3.7.0",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.22",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unknown_world"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.10",
+    "pyright==1.1.408",
+    "pytest==9.0.2",
+    "httpx==0.28.1",
+    "jsonschema>=4.26.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [
+    "__pycache__",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (FastAPI Depends pattern)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src"]
+venvPath = "."
+venv = ".venv"
+</file>
+
+<file path="backend/src/unknown_world/main.py">
+"""Unknown World - FastAPI 애플리케이션 엔트리포인트
+
+이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
+MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
+
+실행 방법:
+    cd backend
+    uv sync
+    uv run uvicorn unknown_world.main:app --reload --port 8011
+
+참조:
+    - vibe/tech-stack.md (버전 SSOT)
+    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
+    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
+"""
+
+# ruff: noqa: E402
+# E402 무시: .env 로딩은 의도적으로 다른 import보다 먼저 실행되어야 함 (U-047)
+
+# =============================================================================
+# .env 자동 로딩 (U-047)
+# =============================================================================
+# 로컬 개발에서 backend/.env 파일이 있으면 자동 로딩합니다.
+# - override=False: 이미 설정된 환경변수는 덮어쓰지 않음 (운영 환경 SSOT 보장)
+# - 파일 미존재 시 no-op (운영/CI에서 파일 미존재를 기본으로 허용)
+# - 페어링 질문 Q1 결정: Option A (import 시점에 로드)
+#
+# 보안 규칙:
+#   - .env 파일은 레포에 커밋 금지 (.gitignore 필수)
+#   - 민감 정보(키/토큰/프롬프트)는 로그/스트림/UI에 노출 금지 (RULE-007)
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# .env 파일 경로 (backend 디렉토리 기준)
+# main.py 위치: backend/src/unknown_world/main.py
+# backend/.env 위치: backend/.env (3단계 상위)
+# resolve()로 절대 경로 보장
+_DOTENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
+
+# .env 로딩 (override=False: 기존 환경변수 우선)
+_dotenv_loaded = load_dotenv(dotenv_path=_DOTENV_PATH, override=False)
+
+# 디버그: .env 로딩 상태 즉시 출력 (U-047 검증용)
+import sys
+
+print(f"[Startup] .env path: {_DOTENV_PATH}", file=sys.stderr)
+print(f"[Startup] .env exists: {_DOTENV_PATH.exists()}", file=sys.stderr)
+print(f"[Startup] dotenv loaded: {_dotenv_loaded}", file=sys.stderr)
+import os as _os_temp
+
+print(f"[Startup] UW_MODE: {_os_temp.environ.get('UW_MODE', 'NOT_SET')}", file=sys.stderr)
+
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Literal
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+from unknown_world import __version__
+from unknown_world.api import image_router, scanner_router, turn_router
+from unknown_world.services.image_generation import DEFAULT_OUTPUT_DIR
+from unknown_world.services.rembg_preflight import (
+    RembgPreflightResult,
+    RembgReadyStatus,
+    get_rembg_status,
+    run_preflight_async,
+)
+
+# =============================================================================
+# 로거 설정
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# .env 로딩 상태 로깅 (U-047)
+# =============================================================================
+# 민감 정보(키/토큰/경로)는 출력하지 않음 (RULE-007/008)
+# 모드/환경 정도만 로깅하여 디버깅 용이성 확보
+
+_uw_mode = os.environ.get("UW_MODE", "mock")  # 기본값: mock (genai_client.py 정책)
+_environment = os.environ.get("ENVIRONMENT", "development")
+
+if _dotenv_loaded:
+    logger.info(
+        "[Config] .env 파일 로드 완료",
+        extra={
+            "dotenv_path": str(_DOTENV_PATH),
+            "UW_MODE": _uw_mode,
+            "ENVIRONMENT": _environment,
+        },
+    )
+else:
+    logger.debug(
+        "[Config] .env 파일 미존재 또는 로드 실패 (기본값 사용)",
+        extra={
+            "UW_MODE": _uw_mode,
+            "ENVIRONMENT": _environment,
+        },
+    )
+
+# =============================================================================
+# Lifespan (서버 시작/종료 이벤트)
+# =============================================================================
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    """FastAPI 앱 lifespan 관리.
+
+    서버 시작 시:
+        - rembg preflight 실행 (모델 사전 점검/다운로드)
+
+    서버 종료 시:
+        - 필요한 정리 작업 수행
+    """
+    # =========================================================================
+    # Startup
+    # =========================================================================
+    logger.info("[Startup] Unknown World 백엔드 시작")
+
+    # rembg preflight 실행 (U-045)
+    # Q1: Option A - 타임아웃 짧게 + 실패 시 degraded 모드로 계속
+    try:
+        logger.info("[Startup] rembg preflight 시작")
+        result = await run_preflight_async()
+
+        if result.status == RembgReadyStatus.READY:
+            logger.info(
+                "[Startup] rembg READY",
+                extra={
+                    "preloaded_models": result.preloaded_models,
+                    "elapsed_ms": result.preflight_time_ms,
+                },
+            )
+        elif result.status == RembgReadyStatus.DEGRADED:
+            logger.warning(
+                "[Startup] rembg DEGRADED - 일부 기능이 제한될 수 있습니다",
+                extra={
+                    "preloaded_models": result.preloaded_models,
+                    "missing_models": result.missing_models,
+                    "last_error": result.last_error,
+                },
+            )
+        else:
+            logger.warning(
+                "[Startup] rembg UNAVAILABLE - 배경 제거 기능이 비활성화됩니다",
+                extra={"last_error": result.last_error},
+            )
+
+        # app.state에 저장
+        app.state.rembg_status = result
+
+    except Exception as e:
+        # preflight 실패해도 서비스는 계속 (RULE-004)
+        logger.exception("[Startup] rembg preflight 실패, degraded 모드로 시작")
+        app.state.rembg_status = RembgPreflightResult(
+            status=RembgReadyStatus.UNAVAILABLE,
+            installed=False,
+            last_error=f"preflight 예외: {type(e).__name__}",
+        )
+
+    logger.info("[Startup] Unknown World 백엔드 시작 완료")
+
+    yield
+
+    # =========================================================================
+    # Shutdown
+    # =========================================================================
+    logger.info("[Shutdown] Unknown World 백엔드 종료")
+
+
+# =============================================================================
+# FastAPI 앱 인스턴스
+# =============================================================================
+
+app = FastAPI(
+    title="Unknown World API",
+    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
+    version=__version__,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# =============================================================================
+# 정적 파일 서빙 (U-019)
+# =============================================================================
+# 생성된 이미지를 /static/images 경로로 서빙합니다.
+DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static/images", StaticFiles(directory=str(DEFAULT_OUTPUT_DIR)), name="images")
+
+# =============================================================================
+# CORS 설정 (개발 환경용)
+# =============================================================================
+# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
+# RULE-011: 프론트엔드는 8001~8010 포트 사용
+# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
+
+ALLOWED_ORIGINS = [
+    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
+    *[f"http://localhost:{port}" for port in range(8001, 8011)],
+    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =============================================================================
+# 라우터 등록
+# =============================================================================
+
+# U-007: /api/turn HTTP Streaming 엔드포인트
+app.include_router(turn_router)
+
+# U-019: /api/image 이미지 생성 엔드포인트
+app.include_router(image_router)
+
+# U-021: /api/scan 이미지 이해(Scanner) 엔드포인트
+app.include_router(scanner_router)
+
+
+# =============================================================================
+# 응답 스키마 (Pydantic)
+# =============================================================================
+
+
+class RembgHealthInfo(BaseModel):
+    """rembg 상태 정보 (헬스체크용).
+
+    Attributes:
+        status: rembg 준비 상태
+        installed: 설치 여부
+        preloaded_models: 사용 가능한 모델 목록
+        missing_models: 누락된 모델 목록
+        last_error: 마지막 에러 (있을 경우)
+    """
+
+    status: str = Field(description="rembg 준비 상태 (ready/degraded/unavailable/pending)")
+    installed: bool = Field(description="rembg 설치 여부")
+    preloaded_models: list[str] = Field(default_factory=list, description="사용 가능한 모델 목록")
+    missing_models: list[str] = Field(default_factory=list, description="누락된 모델 목록")
+    last_error: str | None = Field(default=None, description="마지막 에러 메시지")
+
+
+class HealthResponse(BaseModel):
+    """헬스체크 응답 스키마.
+
+    Attributes:
+        status: 서버 상태 ("ok" 또는 "degraded")
+        version: 백엔드 버전
+        service: 서비스 이름
+        rembg: rembg 상태 정보 (선택)
+    """
+
+    status: Literal["ok", "degraded"]
+    version: str
+    service: str
+    rembg: RembgHealthInfo | None = Field(default=None, description="rembg 상태 정보")
+
+
+# =============================================================================
+# 라우트 정의
+# =============================================================================
+
+
+@app.get("/health", response_model=HealthResponse, tags=["System"])
+async def health_check() -> HealthResponse:
+    """서버 헬스체크 엔드포인트.
+
+    서버가 정상적으로 작동 중인지 확인합니다.
+    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
+
+    rembg 상태:
+        - ready: rembg 설치 + 필수 모델 캐시 완료
+        - degraded: rembg 설치 + 일부 모델 누락
+        - unavailable: rembg 미설치 또는 사용 불가
+        - pending: preflight 아직 실행되지 않음
+
+    Returns:
+        HealthResponse: 서버 상태 정보
+    """
+    # rembg 상태 조회
+    rembg_result = get_rembg_status()
+
+    # 전체 서버 상태 결정
+    # rembg가 unavailable이어도 서버는 ok (배경 제거만 비활성화)
+    server_status: Literal["ok", "degraded"] = "ok"
+    if rembg_result.status == RembgReadyStatus.UNAVAILABLE:
+        # rembg 미사용 가능 시 degraded로 표시 (선택적)
+        # 현재는 rembg 없어도 ok로 유지 (이미지 후처리만 스킵)
+        server_status = "ok"
+
+    # rembg 정보 구성
+    rembg_info = RembgHealthInfo(
+        status=rembg_result.status.value,
+        installed=rembg_result.installed,
+        preloaded_models=rembg_result.preloaded_models,
+        missing_models=rembg_result.missing_models,
+        last_error=rembg_result.last_error,
+    )
+
+    return HealthResponse(
+        status=server_status,
+        version=__version__,
+        service="unknown-world-backend",
+        rembg=rembg_info,
+    )
+
+
+@app.get("/", tags=["System"])
+async def root() -> dict[str, str]:
+    """루트 엔드포인트.
+
+    API 정보를 간략히 안내합니다.
+
+    Returns:
+        dict: 기본 안내 메시지
+    """
+    return {
+        "message": "Unknown World API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+</file>
+
 <file path="frontend/src/schemas/turn.ts">
 /**
  * Unknown World - TurnInput/TurnOutput Zod 스키마.
@@ -27688,84 +29380,6 @@ export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
 }
 </file>
 
-<file path="backend/pyproject.toml">
-# backend/pyproject.toml
-# SSOT: vibe/tech-stack.md (버전 기준일: 2026-01-01)
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[project]
-name = "unknown-world-backend"
-version = "0.1.0"
-description = "Unknown World Backend - Gemini 기반 에이전트형 게임 엔진"
-requires-python = ">=3.14"
-dependencies = [
-    "fastapi==0.128.0",
-    "uvicorn[standard]==0.40.0",
-    "pydantic==2.12.5",
-    "google-genai==1.60.0",
-    "google-cloud-aiplatform==1.132.0",
-    "google-cloud-storage==3.7.0",
-    "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.22",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/unknown_world"]
-
-[dependency-groups]
-dev = [
-    "ruff==0.14.10",
-    "pyright==1.1.408",
-    "pytest==9.0.2",
-    "httpx==0.28.1",
-    "jsonschema>=4.26.0",
-    "pytest-asyncio>=1.3.0",
-    "pytest-cov>=7.0.0",
-]
-
-[tool.ruff]
-line-length = 100
-target-version = "py314"
-extend-exclude = [
-    "__pycache__",
-    ".ruff_cache",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-]
-
-[tool.ruff.lint]
-select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # pyflakes
-    "I",      # isort
-    "UP",     # pyupgrade
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "SIM",    # flake8-simplify
-]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # function call in default argument (FastAPI Depends pattern)
-]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-
-[tool.pyright]
-pythonVersion = "3.14"
-typeCheckingMode = "strict"
-include = ["src"]
-venvPath = "."
-venv = ".venv"
-</file>
-
 <file path="backend/src/unknown_world/api/turn.py">
 """Unknown World - /api/turn HTTP Streaming 엔드포인트.
 
@@ -28148,344 +29762,6 @@ async def turn_stream(request: Request) -> StreamingResponse:
             "X-Request-Time": str(int(time.time() * 1000)),
         },
     )
-</file>
-
-<file path="backend/src/unknown_world/main.py">
-"""Unknown World - FastAPI 애플리케이션 엔트리포인트
-
-이 모듈은 Unknown World 백엔드의 FastAPI 앱을 정의합니다.
-MVP 단계에서는 기본 헬스체크와 개발용 CORS 설정만 포함합니다.
-
-실행 방법:
-    cd backend
-    uv sync
-    uv run uvicorn unknown_world.main:app --reload --port 8011
-
-참조:
-    - vibe/tech-stack.md (버전 SSOT)
-    - vibe/prd.md (에이전트형 게임 엔진 요구사항)
-    - .cursor/rules/20-backend-orchestrator.mdc (SSE/검증/복구 규칙)
-"""
-
-# ruff: noqa: E402
-# E402 무시: .env 로딩은 의도적으로 다른 import보다 먼저 실행되어야 함 (U-047)
-
-# =============================================================================
-# .env 자동 로딩 (U-047)
-# =============================================================================
-# 로컬 개발에서 backend/.env 파일이 있으면 자동 로딩합니다.
-# - override=False: 이미 설정된 환경변수는 덮어쓰지 않음 (운영 환경 SSOT 보장)
-# - 파일 미존재 시 no-op (운영/CI에서 파일 미존재를 기본으로 허용)
-# - 페어링 질문 Q1 결정: Option A (import 시점에 로드)
-#
-# 보안 규칙:
-#   - .env 파일은 레포에 커밋 금지 (.gitignore 필수)
-#   - 민감 정보(키/토큰/프롬프트)는 로그/스트림/UI에 노출 금지 (RULE-007)
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-# .env 파일 경로 (backend 디렉토리 기준)
-# main.py 위치: backend/src/unknown_world/main.py
-# backend/.env 위치: backend/.env (3단계 상위)
-# resolve()로 절대 경로 보장
-_DOTENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
-
-# .env 로딩 (override=False: 기존 환경변수 우선)
-_dotenv_loaded = load_dotenv(dotenv_path=_DOTENV_PATH, override=False)
-
-# 디버그: .env 로딩 상태 즉시 출력 (U-047 검증용)
-import sys
-
-print(f"[Startup] .env path: {_DOTENV_PATH}", file=sys.stderr)
-print(f"[Startup] .env exists: {_DOTENV_PATH.exists()}", file=sys.stderr)
-print(f"[Startup] dotenv loaded: {_dotenv_loaded}", file=sys.stderr)
-import os as _os_temp
-
-print(f"[Startup] UW_MODE: {_os_temp.environ.get('UW_MODE', 'NOT_SET')}", file=sys.stderr)
-
-import logging
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-from typing import Literal
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
-
-from unknown_world import __version__
-from unknown_world.api import image_router, scanner_router, turn_router
-from unknown_world.services.image_generation import DEFAULT_OUTPUT_DIR
-from unknown_world.services.rembg_preflight import (
-    RembgPreflightResult,
-    RembgReadyStatus,
-    get_rembg_status,
-    run_preflight_async,
-)
-
-# =============================================================================
-# 로거 설정
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-# =============================================================================
-# .env 로딩 상태 로깅 (U-047)
-# =============================================================================
-# 민감 정보(키/토큰/경로)는 출력하지 않음 (RULE-007/008)
-# 모드/환경 정도만 로깅하여 디버깅 용이성 확보
-
-_uw_mode = os.environ.get("UW_MODE", "mock")  # 기본값: mock (genai_client.py 정책)
-_environment = os.environ.get("ENVIRONMENT", "development")
-
-if _dotenv_loaded:
-    logger.info(
-        "[Config] .env 파일 로드 완료",
-        extra={
-            "dotenv_path": str(_DOTENV_PATH),
-            "UW_MODE": _uw_mode,
-            "ENVIRONMENT": _environment,
-        },
-    )
-else:
-    logger.debug(
-        "[Config] .env 파일 미존재 또는 로드 실패 (기본값 사용)",
-        extra={
-            "UW_MODE": _uw_mode,
-            "ENVIRONMENT": _environment,
-        },
-    )
-
-# =============================================================================
-# Lifespan (서버 시작/종료 이벤트)
-# =============================================================================
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    """FastAPI 앱 lifespan 관리.
-
-    서버 시작 시:
-        - rembg preflight 실행 (모델 사전 점검/다운로드)
-
-    서버 종료 시:
-        - 필요한 정리 작업 수행
-    """
-    # =========================================================================
-    # Startup
-    # =========================================================================
-    logger.info("[Startup] Unknown World 백엔드 시작")
-
-    # rembg preflight 실행 (U-045)
-    # Q1: Option A - 타임아웃 짧게 + 실패 시 degraded 모드로 계속
-    try:
-        logger.info("[Startup] rembg preflight 시작")
-        result = await run_preflight_async()
-
-        if result.status == RembgReadyStatus.READY:
-            logger.info(
-                "[Startup] rembg READY",
-                extra={
-                    "preloaded_models": result.preloaded_models,
-                    "elapsed_ms": result.preflight_time_ms,
-                },
-            )
-        elif result.status == RembgReadyStatus.DEGRADED:
-            logger.warning(
-                "[Startup] rembg DEGRADED - 일부 기능이 제한될 수 있습니다",
-                extra={
-                    "preloaded_models": result.preloaded_models,
-                    "missing_models": result.missing_models,
-                    "last_error": result.last_error,
-                },
-            )
-        else:
-            logger.warning(
-                "[Startup] rembg UNAVAILABLE - 배경 제거 기능이 비활성화됩니다",
-                extra={"last_error": result.last_error},
-            )
-
-        # app.state에 저장
-        app.state.rembg_status = result
-
-    except Exception as e:
-        # preflight 실패해도 서비스는 계속 (RULE-004)
-        logger.exception("[Startup] rembg preflight 실패, degraded 모드로 시작")
-        app.state.rembg_status = RembgPreflightResult(
-            status=RembgReadyStatus.UNAVAILABLE,
-            installed=False,
-            last_error=f"preflight 예외: {type(e).__name__}",
-        )
-
-    logger.info("[Startup] Unknown World 백엔드 시작 완료")
-
-    yield
-
-    # =========================================================================
-    # Shutdown
-    # =========================================================================
-    logger.info("[Shutdown] Unknown World 백엔드 종료")
-
-
-# =============================================================================
-# FastAPI 앱 인스턴스
-# =============================================================================
-
-app = FastAPI(
-    title="Unknown World API",
-    description="Gemini 기반 에이전트형 게임 엔진 오케스트레이터",
-    version=__version__,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    lifespan=lifespan,
-)
-
-# =============================================================================
-# 정적 파일 서빙 (U-019)
-# =============================================================================
-# 생성된 이미지를 /static/images 경로로 서빙합니다.
-DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static/images", StaticFiles(directory=str(DEFAULT_OUTPUT_DIR)), name="images")
-
-# =============================================================================
-# CORS 설정 (개발 환경용)
-# =============================================================================
-# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
-# RULE-011: 프론트엔드는 8001~8010 포트 사용
-# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
-
-ALLOWED_ORIGINS = [
-    # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
-    *[f"http://localhost:{port}" for port in range(8001, 8011)],
-    *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# =============================================================================
-# 라우터 등록
-# =============================================================================
-
-# U-007: /api/turn HTTP Streaming 엔드포인트
-app.include_router(turn_router)
-
-# U-019: /api/image 이미지 생성 엔드포인트
-app.include_router(image_router)
-
-# U-021: /api/scan 이미지 이해(Scanner) 엔드포인트
-app.include_router(scanner_router)
-
-
-# =============================================================================
-# 응답 스키마 (Pydantic)
-# =============================================================================
-
-
-class RembgHealthInfo(BaseModel):
-    """rembg 상태 정보 (헬스체크용).
-
-    Attributes:
-        status: rembg 준비 상태
-        installed: 설치 여부
-        preloaded_models: 사용 가능한 모델 목록
-        missing_models: 누락된 모델 목록
-        last_error: 마지막 에러 (있을 경우)
-    """
-
-    status: str = Field(description="rembg 준비 상태 (ready/degraded/unavailable/pending)")
-    installed: bool = Field(description="rembg 설치 여부")
-    preloaded_models: list[str] = Field(default_factory=list, description="사용 가능한 모델 목록")
-    missing_models: list[str] = Field(default_factory=list, description="누락된 모델 목록")
-    last_error: str | None = Field(default=None, description="마지막 에러 메시지")
-
-
-class HealthResponse(BaseModel):
-    """헬스체크 응답 스키마.
-
-    Attributes:
-        status: 서버 상태 ("ok" 또는 "degraded")
-        version: 백엔드 버전
-        service: 서비스 이름
-        rembg: rembg 상태 정보 (선택)
-    """
-
-    status: Literal["ok", "degraded"]
-    version: str
-    service: str
-    rembg: RembgHealthInfo | None = Field(default=None, description="rembg 상태 정보")
-
-
-# =============================================================================
-# 라우트 정의
-# =============================================================================
-
-
-@app.get("/health", response_model=HealthResponse, tags=["System"])
-async def health_check() -> HealthResponse:
-    """서버 헬스체크 엔드포인트.
-
-    서버가 정상적으로 작동 중인지 확인합니다.
-    이 엔드포인트는 로드밸런서, 모니터링 시스템, 클라이언트 연결 확인에 사용됩니다.
-
-    rembg 상태:
-        - ready: rembg 설치 + 필수 모델 캐시 완료
-        - degraded: rembg 설치 + 일부 모델 누락
-        - unavailable: rembg 미설치 또는 사용 불가
-        - pending: preflight 아직 실행되지 않음
-
-    Returns:
-        HealthResponse: 서버 상태 정보
-    """
-    # rembg 상태 조회
-    rembg_result = get_rembg_status()
-
-    # 전체 서버 상태 결정
-    # rembg가 unavailable이어도 서버는 ok (배경 제거만 비활성화)
-    server_status: Literal["ok", "degraded"] = "ok"
-    if rembg_result.status == RembgReadyStatus.UNAVAILABLE:
-        # rembg 미사용 가능 시 degraded로 표시 (선택적)
-        # 현재는 rembg 없어도 ok로 유지 (이미지 후처리만 스킵)
-        server_status = "ok"
-
-    # rembg 정보 구성
-    rembg_info = RembgHealthInfo(
-        status=rembg_result.status.value,
-        installed=rembg_result.installed,
-        preloaded_models=rembg_result.preloaded_models,
-        missing_models=rembg_result.missing_models,
-        last_error=rembg_result.last_error,
-    )
-
-    return HealthResponse(
-        status=server_status,
-        version=__version__,
-        service="unknown-world-backend",
-        rembg=rembg_info,
-    )
-
-
-@app.get("/", tags=["System"])
-async def root() -> dict[str, str]:
-    """루트 엔드포인트.
-
-    API 정보를 간략히 안내합니다.
-
-    Returns:
-        dict: 기본 안내 메시지
-    """
-    return {
-        "message": "Unknown World API",
-        "docs": "/docs",
-        "health": "/health",
-    }
 </file>
 
 <file path="frontend/src/api/turnStream.ts">
