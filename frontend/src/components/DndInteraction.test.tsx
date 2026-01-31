@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import App from '../App';
 import * as turnStream from '../api/turnStream';
 
@@ -78,11 +78,19 @@ vi.mock('../api/turnStream', () => ({
 describe('DnD Interaction - Logic Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('should trigger turn execution when handleDragEnd is called with a hotspot target', async () => {
     render(<App />);
+
+    // 1. 프로필 선택 (Playing 페이즈 진입)
+    const narratorProfile = screen.getByLabelText('profile.narrator.name');
+    fireEvent.click(narratorProfile);
+
+    // DndContext가 렌더링된 후 콜백 가져오기
     const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+    expect(dndCallbacks).toBeDefined();
 
     // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
     const mockItem = {
@@ -133,7 +141,14 @@ describe('DnD Interaction - Logic Test', () => {
 
   it('should show failure feedback when handleDragEnd is called with an invalid target', async () => {
     render(<App />);
+
+    // 1. 프로필 선택 (Playing 페이즈 진입)
+    const narratorProfile = screen.getByLabelText('profile.narrator.name');
+    fireEvent.click(narratorProfile);
+
+    // DndContext가 렌더링된 후 콜백 가져오기
     const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+    expect(dndCallbacks).toBeDefined();
 
     // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
     const mockItem = {

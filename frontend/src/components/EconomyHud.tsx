@@ -12,7 +12,7 @@
  * @module components/EconomyHud
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useWorldStore } from '../stores/worldStore';
@@ -217,7 +217,7 @@ function LedgerItem({ entry }: { entry: LedgerEntry }) {
 // 셀렉터 정의 (컴포넌트 외부에서 생성하여 참조 유지)
 // =============================================================================
 
-const selectHistory = selectRecentLedger(5);
+const selectHistory = selectRecentLedger(10);
 
 // =============================================================================
 // 메인 Economy HUD 컴포넌트
@@ -232,6 +232,14 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
   const lastCost = useEconomyStore(selectLastCost);
   const isBalanceLow = useEconomyStore(selectIsBalanceLow);
   const recentLedger = useEconomyStore(useShallow(selectHistory));
+
+  // U-049: 거래 장부(Ledger) 최신 항목이 보이도록 스크롤 (하단 스크롤)
+  const ledgerListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ledgerListRef.current) {
+      ledgerListRef.current.scrollTop = ledgerListRef.current.scrollHeight;
+    }
+  }, [recentLedger]);
 
   // 예상 비용 감당 가능 여부 계산
   const estimateAffordability = useMemo(() => {
@@ -302,7 +310,7 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
           <span className="ledger-title">{t('economy.ledger_title')}</span>
         </div>
         {recentLedger.length > 0 ? (
-          <div className="ledger-list">
+          <div className="ledger-list" ref={ledgerListRef}>
             {recentLedger.map((entry) => (
               <LedgerItem key={`${entry.turnId}-${entry.timestamp}`} entry={entry} />
             ))}

@@ -12,7 +12,10 @@ vi.mock('react-i18next', () => ({
       if (key === 'demo.items.medkit.name') return '응급 키트';
       if (key === 'demo.items.flashlight.name') return '손전등';
       if (key === 'demo.items.data-chip.name') return '데이터칩';
-      // 데모 씬 오브젝트
+      // 데모 씬 오브젝트 (프로필 기반)
+      if (key === 'profile.tech.scene.terminal') return '터미널';
+      if (key === 'profile.tech.scene.terminal_hint') return '활성화된 터미널이다';
+      // 구버전/공통 씬 오브젝트
       if (key === 'demo.scene.terminal.label') return '터미널';
       if (key === 'demo.scene.terminal.hint') return '활성화된 터미널이다';
       if (key === 'demo.scene.door.label') return '문';
@@ -63,12 +66,17 @@ vi.mock('./api/turnStream', () => ({
 describe('App Integration - Hotspot Click', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('should trigger startTurnStream when a hotspot is clicked', async () => {
     render(<App />);
 
-    // 데모용으로 App.tsx에 하드코딩된 '터미널' 핫스팟 찾기
+    // 1. 프로필 선택 (Playing 페이즈 진입) - 테크 프로필 선택
+    const techProfile = screen.getByLabelText('profile.tech.name');
+    fireEvent.click(techProfile);
+
+    // 2. 이제 메인 게임 UI가 나타남 - 테크 프로필의 '터미널' 핫스팟 찾기
     const terminalHotspot = screen.getByLabelText('터미널');
     expect(terminalHotspot).toBeInTheDocument();
 
@@ -83,8 +91,8 @@ describe('App Integration - Hotspot Click', () => {
     // TurnInput 검증
     expect(input.text).toBe('Click: 터미널');
     expect(input.click).toEqual({
-      object_id: 'demo-terminal',
-      box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
+      object_id: 'main-terminal',
+      box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
     });
   });
 });

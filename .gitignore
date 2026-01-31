@@ -192,3 +192,4 @@ temp/
 vibe/commands.md
 nanobanana-output
 backend/generated_images/
+.img-ref/

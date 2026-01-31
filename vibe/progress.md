@@ -1,6 +1,40 @@
 # 프로젝트 진행 상황
 
-## [2026-01-31 23:30] [U-041[Mvp]] SaveGame 마이그레이션 - 버전별 변환 로직 구현 완료
+## [2026-02-01 10:15] [U-049[Mvp]] UI/UX - 레이아웃/스크롤 설계 개선 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 우측 사이드바 컬럼 전체 스크롤 제거, Economy HUD 거래 장부 내부 스크롤 및 자동 스크롤 구현
+- **추가 컴포넌트**: `frontend/src/style.css` (레이아웃 전략), `frontend/src/components/EconomyHud.tsx` (자동 스크롤), `vibe/unit-runbooks/U-049-layout-scroll-runbook.md` (런북), `vibe/unit-results/U-049[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 9.3] 레이아웃/스크롤 원칙 준수, [RULE-002] 게임 UI 고정 레이아웃 강화
+
+### 기술적 구현 세부사항
+
+**레이아웃 스크롤 전략**:
+- **Isolation Strategy**: `.sidebar-right`에 `overflow: hidden`을 적용하여 컬럼 전체 스크롤을 막고, 각 패널에 `min-height: 0`을 부여하여 내부 `overflow-y: auto`가 정상 작동하도록 개선.
+- **Dynamic Viewport**: `100dvh` 단위를 사용하여 모바일 및 웹 환경에서 첫 화면의 불필요한 스크롤 발생을 원천 차단.
+
+**Economy HUD 고도화**:
+- **Internal Ledger Scroll**: 거래 장부 리스트(`.ledger-list`)에 `max-height: 120px`를 적용하여 카드 내부 스크롤 구현.
+- **Auto-scroll to Bottom**: `useRef`와 `useEffect`를 활용하여 새로운 거래가 발생할 때마다 리스트 하단으로 자동 스크롤되어 최신 내역을 즉시 노출.
+
+**UX 개선**:
+- **Drag-to-Scroll**: 액션 카드 영역의 스크롤바를 숨기고 마우스 드래그를 통한 가로 이동 지원으로 게임 인터페이스 느낌 강화.
+- **Contrast Enhancement**: 카드 배경의 불투명도를 높이고 텍스트 그림자를 강화하여 시인성 확보.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── style.css (사이드바/패널 스크롤 및 뷰포트 스타일)
+    ├── App.tsx (패널 식별자 추가 및 레이아웃 정제)
+    └── components/EconomyHud.tsx (거래 장부 내부 스크롤 로직)
+
+### 다음 단계
+- [U-050[Mvp]] UI/UX: 오버레이 팔레트/강도 튜닝 및 반응형 폴리시 점검
+- [CP-MVP-03] 체크포인트: 10분 데모 루프 (레이아웃 안정성 포함)
+
+---
+
 
 ### 구현 완료 항목
 

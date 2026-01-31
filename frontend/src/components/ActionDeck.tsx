@@ -14,13 +14,61 @@
  * @module components/ActionDeck
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionCard } from '../schemas/turn';
 import { useActionDeckStore } from '../stores/actionDeckStore';
 import { useWorldStore } from '../stores/worldStore';
 import { useAgentStore } from '../stores/agentStore';
 import { useEconomyStore } from '../stores/economyStore';
+
+// =============================================================================
+// 드래그 스크롤 훅 (U-049: 스크롤바 숨기고 드래그로 이동)
+// =============================================================================
+
+function useDragScroll() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - containerRef.current.offsetLeft);
+    setScrollLeft(containerRef.current.scrollLeft);
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
+      e.preventDefault();
+      const x = e.pageX - containerRef.current.offsetLeft;
+      const walk = (x - startX) * 1.5; // 스크롤 속도 조절
+      containerRef.current.scrollLeft = scrollLeft - walk;
+    },
+    [isDragging, startX, scrollLeft],
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  return {
+    containerRef,
+    isDragging,
+    handlers: {
+      onMouseDown: handleMouseDown,
+      onMouseMove: handleMouseMove,
+      onMouseUp: handleMouseUp,
+      onMouseLeave: handleMouseLeave,
+    },
+  };
+}
 
 // =============================================================================
 // 타입 정의
@@ -270,6 +318,9 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   const setCostEstimateFromCard = useEconomyStore((state) => state.setCostEstimateFromCard);
   const setCostEstimate = useEconomyStore((state) => state.setCostEstimate);
 
+  // U-049: 드래그 스크롤
+  const { containerRef, isDragging, handlers: dragHandlers } = useDragScroll();
+
   const disabled = propsDisabled ?? isStreaming;
 
   // 카드 호버 핸들러 (U-014: 예상 비용 표시)
@@ -327,14 +378,20 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   }, [processedCards]);
 
   return (
-    <div className="action-deck" role="group" aria-label={t('action.deck_label')}>
+    <div
+      ref={containerRef}
+      className={`action-deck ${isDragging ? 'is-dragging' : ''}`}
+      role="group"
+      aria-label={t('action.deck_label')}
+      {...dragHandlers}
+    >
       {sortedCards.map((card) => (
         <ActionCardItem
           key={card.id}
           card={card}
           onClick={() => onCardClick?.(card)}
           onHover={handleCardHover}
-          disabled={disabled}
+          disabled={disabled || isDragging} /* 드래그 중 클릭 방지 */
         />
       ))}
 

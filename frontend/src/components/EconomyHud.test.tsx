@@ -15,6 +15,7 @@ describe('EconomyHud', () => {
   beforeEach(() => {
     useWorldStore.getState().reset();
     useEconomyStore.getState().reset();
+    useEconomyStore.getState().clearLedger();
   });
 
   it('현재 잔액을 올바르게 표시해야 한다', () => {

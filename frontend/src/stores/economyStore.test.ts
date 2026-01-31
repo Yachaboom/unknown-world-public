@@ -10,6 +10,7 @@ import type { CurrencyAmount, CostEstimate } from '../schemas/turn';
 describe('economyStore', () => {
   beforeEach(() => {
     useEconomyStore.getState().reset();
+    useEconomyStore.getState().clearLedger();
   });
 
   it('초기 상태가 올바르게 설정되어야 한다', () => {

@@ -428,14 +428,19 @@ function App() {
             <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
           </main>
 
+          {/* U-049: 우측 사이드바 스크롤 전략 - Agent Console만 flex-1 (Q1 Option A) */}
           <aside className="sidebar-right">
-            <Panel title={t('panel.agent_console.title')} className="flex-1" hasChrome>
+            <Panel
+              title={t('panel.agent_console.title')}
+              className="panel-agent-console flex-1"
+              hasChrome
+            >
               <AgentConsole />
             </Panel>
-            <Panel title={t('economy.hud_label')} hasChrome>
+            <Panel title={t('economy.hud_label')} className="panel-economy" hasChrome>
               <EconomyHud />
             </Panel>
-            <Panel title={t('panel.scanner.title')} hasChrome>
+            <Panel title={t('panel.scanner.title')} className="panel-scanner" hasChrome>
               <ScannerSlot language={sessionLanguage} disabled={isStreaming} />
             </Panel>
           </aside>

@@ -158,10 +158,69 @@ export type EconomyStore = EconomyStoreState & EconomyStoreActions;
 // =============================================================================
 
 function createInitialState(): EconomyStoreState {
+  // U-049: 스크롤 테스트를 위한 더미 데이터 추가
+  const dummyLedger: LedgerEntry[] = [
+    {
+      turnId: 5,
+      reason: '[행동] 은신하여 접근: 그림자 속에 숨어 경비병들의 눈을 피했습니다.',
+      cost: { signal: 2, memory_shard: 0 },
+      balanceAfter: { signal: 180, memory_shard: 10 },
+      modelLabel: 'FAST',
+      timestamp: Date.now() - 100,
+    },
+    {
+      turnId: 4,
+      reason: '[행동] 장치 해킹: 복잡한 암호를 풀어내고 통제 시스템에 접속했습니다.',
+      cost: { signal: 6, memory_shard: 1 },
+      balanceAfter: { signal: 182, memory_shard: 10 },
+      modelLabel: 'QUALITY',
+      timestamp: Date.now() - 500,
+    },
+    {
+      turnId: 3,
+      reason: '[행동] 주변을 조사한다: 먼지 쌓인 책상 위에서 낡은 열쇠를 발견했습니다.',
+      cost: { signal: 4, memory_shard: 0 },
+      balanceAfter: { signal: 188, memory_shard: 10 },
+      modelLabel: 'QUALITY',
+      timestamp: Date.now() - 1000,
+    },
+    {
+      turnId: 2,
+      reason: '[행동] 말을 걸어본다: 상대방은 당신의 말에 잠시 침묵하더니 고개를 끄덕입니다.',
+      cost: { signal: 3, memory_shard: 0 },
+      balanceAfter: { signal: 192, memory_shard: 10 },
+      modelLabel: 'FAST',
+      timestamp: Date.now() - 2000,
+    },
+    {
+      turnId: 1,
+      reason: '[행동] 탐색하기: 어두운 복도를 따라 걷자 벽면에서 희미한 빛이 새어 나옵니다.',
+      cost: { signal: 5, memory_shard: 0 },
+      balanceAfter: { signal: 195, memory_shard: 10 },
+      modelLabel: 'QUALITY',
+      timestamp: Date.now() - 3000,
+    },
+    {
+      turnId: 0,
+      reason: '초기 데이터 동기화 완료',
+      cost: { signal: 0, memory_shard: 0 },
+      balanceAfter: { signal: 200, memory_shard: 10 },
+      modelLabel: 'FAST',
+      timestamp: Date.now() - 4000,
+    },
+  ];
+
   return {
-    ledger: [],
+    ledger: dummyLedger,
     costEstimate: null,
-    lastCost: null,
+    lastCost: dummyLedger[0]
+      ? {
+          cost: dummyLedger[0].cost,
+          balanceAfter: dummyLedger[0].balanceAfter,
+          turnId: dummyLedger[0].turnId,
+          modelLabel: dummyLedger[0].modelLabel,
+        }
+      : null,
     isBalanceLow: false,
     // RU-004-Q5: 임계값 상수 SSOT (save/constants.ts)
     lowBalanceThreshold: LOW_BALANCE_THRESHOLD,

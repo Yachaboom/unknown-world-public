@@ -11,13 +11,14 @@
    1. CRT 테마 토큰 (CSS Variables)
    ============================================ */
 :root {
+  color-scheme: dark; /* U-049: 시스템 브라우저 요소(스크롤바 등)를 다크 모드로 강제 */
   /* 기본 색상 - CRT 인광 녹색 테마 */
   --bg-color: #0d0d0d; /* 배경: 거의 순수한 검정 */
   --text-color: #33ff00; /* 주 텍스트: 인광 녹색 (CRT 그린) */
-  --text-dim: #1a8000; /* 보조 텍스트: 어두운 녹색 */
+  --text-dim: #22a000; /* 보조 텍스트: 약간 더 밝게 하여 가독성 향상 (U-049) */
   --accent-color: #ff00ff; /* 강조색: 마젠타 */
   --border-color: #33ff00; /* 테두리: 인광 녹색 */
-  --panel-bg: rgba(0, 20, 0, 0.3); /* 패널 배경: 투명 녹색 */
+  --panel-bg: rgba(0, 15, 0, 0.7); /* 패널 배경: 대비 향상을 위해 불투명도 증가 (U-049) */
   --warning-color: #ffaa00; /* 경고: 주황색 */
   --error-color: #ff3333; /* 에러: 붉은색 */
 
@@ -38,9 +39,9 @@
   --font-size-2xl: 2rem;
   --line-height-base: 1.5;
 
-  /* 마이크로 텍스트 (U-028: 가독성 상향) */
-  --font-size-xs: 0.75rem; /* 12px at 1.0 scale - 최소 마이크로 텍스트 */
-  --font-size-sm: 0.875rem; /* 14px at 1.0 scale - 작은 텍스트 */
+  /* 마이크로 텍스트 (U-049: 가독성을 위해 최소 크기 상향) */
+  --font-size-xs: 0.8125rem; /* 13px at 1.0 scale - 최소 마이크로 텍스트 */
+  --font-size-sm: 0.9375rem; /* 15px at 1.0 scale - 작은 텍스트 */
 
   /* UI 스케일 (U-028: 전역 스케일 조절) */
   --ui-scale-factor: 1;
@@ -56,7 +57,7 @@
 
   /* 그리드 레이아웃 */
   --header-height: 60px;
-  --footer-height: 120px;
+  --footer-height: 160px; /* U-049: 카드 비용/위험도 정보가 잘리지 않도록 높이 증가 */
   --sidebar-width: 320px;
 }
 
@@ -88,13 +89,26 @@ html {
   line-height: var(--line-height-base);
 }
 
+html,
 body {
-  font-family: var(--font-main);
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   background-color: var(--bg-color);
   color: var(--text-color);
+  /* U-049: 표준 스크롤바 스타일 (Firefox 등) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(51, 255, 0, 0.3) var(--bg-color);
+}
+
+body {
+  font-family: var(--font-main);
   min-height: 100vh;
   overflow: hidden;
-  text-shadow: 0 0 var(--glow-intensity) var(--text-dim);
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.8),
+    0 0 var(--glow-intensity) var(--text-dim);
 }
 
 #root {
@@ -243,12 +257,17 @@ body {
     'footer footer footer';
   grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
   grid-template-rows: var(--header-height) 1fr var(--footer-height);
-  height: 100vh;
+  /* U-049: 스크롤 방지 - dvh 사용 및 overflow 제어 */
+  height: 100dvh;
+  height: 100vh; /* dvh 미지원 브라우저 폴백 */
+  max-height: 100dvh;
+  max-height: 100vh;
   width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
   padding: var(--spacing-sm);
   gap: var(--spacing-sm);
+  overflow: hidden; /* U-049: 의도치 않은 스크롤 방지 */
 }
 
 /* ============================================
@@ -331,6 +350,7 @@ body {
 /* ============================================
    7. Sidebar (Left) 영역
    - Inventory, Quest/Objective, Rule Board
+   - U-049: 컬럼 전체 스크롤 제거, 패널 콘텐츠 단위 스크롤
    ============================================ */
 
 .sidebar-left {
@@ -338,7 +358,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  overflow-y: auto;
+  min-height: 0; /* U-049: flex 자식 축소 허용 */
+  overflow: hidden; /* U-049: 컬럼 전체 스크롤 제거 */
 }
 
 /* ============================================
@@ -907,6 +928,8 @@ body {
   background-color: var(--panel-bg);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
   overflow-y: auto;
+  overflow-x: hidden; /* U-049: 불필요한 가로 스크롤 방지 */
+  scrollbar-width: thin; /* Firefox: 얇은 스크롤바 */
   padding: var(--spacing-sm);
 }
 
@@ -932,6 +955,7 @@ body {
 /* ============================================
    9. Sidebar (Right) 영역
    - Agent Console, Memory Pin, Scanner Slot
+   - U-049: 컬럼 전체 스크롤 제거, 패널 콘텐츠 단위 스크롤
    ============================================ */
 
 .sidebar-right {
@@ -939,7 +963,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  overflow-y: auto;
+  min-height: 0; /* U-049: flex 자식 축소 허용 */
+  overflow: hidden; /* U-049: 컬럼 전체 스크롤 제거 */
 }
 
 /* ============================================
@@ -967,9 +992,41 @@ body {
 .action-deck {
   display: flex;
   gap: var(--spacing-sm);
-  overflow-x: auto;
   padding: var(--spacing-xs) 0;
-  scrollbar-width: thin;
+  /* U-049: 드래그 스크롤 - 스크롤바 숨김 */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  /* 터치 디바이스 부드러운 스크롤 */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* 드래그 스크롤을 위한 커서 */
+  cursor: grab;
+  /* 카드 스냅 */
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 var(--spacing-sm);
+}
+
+.action-deck::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.action-deck:active,
+.action-deck.is-dragging {
+  cursor: grabbing;
+  user-select: none; /* 드래그 중 텍스트 선택 방지 */
+}
+
+/* U-049: 터치 디바이스 최적화 (Web Interface Guidelines) */
+.action-deck {
+  touch-action: pan-x; /* 수평 스크롤만 허용 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-deck .action-card {
+  scroll-snap-align: start;
+  flex-shrink: 0; /* 카드 축소 방지 */
 }
 
 /* 카드 기본 스타일 - 게임 카드처럼 보이게 */
@@ -980,7 +1037,12 @@ body {
   padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
   border: 2px solid var(--border-color);
   border-radius: var(--border-radius);
-  background: linear-gradient(180deg, rgba(0, 30, 0, 0.9) 0%, rgba(0, 15, 0, 0.95) 100%);
+  /* U-049: 배경 대비 강화 - 더 불투명한 배경 */
+  background: linear-gradient(180deg, rgba(0, 20, 0, 0.98) 0%, rgba(0, 10, 0, 0.99) 100%);
+  /* U-049: 내부 그림자로 깊이감 추가 */
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(51, 255, 0, 0.1);
   cursor: pointer;
   transition:
     border-color 0.2s,
@@ -1013,14 +1075,18 @@ body {
   transform: translateY(-4px);
 }
 
-/* 카드 타이틀 */
+/* 카드 타이틀 - U-049: 가독성 강화 */
 .action-card-title {
   font-size: 1rem;
   font-weight: bold;
   color: var(--text-color);
   text-transform: uppercase;
   letter-spacing: 1px;
-  text-shadow: 0 0 8px var(--text-dim);
+  /* U-049: 강한 텍스트 그림자로 배경과 분리 */
+  text-shadow:
+    0 0 10px var(--text-color),
+    0 0 20px rgba(51, 255, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.9);
   padding-bottom: var(--spacing-xs);
   border-bottom: 1px solid var(--text-dim);
 }
@@ -1033,7 +1099,7 @@ body {
   min-height: 2em;
 }
 
-/* 비용 표시 영역 */
+/* 비용 표시 영역 - U-049: 가독성 및 대비 강화 */
 .action-card-cost {
   display: flex;
   align-items: center;
@@ -1041,10 +1107,14 @@ body {
   gap: 4px;
   font-size: 0.75rem;
   color: var(--warning-color);
-  padding: var(--spacing-xs);
-  background-color: rgba(0, 0, 0, 0.4);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  /* U-049: 더 강한 배경 대비 */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.85) 100%);
+  border: 1px solid rgba(51, 255, 0, 0.2);
   border-radius: 2px;
   margin-top: auto;
+  /* U-049: 텍스트 그림자 */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .action-card-cost .cost-item {
@@ -1225,6 +1295,7 @@ body {
 
 /* ============================================
    11. 공통 패널 스타일
+   - U-049: flex 스크롤 전략 정리 (min-height: 0 핵심)
    ============================================ */
 
 .panel {
@@ -1233,6 +1304,8 @@ body {
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
   display: flex;
   flex-direction: column;
+  min-height: 0; /* U-049: flex item 축소 허용 (필수) */
+  overflow: hidden; /* U-049: 패널 자체 스크롤 방지 */
 }
 
 .panel-header {
@@ -1242,6 +1315,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0; /* U-049: 헤더는 축소하지 않음 */
 }
 
 .panel-title {
@@ -1255,6 +1329,9 @@ body {
   flex: 1;
   padding: var(--spacing-sm);
   overflow-y: auto;
+  overflow-x: hidden; /* U-049: 우측 패널 등 가로 스크롤 방지 */
+  scrollbar-width: thin; /* Firefox: 얇은 스크롤바 */
+  min-height: 0; /* U-049: flex 자식 축소 허용 (필수) */
 }
 
 .panel-placeholder {
@@ -1262,6 +1339,34 @@ body {
   font-size: 0.875rem;
   text-align: center;
   padding: var(--spacing-md);
+}
+
+/* ===========================================
+   11.1 사이드바 패널별 높이 전략 (U-049)
+   - Q1 Option A: Agent Console만 flex-1 (유연 높이)
+   - Economy/Scanner는 콘텐츠에 맞춰 축소
+   =========================================== */
+
+/* Agent Console: 유연 확장 (Q1 Option A) */
+.panel-agent-console {
+  /* flex-1은 className으로 받음 - 별도 설정 불필요 */
+}
+
+/* Economy HUD: 콘텐츠 기반 높이, 최대 제한 */
+.panel-economy {
+  flex-shrink: 0; /* 다른 패널에 밀려 축소되지 않음 */
+  max-height: 280px; /* U-049: 과도한 확장 방지 */
+}
+
+.panel-economy .panel-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* U-049: flex 자식 축소 허용 */
+}
+
+/* Scanner Slot: 콘텐츠 기반 높이 */
+.panel-scanner {
+  flex-shrink: 0; /* 다른 패널에 밀려 축소되지 않음 */
 }
 
 /* ============================================
@@ -1297,12 +1402,13 @@ button:disabled,
 }
 
 /* ============================================
-   13. 스크롤바 커스터마이징
+   13. 스크롤바 커스터마이징 (U-049: 다크 테마 강제)
    ============================================ */
 
+/* 전역 웹킷 스크롤바 (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -1310,12 +1416,25 @@ button:disabled,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-dim);
-  border: 1px solid var(--text-color);
+  background: rgba(51, 255, 0, 0.25); /* 튀지 않는 어두운 녹색 */
+  border: 1px solid rgba(51, 255, 0, 0.4);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-color);
+  background: rgba(51, 255, 0, 0.5);
+}
+
+/* 스크롤바 화살표 제거 */
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* 코너(가로/세로 스크롤 만나는 지점) */
+::-webkit-scrollbar-corner {
+  background: var(--bg-color);
 }
 
 /* ============================================
@@ -2118,6 +2237,8 @@ button:disabled,
   align-items: stretch;
   padding: var(--spacing-sm);
   gap: var(--spacing-sm);
+  min-height: 0; /* U-049: flex 자식 축소 허용 */
+  flex: 1; /* U-049: panel-content 내에서 확장 */
 }
 
 /* 잔액 부족 시 경고 스타일 */
@@ -2352,6 +2473,113 @@ button:disabled,
   color: var(--text-color);
 }
 
+/* ===========================================
+   22.4 Economy Ledger 스타일 (U-049)
+   - 거래 장부 영역만 내부 스크롤
+   - 잔액/비용 영역은 고정
+   =========================================== */
+
+.economy-ledger {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* U-049: flex 자식 축소 허용 (필수) */
+  flex: 1; /* 남은 공간 차지 */
+  border-top: 1px solid var(--text-dim);
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+}
+
+.ledger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+  flex-shrink: 0; /* U-049: 헤더는 축소하지 않음 */
+}
+
+.ledger-title {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* U-049: ledger-list만 스크롤 (핵심) */
+.ledger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden; /* U-049: 불필요한 가로 스크롤 방지 */
+  scrollbar-width: thin; /* Firefox: 얇은 스크롤바 */
+  min-height: 0; /* U-049: flex 자식 축소 허용 */
+  max-height: 120px; /* U-049: 최대 높이 제한하여 스크롤 유도 */
+  padding-right: var(--spacing-xs); /* 스크롤바 공간 */
+}
+
+.ledger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-xs);
+  background-color: rgba(0, 20, 0, 0.5);
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+  font-size: var(--font-size-xs);
+}
+
+.ledger-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.ledger-turn {
+  font-family: var(--font-micro-en);
+  font-weight: bold;
+  color: var(--text-color);
+  flex-shrink: 0;
+}
+
+.ledger-reason {
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-values {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.ledger-cost {
+  font-family: var(--font-micro-en);
+  color: var(--warning-color);
+  font-weight: bold;
+}
+
+.ledger-model {
+  font-family: var(--font-micro-en);
+  font-size: 0.625rem;
+  color: var(--accent-color);
+  padding: 1px 3px;
+  background-color: rgba(255, 0, 255, 0.1);
+  border: 1px solid var(--accent-color);
+  border-radius: 2px;
+}
+
+.ledger-empty {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+  text-align: center;
+  padding: var(--spacing-sm);
+}
+
 /* reduced-motion: 경고 애니메이션 비활성화 */
 @media (prefers-reduced-motion: reduce) {
   .economy-balance.balance-low {
@@ -2547,8 +2775,16 @@ button:disabled,
   background-size: 100% 100%;
   background-repeat: no-repeat;
   pointer-events: none;
-  opacity: 0.7;
+  /* U-049: 배경 투명도 낮춰서 텍스트 가독성 향상 */
+  opacity: 0.4;
   filter: drop-shadow(0 0 6px var(--chrome-glow-color));
+  /* U-049: z-index를 낮춰서 텍스트 뒤에 위치 */
+  z-index: 0;
+}
+
+/* U-049: 카드 내용은 chrome 배경 위에 표시 */
+.action-card.has-chrome > * {
+  position: relative;
   z-index: 1;
 }
 
@@ -2830,6 +3066,8 @@ button:disabled,
   gap: 4px;
   max-height: 150px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 .scanner-candidate {
@@ -3382,6 +3620,8 @@ button:disabled,
 .quest-list-completed {
   max-height: 100px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 /* ============================================
@@ -3556,6 +3796,8 @@ button:disabled,
   gap: var(--spacing-xs);
   max-height: 150px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 /* 개별 타임라인 이벤트 */
