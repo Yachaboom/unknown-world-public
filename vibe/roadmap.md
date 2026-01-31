@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 67/82 (81.7%) | **MVP**: 67/66 (101.5%) | **MMP**: 0/16 (0%)
+**전체**: 67/88 (76.1%) | **MVP**: 67/71 (94.4%) | **MMP**: 0/17 (0%)
 
-**예상 완료(가정)**: MVP D-0 | MMP D-7  
+**예상 완료(가정)**: MVP D-2 | MMP D-8
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [CP-MVP-03](unit-plans/CP-MVP-03.md) / **최근 완료**: [U-049[Mvp]](unit-results/U-049[Mvp].md) (2026-02-01)
+**진행 중(현재 포커스)**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) / **최근 완료**: [U-049[Mvp]](unit-results/U-049[Mvp].md) (2026-02-01)
 
 **블로커**: 없음
 
@@ -92,9 +92,9 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
-- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**
-- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06
-- **상태**: ✅
+- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**
+- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**
+- **상태**: 🚧
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
 
@@ -140,6 +140,12 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ID=[U-050[Mvp]](unit-plans/U-050[Mvp].md) | UI/UX: 오버레이 팔레트/강도 튜닝(덮임/쨍함 완화) + 반응형 폴리시(가이드 준수) | Depends=U-010[Mvp],U-037[Mvp] | ⏸️
 
+ID=[U-051[Mvp]](unit-plans/U-051[Mvp].md) | ⚡렌더링 단계-이미지 생성 서비스 브릿지 구축 | Depends=U-019[Mvp],RU-005[Mvp] | ⏸️
+ID=[U-052[Mvp]](unit-plans/U-052[Mvp].md) | 조건부 이미지 생성 제어 로직(should_generate 판정) | Depends=U-051[Mvp],U-017[Mvp] | ⏸️
+ID=[U-053[Mvp]](unit-plans/U-053[Mvp].md) | 비동기 이미지 생성 및 결과 데이터 동기화 | Depends=U-052[Mvp] | ⏸️
+ID=[U-054[Mvp]](unit-plans/U-054[Mvp].md) | 이미지 생성 폴백 및 실패 복구 체계 강화(RULE-004) | Depends=U-053[Mvp],U-018[Mvp] | ⏸️
+ID=[U-055[Mvp]](unit-plans/U-055[Mvp].md) | 이미지 파이프라인 Mock/Real 모드 통합 검증 | Depends=U-054[Mvp],CP-MVP-05 | ⏸️
+
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
 ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
@@ -164,6 +170,7 @@ ID=[U-107[Mmp]](unit-plans/U-107[Mmp].md) | 접근성/단축키/모바일 UX 개
 ID=[U-108[Mmp]](unit-plans/U-108[Mmp].md) | ⚡보안 하드닝(인젝션 케이스/secret scan) | Depends=CP-MMP-01 | ⏸️
 ID=[U-110[Mmp]](unit-plans/U-110[Mmp].md) | 프론트엔드 디버깅 모드 토글 UI(스트림 로그/상태 diff/스토리지 사용량) | Depends=U-106 | ⏸️
 ID=[U-111[Mmp]](unit-plans/U-111[Mmp].md) | 스토리지 TTL/정리 정책 정의(로컬/GCS Lifecycle) | Depends=U-102 | ⏸️
+ID=[U-112[Mmp]](unit-plans/U-112[Mmp].md) | Panel Corner 이미지 방향 수정(panel-corner-br.png 식별성 개선) | Depends=U-032[Mvp] | ⏸️
 ID=[RU-011[Mmp]](unit-plans/RU-011[Mmp].md) | 리팩토링: Autopilot/Replay 모듈 정리 | Depends=U-108 | ⏸️
 ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=RU-011,U-107,U-110,U-111 | ⏸️
 
@@ -252,7 +259,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [CP-MVP-06](unit-plans/CP-MVP-06.md) - 체크포인트: Scanner 업로드 게이트(안전/좌표/비용)
+**현재 작업**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) - 렌더링 단계-이미지 생성 서비스 브릿지 구축
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -283,10 +290,10 @@ pnpm kill
 
 ---
 
-## 일일 스탠드업 (2026-01-24)
+## 일일 스탠드업 (2026-02-01)
 
-**완료**: [U-017[Mvp]](unit-results/U-017[Mvp].md) - ⚡Structured Output TurnOutput 생성 + Pydantic 검증
+**완료**: [U-049[Mvp]](unit-results/U-049[Mvp].md) - UI/UX - 레이아웃/스크롤 설계 개선
 
-**진행중**: [U-018[Mvp]](unit-plans/U-018[Mvp].md) - ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백
+**진행중**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) - 렌더링 단계-이미지 생성 서비스 브릿지 구축
 
 **블로커**: 없음
