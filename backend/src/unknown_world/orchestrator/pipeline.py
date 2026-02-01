@@ -7,16 +7,19 @@ Stage 함수들을 체인으로 조합하여 실행하는 파이프라인입니�
     - 동작 보존: 기존 mock/real 경로의 결과(JSON) 의미 유지
     - 관측 가능성 SSOT: stage start/complete/fail, badges, repair를 일관되게 생성
     - 레이어링 보호: 오케스트레이터가 FastAPI에 직접 의존하지 않음
+    - U-051: 이미지 생성 서비스 의존성 주입 (Option A: 매개변수 전달, 테스트 용이)
 
 참조:
     - vibe/refactors/RU-005-Q4.md
     - vibe/refactors/RU-005-SUMMARY.md
+    - vibe/unit-results/U-019[Mvp].md
 """
 
 from __future__ import annotations
 
 import os
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from unknown_world.models.turn import CurrencyAmount, TurnInput
 from unknown_world.orchestrator.fallback import create_safe_fallback
@@ -32,6 +35,10 @@ from unknown_world.orchestrator.stages.types import (
 )
 from unknown_world.orchestrator.stages.validate import validate_stage
 from unknown_world.orchestrator.stages.verify import verify_stage
+from unknown_world.services.image_generation import get_image_generator
+
+if TYPE_CHECKING:
+    from unknown_world.services.image_generation import ImageGeneratorType
 
 # =============================================================================
 # 기본 Stage 순서 (PRD 기준)
@@ -71,6 +78,7 @@ def create_pipeline_context(
     *,
     seed: int | None = None,
     is_mock: bool | None = None,
+    image_generator: ImageGeneratorType | None = None,
 ) -> PipelineContext:
     """파이프라인 컨텍스트를 생성합니다.
 
@@ -78,20 +86,44 @@ def create_pipeline_context(
         turn_input: 사용자 턴 입력
         seed: Mock 모드 시드 (재현성 보장)
         is_mock: Mock 모드 여부 (None이면 환경변수 기준)
+        image_generator: 이미지 생성 서비스 인스턴스 (U-051)
+            None이면 render_stage에서 이미지 생성을 건너뜁니다 (기존 동작 보존).
+            테스트 시 MockImageGenerator를 주입하여 모킹 가능합니다.
 
     Returns:
         초기화된 파이프라인 컨텍스트
+
+    Example:
+        >>> # 기본 사용 (이미지 생성 없음)
+        >>> ctx = create_pipeline_context(turn_input)
+        >>>
+        >>> # 이미지 생성 서비스 주입
+        >>> from unknown_world.services.image_generation import get_image_generator
+        >>> generator = get_image_generator()
+        >>> ctx = create_pipeline_context(turn_input, image_generator=generator)
+        >>>
+        >>> # 테스트용 Mock 주입
+        >>> from unknown_world.services.image_generation import MockImageGenerator
+        >>> mock_gen = MockImageGenerator()
+        >>> ctx = create_pipeline_context(turn_input, image_generator=mock_gen)
     """
     economy_snapshot = CurrencyAmount(
         signal=turn_input.economy_snapshot.signal,
         memory_shard=turn_input.economy_snapshot.memory_shard,
     )
 
+    is_mock = is_mock if is_mock is not None else _is_mock_mode()
+
+    # 이미지 생성기 자동 획득 (U-051)
+    if image_generator is None:
+        image_generator = get_image_generator(force_mock=is_mock)
+
     return PipelineContext(
         turn_input=turn_input,
         economy_snapshot=economy_snapshot,
-        is_mock=is_mock if is_mock is not None else _is_mock_mode(),
+        is_mock=is_mock,
         seed=seed,
+        image_generator=image_generator,
     )
 
 

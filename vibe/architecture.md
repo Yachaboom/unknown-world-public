@@ -26,8 +26,10 @@ D:\Dev\unknown-world\
 │   │       ├── config/     # 모델 및 시스템 설정
 │   │       │   └── models.py (모델 라벨/ID 매핑)
 │   │       ├── orchestrator/ # 오케스트레이션 엔진
-│   │       │   ├── pipeline.py (7대 단계 실행기)
+│   │       │   ├── pipeline.py (7대 단계 실행기 및 서비스 주입)
 │   │       │   ├── stages/    # 단계별 독립 모듈 (Parse~Commit)
+│   │       │   │   ├── render.py (메인 렌더링 및 이미지 생성 브릿지)
+│   │       │   │   └── ...
 │   │       │   ├── fallback.py (안전 폴백 SSOT)
 │   │       │   ├── mock.py (결정적 다양성 모의 엔진)
 │   │       │   ├── prompt_loader.py (XML/Frontmatter 로더)
@@ -87,9 +89,10 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 1. **Stateful Orchestrator**: 월드 상태(WorldState)를 유지하고 갱신하는 시스템.
 2. **Structured Turn Contract**: 엄격한 JSON Schema 기반 통신.
-3. **Resilient Pipeline (RU-005 / Repair Loop)**: 
+3. **Resilient Pipeline (RU-005 / Repair Loop / U-051)**: 
     - **Pipeline SSOT**: 모든 턴 처리는 `orchestrator/pipeline.py`에 정의된 7대 단계를 따름.
     - **Stage Modularity**: 각 단계는 독립된 함수로 모듈화되어 있으며, `PipelineContext`를 통해 상태 전이.
+    - **Service Injection (U-051)**: `PipelineContext` 생성 시 `image_generator` 등 핵심 서비스를 주입하거나 자동으로 획득하여 단계 간 서비스 공유.
     - **Deterministic Diversity (U-048[Mvp])**: Mock 모드에서도 per-turn RNG를 통해 결정적 다양성 확보.
 4. **Guaranteed Safe Fallback**: 모든 오류 상황에서 입력 시점의 재화를 보존하는 **안전 폴백 TurnOutput** 생성 보장.
 5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 모든 데이터를 전수 검증함.
