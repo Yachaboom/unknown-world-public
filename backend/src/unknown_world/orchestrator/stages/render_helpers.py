@@ -1,0 +1,285 @@
+"""Unknown World - 이미지 생성 판정 헬퍼.
+
+이 모듈은 TurnOutput의 image_job을 분석하여 이미지 생성 여부를 판정하고,
+Economy 기반으로 잔액 검증을 수행하는 헬퍼 함수들을 제공합니다.
+
+설계 원칙:
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
+    - RULE-007: 프롬프트 원문 로그 노출 금지 (해시만 사용)
+    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    - 순수 함수: 테스트 용이성을 위해 부작용 없는 순수 함수로 구현
+
+페어링 질문 결정:
+    - Q1: Option A (고정 비용 10 Signal) - MVP 단순화
+
+참조:
+    - vibe/unit-plans/U-052[Mvp].md
+    - vibe/prd.md 6.7 - Economy HUD/비용 정책
+    - .cursor/rules/00-core-critical.mdc - RULE-005/007/008
+"""
+
+from __future__ import annotations
+
+import hashlib
+import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from unknown_world.models.turn import (
+        EconomySnapshot,
+        ImageJob,
+        TurnOutput,
+    )
+
+# =============================================================================
+# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 상수 정의
+# =============================================================================
+
+# MVP: 이미지 생성 고정 비용 (Q1 결정: Option A)
+IMAGE_GENERATION_COST_SIGNAL = 10
+"""이미지 생성에 필요한 Signal 비용 (MVP 고정값)."""
+
+IMAGE_GENERATION_COST_MEMORY_SHARD = 0
+"""이미지 생성에 필요한 Memory Shard 비용 (MVP에서는 0)."""
+
+
+# =============================================================================
+# 텍스트-only 폴백 메시지 (i18n)
+# =============================================================================
+
+FALLBACK_MESSAGE_KO = "잔액이 부족하여 이미지를 생성할 수 없습니다. 텍스트로 진행합니다."
+"""잔액 부족 시 폴백 메시지 (한국어)."""
+
+FALLBACK_MESSAGE_EN = "Insufficient balance for image generation. Proceeding with text only."
+"""잔액 부족 시 폴백 메시지 (영어)."""
+
+
+# =============================================================================
+# 판정 결과 데이터 클래스
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ImageGenerationDecision:
+    """이미지 생성 판정 결과.
+
+    이미지 생성 여부와 관련 정보를 담은 불변 데이터 클래스입니다.
+
+    Attributes:
+        should_generate: 이미지를 생성해야 하는지
+        reason: 판정 사유 (로깅/디버깅용)
+        prompt_hash: 프롬프트 해시 (원문 노출 금지, 로깅용)
+        aspect_ratio: 가로세로 비율 (생성 시)
+        image_size: 이미지 크기 (생성 시)
+        estimated_cost_signal: 예상 Signal 비용
+        fallback_message: 생성 불가 시 폴백 메시지 (선택)
+    """
+
+    should_generate: bool
+    reason: str
+    prompt_hash: str | None = None
+    aspect_ratio: str | None = None
+    image_size: str | None = None
+    estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL
+    fallback_message: str | None = None
+
+
+# =============================================================================
+# ImageJob 분석 헬퍼 함수
+# =============================================================================
+
+
+def extract_image_job(turn_output: TurnOutput) -> ImageJob | None:
+    """TurnOutput에서 ImageJob을 추출합니다.
+
+    Args:
+        turn_output: 검증할 TurnOutput
+
+    Returns:
+        유효한 ImageJob 또는 None
+    """
+    # TurnOutput.render는 default_factory=RenderOutput이므로 항상 존재
+    # render.image_job은 선택적 (None 가능)
+    return turn_output.render.image_job
+
+
+def should_generate_image(image_job: ImageJob | None) -> bool:
+    """이미지 생성 여부를 판정합니다.
+
+    다음 조건을 모두 만족해야 True를 반환합니다:
+    1. image_job이 None이 아님
+    2. image_job.should_generate가 True
+    3. image_job.prompt가 비어있지 않음 (빈 프롬프트 방어)
+
+    Args:
+        image_job: 검사할 ImageJob (None 가능)
+
+    Returns:
+        이미지를 생성해야 하면 True
+    """
+    if image_job is None:
+        return False
+
+    if not image_job.should_generate:
+        return False
+
+    # 빈 프롬프트 방어: 모델이 should_generate=true지만 프롬프트가 없는 경우
+    return bool(image_job.prompt and image_job.prompt.strip())
+
+
+def get_prompt_hash(prompt: str) -> str:
+    """프롬프트의 SHA-256 해시를 생성합니다.
+
+    RULE-007: 프롬프트 원문은 로그에 노출하지 않고 해시만 사용합니다.
+
+    Args:
+        prompt: 해시할 프롬프트
+
+    Returns:
+        8자리 해시 문자열
+    """
+    return hashlib.sha256(prompt.encode()).hexdigest()[:8]
+
+
+# =============================================================================
+# Economy 기반 판정 함수
+# =============================================================================
+
+
+def can_afford_image_generation(
+    economy_snapshot: EconomySnapshot,
+    estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL,
+) -> bool:
+    """이미지 생성 비용을 감당할 수 있는지 판정합니다.
+
+    RULE-005: 잔액 부족 시 생성을 강행하지 않고, 대안(텍스트-only)을 제안합니다.
+
+    Args:
+        economy_snapshot: 현재 재화 스냅샷
+        estimated_cost_signal: 예상 Signal 비용 (기본값: 10)
+
+    Returns:
+        비용을 감당할 수 있으면 True
+    """
+    return economy_snapshot.signal >= estimated_cost_signal
+
+
+def get_fallback_message(language: str) -> str:
+    """언어에 맞는 폴백 메시지를 반환합니다.
+
+    RULE-006: ko/en 언어 정책 준수
+
+    Args:
+        language: 언어 코드 ("ko-KR" 또는 "en-US")
+
+    Returns:
+        해당 언어의 폴백 메시지
+    """
+    if language == "ko-KR":
+        return FALLBACK_MESSAGE_KO
+    return FALLBACK_MESSAGE_EN
+
+
+# =============================================================================
+# 통합 판정 함수
+# =============================================================================
+
+
+def decide_image_generation(
+    turn_output: TurnOutput,
+    economy_snapshot: EconomySnapshot,
+    language: str = "ko-KR",
+) -> ImageGenerationDecision:
+    """이미지 생성 여부를 종합적으로 판정합니다.
+
+    다음 순서로 검증합니다:
+    1. ImageJob 존재 여부
+    2. should_generate 플래그
+    3. 프롬프트 유효성
+    4. 잔액 충분 여부 (RULE-005)
+
+    Args:
+        turn_output: 검증할 TurnOutput
+        economy_snapshot: 현재 재화 스냅샷
+        language: 폴백 메시지 언어 (기본: ko-KR)
+
+    Returns:
+        ImageGenerationDecision: 판정 결과
+    """
+    # 1. ImageJob 추출
+    image_job = extract_image_job(turn_output)
+
+    if image_job is None:
+        logger.debug("[RenderHelpers] ImageJob 없음, 이미지 생성 건너뜀")
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="no_image_job",
+        )
+
+    # 2. should_generate 플래그 확인
+    if not image_job.should_generate:
+        logger.debug("[RenderHelpers] should_generate=false, 이미지 생성 건너뜀")
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="should_generate_false",
+        )
+
+    # 3. 프롬프트 유효성 검사
+    if not image_job.prompt or not image_job.prompt.strip():
+        logger.warning("[RenderHelpers] 프롬프트 비어있음, 이미지 생성 건너뜀 (방어)")
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="empty_prompt",
+        )
+
+    # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
+    prompt_hash = get_prompt_hash(image_job.prompt)
+
+    # 4. 잔액 확인 (RULE-005)
+    if not can_afford_image_generation(economy_snapshot, IMAGE_GENERATION_COST_SIGNAL):
+        fallback_msg = get_fallback_message(language)
+        logger.info(
+            "[RenderHelpers] 잔액 부족, 이미지 생성 건너뜀",
+            extra={
+                "current_signal": economy_snapshot.signal,
+                "required_signal": IMAGE_GENERATION_COST_SIGNAL,
+                "prompt_hash": prompt_hash,
+            },
+        )
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="insufficient_balance",
+            prompt_hash=prompt_hash,
+            aspect_ratio=image_job.aspect_ratio,
+            image_size=image_job.image_size,
+            estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
+            fallback_message=fallback_msg,
+        )
+
+    # 모든 조건 통과 - 이미지 생성 진행
+    logger.info(
+        "[RenderHelpers] 이미지 생성 판정 통과",
+        extra={
+            "prompt_hash": prompt_hash,
+            "aspect_ratio": image_job.aspect_ratio,
+            "image_size": image_job.image_size,
+            "estimated_cost": IMAGE_GENERATION_COST_SIGNAL,
+        },
+    )
+
+    return ImageGenerationDecision(
+        should_generate=True,
+        reason="all_conditions_met",
+        prompt_hash=prompt_hash,
+        aspect_ratio=image_job.aspect_ratio,
+        image_size=image_job.image_size,
+        estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
+    )

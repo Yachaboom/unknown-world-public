@@ -29,6 +29,7 @@ D:\Dev\unknown-world\
 │   │       │   ├── pipeline.py (7대 단계 실행기 및 서비스 주입)
 │   │       │   ├── stages/    # 단계별 독립 모듈 (Parse~Commit)
 │   │       │   │   ├── render.py (메인 렌더링 및 이미지 생성 브릿지)
+│   │       │   │   ├── render_helpers.py (이미지 생성 판정 및 경제 기반 폴백 헬퍼)
 │   │       │   │   └── ...
 │   │       │   ├── fallback.py (안전 폴백 SSOT)
 │   │       │   ├── mock.py (결정적 다양성 모의 엔진)
@@ -93,6 +94,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Pipeline SSOT**: 모든 턴 처리는 `orchestrator/pipeline.py`에 정의된 7대 단계를 따름.
     - **Stage Modularity**: 각 단계는 독립된 함수로 모듈화되어 있으며, `PipelineContext`를 통해 상태 전이.
     - **Service Injection (U-051)**: `PipelineContext` 생성 시 `image_generator` 등 핵심 서비스를 주입하거나 자동으로 획득하여 단계 간 서비스 공유.
+    - **Conditional Image Generation (U-052)**: 모델의 `image_job` 요청을 경제 잔액, 프롬프트 유효성, `should_generate` 플래그를 기반으로 종합 판정하여 불필요한 비용 및 지연 방지.
     - **Deterministic Diversity (U-048[Mvp])**: Mock 모드에서도 per-turn RNG를 통해 결정적 다양성 확보.
 4. **Guaranteed Safe Fallback**: 모든 오류 상황에서 입력 시점의 재화를 보존하는 **안전 폴백 TurnOutput** 생성 보장.
 5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 모든 데이터를 전수 검증함.
@@ -171,3 +173,18 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **Flexbox 하위 스크롤 보장**: 컨테이너가 자식의 높이에 맞춰 늘어나지 않도록 `min-height: 0`을 명시적으로 적용하여 내부 스크롤 기반 확보.
 4. **동적 뷰포트 최적화**: `100dvh`를 활용하여 모바일 주소창 등에 의한 불필요한 첫 화면 스크롤 제거.
 5. **자동 스크롤 (Auto-focus)**: 거래 장부(Economy HUD) 등 실시간 데이터 누적 영역은 최신 항목이 보이도록 하단 자동 스크롤(`useRef`/`useEffect`) 적용.
+
+---
+
+## 20. 이미지 파이프라인 및 조건부 생성 정책 (U-052[Mvp])
+
+1. **조건부 생성 판정 (Conditional Logic)**:
+    - **플래그 검증**: `image_job.should_generate`가 `true`일 때만 생성 프로세스 진입.
+    - **프롬프트 가드**: 모델이 플래그를 `true`로 주더라도 프롬프트가 비어있거나 공백만 있는 경우 생성을 차단하여 API 오류 방지.
+2. **이미지 생성 비용 정책 (RULE-005)**:
+    - **고정 비용**: MVP 기준 이미지 생성 1회당 **10 Signal** 고정 비용 부과 (Option A).
+    - **잔액 검증**: 현재 잔액(`economy_snapshot.signal`)이 생성 비용보다 적을 경우 생성을 거부하고 텍스트-only 폴백으로 전환.
+3. **프롬프트 보안 및 로깅 (RULE-007)**:
+    - **해시 로깅**: 프롬프트 원문을 로그에 남기지 않으며, SHA-256 해시의 앞 8자리를 사용하여 추적성 확보.
+4. **언어별 폴백 메시지 (RULE-006)**:
+    - 잔액 부족으로 생성 실패 시 세션 언어(`ko-KR`/`en-US`)에 맞는 안내 메시지를 제공.
