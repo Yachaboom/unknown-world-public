@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 71/96 (74.0%) | **MVP**: 71/79 (89.9%) | **MMP**: 0/17 (0%)
+**전체**: 72/96 (75.0%) | **MVP**: 72/79 (91.1%) | **MMP**: 0/17 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP D-8
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-054[Mvp]](unit-plans/U-054[Mvp].md) / **최근 완료**: [U-053[Mvp]](unit-results/U-053[Mvp].md) (2026-02-01)
+**진행 중(현재 포커스)**: [U-055[Mvp]](unit-plans/U-055[Mvp].md) / **최근 완료**: [U-054[Mvp]](unit-results/U-054[Mvp].md) (2026-02-01)
 
 **블로커**: 없음
 
@@ -138,7 +138,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-054[Mvp]](unit-plans/U-054[Mvp].md) | 이미지 생성 폴백 및 실패 복구 체계 강화(RULE-004) | Depends=U-053[Mvp],U-018[Mvp] | ⏸️
 ID=[U-055[Mvp]](unit-plans/U-055[Mvp].md) | 이미지 파이프라인 Mock/Real 모드 통합 검증 | Depends=U-054[Mvp],CP-MVP-05 | ⏸️
 
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
@@ -171,6 +170,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-054[Mvp]](unit-results/U-054[Mvp].md): 이미지 생성 폴백 및 실패 복구 체계 강화 (2026-02-01)
 - ✅ [U-053[Mvp]](unit-results/U-053[Mvp].md): 비동기 이미지 생성 및 결과 데이터 동기화 (2026-02-01)
 - ✅ [U-052[Mvp]](unit-results/U-052[Mvp].md): 조건부 이미지 생성 제어 로직(should_generate 판정) (2026-02-01)
 - ✅ [U-051[Mvp]](unit-results/U-051[Mvp].md): ⚡렌더링 단계-이미지 생성 서비스 브릿지 구축 (2026-02-01)
@@ -258,7 +258,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) - 렌더링 단계-이미지 생성 서비스 브릿지 구축
+**현재 작업**: [U-055[Mvp]](unit-plans/U-055[Mvp].md) - 이미지 파이프라인 Mock/Real 모드 통합 검증
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -291,8 +291,8 @@ pnpm kill
 
 ## 일일 스탠드업 (2026-02-01)
 
-**완료**: [U-049[Mvp]](unit-results/U-049[Mvp].md) - UI/UX - 레이아웃/스크롤 설계 개선
+**완료**: [U-054[Mvp]](unit-results/U-054[Mvp].md) - 이미지 생성 폴백 및 실패 복구 체계 강화
 
-**진행중**: [U-051[Mvp]](unit-plans/U-051[Mvp].md) - 렌더링 단계-이미지 생성 서비스 브릿지 구축
+**진행중**: [U-055[Mvp]](unit-plans/U-055[Mvp].md) - 이미지 파이프라인 Mock/Real 모드 통합 검증
 
 **블로커**: 없음

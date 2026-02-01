@@ -61,6 +61,26 @@ FALLBACK_MESSAGE_KO = "잔액이 부족하여 이미지를 생성할 수 없습�
 FALLBACK_MESSAGE_EN = "Insufficient balance for image generation. Proceeding with text only."
 """잔액 부족 시 폴백 메시지 (영어)."""
 
+# =============================================================================
+# 이미지 생성 실패 폴백 메시지 (i18n) - U-054
+# =============================================================================
+
+IMAGE_GENERATION_FAILURE_MESSAGE_KO = "이미지 생성에 실패했습니다. 텍스트로 진행합니다."
+"""이미지 생성 실패 시 폴백 메시지 (한국어)."""
+
+IMAGE_GENERATION_FAILURE_MESSAGE_EN = "Image generation failed. Proceeding with text only."
+"""이미지 생성 실패 시 폴백 메시지 (영어)."""
+
+# =============================================================================
+# 안전 정책 차단 메시지 (i18n) - U-054
+# =============================================================================
+
+SAFETY_BLOCKED_MESSAGE_KO = "안전 정책에 따라 이미지를 생성할 수 없습니다."
+"""안전 정책 차단 시 메시지 (한국어)."""
+
+SAFETY_BLOCKED_MESSAGE_EN = "Image generation blocked due to safety policies."
+"""안전 정책 차단 시 메시지 (영어)."""
+
 
 # =============================================================================
 # 판정 결과 데이터 클래스
@@ -282,4 +302,113 @@ def decide_image_generation(
         aspect_ratio=image_job.aspect_ratio,
         image_size=image_job.image_size,
         estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
+    )
+
+
+# =============================================================================
+# 이미지 생성 실패/안전 차단 헬퍼 함수 (U-054)
+# =============================================================================
+
+
+def is_safety_blocked(message: str | None) -> bool:
+    """응답 메시지가 안전 정책 차단을 나타내는지 확인합니다.
+
+    RULE-004: 안전 차단 시 적절한 메시지가 TurnOutput.safety에 기록되어야 합니다.
+
+    Args:
+        message: 이미지 생성 응답 메시지 (None 가능)
+
+    Returns:
+        안전 정책 차단이면 True
+    """
+    if not message:
+        return False
+
+    message_lower = message.lower()
+    safety_keywords = ["safety", "blocked", "policy", "violation", "prohibited"]
+    return any(keyword in message_lower for keyword in safety_keywords)
+
+
+def get_image_failure_message(language: str) -> str:
+    """언어에 맞는 이미지 생성 실패 폴백 메시지를 반환합니다.
+
+    RULE-006: ko/en 언어 정책 준수
+
+    Args:
+        language: 언어 코드 ("ko-KR" 또는 "en-US")
+
+    Returns:
+        해당 언어의 이미지 생성 실패 메시지
+    """
+    if language == "ko-KR":
+        return IMAGE_GENERATION_FAILURE_MESSAGE_KO
+    return IMAGE_GENERATION_FAILURE_MESSAGE_EN
+
+
+def get_safety_blocked_message(language: str) -> str:
+    """언어에 맞는 안전 정책 차단 메시지를 반환합니다.
+
+    RULE-006: ko/en 언어 정책 준수
+
+    Args:
+        language: 언어 코드 ("ko-KR" 또는 "en-US")
+
+    Returns:
+        해당 언어의 안전 차단 메시지
+    """
+    if language == "ko-KR":
+        return SAFETY_BLOCKED_MESSAGE_KO
+    return SAFETY_BLOCKED_MESSAGE_EN
+
+
+@dataclass(frozen=True)
+class ImageFallbackResult:
+    """이미지 생성 실패 시 폴백 결과.
+
+    U-054: 이미지 생성 실패 시 안전한 폴백 정보를 담은 데이터 클래스입니다.
+
+    Attributes:
+        is_safety_blocked: 안전 정책에 의해 차단되었는지
+        fallback_message: 사용자에게 표시할 폴백 메시지
+        should_update_safety: TurnOutput.safety를 업데이트해야 하는지
+        reason: 폴백 사유 (로깅용)
+    """
+
+    is_safety_blocked: bool
+    fallback_message: str
+    should_update_safety: bool
+    reason: str
+
+
+def create_image_fallback_result(
+    status_message: str | None,
+    language: str = "ko-KR",
+) -> ImageFallbackResult:
+    """이미지 생성 실패에 대한 폴백 결과를 생성합니다.
+
+    U-054: RULE-004에 따라 이미지 생성 실패 시 안전한 폴백을 제공합니다.
+    재시도 없이 즉시 폴백합니다 (Q1: Option A).
+
+    Args:
+        status_message: 이미지 생성 응답 메시지 (실패 사유)
+        language: 폴백 메시지 언어 (기본: ko-KR)
+
+    Returns:
+        ImageFallbackResult: 폴백 처리에 필요한 정보
+    """
+    is_blocked = is_safety_blocked(status_message)
+
+    if is_blocked:
+        return ImageFallbackResult(
+            is_safety_blocked=True,
+            fallback_message=get_safety_blocked_message(language),
+            should_update_safety=True,
+            reason="safety_blocked",
+        )
+
+    return ImageFallbackResult(
+        is_safety_blocked=False,
+        fallback_message=get_image_failure_message(language),
+        should_update_safety=False,
+        reason="generation_failed",
     )

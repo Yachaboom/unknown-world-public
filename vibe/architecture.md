@@ -29,7 +29,7 @@ D:\Dev\unknown-world\
 │   │       │   ├── pipeline.py (7대 단계 실행기 및 서비스 주입)
 │   │       │   ├── stages/    # 단계별 독립 모듈 (Parse~Commit)
 │   │       │   │   ├── render.py (메인 렌더링 및 이미지 생성 브릿지)
-│   │       │   │   ├── render_helpers.py (이미지 생성 판정 및 경제 기반 폴백 헬퍼)
+│   │       │   │   ├── render_helpers.py (판정, 폴백 결과 생성 및 안전 차단 감지 헬퍼)
 │   │       │   │   └── ...
 │   │       │   ├── fallback.py (안전 폴백 SSOT)
 │   │       │   ├── mock.py (결정적 다양성 모의 엔진)
@@ -51,6 +51,11 @@ D:\Dev\unknown-world\
 │   │       │   └── language_gate.py (언어 혼합 방지)
 │   │       └── models/     # Pydantic 데이터 모델
 │   ├── tests/              # 통합 및 단위 테스트
+│   │   ├── unit/
+│   │   │   ├── orchestrator/
+│   │   │   │   ├── test_u054_image_fallback.py (폴백 검증)
+│   │   │   │   └── ...
+│   │   │   └── ...
 │   └── pyproject.toml      # Python 의존성 관리 (uv)
 ├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
 │   ├── src/
@@ -202,4 +207,17 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Frontend Connection**: 프론트엔드의 `SceneCanvas`가 즉시 소비할 수 있도록 서빙 가능한 정적 URL(`STATIC_URL_PREFIX`) 형식으로 제공.
 3. **로깅 및 가시성 (RULE-007, RULE-008)**:
     - **보안 로깅**: 프롬프트 원문 대신 해시를 로그에 남기고, 생성 소요 시간 및 성공 여부를 기록하여 운영 가시성 확보.
-    - **상태 무결성**: 생성 실패 시에도 스키마를 준수하는 `None` 값을 유지하여 클라이언트 측 폴백(U-020) 유도.
+---
+
+## 22. 이미지 생성 폴백 및 실패 복구 정책 (U-054[Mvp])
+
+1. **실패 내성 구조 (Fault Tolerance)**:
+    - **RULE-004 준수**: 이미지 생성 중 발생하는 모든 예외(`TimeoutError`, `ValueError`, `API Error` 등)를 포착하여 시스템 중단 없이 텍스트-only 모드로 즉시 전이.
+    - **재시도 최소화 (Option A)**: 지연 시간 단축을 위해 이미지 실패 시 재시도 없이 즉시 폴백 수행 (Retry Count: 0).
+2. **안전 차단(Safety Blocked) 대응**:
+    - **키워드 기반 감지**: 응답 메시지 내 "safety", "blocked", "policy" 등 키워드 포함 여부로 차단 여부 판별.
+    - **상태 동기화**: 차단 감지 시 `TurnOutput.safety.blocked`를 `true`로 설정하고, 언어별 안전 안내 메시지 제공.
+3. **배지 및 가시성 연동**:
+    - **Badges SSOT**: 안전 차단 시 기존 `SAFETY_OK` 배지를 제거하고 `SAFETY_BLOCKED` 배지를 즉시 반영하여 Agent Console에 시스템 증거 노출.
+4. **다국어 폴백 메시지 (RULE-006)**:
+    - 실패 유형(일반 실패, 안전 차단, 잔액 부족)에 따라 `ko-KR`/`en-US` 언어 정책에 정렬된 전용 메시지 템플릿 사용.

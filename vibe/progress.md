@@ -1,5 +1,32 @@
 # 프로젝트 진행 상황
 
+## [2026-02-01 17:40] [U-054[Mvp]] 이미지 생성 폴백 및 실패 복구 체계 강화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 이미지 생성 실패(안전 차단, 타임아웃, 예외) 시 즉시 폴백 및 안전 정보 동기화 구현
+- **추가 컴포넌트**: `backend/src/unknown_world/orchestrator/stages/render_helpers.py` (폴백 헬퍼), `backend/tests/unit/orchestrator/test_u054_image_fallback.py` (검증 테스트), `vibe/unit-results/U-054[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-004] 실패 시 안전 폴백(Safety Blocked 처리), [RULE-006] i18n 폴백 메시지(ko/en) 준수
+
+### 기술적 구현 세부사항
+
+**실패 내성 및 안전 정책**:
+- **Immediate Fallback**: 지연 최소화를 위해 이미지 생성 실패 시 재시도 없이 즉시 텍스트-only 모드로 전환 (Q1: Option A).
+- **Safety Synchronization**: 모델 응답 메시지 내 안전 관련 키워드 감지 시 `TurnOutput.safety.blocked = True` 설정 및 `SAFETY_BLOCKED` 배지 즉시 반영.
+- **Graceful Error Handling**: `TimeoutError` 및 기타 런타임 예외 발생 시 스키마를 준수하는 빈 결과값과 언어별 오류 메시지 반환.
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/orchestrator/stages/
+    ├── render.py (예외 처리 가드 및 폴백 실행)
+    └── render_helpers.py (안전 차단 감지 및 i18n 메시지)
+
+### 다음 단계
+- [U-055[Mvp]] 이미지 파이프라인 Mock/Real 모드 통합 검증
+- [U-023[Mvp]] Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI
+
+---
+
 ## [2026-02-01 16:15] [U-053[Mvp]] 비동기 이미지 생성 및 결과 데이터 동기화 완료
 
 ### 구현 완료 항목

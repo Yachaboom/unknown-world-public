@@ -28,10 +28,18 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from unknown_world.models.turn import AgentPhase, EconomySnapshot, RenderOutput
+from unknown_world.models.turn import (
+    AgentPhase,
+    EconomySnapshot,
+    RenderOutput,
+    SafetyOutput,
+    ValidationBadge,
+)
 from unknown_world.orchestrator.stages.render_helpers import (
     IMAGE_GENERATION_COST_SIGNAL,
+    ImageFallbackResult,
     ImageGenerationDecision,
+    create_image_fallback_result,
     decide_image_generation,
     extract_image_job,
 )
@@ -75,6 +83,7 @@ async def _execute_image_generation(
 
     설계:
         - 페어링 질문 Q1: Option A (ctx.output 갱신) 채택
+        - RULE-004: 실패 시 즉시 폴백 (재시도 0회, U-054 Q1: Option A)
         - RULE-007: 프롬프트 원문 로그 노출 금지 (해시만 사용)
         - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
     """
@@ -87,6 +96,9 @@ async def _execute_image_generation(
     if image_job is None or not image_job.prompt:
         logger.warning("[Render] ImageJob 또는 프롬프트 없음, 생성 건너뜀")
         return ctx
+
+    # 언어 정보 추출 (폴백 메시지용)
+    language = ctx.turn_input.language.value
 
     # 생성 시작 시간 기록
     start_time = datetime.now(UTC)
@@ -141,31 +153,167 @@ async def _execute_image_generation(
             )
 
         else:
-            # 생성 실패 - 에러 로그만 기록, 텍스트-only 폴백은 U-054에서 처리
+            # U-054: 이미지 생성 실패 - 즉시 폴백 (재시도 0회, Q1: Option A)
             logger.warning(
-                "[Render] 이미지 생성 실패",
+                "[Render] 이미지 생성 실패, 텍스트-only 폴백",
                 extra={
                     "status": response.status.value,
-                    "message": response.message,
+                    "status_message": response.message,
                     "elapsed_ms": elapsed_ms,
                     "prompt_hash": image_decision.prompt_hash,
                 },
             )
 
-    except Exception as e:
-        # 예외 발생 시 안전하게 처리 (RULE-004)
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-        error_type = type(e).__name__
+            # 폴백 결과 생성 및 TurnOutput 업데이트
+            fallback_result = create_image_fallback_result(
+                status_message=response.message,
+                language=language,
+            )
+            ctx = _apply_image_fallback(ctx, fallback_result)
 
-        logger.error(
-            "[Render] 이미지 생성 중 예외 발생",
+    except TimeoutError:
+        # 타임아웃 예외 - 안전하게 폴백 (RULE-004)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+        logger.warning(
+            "[Render] 이미지 생성 타임아웃, 텍스트-only 폴백",
             extra={
-                "error_type": error_type,
                 "elapsed_ms": elapsed_ms,
                 "prompt_hash": image_decision.prompt_hash,
             },
         )
-        # 예외 시에도 ctx는 그대로 반환 (텍스트-only 폴백은 U-054)
+
+        fallback_result = create_image_fallback_result(
+            status_message="timeout",
+            language=language,
+        )
+        ctx = _apply_image_fallback(ctx, fallback_result)
+
+    except (ValueError, TypeError) as e:
+        # 잘못된 요청/검증 오류 - 안전하게 폴백 (RULE-004)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+        error_type = type(e).__name__
+
+        logger.warning(
+            "[Render] 이미지 생성 요청 오류, 텍스트-only 폴백",
+            extra={
+                "error_type": error_type,
+                "error_message": str(e),
+                "elapsed_ms": elapsed_ms,
+                "prompt_hash": image_decision.prompt_hash,
+            },
+        )
+
+        fallback_result = create_image_fallback_result(
+            status_message=str(e),
+            language=language,
+        )
+        ctx = _apply_image_fallback(ctx, fallback_result)
+
+    except Exception as e:
+        # 기타 예외 발생 시 안전하게 처리 (RULE-004)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+        error_type = type(e).__name__
+
+        logger.error(
+            "[Render] 이미지 생성 중 예외 발생, 텍스트-only 폴백",
+            extra={
+                "error_type": error_type,
+                "error_message": str(e),
+                "elapsed_ms": elapsed_ms,
+                "prompt_hash": image_decision.prompt_hash,
+            },
+        )
+
+        fallback_result = create_image_fallback_result(
+            status_message=None,
+            language=language,
+        )
+        ctx = _apply_image_fallback(ctx, fallback_result)
+
+    return ctx
+
+
+def _apply_image_fallback(
+    ctx: PipelineContext,
+    fallback_result: ImageFallbackResult,
+) -> PipelineContext:
+    """이미지 생성 실패 시 폴백을 적용합니다.
+
+    U-054: RULE-004에 따라 이미지 생성 실패 시 안전한 폴백을 제공합니다.
+    - 안전 차단 시 TurnOutput.safety 업데이트
+    - 배지에 실패 상태 반영
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        fallback_result: 폴백 처리 결과
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    if ctx.output is None:
+        return ctx
+
+    logger.info(
+        "[Render] 이미지 폴백 적용",
+        extra={
+            "is_safety_blocked": fallback_result.is_safety_blocked,
+            "reason": fallback_result.reason,
+        },
+    )
+
+    # 안전 차단 시 TurnOutput.safety 업데이트
+    if fallback_result.should_update_safety:
+        new_safety = SafetyOutput(
+            blocked=True,
+            message=fallback_result.fallback_message,
+        )
+        ctx.output = ctx.output.model_copy(update={"safety": new_safety})
+
+        # 배지에 SAFETY_BLOCKED 추가
+        ctx = _add_badge(ctx, ValidationBadge.SAFETY_BLOCKED)
+    else:
+        # 일반 실패 시에도 기존 배지는 유지하고 로그만 기록
+        # (SAFETY_OK는 이미 설정되어 있을 수 있음)
+        pass
+
+    return ctx
+
+
+def _add_badge(ctx: PipelineContext, badge: ValidationBadge) -> PipelineContext:
+    """TurnOutput.agent_console.badges에 배지를 추가합니다.
+
+    U-054: 이미지 생성 상태를 배지로 반영합니다.
+    중복 배지는 추가하지 않습니다.
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        badge: 추가할 배지
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    if ctx.output is None:
+        return ctx
+
+    current_badges = list(ctx.output.agent_console.badges)
+
+    # 관련 배지 교체 (예: SAFETY_OK -> SAFETY_BLOCKED)
+    if badge == ValidationBadge.SAFETY_BLOCKED:
+        current_badges = [b for b in current_badges if b != ValidationBadge.SAFETY_OK]
+
+    # 중복 방지
+    if badge not in current_badges:
+        current_badges.append(badge)
+
+    # agent_console 업데이트
+    new_console = ctx.output.agent_console.model_copy(update={"badges": current_badges})
+    ctx.output = ctx.output.model_copy(update={"agent_console": new_console})
+
+    logger.debug(
+        "[Render] 배지 추가됨",
+        extra={"badge": badge.value, "total_badges": len(current_badges)},
+    )
 
     return ctx
 
@@ -300,8 +448,9 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
                         "required_signal": IMAGE_GENERATION_COST_SIGNAL,
                     },
                 )
-                # NOTE: 폴백 메시지를 TurnOutput에 반영하는 로직은 U-054에서 구현
-                # 현재는 로그 기록만 수행
+                # U-054: 폴백 메시지를 TurnOutput.narrative에 추가 (RULE-004/005)
+                new_narrative = ctx.output.narrative + "\n\n" + image_decision.fallback_message
+                ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
 
             # U-053: 이미지 생성이 필요한 경우 비동기 호출
             if image_decision.should_generate:
