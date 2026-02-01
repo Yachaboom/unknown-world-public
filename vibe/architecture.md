@@ -101,6 +101,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Service Injection (U-051)**: `PipelineContext` 생성 시 `image_generator` 등 핵심 서비스를 주입하거나 자동으로 획득하여 단계 간 서비스 공유.
     - **Conditional Image Generation (U-052)**: 모델의 `image_job` 요청을 경제 잔액, 프롬프트 유효성, `should_generate` 플래그를 기반으로 종합 판정하여 불필요한 비용 및 지연 방지.
     - **Async Data Synchronization (U-053)**: 비동기(`await`) 이미지 생성을 수행하고, 생성된 `image_url` 및 메타데이터를 `TurnOutput` 응답에 원자적으로 동기화하여 프론트엔드에 전달.
+    - **Mock/Real Integrated Validation (U-055)**: 개발 모드(Mock)와 실모델 모드(Real) 간의 이미지 파이프라인 동작 일관성을 통합 검증하고, 모드별 성능 지표 및 폴백 안전성을 확정함.
     - **Deterministic Diversity (U-048[Mvp])**: Mock 모드에서도 per-turn RNG를 통해 결정적 다양성 확보.
 4. **Guaranteed Safe Fallback**: 모든 오류 상황에서 입력 시점의 재화를 보존하는 **안전 폴백 TurnOutput** 생성 보장.
 5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 모든 데이터를 전수 검증함.
@@ -221,3 +222,16 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Badges SSOT**: 안전 차단 시 기존 `SAFETY_OK` 배지를 제거하고 `SAFETY_BLOCKED` 배지를 즉시 반영하여 Agent Console에 시스템 증거 노출.
 4. **다국어 폴백 메시지 (RULE-006)**:
     - 실패 유형(일반 실패, 안전 차단, 잔액 부족)에 따라 `ko-KR`/`en-US` 언어 정책에 정렬된 전용 메시지 템플릿 사용.
+
+---
+
+## 23. 이미지 파이프라인 통합 및 검증 정책 (U-055[Mvp])
+
+1. **모드별 동작 일관성 (Mock/Real SSOT)**:
+    - **Mock 모드**: 개발 생산성을 위해 로컬 플레이스홀더 이미지를 생성하며, 30% 확률로 생성 판정을 시뮬레이션하여 프론트엔드 렌더링 루프를 검증함.
+    - **Real 모드**: Vertex AI 기반 실제 Gemini 이미지 생성을 수행하며, TTFB(2s 이내) 및 전체 생성 시간(15s 이내) 지표를 관리함.
+2. **통합 검증 가드레일**:
+    - **UW_MODE 환경변수**: 백엔드 시작 시 `UW_MODE` 값을 통해 오케스트레이터 및 이미지 생성기 구현체를 원자적으로 교체함.
+    - **End-to-End 가시성**: 턴 요청부터 이미지 렌더링까지의 전 과정을 Agent Console의 단계(Queue) 및 배지(Badges) 시스템을 통해 관측 가능하게 유지함.
+3. **폴백 및 예외 통합**:
+    - 이미지 생성 성공 여부와 관계없이 턴 자체는 항상 성공적으로 완료되어야 하며, 실패 시 UI는 즉시 텍스트 전용 모드로 전이되어야 함.
