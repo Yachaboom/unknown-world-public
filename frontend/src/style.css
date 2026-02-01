@@ -106,9 +106,13 @@ body {
   font-family: var(--font-main);
   min-height: 100vh;
   overflow: hidden;
+  /* U-057: 기본 글로우 완화 - 분위기 유지하면서 가독성 개선 */
+  /* 기존: 0 0 5px (glow-intensity) → 완화: 0 0 2px */
   text-shadow:
-    0 0 2px rgba(0, 0, 0, 0.8),
-    0 0 var(--glow-intensity) var(--text-dim);
+    0 0 1px rgba(0, 0, 0, 0.8),
+    0 0 2px var(--text-dim);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -415,7 +419,9 @@ body {
   background-color: rgba(0, 0, 0, 0.6);
   padding: var(--spacing-md);
   border: 1px solid var(--text-dim);
-  text-shadow: 0 0 10px var(--text-color);
+  /* U-057: 글로우 완화 (10px → 3px) */
+  text-shadow: 0 0 3px rgba(51, 255, 0, 0.4);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* U-031: Scene Canvas 상태별 placeholder 스타일 */
@@ -887,6 +893,7 @@ body {
 }
 
 /* 툴팁 라벨 */
+/* U-057: 툴팁 라벨 글로우 완화 */
 .hotspot-tooltip-label {
   display: block;
   font-size: var(--font-size-sm);
@@ -894,7 +901,8 @@ body {
   color: var(--text-color);
   text-transform: uppercase;
   letter-spacing: 1px;
-  text-shadow: 0 0 5px var(--text-dim);
+  text-shadow: 0 0 2px rgba(51, 255, 0, 0.3);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 툴팁 힌트 */
@@ -1123,19 +1131,20 @@ body {
 }
 
 /* 카드 타이틀 - U-050 v6: 컴팩트 카드에 맞춰 크기 축소 */
+/* U-057: 글로우 완화 (10px/20px → 3px) - 가독성 개선 */
 .action-card-title {
   font-size: 0.85rem;
   font-weight: bold;
   color: var(--text-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  /* U-049: 강한 텍스트 그림자로 배경과 분리 */
+  /* U-057: 과도한 글로우 완화 - 분위기 유지 + 가독성 */
   text-shadow:
-    0 0 10px var(--text-color),
-    0 0 20px rgba(51, 255, 0, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.9);
+    0 0 3px rgba(51, 255, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.9);
   padding-bottom: 2px;
   border-bottom: 1px solid var(--text-dim);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 카드 설명 - U-050 v6: 컴팩트 카드에 맞춰 축소 */
@@ -1654,7 +1663,9 @@ button:disabled,
   opacity: 1; /* 투명도 제거하여 최대 밝기 */
   margin-bottom: var(--spacing-sm);
   font-weight: 600; /* 더 굵게 */
-  text-shadow: 0 0 5px rgba(51, 255, 0, 0.4); /* 미세 글로우로 강조 */
+  /* U-057: 글로우 완화 (5px → 2px) - 라벨 가독성 개선 */
+  text-shadow: 0 0 2px rgba(51, 255, 0, 0.3);
+  -webkit-font-smoothing: antialiased;
 }
 
 .badges-panel .badges-grid {
@@ -1690,12 +1701,14 @@ button:disabled,
 }
 
 /* 텍스트 선명도 및 글로우 최적화 (번짐 방지) */
+/* U-057: filter drop-shadow도 제거 - 완전 선명 */
 .phase-item > * {
   position: relative;
   z-index: 2;
   text-shadow: none !important; /* 번짐 방지를 위해 그림자 제거 */
-  filter: drop-shadow(0 0 1px rgba(51, 255, 0, 0.3)); /* 미세 테두리 */
+  filter: none !important; /* U-057: drop-shadow도 제거하여 완전 선명 */
   opacity: 1 !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 상태별 색상 대비 상향 */
@@ -2008,7 +2021,100 @@ button:disabled,
 }
 
 /* ============================================
-   21. 중요도 기반 레이어링 (U-037: critical/ambient)
+   21. 가독성 보호 클래스 (U-057: 텍스트 번짐 식별성 개선)
+   - 페어링 결정:
+     - Q1 Option A: 본문 텍스트만 보호, 제목/라벨은 글로우 유지
+     - Q2 Option B: 1px 미만의 미세 글로우 (분위기 유지 + 가독성)
+     - Q3 Option A: 12px 이하 텍스트만 font-weight 상향
+   ============================================ */
+
+/* 가독성 우선 영역 - CRT 효과 완전 제거 */
+.readable-text {
+  text-shadow: none !important;
+  filter: none !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 분위기 유지하면서 가독성 확보 - 미세한 글로우만 */
+.readable-glow {
+  text-shadow: 0 0 0.5px currentColor !important;
+  filter: none !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 중요 텍스트 강조 - 약간의 글로우 */
+.readable-emphasis {
+  text-shadow: 0 0 2px rgba(51, 255, 0, 0.3) !important;
+  filter: none !important;
+}
+
+/* 작은 텍스트 가독성 보정 (12px 이하) - Q3 Option A */
+.readable-small {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   21.0.0 본문/설명 텍스트 가독성 (U-057)
+   - Q1 Option A: 본문 텍스트만 보호, 제목/라벨은 글로우 유지
+   - p, span, 설명 텍스트는 효과 제거/완화
+   ============================================ */
+
+/* 본문/설명 텍스트 - 효과 최소화 */
+.narrative-text,
+.action-card-description,
+.quest-label,
+.rule-card-description,
+.timeline-event-description,
+.scanner-caption,
+.hotspot-tooltip-hint,
+.ledger-reason {
+  text-shadow: none;
+  filter: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 제목/라벨 - 미세 글로우 유지 (Q2 Option B: 1px 미만) */
+.game-title,
+.panel-title,
+.action-card-title,
+.quest-section-title,
+.rule-card-label,
+.timeline-title,
+.scanner-candidates-title {
+  text-shadow: 0 0 3px rgba(51, 255, 0, 0.4);
+  filter: none;
+}
+
+/* 작은 폰트 (12px/0.75rem 이하) 가독성 강화 - Q3 Option A */
+.action-card-cost,
+.action-card-hints,
+.action-card-hints .hint-text,
+.action-card .alternative-badge,
+.card-disabled-overlay .disabled-reason,
+.narrative-timestamp,
+.phase-queue .queue-label,
+.badges-panel .badges-label,
+.repair-trace .repair-label,
+.repair-trace .repair-status,
+.agent-error .error-code,
+.timeline-event-turn,
+.timeline-event-type,
+.ledger-model,
+.scanner-stats,
+.scanner-candidate-type,
+.cost-label,
+.timeline-more-text {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   21.0.1 중요도 기반 레이어링 (U-037: critical/ambient)
    - critical: 어두운 배경/패널 내부의 작은 텍스트 (마이크로 텍스트)
    - ambient: 분위기/장식, 로고/타이틀/패널 헤더 (기본 스타일)
    - Scene Canvas 중심으로 CRT 분위기 집중 (Q2: Option A)
@@ -2055,32 +2161,40 @@ button:disabled,
    ============================================ */
 
 /* Action Card 비용/위험 정보 (작은 텍스트, 어두운 카드 배경) */
+/* U-057: 글로우 완화 - 작은 텍스트 가독성 우선 */
 .action-card-cost {
-  text-shadow:
-    0 0 2px currentColor,
-    0 1px 1px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 에러/차단 메시지 (배경색 다양, 중요 정보) */
+/* U-057: 에러 메시지도 가독성 우선 */
 .agent-error {
-  text-shadow:
-    0 0 2px var(--error-color),
-    0 1px 1px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 배지 상태 텍스트 (작은 폰트, 패널 내부) */
+/* U-057: 작은 텍스트는 글로우 제거 */
 .badge-status {
-  text-shadow: 0 0 1px currentColor;
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 내러티브 타임스탬프 (작은 폰트) */
+/* U-057: 타임스탬프 가독성 개선 */
 .narrative-timestamp {
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+  text-shadow: none;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 복구 트레이스 (작은 폰트, 경고 정보) */
+/* U-057: 작은 텍스트 글로우 제거 */
 .repair-trace .repair-count {
-  text-shadow: 0 0 2px var(--warning-color);
+  text-shadow: none;
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ============================================

@@ -4,80 +4,54 @@
 
 Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모달 파이프라인을 결합한 무한 생성 로그라이크 내러티브 웹게임입니다. 시스템은 상태 기반 오케스트레이터와 고수준 게임 UI로 구성됩니다.
 
-## 2. 프로젝트 구조
+## 프로젝트 구조
 
-### 디렉토리 구조 (Tree)
+### 디렉토리 구조
 
 ```text
-D:\Dev\unknown-world\
-├── backend/               # 백엔드 (FastAPI + Pydantic)
-│   ├── prompts/           # 프롬프트 저장소 (XML 규격 적용)
-│   │   ├── system/        # 시스템/페르소나 프롬프트
-│   │   ├── turn/          # 출력 지시사항 프롬프트
-│   │   └── image/         # 이미지 스타일 가이드라인
-│   ├── src/
-│   │   └── unknown_world/
-│   │       ├── api/        # API 엔드포인트 및 스트림 이벤트 계약
-│   │       │   ├── image.py (이미지 생성 API)
-│   │       │   ├── scanner.py (이미지 이해 API)
-│   │       │   ├── turn.py (메인 턴 스트리밍)
-│   │       │   ├── turn_stream_events.py (스트림 이벤트 SSOT)
-│   │       │   └── turn_streaming_helpers.py (스트리밍 유틸리티)
-│   │       ├── config/     # 모델 및 시스템 설정
-│   │       │   └── models.py (모델 라벨/ID 매핑)
-│   │       ├── orchestrator/ # 오케스트레이션 엔진
-│   │       │   ├── pipeline.py (7대 단계 실행기 및 서비스 주입)
-│   │       │   ├── stages/    # 단계별 독립 모듈 (Parse~Commit)
-│   │       │   │   ├── render.py (메인 렌더링 및 이미지 생성 브릿지)
-│   │       │   │   ├── render_helpers.py (판정, 폴백 결과 생성 및 안전 차단 감지 헬퍼)
-│   │       │   │   └── ...
-│   │       │   ├── fallback.py (안전 폴백 SSOT)
-│   │       │   ├── mock.py (결정적 다양성 모의 엔진)
-│   │       │   ├── prompt_loader.py (XML/Frontmatter 로더)
-│   │       │   ├── repair_loop.py (자기 수정 루프)
-│   │       │   └── validator.py (비즈니스 룰 검증)
-│   │       ├── services/   # 외부 서비스 연동
-│   │       │   ├── genai_client.py (Vertex AI SDK 래퍼)
-│   │       │   ├── image_generation.py (Gemini 3 Pro Image)
-│   │       │   ├── image_postprocess.py (rembg 배경 제거)
-│   │       │   ├── image_understanding.py (이미지 분석/아이템화)
-│   │       │   └── rembg_preflight.py (모델 사전 점검)
-│   │       ├── storage/    # 스토리지 추상화 및 경로 관리
-│   │       │   ├── local_storage.py (로컬 파일 시스템)
-│   │       │   ├── paths.py (경로/URL 상수 SSOT)
-│   │       │   └── validation.py (파일 제한 정책)
-│   │       ├── validation/ # 특수 검증 로직
-│   │       │   ├── business_rules.py
-│   │       │   └── language_gate.py (언어 혼합 방지)
-│   │       └── models/     # Pydantic 데이터 모델
-│   ├── tests/              # 통합 및 단위 테스트
-│   │   ├── unit/
-│   │   │   ├── orchestrator/
-│   │   │   │   ├── test_u054_image_fallback.py (폴백 검증)
-│   │   │   │   └── ...
-│   │   │   └── ...
-│   └── pyproject.toml      # Python 의존성 관리 (uv)
-├── frontend/              # 프론트엔드 (React 19 + Vite 7 + TS 5.9)
-│   ├── src/
-│   │   ├── api/            # API 클라이언트 (Streaming/Scanner)
-│   │   ├── components/     # 게임 UI 컴포넌트 (HUD/Canvas/Console 등)
-│   │   ├── locales/        # i18n 리소스 (ko-KR/en-US)
-│   │   ├── save/           # 세션 관리 및 마이그레이션 (U-041)
-│   │   ├── stores/         # Zustand 상태 슬라이스
-│   │   ├── turn/           # Turn Runner 실행 엔진
-│   │   ├── utils/          # 좌표 변환 및 공통 유틸리티
-│   │   └── schemas/        # Zod 스키마 검증
-│   └── package.json        # Node.js 의존성 및 스크립트
-├── shared/                # 공유 리소스 (JSON Schema SSOT)
-└── vibe/                  # SSOT 문서 및 작업 기록
+backend/
+├── src/unknown_world/
+│   ├── api/ (엔드포인트 및 스트리밍 헬퍼)
+│   ├── config/ (모델 ID/라벨 SSOT)
+│   ├── models/ (Pydantic 스키마)
+│   ├── orchestrator/ (7대 단계 파이프라인 및 복구 루프)
+│   │   ├── stages/ (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
+│   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리)
+│   ├── storage/ (로컬/GCS 스토리지 추상화 및 경로 관리)
+│   └── validation/ (비즈니스 룰 및 언어 게이트)
+├── tests/ (유닛, 통합, QA 테스트)
+└── pyproject.toml
+frontend/
+├── src/
+│   ├── api/ (API 클라이언트 및 스트리밍 인터페이스)
+│   ├── components/ (게임 UI 컴포넌트: ActionDeck, SceneCanvas, AgentConsole 등)
+│   ├── data/ (데모 프로필 프리셋)
+│   ├── demo/ (테스트용 목 데이터)
+│   ├── dnd/ (인벤토리 DnD 타입 및 상수)
+│   ├── locales/ (i18n JSON 리소스)
+│   ├── save/ (세이브 시스템 및 세션 라이프사이클)
+│   ├── schemas/ (Zod 검증 스키마)
+│   ├── stores/ (Zustand 상태 관리 슬라이스)
+│   ├── turn/ (턴 실행 엔진)
+│   ├── types/ (공통 타입 정의)
+│   └── utils/ (좌표 변환 등 유틸리티)
+├── public/ui/ (에셋 매니페스트 및 이미지 리소스)
+└── package.json
+shared/
+└── schemas/turn/ (JSON Schema SSOT)
+vibe/
+├── unit-plans/ (개발 계획서)
+├── unit-results/ (완료 보고서)
+├── unit-runbooks/ (실행 가이드 및 런북)
+└── ref/ (기술 가이드 및 레퍼런스)
 ```
 
-### 주요 디렉토리 책임
+### 주요 디렉토리 설명
 
-- **`frontend/`**: 게임 HUD, 액션 덱, 인벤토리, 씬 캔버스 등 사용자 인터페이스 담당. Zustand로 월드 상태 관리. i18n 기반의 다국어 지원 및 구버전 데이터 마이그레이션(U-041) 포함. **U-056 구현에 따라 인벤토리 아이템의 텍스트 오버플로우 처리 및 네이티브 툴팁 지원이 추가됨.** U-049/U-050 전략에 따라 레이아웃 안정성과 오버레이 가독성을 확보함.
-- **`backend/`**: FastAPI 기반의 오케스트레이터 서버. 7단계 파이프라인을 통한 턴 처리, Vertex AI 연동, 이미지 후처리(rembg) 및 스토리지 관리 담당.
-- **`shared/`**: 백엔드(Pydantic)와 프론트엔드(Zod)가 공유하는 **데이터 계약(Data Contract)** 스키마 저장소.
-- **`vibe/`**: 계획(`unit-plans`), 결과(`unit-results`), 검증(`unit-runbooks`)을 포함한 프로젝트의 모든 기술 결정 사항과 히스토리를 기록하는 단일 진실 공급원(SSOT).
+- `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치합니다.
+- `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+- `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
 
 ---
 
