@@ -1,5 +1,87 @@
 # 프로젝트 진행 상황
 
+## [2026-02-01 16:15] [U-053[Mvp]] 비동기 이미지 생성 및 결과 데이터 동기화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 비동기 이미지 생성 호출 및 `TurnOutput.render` 데이터 동기화 구현
+- **추가 컴포넌트**: `backend/src/unknown_world/orchestrator/stages/render.py` (로직 통합), `vibe/unit-results/U-053[Mvp].md` (보고서), `vibe/unit-runbooks/U-053-async-image-generation-runbook.md` (런북)
+- **달성 요구사항**: [RULE-007] 프롬프트 원문 노출 금지, [RULE-008] 텍스트 우선 + Lazy 이미지 원칙 준수
+
+### 기술적 구현 세부사항
+
+**데이터 동기화 전략**:
+- **Async Execution**: `render_stage` 내에서 `PipelineContext.image_generator`를 통해 비동기로 이미지를 생성하고 소요 시간을 측정.
+- **Atomic Update**: Pydantic의 `model_copy(update=...)`를 사용하여 `TurnOutput.render` 필드(`image_url`, `image_id`, `generation_time_ms`)를 원자적으로 갱신.
+
+**로깅 및 보안**:
+- **Prompt Masking**: RULE-007을 준수하여 로그에 프롬프트 원문을 남기지 않고 판정 단계에서 생성된 8자리 해시를 사용하여 추적성 확보.
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/
+    ├── orchestrator/stages/render.py (이미지 생성 호출 및 결과 동기화)
+    └── models/turn.py (RenderOutput 스키마 확장)
+
+### 다음 단계
+- [U-054[Mvp]] 이미지 생성 폴백 및 실패 복구 체계 강화
+- [U-055[Mvp]] 이미지 파이프라인 Mock/Real 모드 통합 검증
+
+---
+
+## [2026-02-01 15:40] [U-052[Mvp]] 조건부 이미지 생성 제어 로직(should_generate 판정) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: `TurnOutput` 내 `image_job` 분석 및 재화(Economy) 기반 이미지 생성 가부 판정 로직 구현
+- **추가 컴포넌트**: `backend/src/unknown_world/orchestrator/stages/render_helpers.py` (판정 헬퍼), `vibe/unit-results/U-052[Mvp].md` (보고서), `vibe/unit-runbooks/U-052-conditional-image-generation-runbook.md` (런북)
+- **달성 요구사항**: [RULE-005] 경제 인바리언트 준수, [RULE-007] 프롬프트 보안 로깅 적용
+
+### 기술적 구현 세부사항
+
+**판정 파이프라인**:
+- **Pure Function Approach**: 판정 로직을 `render_helpers.py`의 순수 함수로 분리하여 테스트 가능성 및 정합성 확보.
+- **Cost Invariant**: 이미지 생성 비용(10 Signal)을 상수로 정의하고, 잔액 부족 시 `insufficient_balance` 사유와 함께 텍스트-only 폴백 유도.
+- **Defensive Guard**: 프롬프트 부재 시 생성을 원천 차단하고, 로그에는 SHA-256 기반 8자리 해시만 기록하여 보안 가이드 준수.
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/orchestrator/stages/
+    ├── render_helpers.py (신규: 판정 및 해시 헬퍼)
+    └── render.py (판정 로직 통합 호출)
+
+### 다음 단계
+- [U-053[Mvp]] 비동기 이미지 생성 및 결과 데이터 동기화
+
+---
+
+## [2026-02-01 15:15] [U-051[Mvp]] ⚡렌더링 단계-이미지 생성 서비스 브릿지 구축 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: `PipelineContext` 내 이미지 생성 서비스 의존성 주입 및 `render_stage` 연결 구조 구축
+- **추가 컴포넌트**: `backend/src/unknown_world/orchestrator/pipeline.py` (의존성 주입), `backend/tests/unit/orchestrator/test_u051_bridge.py` (검증 테스트), `vibe/unit-results/U-051[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-010] 기술 스택/모델 버전 고정 준수, [RULE-008] 단계 이벤트 일관성 유지
+
+### 기술적 구현 세부사항
+
+**의존성 주입 아키텍처**:
+- **Context Extension**: `PipelineContext`에 `image_generator` 필드를 추가하여 서비스 인스턴스에 대한 유형 안전한 참조 확보.
+- **Auto-Discovery**: `create_pipeline_context` 호출 시 이미지 생성기를 명시적으로 주입하거나 전역 팩토리를 통해 자동으로 획득하는 브릿지 로직 구현.
+- **Circular Dependency Guard**: `TYPE_CHECKING`을 활용하여 서비스와 오케스트레이터 간의 순환 참조 리스크 제거.
+
+### 코드 구조
+repo-root/
+└── backend/src/unknown_world/orchestrator/
+    ├── pipeline.py (컨텍스트 생성 및 서비스 주입)
+    ├── stages/types.py (PipelineContext 필드 확장)
+    └── stages/render.py (서비스 연결 가드 추가)
+
+### 다음 단계
+- [U-052[Mvp]] 조건부 이미지 생성 제어 로직 구현
+
+---
+
 ## [2026-02-01 10:50] [U-050[Mvp]] UI/UX - 오버레이 팔레트/강도 튜닝 및 반응형 폴리시 완료
 
 ### 구현 완료 항목

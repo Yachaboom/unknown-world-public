@@ -480,14 +480,29 @@ class RenderOutput(BaseModel):
     """렌더링 출력 데이터.
 
     이미지 생성/편집 관련 정보입니다.
+    image_job은 AI 모델이 생성하고, image_url/image_id는 후처리에서 채워집니다.
 
     Attributes:
-        image_job: 이미지 생성 작업 (선택)
+        image_job: 이미지 생성 작업 (선택, AI 모델 생성)
+        image_url: 생성된 이미지 URL (선택, 후처리에서 채움, U-053)
+        image_id: 생성된 이미지 ID (선택, 후처리에서 채움, U-053)
+        generation_time_ms: 이미지 생성 소요 시간 (밀리초, 선택, U-053)
+        background_removed: 배경 제거 수행 여부 (U-035, 선택)
     """
 
     model_config = ConfigDict(extra="forbid")
 
     image_job: ImageJob | None = Field(default=None, description="이미지 생성 작업 (선택)")
+    image_url: str | None = Field(
+        default=None, description="생성된 이미지 URL (후처리에서 채움, U-053)"
+    )
+    image_id: str | None = Field(
+        default=None, description="생성된 이미지 ID (후처리에서 채움, U-053)"
+    )
+    generation_time_ms: int | None = Field(
+        default=None, description="이미지 생성 소요 시간 (ms, U-053)"
+    )
+    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
 
 
 # =============================================================================
