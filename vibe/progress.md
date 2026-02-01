@@ -1,5 +1,32 @@
 # 프로젝트 진행 상황
 
+## [2026-02-01 21:05] [U-061[Mvp]] 이미지 생성 지침(scene_prompt) 파이프라인 통합 및 i18n 정합성 강화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: `scene_prompt.md` 지침을 시스템 프롬프트에 동적 통합, 영문 가이드라인 추가 및 i18n 로딩 로직 강화
+- **추가 컴포넌트**: `backend/prompts/image/scene_prompt.en.md`, `vibe/unit-results/U-061[Mvp].md`
+- **달성 요구사항**: [RULE-006] 언어 정합성(ko/en), [이미지 품질] 고품질 키워드(Cinematic, Dark Fantasy 등) 파이프라인 주입
+
+### 기술적 구현 세부사항
+
+**프롬프트 통합 파이프라인**:
+- **Dynamic Guideline Injection**: `TurnOutputGenerator`가 시스템 프롬프트를 생성할 때 `prompt_loader`를 통해 현재 세션 언어에 맞는 이미지 지침을 로드하여 자동으로 섹션을 추가함.
+- **i18n & Fallback**: `scene_prompt.en.md`를 추가하여 영문 세션 품질을 확보하고, 지침 파일 미존재 시 `ko`로 안전하게 폴백하는 로직을 `prompt_loader.py`에 구현.
+
+**코드 정제 및 부채 해결**:
+- **Hard-coding Cleanup**: `image_generation.py`에 남아있던 `Language.KO` 하드코딩 및 중복된 인라인 스타일 가이드를 제거하여 서비스 레이어를 경량화하고 오케스트레이터로 역할을 일원화함.
+
+### 의존성 변경
+
+- 없음 (기존 `prompt_loader` 구조 활용)
+
+### 다음 단계
+
+- **U-064**: 이미지 프롬프트 반영 품질 최종 시각적 검증
+
+---
+
 ## [2026-02-01 20:30] [U-060[Mvp]] 테스트 코드 정합성 수정 완료
 
 ### 구현 완료 항목

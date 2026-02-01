@@ -33,10 +33,13 @@ from unknown_world.models.scanner import (
 )
 from unknown_world.models.turn import Language
 from unknown_world.services.image_understanding import (
-    ALLOWED_MIME_TYPES,
-    MAX_FILE_SIZE_BYTES,
     ImageUnderstandingService,
     get_image_understanding_service,
+)
+from unknown_world.storage.validation import (
+    ALLOWED_IMAGE_MIME_TYPES,
+    MAX_IMAGE_FILE_SIZE_BYTES,
+    validate_image_upload,
 )
 
 # =============================================================================
@@ -183,20 +186,6 @@ async def scan_image(
     except ValueError:
         lang = Language.KO
 
-    # 파일 검증: Content-Type
-    content_type = file.content_type or "application/octet-stream"
-    if content_type.lower() not in ALLOWED_MIME_TYPES:
-        logger.warning(
-            "[ScannerAPI] 지원하지 않는 파일 형식",
-            extra={"content_type": content_type},
-        )
-        return ScannerResponse(
-            success=False,
-            status=ScanStatus.FAILED,
-            message=f"지원하지 않는 이미지 형식입니다: {content_type}",
-            language=lang,
-        )
-
     # 파일 읽기
     try:
         content = await file.read()
@@ -212,17 +201,23 @@ async def scan_image(
             language=lang,
         )
 
-    # 파일 크기 검증
-    if len(content) > MAX_FILE_SIZE_BYTES:
-        size_mb = len(content) / (1024 * 1024)
+    # 중앙화된 파일 검증 (RULE-004, RU-006-Q1)
+    content_type = file.content_type or "application/octet-stream"
+    validation_error = validate_image_upload(
+        content=content,
+        content_type=content_type,
+        language=lang,
+    )
+
+    if validation_error:
         logger.warning(
-            "[ScannerAPI] 파일 크기 초과",
-            extra={"size_mb": size_mb},
+            "[ScannerAPI] 파일 검증 실패",
+            extra={"error": validation_error},
         )
         return ScannerResponse(
             success=False,
             status=ScanStatus.FAILED,
-            message=f"파일이 너무 큽니다: {size_mb:.1f}MB (최대 20MB)",
+            message=validation_error,
             language=lang,
         )
 
@@ -300,6 +295,6 @@ async def scanner_health(
         status="ok",
         mode="mock" if service.is_mock else "real",
         model="VISION (gemini-3-flash-preview)",
-        supported_formats=list(ALLOWED_MIME_TYPES),
-        max_file_size_mb=MAX_FILE_SIZE_BYTES // (1024 * 1024),
+        supported_formats=list(ALLOWED_IMAGE_MIME_TYPES),
+        max_file_size_mb=MAX_IMAGE_FILE_SIZE_BYTES // (1024 * 1024),
     )

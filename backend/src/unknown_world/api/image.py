@@ -25,18 +25,21 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from unknown_world.models.turn import Language
 from unknown_world.services.image_generation import (
     ImageGenerationRequest,
     ImageGenerationStatus,
     ImageGeneratorType,
     create_fallback_response,
     get_image_generator,
-    validate_image_request,
 )
 from unknown_world.storage.paths import (
     DEFAULT_IMAGE_EXTENSION,
     build_image_url,
     get_generated_images_dir,
+)
+from unknown_world.storage.validation import (
+    validate_image_generation_request,
 )
 
 # =============================================================================
@@ -77,6 +80,7 @@ class GenerateImageRequest(BaseModel):
 
     Attributes:
         prompt: 이미지 생성 프롬프트 (필수)
+        language: 언어 (에러 메시지용, RULE-006)
         aspect_ratio: 가로세로 비율
         image_size: 이미지 크기
         reference_image_ids: 참조 이미지 ID 목록 (편집용)
@@ -87,6 +91,7 @@ class GenerateImageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prompt: str = Field(min_length=1, max_length=2000, description="이미지 생성 프롬프트")
+    language: Language = Field(default=Language.KO, description="요청 언어")
     aspect_ratio: str = Field(default="1:1", description="가로세로 비율")
     image_size: str = Field(default="1024x1024", description="이미지 크기")
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
@@ -162,14 +167,10 @@ async def generate_image(
         GenerateImageResponse: 생성 결과
     """
     # 요청 검증
-    validation_error = validate_image_request(
-        ImageGenerationRequest(
-            prompt=request.prompt,
-            aspect_ratio=request.aspect_ratio,
-            image_size=request.image_size,
-            reference_image_ids=request.reference_image_ids,
-            session_id=request.session_id,
-        )
+    validation_error = validate_image_generation_request(
+        prompt=request.prompt,
+        image_size=request.image_size,
+        language=request.language,
     )
 
     if validation_error:

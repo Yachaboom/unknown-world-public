@@ -277,7 +277,7 @@ def validate_image(
     Returns:
         에러 메시지 (없으면 None)
     """
-    return validate_image_upload(content, content_type, language="ko-KR")
+    return validate_image_upload(content, content_type, language=Language.KO)
 
 
 def normalize_bbox(bbox: dict[str, Any]) -> Box2D:

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from unknown_world.models.turn import Language
+
 # =============================================================================
 # 이미지 업로드 제한 (Scanner/Vision 공통)
 # =============================================================================
@@ -80,7 +82,7 @@ def validate_image_upload(
     content: bytes,
     content_type: str,
     *,
-    language: str = "ko-KR",
+    language: Language = Language.KO,
 ) -> str | None:
     """업로드 이미지를 검증합니다.
 
@@ -92,7 +94,7 @@ def validate_image_upload(
     Returns:
         에러 메시지 (없으면 None)
     """
-    is_ko = language == "ko-KR"
+    is_ko = language == Language.KO
 
     # MIME 타입 검증
     if content_type.lower() not in ALLOWED_IMAGE_MIME_TYPES:
@@ -126,7 +128,7 @@ def validate_image_generation_request(
     prompt: str,
     image_size: str,
     *,
-    language: str = "ko-KR",
+    language: Language = Language.KO,
 ) -> str | None:
     """이미지 생성 요청을 검증합니다.
 
@@ -138,7 +140,7 @@ def validate_image_generation_request(
     Returns:
         에러 메시지 (없으면 None)
     """
-    is_ko = language == "ko-KR"
+    is_ko = language == Language.KO
 
     # 이미지 크기 검증
     if image_size not in SUPPORTED_IMAGE_SIZES:

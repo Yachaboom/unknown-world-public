@@ -10,20 +10,22 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 
 ```text
 backend/
+├── prompts/
+│   ├── image/ (이미지 생성 가이드라인: scene_prompt.ko.md, scene_prompt.en.md)
+│   ├── system/ (Game Master 시스템 프롬프트)
+│   └── turn/ (턴 출력 제어 지침)
 ├── src/unknown_world/
 │   ├── api/ (엔드포인트 및 스트리밍 헬퍼)
 │   ├── config/ (모델 ID/라벨 SSOT)
-│   ├── models/ (Pydantic 스키마)
+│   ├── models/ (Pydantic 스키마: turn.py 등)
 │   ├── orchestrator/ (7대 단계 파이프라인 및 복구 루프)
-│   │   ├── stages/ (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
-│   │   │   └── render_helpers.py (이미지 판정 및 폴백 헬퍼)
-│   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리/프리플라이트)
-│   ├── storage/ (로컬/GCS 스토리지 추상화 및 경로 관리)
+│   │   ├── prompt_loader.py (프롬프트 로딩 및 i18n 폴백)
+│   │   ├── generate_turn_output.py (시스템 프롬프트 구성 및 통합)
+│   │   └── stages/ (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
+│   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리)
+│   ├── storage/ (로컬/GCS 스토리지 추상화)
 │   └── validation/ (비즈니스 룰 및 언어 게이트)
 ├── tests/ (유닛, 통합, QA 테스트)
-│   ├── integration/
-│   ├── unit/
-│   └── manual_test_*.py
 ├── generated_images/ (생성된 이미지 로컬 저장소)
 └── pyproject.toml
 frontend/
@@ -61,7 +63,17 @@ vibe/
 - `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
 ---
 
-## 24. 핫스팟 디자인 및 시각적 품질 정책 (U-058[Mvp])
+## 25. 이미지 생성 지침 통합 및 i18n 정책 (U-061[Mvp])
+
+1. **지침 통합 방식 (Option A)**:
+    - **System Prompt Fusion**: `scene_prompt.md`의 가이드라인을 별도 턴 단계로 분리하지 않고, Game Master의 시스템 프롬프트 하단에 `## 이미지 생성 지침` 섹션으로 직접 주입함.
+    - **LLM Context Alignment**: LLM이 내러티브 생성 시점부터 이미지 생성에 최적화된 키워드(Cinematic, Dark Fantasy, 16:9 등)를 문맥에 포함하도록 유도하여 `image_job.prompt` 품질을 상향 평준화함.
+2. **언어 정합성 및 폴백 (RULE-006)**:
+    - **Language Synchronization**: 세션 언어(`ko-KR`, `en-US`)에 따라 자동으로 해당 언어의 지침 파일(`scene_prompt.{lang}.md`)을 로드함.
+    - **Safe Fallback**: 특정 언어의 지침 파일이 부재할 경우 기본값인 `ko`(한국어) 지침으로 폴백하여 파이프라인 중단을 방지함.
+3. **서비스 레이어 경량화**:
+    - **Role Consolidation**: 이미지 프롬프트 생성에 관한 스타일 지침을 오케스트레이터(프롬프트 계층)로 일원화하고, `image_generation.py` 등 서비스 레이어의 하드코딩된 스타일 가이드라인을 제거하여 역할 책임을 분리함.
+
 
 1. **디자인 테마 (Option C - Magenta)**:
     - **Primary Accent**: 터미널 녹색과 대비되는 `#e040fb` (Magenta) 계열을 강조색으로 사용하여 상호작용 지점을 명확히 함.
@@ -98,7 +110,8 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Service Injection (U-051)**: `PipelineContext` 생성 시 `image_generator` 등 핵심 서비스를 주입하거나 자동으로 획득하여 단계 간 서비스 공유.
     - **Conditional Image Generation (U-052)**: 모델의 `image_job` 요청을 경제 잔액, 프롬프트 유효성, `should_generate` 플래그를 기반으로 종합 판정하여 불필요한 비용 및 지연 방지.
     - **Async Data Synchronization (U-053)**: 비동기(`await`) 이미지 생성을 수행하고, 생성된 `image_url` 및 메타데이터를 `TurnOutput` 응답에 원자적으로 동기화하여 프론트엔드에 전달.
-    - **Mock/Real Integrated Validation (U-055)**: 개발 모드(Mock)와 실모델 모드(Real) 간의 이미지 파이프라인 동작 일관성을 통합 검증하고, 모드별 성능 지표 및 폴백 안전성을 확정함.
+    - **Mock/Real Integrated Validation (U-055)**: 개발 모드(Mock)와 실모델 모드(Real) 간의 이미지 파이프라인 동작 일관성을 통합 검증함.
+    - **Image Prompt Integration (U-061)**: 시스템 프롬프트에 이미지 가이드라인을 동적으로 삽입하여 LLM의 이미지 프롬프트 생성 품질을 상향 평준화하고 i18n 정합성을 확보함.
     - **Deterministic Diversity (U-048[Mvp])**: Mock 모드에서도 per-turn RNG를 통해 결정적 다양성 확보.
 4. **Guaranteed Safe Fallback**: 모든 오류 상황에서 입력 시점의 재화를 보존하는 **안전 폴백 TurnOutput** 생성 보장.
 5. **이중 검증**: 서버(Pydantic) 및 클라이언트(Zod)에서 모든 데이터를 전수 검증함.

@@ -39,6 +39,7 @@ from unknown_world.models.turn import (
 )
 from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.prompt_loader import (
+    load_image_prompt,
     load_system_prompt,
     load_turn_instructions,
 )
@@ -156,6 +157,33 @@ class TurnOutputGenerator:
         # 언어별 프롬프트 로드
         system_prompt = load_system_prompt(turn_input.language)
         turn_instructions = load_turn_instructions(turn_input.language)
+
+        # U-061: 이미지 생성 가이드라인 로드 및 시스템 프롬프트에 추가
+        # Q1 결정: Option A (Game Master 시스템 프롬프트에 섹션 추가)
+        # Q2 결정: Option A (영문 없으면 한국어로 폴백 - prompt_loader에서 처리)
+        try:
+            image_guidelines = load_image_prompt(turn_input.language)
+            # 이미지 가이드라인을 시스템 프롬프트 끝에 섹션으로 추가
+            system_prompt = f"""{system_prompt}
+
+---
+
+## 이미지 생성 지침 (Image Generation Guidelines)
+
+아래 가이드라인에 따라 `image_job.prompt` 필드를 작성하세요.
+LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 있도록 합니다.
+
+{image_guidelines}"""
+            logger.debug(
+                "[TurnOutputGenerator] 이미지 가이드라인 로드 완료",
+                extra={"language": turn_input.language.value},
+            )
+        except FileNotFoundError:
+            # 가이드라인 없으면 기본 프롬프트만 사용 (안전한 폴백)
+            logger.warning(
+                "[TurnOutputGenerator] 이미지 가이드라인 파일 미존재, 기본 프롬프트 사용",
+                extra={"language": turn_input.language.value},
+            )
 
         # 입력 정보 구성 (프롬프트에 포함)
         input_summary = f"""
