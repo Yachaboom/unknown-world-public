@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 73/96 (76.0%) | **MVP**: 73/79 (92.4%) | **MMP**: 0/17 (0%)
+**전체**: 73/105 (69.5%) | **MVP**: 73/88 (83.0%) | **MMP**: 0/17 (0%)
 
-**예상 완료(가정)**: MVP D-2 | MMP D-8
+**예상 완료(가정)**: MVP D-5 | MMP D-11
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -17,9 +17,10 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 **추가 메모**:
 - 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
-- M3 통합 구간에서 “나중에 한 번에 붙이기”로 인한 기술 부채/회귀를 줄이기 위해, 중간 체크포인트(CP-MVP-04~06)를 추가했다(실모델 Hard Gate / 멀티모달 이미지 게이트 / Scanner 업로드 게이트). **ID는 유지**하되, 목표일/Depends 기준으로 실행 순서를 정렬한다.
+- M3 통합 구간에서 "나중에 한 번에 붙이기"로 인한 기술 부채/회귀를 줄이기 위해, 중간 체크포인트(CP-MVP-04~06)를 추가했다(실모델 Hard Gate / 멀티모달 이미지 게이트 / Scanner 업로드 게이트). **ID는 유지**하되, 목표일/Depends 기준으로 실행 순서를 정렬한다.
 - ko/en 혼합 출력 사례: `vibe/ref/en-ko-issue.png` (현상/원인 분류 및 수정 계획은 U-043/U-044에서 정리)
-- 로컬에서 `.env`가 자동 로딩되지 않으면 `UW_MODE`가 기본값(mock)으로 동작해 MockOrchestrator 템플릿(“...라고 말했습니다”, 고정 내러티브)이 반복 노출될 수 있다 → U-047(백엔드 `.env` 자동 로딩) + U-048(Mock 내러티브/액션 echo 개선)로 해결한다.
+- 로컬에서 `.env`가 자동 로딩되지 않으면 `UW_MODE`가 기본값(mock)으로 동작해 MockOrchestrator 템플릿("...라고 말했습니다", 고정 내러티브)이 반복 노출될 수 있다 → U-047(백엔드 `.env` 자동 로딩) + U-048(Mock 내러티브/액션 echo 개선)로 해결한다.
+- **[2026-02-01 추가]** MVP 품질 개선을 위한 신규 유닛 추가: UI 품질(U-056~U-058), 테스트 수정(U-060), 이미지 프롬프트 통합(U-061), 언어/재화/API 버그 수정(U-062~U-065). 프롬프트 ko/en 분리는 U-036에서 이미 완료됨.
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -78,11 +79,11 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **책임 Unit**: U-005 ~ CP-MVP-01, U-016 ~ U-018, CP-MVP-04, RU-005, U-047, U-048, CP-MVP-07
 - **상태**: ✅ (리팩토링 완료)
 
-### “채팅이 아닌” 고정 게임 UI + 핵심 인터랙션
+### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
-- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 “읽을 수 있는” 수준으로 유지된다
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050
-- **상태**: ✅
+- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**
+- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**
+- **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
 
@@ -92,8 +93,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
-- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**
-- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**
+- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**
+- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**, **U-061**
 - **상태**: 🚧
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
@@ -138,12 +139,21 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
+ID=[U-056[Mvp]](unit-plans/U-056[Mvp].md) | 인벤토리 아이템 이름 텍스트 잘림 최소화 + 툴팁 | Depends=U-011 | ⏸️
+ID=[U-057[Mvp]](unit-plans/U-057[Mvp].md) | 텍스트 번짐 식별성 개선 | Depends=U-037 | ⏸️
+ID=[U-058[Mvp]](unit-plans/U-058[Mvp].md) | 핫스팟 디자인 개선 (코너/스트로크/색상) | Depends=U-010 | ⏸️
+ID=[U-060[Mvp]](unit-plans/U-060[Mvp].md) | 테스트 코드 정합성 수정 | Depends=U-055 | ⏸️
+ID=[U-061[Mvp]](unit-plans/U-061[Mvp].md) | ⚡이미지 생성 지침(scene_prompt) 파이프라인 통합 및 i18n 정합성 강화 | Depends=U-055,U-036 | ⏸️
+ID=[U-062[Mvp]](unit-plans/U-062[Mvp].md) | MockOrchestrator 영어 입력 시 LanguageGate 수정 | Depends=U-055 | ⏸️
+ID=[U-063[Mvp]](unit-plans/U-063[Mvp].md) | 프론트엔드 턴 실행 후 재화 잔액 버그 수정 | Depends=U-055 | ⏸️
+ID=[U-064[Mvp]](unit-plans/U-064[Mvp].md) | ⚡Gemini 이미지 생성 API 호출 방식 수정 | Depends=U-055 | ⏸️
+ID=[U-065[Mvp]](unit-plans/U-065[Mvp].md) | ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응) | Depends=U-064 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
 ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
 ID=[U-026[Mvp]](unit-plans/U-026[Mvp].md) | 리플레이/시나리오 하네스(저장+수동 러너) | Depends=U-024,U-025 | ⏸️
 ID=[RU-007[Mvp]](unit-plans/RU-007[Mvp].md) | 리팩토링: artifacts 버전/경로/링크 정리 | Depends=U-026 | ⏸️
-ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** | Depends=RU-007 | ⏸️
+ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** | Depends=RU-007,U-056,U-057,U-058,U-061 | ⏸️
 
 ### MMP
 
@@ -257,7 +267,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-055[Mvp]](unit-plans/U-055[Mvp].md) - 이미지 파이프라인 Mock/Real 모드 통합 검증
+**현재 작업**: [U-056[Mvp]](unit-plans/U-056[Mvp].md) - 인벤토리 아이템 이름 텍스트 잘림 최소화 + 툴팁
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -290,8 +300,19 @@ pnpm kill
 
 ## 일일 스탠드업 (2026-02-01)
 
-**완료**: [U-054[Mvp]](unit-results/U-054[Mvp].md) - 이미지 생성 폴백 및 실패 복구 체계 강화
+**완료**: [U-055[Mvp]](unit-results/U-055[Mvp].md) - 이미지 파이프라인 Mock/Real 모드 통합 검증
 
-**진행중**: [U-055[Mvp]](unit-plans/U-055[Mvp].md) - 이미지 파이프라인 Mock/Real 모드 통합 검증
+**진행중**: MVP 품질 개선 유닛 계획 수립 (U-056~U-061)
+
+**추가된 MVP 유닛**:
+- U-056: 인벤토리 아이템 이름 텍스트 잘림 최소화 + 툴팁
+- U-057: 텍스트 번짐 식별성 개선
+- U-058: 핫스팟 디자인 개선 (코너/스트로크/색상)
+- U-060: 테스트 코드 정합성 수정
+- U-061: 이미지 생성 지침(scene_prompt) 파이프라인 통합 및 i18n 정합성 강화
+- U-062: MockOrchestrator 영어 입력 시 LanguageGate 수정
+- U-063: 프론트엔드 턴 실행 후 재화 잔액 버그 수정
+- U-064: Gemini 이미지 생성 API 호출 방식 수정
+- U-065: TurnOutput 스키마 단순화 (Gemini API 제한 대응)
 
 **블로커**: 없음
