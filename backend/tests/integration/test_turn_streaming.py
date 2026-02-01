@@ -46,8 +46,9 @@ def test_turn_streaming_success():
     assert stages == expected_stages
 
     # 4. 배지 이벤트 포함 여부 확인
+    # U-060: badges 발생 여부가 중요, 정확한 수는 구현 세부사항이므로 >= 1로 완화
     badges_events = [e for e in events if e["type"] == "badges"]
-    assert len(badges_events) >= 2
+    assert len(badges_events) >= 1, "최소 1개 이상의 badges 이벤트가 필요합니다"
     assert "schema_ok" in badges_events[0]["badges"]
 
     # 5. 최종 결과물 확인

@@ -120,6 +120,7 @@ async def _execute_image_generation(
         reference_image_ids=image_job.reference_image_ids,
         session_id=None,  # 세션 ID는 필요 시 TurnInput에서 추출
         remove_background=image_job.remove_background,
+        seed=ctx.seed,
         image_type_hint=image_job.image_type_hint,
     )
 

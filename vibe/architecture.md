@@ -16,10 +16,15 @@ backend/
 │   ├── models/ (Pydantic 스키마)
 │   ├── orchestrator/ (7대 단계 파이프라인 및 복구 루프)
 │   │   ├── stages/ (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
+│   │   │   └── render_helpers.py (이미지 판정 및 폴백 헬퍼)
 │   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리/프리플라이트)
 │   ├── storage/ (로컬/GCS 스토리지 추상화 및 경로 관리)
 │   └── validation/ (비즈니스 룰 및 언어 게이트)
 ├── tests/ (유닛, 통합, QA 테스트)
+│   ├── integration/
+│   ├── unit/
+│   └── manual_test_*.py
+├── generated_images/ (생성된 이미지 로컬 저장소)
 └── pyproject.toml
 frontend/
 ├── src/

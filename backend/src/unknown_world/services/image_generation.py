@@ -24,6 +24,7 @@ import base64
 import hashlib
 import logging
 import os
+import random
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -121,6 +122,7 @@ class ImageGenerationRequest(BaseModel):
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
     session_id: str | None = Field(default=None, description="세션 ID")
     remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
+    seed: int | None = Field(default=None, description="결정적 생성을 위한 시드 (선택)")
     image_type_hint: str | None = Field(
         default=None,
         description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
@@ -236,8 +238,13 @@ class MockImageGenerator:
             },
         )
 
-        # 고유 이미지 ID 생성
-        image_id = f"img_{uuid.uuid4().hex[:12]}"
+        # 고유 이미지 ID 생성 (U-060: seed가 있으면 결정적 생성)
+        if request.seed is not None:
+            # 시드와 프롬프트 해시를 조합하여 고유성 확보
+            seed_rng = random.Random(f"{request.seed}_{prompt_hash}")
+            image_id = f"img_{seed_rng.getrandbits(48):012x}"
+        else:
+            image_id = f"img_{uuid.uuid4().hex[:12]}"
 
         # 플레이스홀더 이미지 생성 (1x1 투명 PNG)
         # 실제 환경에서는 Gemini API 응답으로 대체됨
@@ -469,8 +476,17 @@ class ImageGenerator:
                 if image_bytes is None:
                     raise ValueError("이미지 데이터를 추출할 수 없습니다.")
 
-                # 고유 ID 및 파일 저장
-                image_id = f"img_{uuid.uuid4().hex[:12]}"
+                # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
+                prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
+
+                # 고유 ID 및 파일 저장 (U-060: seed가 있으면 결정적 생성)
+                if request.seed is not None:
+                    # 시드와 프롬프트 해시를 조합하여 고유성 확보
+                    seed_rng = random.Random(f"{request.seed}_{prompt_hash}")
+                    image_id = f"img_{seed_rng.getrandbits(48):012x}"
+                else:
+                    image_id = f"img_{uuid.uuid4().hex[:12]}"
+
                 file_name = f"{image_id}.png"
                 file_path = self._output_dir / file_name
                 file_path.write_bytes(image_bytes)

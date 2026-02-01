@@ -118,10 +118,15 @@ async def test_genai_client_generate_real_call():
 
         response = await client.generate(request)
 
-        # 호출 인자 확인
-        mock_instance.aio.models.generate_content.assert_called_once_with(
-            model=MODEL_QUALITY, contents="hello", config={"max_output_tokens": 100}
-        )
+        # U-060: 호출 인자 확인 - GenerateContentConfig 객체로 전달되므로 타입 + 핵심 속성 검증
+        mock_instance.aio.models.generate_content.assert_called_once()
+        call_kwargs = mock_instance.aio.models.generate_content.call_args.kwargs
+        assert call_kwargs["model"] == MODEL_QUALITY
+        assert call_kwargs["contents"] == "hello"
+        # config는 GenerateContentConfig 객체이므로 속성 검증
+        config = call_kwargs["config"]
+        assert config is not None
+        assert config.max_output_tokens == 100
         assert response.text == "Actual response"
         assert response.usage["total_tokens"] == 30
 
@@ -199,17 +204,28 @@ async def test_genai_client_full_config():
         request = GenerateRequest(prompt="hi", max_tokens=50, temperature=0.7)
 
         # generate 호출 검증
+        # U-060: GenerateContentConfig 객체로 전달되므로 타입 + 핵심 속성 검증
         await client.generate(request)
-        mock_instance.aio.models.generate_content.assert_called_with(
-            model=MODEL_FAST, contents="hi", config={"max_output_tokens": 50, "temperature": 0.7}
-        )
+        mock_instance.aio.models.generate_content.assert_called_once()
+        gen_call_kwargs = mock_instance.aio.models.generate_content.call_args.kwargs
+        assert gen_call_kwargs["model"] == MODEL_FAST
+        assert gen_call_kwargs["contents"] == "hi"
+        gen_config = gen_call_kwargs["config"]
+        assert gen_config is not None
+        assert gen_config.max_output_tokens == 50
+        assert gen_config.temperature == 0.7
 
         # generate_stream 호출 검증
         async for _ in client.generate_stream(request):
             pass
-        mock_instance.aio.models.generate_content_stream.assert_called_with(
-            model=MODEL_FAST, contents="hi", config={"max_output_tokens": 50, "temperature": 0.7}
-        )
+        mock_instance.aio.models.generate_content_stream.assert_called_once()
+        stream_call_kwargs = mock_instance.aio.models.generate_content_stream.call_args.kwargs
+        assert stream_call_kwargs["model"] == MODEL_FAST
+        assert stream_call_kwargs["contents"] == "hi"
+        stream_config = stream_call_kwargs["config"]
+        assert stream_config is not None
+        assert stream_config.max_output_tokens == 50
+        assert stream_config.temperature == 0.7
 
 
 def test_get_genai_client_real_init_failure_fallback():

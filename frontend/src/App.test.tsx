@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 import * as turnStream from './api/turnStream';
 
@@ -76,15 +76,21 @@ describe('App Integration - Hotspot Click', () => {
     const techProfile = screen.getByLabelText('profile.tech.name');
     fireEvent.click(techProfile);
 
+    // U-060: 프로필 선택 후 상태 전환이 React 상태 업데이트이므로 waitFor 사용
     // 2. 이제 메인 게임 UI가 나타남 - 테크 프로필의 '터미널' 핫스팟 찾기
-    const terminalHotspot = screen.getByLabelText('터미널');
-    expect(terminalHotspot).toBeInTheDocument();
+    const terminalHotspot = await waitFor(() => {
+      const hotspot = screen.getByLabelText('터미널');
+      expect(hotspot).toBeInTheDocument();
+      return hotspot;
+    });
 
     // 클릭 시뮬레이션
     fireEvent.click(terminalHotspot);
 
     // startTurnStream 호출 확인
-    expect(turnStream.startTurnStream).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(turnStream.startTurnStream).toHaveBeenCalled();
+    });
 
     const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
 

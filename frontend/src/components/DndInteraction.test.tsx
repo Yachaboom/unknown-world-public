@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
 import * as turnStream from '../api/turnStream';
 
@@ -88,9 +88,14 @@ describe('DnD Interaction - Logic Test', () => {
     const narratorProfile = screen.getByLabelText('profile.narrator.name');
     fireEvent.click(narratorProfile);
 
+    // U-060: 프로필 선택 후 DndContext 마운트를 기다림
     // DndContext가 렌더링된 후 콜백 가져오기
-    const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
-    expect(dndCallbacks).toBeDefined();
+    const dndCallbacks = await waitFor(() => {
+      const callbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+      expect(callbacks).toBeDefined();
+      expect(callbacks.onDragEnd).toBeDefined();
+      return callbacks;
+    });
 
     // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
     const mockItem = {
@@ -128,7 +133,9 @@ describe('DnD Interaction - Logic Test', () => {
     });
 
     // startTurnStream 호출 확인
-    expect(turnStream.startTurnStream).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(turnStream.startTurnStream).toHaveBeenCalled();
+    });
     const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
 
     expect(input.text).toBe('Drop: 키카드 A on 터미널');
@@ -146,9 +153,14 @@ describe('DnD Interaction - Logic Test', () => {
     const narratorProfile = screen.getByLabelText('profile.narrator.name');
     fireEvent.click(narratorProfile);
 
+    // U-060: 프로필 선택 후 DndContext 마운트를 기다림
     // DndContext가 렌더링된 후 콜백 가져오기
-    const dndCallbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
-    expect(dndCallbacks).toBeDefined();
+    const dndCallbacks = await waitFor(() => {
+      const callbacks = (global as unknown as Record<string, MockDndCallbacks>).dndCallbacks;
+      expect(callbacks).toBeDefined();
+      expect(callbacks.onDragEnd).toBeDefined();
+      return callbacks;
+    });
 
     // RU-003-Q1: 드래그 데이터에 item 객체 포함 (타입 가드 요구사항)
     const mockItem = {
