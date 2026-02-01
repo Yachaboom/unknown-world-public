@@ -1,5 +1,34 @@
 # 프로젝트 진행 상황
 
+## [2026-02-02 14:15] [U-063[Mvp]] 프론트엔드 턴 실행 후 재화 잔액 버그 수정 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 턴 실행 중 스키마 검증 실패(폴백) 시 재화 잔액이 0으로 초기화되는 버그 수정
+- **추가 컴포넌트**: `vibe/unit-results/U-063[Mvp].md` (개발 보고서)
+- **달성 요구사항**: [RULE-005] 재화 인바리언트 준수 (잔액 보존), [RULE-004] 안전 폴백 품질 강화
+
+### 기술적 구현 세부사항
+
+**재화 잔액 보존 정책**:
+- **Snapshot Persistence**: 턴 입력 시 서버로 전달한 `economy_snapshot`을 로컬 파서 및 폴백 생성기에 주입하여, 검증 실패 시에도 현재 잔액을 유지하도록 개선.
+- **Fail-safe Fallback**: `frontend/src/schemas/turn.ts` 및 `api/turnStream.ts`의 폴백 로직을 수정하여 `balance_after`가 하드코딩된 0이 아닌 실제 잔액 스냅샷을 따르도록 SSOT 단일화.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── schemas/
+    │   └── turn.ts (폴백 생성기에 snapshot 파라미터 추가)
+    └── api/
+        └── turnStream.ts (이벤트 분배 시 snapshot 주입)
+
+### 다음 단계
+
+- **U-064**: Gemini 이미지 생성 API 호출 방식 수정
+- **U-065**: TurnOutput 스키마 단순화 (Gemini API 제한 대응)
+
+---
+
 ## [2026-02-01 22:35] [U-062[Mvp]] MockOrchestrator 영어 입력 시 LanguageGate 수정 완료
 
 ### 구현 완료 항목
@@ -20,8 +49,8 @@
 
 ### 다음 단계
 
-- **U-063**: 프론트엔드 턴 실행 후 재화 잔액 버그 수정
 - **U-064**: Gemini 이미지 생성 API 호출 방식 수정
+- **U-065**: TurnOutput 스키마 단순화 (Gemini API 제한 대응)
 
 ---
 

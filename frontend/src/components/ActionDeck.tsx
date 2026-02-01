@@ -24,38 +24,64 @@ import { useEconomyStore } from '../stores/economyStore';
 
 // =============================================================================
 // 드래그 스크롤 훅 (U-049: 스크롤바 숨기고 드래그로 이동)
+// U-063-fix: 클릭과 드래그를 구분하여 카드 클릭이 정상 동작하도록 수정
 // =============================================================================
+
+/** 드래그로 인식할 최소 이동 거리 (픽셀) */
+const DRAG_THRESHOLD = 5;
 
 function useDragScroll() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+
+  // ref로 관리하여 불필요한 리렌더링 방지
+  const isMouseDownRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasDraggedRef = useRef(false);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!containerRef.current) return;
-    setIsDragging(true);
-    setStartX(e.pageX - containerRef.current.offsetLeft);
-    setScrollLeft(containerRef.current.scrollLeft);
+    // mouseDown 시에는 isDragging을 설정하지 않음 (클릭 허용)
+    isMouseDownRef.current = true;
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX - containerRef.current.offsetLeft;
+    scrollLeftRef.current = containerRef.current.scrollLeft;
   }, []);
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isDragging || !containerRef.current) return;
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isMouseDownRef.current || !containerRef.current) return;
+
+    const x = e.pageX - containerRef.current.offsetLeft;
+    const distance = Math.abs(x - startXRef.current);
+
+    // 임계값을 넘어야 드래그로 인식
+    if (distance > DRAG_THRESHOLD) {
+      if (!hasDraggedRef.current) {
+        hasDraggedRef.current = true;
+        setIsDragging(true);
+      }
       e.preventDefault();
-      const x = e.pageX - containerRef.current.offsetLeft;
-      const walk = (x - startX) * 1.5; // 스크롤 속도 조절
-      containerRef.current.scrollLeft = scrollLeft - walk;
-    },
-    [isDragging, startX, scrollLeft],
-  );
+      const walk = (x - startXRef.current) * 1.5; // 스크롤 속도 조절
+      containerRef.current.scrollLeft = scrollLeftRef.current - walk;
+    }
+  }, []);
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+    isMouseDownRef.current = false;
+    // 드래그가 발생했으면 약간의 지연 후 isDragging 해제 (클릭 이벤트 차단 유지)
+    if (hasDraggedRef.current) {
+      setTimeout(() => {
+        setIsDragging(false);
+        hasDraggedRef.current = false;
+      }, 0);
+    }
   }, []);
 
   const handleMouseLeave = useCallback(() => {
+    isMouseDownRef.current = false;
     setIsDragging(false);
+    hasDraggedRef.current = false;
   }, []);
 
   return {

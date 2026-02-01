@@ -120,12 +120,19 @@ export class NDJSONParser {
  *
  * RU-002-S2: 캐스팅 대신 Zod safeParse를 적용하여 검증 강화.
  * Unknown/확장 이벤트는 UI를 멈추지 않고 경고만 출력.
+ * U-063: economySnapshot 파라미터 추가 - 폴백 시에도 재화 잔액 유지.
  *
  * @param event - 파싱된 이벤트 객체
  * @param callbacks - 콜백 함수들
  * @param language - 폴백 언어
+ * @param economySnapshot - 현재 재화 스냅샷 (폴백 시 잔액 유지)
  */
-function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Language): void {
+function dispatchEvent(
+  event: unknown,
+  callbacks: StreamCallbacks,
+  language: Language,
+  economySnapshot: { signal: number; memory_shard: number },
+): void {
   if (!event || typeof event !== 'object') return;
 
   // 기본 이벤트 타입 추출
@@ -193,17 +200,18 @@ function dispatchEvent(event: unknown, callbacks: StreamCallbacks, language: Lan
       const finalRawResult = safeParseFinalEventRaw(event);
       if (!finalRawResult.success) {
         console.warn('[TurnStream] Invalid final event structure:', finalRawResult.error.message);
-        // 구조가 잘못되어도 폴백 제공
+        // U-063: 구조가 잘못되어도 폴백 제공 (재화 잔액 유지)
         callbacks.onFinal?.({
           type: StreamEventType.FINAL,
-          data: createFallbackTurnOutput(language),
+          data: createFallbackTurnOutput(language, economySnapshot),
         });
         break;
       }
 
       // RULE-003/004: Zod strict parse + 폴백
+      // U-063: economySnapshot 전달하여 폴백 시에도 재화 잔액 유지
       const turnOutputPayload = finalRawResult.data.data;
-      const parseResult = safeParseTurnOutput(turnOutputPayload, language);
+      const parseResult = safeParseTurnOutput(turnOutputPayload, language, 0, economySnapshot);
 
       if (parseResult.success) {
         callbacks.onFinal?.({
@@ -282,19 +290,28 @@ function getErrorMessage(key: string, language: Language): string {
 }
 
 /**
- * 클라이언트 측 폴백 TurnOutput 생성 (언어만 지정).
+ * 클라이언트 측 폴백 TurnOutput 생성 (언어 + 스냅샷 지정).
  * dispatchEvent 내부에서 사용하는 간단한 폴백.
  * U-044: 하드코딩 메시지 제거, i18n 리소스 사용.
+ * U-063: economySnapshot 파라미터 추가 - 폴백에서도 재화 잔액 유지 (RULE-005).
  */
-function createFallbackTurnOutput(language: Language): TurnOutput {
+function createFallbackTurnOutput(
+  language: Language,
+  economySnapshot?: { signal: number; memory_shard: number },
+): TurnOutput {
   const fallbackNarrative = getErrorMessage('response_processing', language);
+
+  // U-063: 폴백에서도 재화 잔액 유지 (RULE-005)
+  const balanceAfter = economySnapshot
+    ? { signal: economySnapshot.signal, memory_shard: economySnapshot.memory_shard }
+    : { signal: 100, memory_shard: 5 }; // 기본값 (프로필 미로드 상태의 placeholder)
 
   return {
     language,
     narrative: fallbackNarrative,
     economy: {
       cost: { signal: 0, memory_shard: 0 },
-      balance_after: { signal: 0, memory_shard: 0 },
+      balance_after: balanceAfter,
     },
     safety: {
       blocked: false,
@@ -389,6 +406,7 @@ export async function executeTurnStream(
     const decoder = new TextDecoder('utf-8');
 
     // 스트림 읽기 루프
+    // U-063: economySnapshot을 dispatchEvent에 전달하여 폴백 시 재화 잔액 유지
     while (true) {
       const { done, value } = await reader.read();
 
@@ -398,14 +416,14 @@ export async function executeTurnStream(
       const events = parser.parse(chunk);
 
       for (const event of events) {
-        dispatchEvent(event, callbacks, input.language);
+        dispatchEvent(event, callbacks, input.language, input.economy_snapshot);
       }
     }
 
     // 남은 버퍼 플러시
     const remaining = parser.flush();
     if (remaining) {
-      dispatchEvent(remaining, callbacks, input.language);
+      dispatchEvent(remaining, callbacks, input.language, input.economy_snapshot);
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {

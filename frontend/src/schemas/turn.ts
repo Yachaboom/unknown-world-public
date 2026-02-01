@@ -544,14 +544,19 @@ export type TurnOutput = z.infer<typeof TurnOutputSchema>;
  * 검증 실패 시 제공되는 안전 폴백 TurnOutput.
  * UI가 멈추지 않도록 최소한의 정보를 제공합니다.
  *
+ * U-063: 폴백에서도 재화 잔액을 유지하도록 economySnapshot 파라미터 추가.
+ * RULE-005: 재화 인바리언트 - 폴백 시에도 잔액이 0으로 초기화되지 않아야 함.
+ *
  * @param language - 요청 언어
  * @param repairCount - 복구 시도 횟수
  * @param errorMessage - 오류 메시지 (선택)
+ * @param economySnapshot - 현재 재화 스냅샷 (선택, 제공 시 잔액 유지)
  */
 export function createFallbackTurnOutput(
   language: Language,
   repairCount: number = 0,
   errorMessage?: string,
+  economySnapshot?: { signal: number; memory_shard: number },
 ): TurnOutput {
   const fallbackNarrative =
     language === 'ko-KR'
@@ -563,12 +568,18 @@ export function createFallbackTurnOutput(
       ? '스키마 검증 실패로 인한 폴백 응답입니다.'
       : 'This is a fallback response due to schema validation failure.';
 
+  // U-063: 폴백에서도 재화 잔액 유지 (RULE-005)
+  // economySnapshot이 제공되면 해당 값을 사용, 없으면 기본값 사용
+  const balanceAfter = economySnapshot
+    ? { signal: economySnapshot.signal, memory_shard: economySnapshot.memory_shard }
+    : { signal: 100, memory_shard: 5 }; // 기본값 (프로필 미로드 상태의 placeholder)
+
   return {
     language,
     narrative: errorMessage ?? fallbackNarrative,
     economy: {
       cost: { signal: 0, memory_shard: 0 },
-      balance_after: { signal: 0, memory_shard: 0 },
+      balance_after: balanceAfter,
     },
     safety: {
       blocked: false,
@@ -613,14 +624,18 @@ export type TurnOutputParseResult =
  * TurnOutput을 안전하게 파싱합니다.
  * 실패 시 폴백 TurnOutput을 반환합니다 (RULE-004).
  *
+ * U-063: economySnapshot 파라미터 추가 - 폴백 시에도 재화 잔액 유지.
+ *
  * @param data - 파싱할 데이터
  * @param language - 폴백 시 사용할 언어 (기본: ko-KR)
  * @param repairCount - 현재 복구 시도 횟수
+ * @param economySnapshot - 현재 재화 스냅샷 (선택, 폴백 시 잔액 유지)
  */
 export function safeParseTurnOutput(
   data: unknown,
   language: Language = 'ko-KR',
   repairCount: number = 0,
+  economySnapshot?: { signal: number; memory_shard: number },
 ): TurnOutputParseResult {
   const result = TurnOutputSchema.safeParse(data);
 
@@ -631,7 +646,7 @@ export function safeParseTurnOutput(
   return {
     success: false,
     error: result.error,
-    fallback: createFallbackTurnOutput(language, repairCount),
+    fallback: createFallbackTurnOutput(language, repairCount, undefined, economySnapshot),
   };
 }
 

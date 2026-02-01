@@ -151,15 +151,15 @@ const updateFromTurn = (turnOutput: TurnOutput) => {
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 재화 상태의 SSOT(Single Source of Truth)?
+- [x] **Q1**: 재화 상태의 SSOT(Single Source of Truth)?
   - Option A: 프론트엔드 상태 (Zustand/useState)
   - Option B: 백엔드 응답이 항상 최신 (프론트엔드는 캐시만)
-  **권장**: Option B (백엔드가 재화 계산의 SSOT, 프론트엔드는 표시만)
+  **A1**: Option B (백엔드가 재화 계산의 SSOT, 프론트엔드는 표시만)
 
-- [ ] **Q2**: 재화 불일치 감지 시 처리?
+- [x] **Q2**: 재화 불일치 감지 시 처리?
   - Option A: 경고 표시 + 게임 진행 허용
   - Option B: 동기화 요청 후 재시도
-  **권장**: Option A (MVP에서는 경고만, 동기화는 MMP에서)
+  **A2**: Option A (MVP에서는 경고만, 동기화는 MMP에서)
 
 ## 참고 자료
 

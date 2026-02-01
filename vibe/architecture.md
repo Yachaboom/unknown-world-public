@@ -36,8 +36,8 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 │   └── schemas/turn/ (turn_output.schema.json 등)
 └── vibe/
     ├── unit-plans/
-    ├── unit-results/
-    └── unit-runbooks/
+    ├── unit-results/ (U-062[Mvp].md, U-063[Mvp].md 등)
+    └── unit-runbooks/ (U-063-economy-balance-fix-runbook.md 등)
 ```
 
 ### 주요 디렉토리 설명
@@ -82,6 +82,14 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 2. **언어 일관성 검증 (LanguageGate)**:
     - 턴 응답의 전체 내러티브 언어가 세션 언어(`Language.KO`/`EN`)와 일치하는지 전수 검증함.
     - 사용자 입력이 다른 언어일지라도 시스템 응답이 일관되게 세션 언어를 유지하도록 보장함.
+
+## 27. 재화 잔액 보존 및 폴백 정책 (U-063[Mvp])
+
+1. **폴백 재화 보존 (Snapshot Persistence)**:
+    - **RULE-005 준수**: 스키마 검증 실패(`schema_fail`) 등으로 인한 폴백 응답 생성 시, 사용자의 재화 잔액이 0으로 초기화되지 않도록 **입력 시점의 재화 스냅샷(`economy_snapshot`)**을 폴백 결과의 `balance_after`로 보존함.
+    - **SSOT 기반 복구**: 프론트엔드 파서(`safeParseTurnOutput`)와 폴백 생성기(`createFallbackTurnOutput`)에 스냅샷 주입 구조를 일원화하여 정책 드리프트 방지.
+2. **안전한 폴백 비용 정책**:
+    - 폴백 상황에서는 실제 비용 계산이 불가능하거나 신뢰할 수 없으므로, 사용자 보호를 위해 **비용(`cost`)을 항상 0**으로 처리함.
 
 ---
 

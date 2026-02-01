@@ -112,7 +112,7 @@
   - **Real 모드**: Game Master 프롬프트에 "사용자 입력을 내러티브에 그대로 인용하지 말 것" 지침 추가
   - **수정 파일**: `backend/src/unknown_world/orchestrator/mock.py`, `backend/prompts/system/game_master.ko.md`, `backend/prompts/system/game_master.en.md`
 
-## 2026-02-01 이슈: 프론트엔드 턴 실행 후 재화 잔액 0으로 초기화 (U-055 발견)
+## 2026-02-01 이슈: 프론트엔드 턴 실행 후 재화 잔액 0으로 초기화 (U-055 발견) ✅ 해결됨
 
 - **발견 위치**: `frontend/src/App.tsx` 또는 상태 관리 로직
 - **현상**: 프론트엔드에서 턴 실행 후 Signal/Shard가 0으로 표시되고 "잔액이 부족합니다" 경고 발생
@@ -120,14 +120,17 @@
   1. 프로필 선택 후 게임 시작 (Signal: 150, Shard: 5)
   2. 텍스트 입력 후 "실행" 클릭
   3. 턴 완료 후 Signal: 0, Shard: 0으로 변경됨
-- **추정 원인**:
-  - 백엔드 응답의 `economy.balance_after`가 프론트엔드 상태에 제대로 반영되지 않음
-  - 또는 폴백 응답에서 `balance_after`가 기본값(100, 5)이 아닌 초기값으로 설정됨
-  - 프론트엔드에서 응답 파싱 시 재화 상태 업데이트 로직 오류
-- **보류 사유**: U-055[Mvp] 범위 밖 (이미지 파이프라인 백엔드 검증이 주목적)
-- **권장 조치**:
-  - 프론트엔드에서 `/api/turn` 응답의 `economy.balance_after` 처리 로직 디버깅
-  - 백엔드 폴백 응답의 `economy_snapshot` 처리 확인
+- **원인 분석**:
+  - `frontend/src/schemas/turn.ts`의 `createFallbackTurnOutput` 함수에서 `balance_after`가 `{ signal: 0, memory_shard: 0 }`으로 하드코딩됨
+  - `frontend/src/api/turnStream.ts`의 `createFallbackTurnOutput`도 동일한 문제
+  - Zod 스키마 검증 실패 시 이 폴백이 사용되어 재화가 0으로 리셋됨
+
+- **해결 완료**: [U-063[Mvp]](unit-plans/U-063[Mvp].md) (2026-02-02)
+  - **수정**: 폴백 함수들에 `economySnapshot` 파라미터 추가
+  - **정책**: 폴백 시에도 현재 재화 스냅샷을 사용하여 잔액 유지 (RULE-005 준수)
+  - **수정 파일**:
+    - `frontend/src/schemas/turn.ts`: `createFallbackTurnOutput`, `safeParseTurnOutput` 함수
+    - `frontend/src/api/turnStream.ts`: `createFallbackTurnOutput`, `dispatchEvent` 함수
 
 ## 2026-02-01 이슈: Gemini 이미지 생성 API 호출 방식 오류 (U-055 Real 모드 테스트 발견)
 
