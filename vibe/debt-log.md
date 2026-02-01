@@ -92,7 +92,7 @@
     - `vibe/unit-runbooks/U-034-nanobanana-template-runbook.md`: 스키마 주요 필드 표 및 확인 포인트 갱신
   - **재발 방지**: JSON Schema required와 "워크플로우 필수" 개념을 테스트 코드에 명확히 구분/문서화함
 
-## 2026-02-01 이슈: MockOrchestrator 영어 입력 시 LanguageGate 검증 실패 (U-055 발견)
+## 2026-02-01 이슈: MockOrchestrator 영어 입력 시 LanguageGate 검증 실패 (U-055 발견) ✅ 해결됨
 
 - **발견 위치**: `backend/src/unknown_world/validation/language_gate.py`, `backend/src/unknown_world/orchestrator/mock.py`
 - **현상**: MockOrchestrator로 생성된 TurnOutput의 내러티브가 한국어인데, 입력 텍스트가 영어이면 내러티브에 `[시도] {영어 텍스트}:` 형태로 혼합되어 LanguageGate에서 언어 혼합으로 검증 실패
@@ -105,10 +105,12 @@
   ```
 - **영향**: 영어 입력 시 repair loop 3회 후 폴백 반환, 이미지 생성 불가
 - **추정 원인**: `_format_action_log_prefix()`가 입력 텍스트를 그대로 내러티브에 포함시키는데, 입력 언어와 출력 언어 불일치 시 혼합 발생
-- **보류 사유**: U-055[Mvp] 범위 밖 (이미지 파이프라인 통합 검증). 한국어 입력으로 우회 가능
-- **권장 조치**:
-  - Option A: `_format_action_log_prefix()`에서 입력 텍스트를 번역하거나 생략
-  - Option B: LanguageGate에서 행동 로그 프리픽스 영역은 검증 제외
+
+- **해결 완료**: [U-062[Mvp]](unit-plans/U-062[Mvp].md) (2026-02-01)
+  - **수정**: `_format_action_log_prefix()`에서 사용자 입력 텍스트(text, action_id)를 프리픽스에 포함하지 않도록 변경
+  - **정책**: 오직 DROP/CLICK의 오브젝트 ID만 프리픽스에 포함 (시스템 생성 ID이므로 언어 혼합 위험 없음)
+  - **Real 모드**: Game Master 프롬프트에 "사용자 입력을 내러티브에 그대로 인용하지 말 것" 지침 추가
+  - **수정 파일**: `backend/src/unknown_world/orchestrator/mock.py`, `backend/prompts/system/game_master.ko.md`, `backend/prompts/system/game_master.en.md`
 
 ## 2026-02-01 이슈: 프론트엔드 턴 실행 후 재화 잔액 0으로 초기화 (U-055 발견)
 

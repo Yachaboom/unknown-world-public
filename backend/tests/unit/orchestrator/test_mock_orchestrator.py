@@ -302,8 +302,6 @@ class TestFormatActionLogPrefix:
         # 한국어 액션 프리픽스 중 하나여야 함
         expected_patterns = ["[행동]", "[실행]", "[시도]"]
         assert any(pattern in prefix for pattern in expected_patterns)
-        # 액션 텍스트가 포함되어야 함
-        assert "문을 열어본다" in prefix
 
     def test_ko_click_prefix(self, ko_click_input):
         """한국어 클릭 프리픽스 테스트."""
@@ -312,7 +310,7 @@ class TestFormatActionLogPrefix:
 
         expected_patterns = ["[조사]", "[탐색]", "[상호작용]"]
         assert any(pattern in prefix for pattern in expected_patterns)
-        # 오브젝트 ID가 포함되어야 함
+        # 오브젝트 ID는 여전히 포함되어야 함 (시스템 생성 ID이므로 언어 혼합 위험 없음)
         assert "obj_door" in prefix
 
     def test_ko_drop_prefix(self, ko_drop_input):
@@ -322,7 +320,7 @@ class TestFormatActionLogPrefix:
 
         expected_patterns = ["[사용]", "[조합]", "[적용]"]
         assert any(pattern in prefix for pattern in expected_patterns)
-        # 아이템 ID와 대상 ID가 포함되어야 함
+        # 아이템 ID와 대상 ID는 포함되어야 함
         assert "key_001" in prefix
         assert "obj_lock" in prefix
 
@@ -333,10 +331,9 @@ class TestFormatActionLogPrefix:
             rng, InputType.FREE_TEXT, ko_free_text_input, is_korean=True
         )
 
-        expected_patterns = ["[입력]", "[명령]", "[지시]"]
+        # U-062: [입력] 대신 [행동], [시도], [탐색] 사용
+        expected_patterns = ["[행동]", "[시도]", "[탐색]"]
         assert any(pattern in prefix for pattern in expected_patterns)
-        # 텍스트가 포함되어야 함
-        assert "주변을 살펴본다" in prefix
 
     def test_en_action_prefix(self, en_action_input):
         """영어 액션 프리픽스 테스트."""
@@ -345,27 +342,6 @@ class TestFormatActionLogPrefix:
 
         expected_patterns = ["[ACTION]", "[EXECUTE]", "[ATTEMPT]"]
         assert any(pattern in prefix for pattern in expected_patterns)
-        assert "Open the door" in prefix
-
-    def test_long_text_truncation(self, base_client_info, base_economy_snapshot):
-        """긴 텍스트 자르기 테스트 (30자 초과)."""
-        long_text = "이것은 매우 매우 매우 매우 매우 매우 긴 텍스트입니다 어쩌고 저쩌고"
-        assert len(long_text) > 30
-
-        turn_input = TurnInput(
-            language=Language.KO,
-            text=long_text,
-            client=base_client_info,
-            economy_snapshot=base_economy_snapshot,
-        )
-
-        rng = random.Random(42)
-        prefix = _format_action_log_prefix(rng, InputType.FREE_TEXT, turn_input, is_korean=True)
-
-        # 텍스트가 잘려서 "..." 으로 끝나야 함
-        assert "..." in prefix
-        # 전체 텍스트가 포함되지 않아야 함
-        assert long_text not in prefix
 
     def test_deterministic_with_same_rng_state(self, ko_action_input):
         """동일 RNG 상태에서 결정적 결과 테스트."""
@@ -425,14 +401,14 @@ class TestMockOrchestratorNarrativePrefix:
         assert "obj_lock" in output.narrative
 
     def test_free_text_input_no_said_ko(self, ko_free_text_input):
-        """한국어 자유 텍스트 입력 시 '말했습니다' 없음 테스트 (Q1: Option B)."""
+        """한국어 자유 텍스트 입력 시 '말했습니다' 없음 테스트."""
         orchestrator = MockOrchestrator(seed=42)
         output = orchestrator.generate_turn_output(ko_free_text_input)
 
         assert "말했습니다" not in output.narrative
 
-        # 행동 로그 프리픽스가 있어야 함 (Q1: Option B 결정)
-        expected_prefixes = ["[입력]", "[명령]", "[지시]"]
+        # U-062: [행동], [시도], [탐색] 중 하나여야 함
+        expected_prefixes = ["[행동]", "[시도]", "[탐색]"]
         assert any(prefix in output.narrative for prefix in expected_prefixes)
 
     def test_action_input_no_said_en(self, en_action_input):
@@ -460,6 +436,52 @@ class TestMockOrchestratorNarrativePrefix:
 
         # 빈 입력이므로 프리픽스가 없어야 함
         assert not output.narrative.startswith("[")
+
+    def test_english_input_korean_session_passes_language_gate(
+        self, base_client_info, base_economy_snapshot
+    ):
+        """U-062: 영어 입력 시에도 한국어 세션에서 LanguageGate를 통과하는지 테스트."""
+        from unknown_world.validation.language_gate import validate_language_consistency
+
+        turn_input = TurnInput(
+            language=Language.KO,
+            text="English instruction for a Korean session",
+            client=base_client_info,
+            economy_snapshot=base_economy_snapshot,
+        )
+
+        orchestrator = MockOrchestrator(seed=42)
+        output = orchestrator.generate_turn_output(turn_input)
+
+        # 1. 내러티브에 영어 입력이 포함되지 않아야 함
+        assert "English instruction" not in output.narrative
+
+        # 2. LanguageGate 검증 통과해야 함
+        result = validate_language_consistency(output, Language.KO)
+        assert result.is_valid is True, f"LanguageGate failed: {result.violations}"
+
+    def test_korean_input_english_session_passes_language_gate(
+        self, base_client_info, base_economy_snapshot
+    ):
+        """U-062: 한국어 입력 시에도 영어 세션에서 LanguageGate를 통과하는지 테스트."""
+        from unknown_world.validation.language_gate import validate_language_consistency
+
+        turn_input = TurnInput(
+            language=Language.EN,
+            text="영어 세션에 들어온 한국어 명령",
+            client=base_client_info,
+            economy_snapshot=base_economy_snapshot,
+        )
+
+        orchestrator = MockOrchestrator(seed=42)
+        output = orchestrator.generate_turn_output(turn_input)
+
+        # 1. 내러티브에 한국어 입력이 포함되지 않아야 함
+        assert "한국어 명령" not in output.narrative
+
+        # 2. LanguageGate 검증 통과해야 함
+        result = validate_language_consistency(output, Language.EN)
+        assert result.is_valid is True, f"LanguageGate failed: {result.violations}"
 
 
 # =============================================================================
@@ -502,12 +524,9 @@ class TestDeterministicDiversity:
         output1 = orchestrator.generate_turn_output(input1)
         output2 = orchestrator.generate_turn_output(input2)
 
-        # 프리픽스 부분은 다를 수 있음 (다른 입력이므로)
-        # 적어도 프리픽스가 다르거나 내러티브 본문이 다를 수 있음
-        # per-turn RNG이므로 다른 결과가 나와야 함
-        # 참고: 프리픽스의 텍스트 부분은 분명히 다름
-        assert "문을 열어본다" in output1.narrative
-        assert "주변을 탐색한다" in output2.narrative
+        # per-turn RNG이므로 다른 내러티브가 나와야 함
+        # (프리픽스는 같을 수 있지만 본문이 달라질 확률이 높음)
+        assert output1.narrative != output2.narrative
 
     def test_multiple_calls_deterministic(self, ko_action_input):
         """여러 번 호출해도 같은 결과 (동일 입력에 대해)."""

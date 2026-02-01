@@ -119,6 +119,7 @@ def _compute_turn_seed(base_seed: int, turn_input: TurnInput) -> int:
 # =============================================================================
 
 # 한국어 행동 로그 프리픽스 (입력 타입별)
+# U-062: 언어 혼합 방지를 위해 사용자 입력 텍스트를 프리픽스에 포함하지 않음
 KO_ACTION_LOG_PREFIXES: dict[InputType, list[str]] = {
     InputType.DROP: [
         "[사용] {item} → {target}:",
@@ -131,18 +132,19 @@ KO_ACTION_LOG_PREFIXES: dict[InputType, list[str]] = {
         "[상호작용] {object}:",
     ],
     InputType.ACTION: [
-        "[행동] {action}:",
-        "[실행] {action}:",
-        "[시도] {action}:",
+        "[행동]",
+        "[실행]",
+        "[시도]",
     ],
     InputType.FREE_TEXT: [
-        "[입력] {text}:",
-        "[명령] {text}:",
-        "[지시] {text}:",
+        "[행동]",
+        "[시도]",
+        "[탐색]",
     ],
 }
 
 # 영어 행동 로그 프리픽스 (입력 타입별)
+# U-062: 언어 혼합 방지를 위해 사용자 입력 텍스트를 프리픽스에 포함하지 않음
 EN_ACTION_LOG_PREFIXES: dict[InputType, list[str]] = {
     InputType.DROP: [
         "[USE] {item} → {target}:",
@@ -155,14 +157,14 @@ EN_ACTION_LOG_PREFIXES: dict[InputType, list[str]] = {
         "[INTERACT] {object}:",
     ],
     InputType.ACTION: [
-        "[ACTION] {action}:",
-        "[EXECUTE] {action}:",
-        "[ATTEMPT] {action}:",
+        "[ACTION]",
+        "[EXECUTE]",
+        "[ATTEMPT]",
     ],
     InputType.FREE_TEXT: [
-        "[INPUT] {text}:",
-        "[COMMAND] {text}:",
-        "[DIRECTIVE] {text}:",
+        "[ACTION]",
+        "[ATTEMPT]",
+        "[EXPLORE]",
     ],
 }
 
@@ -174,6 +176,10 @@ def _format_action_log_prefix(
     is_korean: bool,
 ) -> str:
     """입력 타입에 맞는 행동 로그 프리픽스 생성.
+
+    U-062: 언어 혼합 방지를 위해 사용자 입력 텍스트(text, action_id)는
+    프리픽스에 포함하지 않습니다. 오직 DROP/CLICK의 오브젝트 ID만 포함합니다.
+    (오브젝트 ID는 시스템이 생성한 것이므로 언어 혼합 위험 없음)
 
     Args:
         rng: 랜덤 생성기
@@ -188,6 +194,7 @@ def _format_action_log_prefix(
     template = rng.choice(templates[input_type])
 
     # 입력 타입별 포맷 인자 준비
+    # U-062: ACTION/FREE_TEXT는 사용자 입력 텍스트를 포함하지 않음 (언어 혼합 방지)
     format_args: dict[str, str] = {}
 
     if input_type == InputType.DROP and turn_input.drop:
@@ -195,14 +202,7 @@ def _format_action_log_prefix(
         format_args["target"] = turn_input.drop.target_object_id
     elif input_type == InputType.CLICK and turn_input.click:
         format_args["object"] = turn_input.click.object_id
-    elif input_type == InputType.ACTION:
-        format_args["action"] = turn_input.text or turn_input.action_id or ""
-    elif input_type == InputType.FREE_TEXT:
-        # 긴 텍스트는 앞부분만 표시
-        text = turn_input.text or ""
-        if len(text) > 30:
-            text = text[:27] + "..."
-        format_args["text"] = text
+    # InputType.ACTION, InputType.FREE_TEXT는 포맷 인자 없음
 
     return template.format(**format_args)
 

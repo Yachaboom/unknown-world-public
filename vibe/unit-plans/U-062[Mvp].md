@@ -129,9 +129,10 @@ def test_mock_orchestrator_korean_input_english_session():
   - Option C: 입력 텍스트 언어 감지 후 불일치 시에만 생략 (중간 복잡도)
   **A1**: Option A
 
-- [ ] **Q2**: Real 모드에서도 동일 정책 적용?
+- [x] **Q2**: Real 모드에서도 동일 정책 적용?
   - Option A: Game Master 프롬프트에 "사용자 입력을 그대로 인용하지 말 것" 지침 추가
   - Option B: Real 모드는 LLM 재량에 맡김 (불일치 가능)
+  **A2**: Option A
 
 ## 참고 자료
 

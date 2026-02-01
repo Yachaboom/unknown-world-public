@@ -9,49 +9,35 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ### 디렉토리 구조
 
 ```text
-backend/
-├── prompts/
-│   ├── image/ (이미지 생성 가이드라인: scene_prompt.ko.md, scene_prompt.en.md)
-│   ├── system/ (Game Master 시스템 프롬프트)
-│   └── turn/ (턴 출력 제어 지침)
-├── src/unknown_world/
-│   ├── api/ (엔드포인트 및 스트리밍 헬퍼)
-│   ├── config/ (모델 ID/라벨 SSOT)
-│   ├── models/ (Pydantic 스키마: turn.py 등)
-│   ├── orchestrator/ (7대 단계 파이프라인 및 복구 루프)
-│   │   ├── prompt_loader.py (프롬프트 로딩 및 i18n 폴백)
-│   │   ├── generate_turn_output.py (시스템 프롬프트 구성 및 통합)
-│   │   └── stages/ (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
-│   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리)
-│   ├── storage/ (로컬/GCS 스토리지 추상화)
-│   └── validation/ (비즈니스 룰 및 언어 게이트)
-├── tests/ (유닛, 통합, QA 테스트)
-├── generated_images/ (생성된 이미지 로컬 저장소)
-└── pyproject.toml
-frontend/
-├── src/
-│   ├── api/ (API 클라이언트 및 스트리밍 인터페이스)
-│   ├── components/ (게임 UI: ActionDeck, SceneCanvas, Hotspot, AgentConsole 등)
-│   ├── data/ (데모 프로필 프리셋)
-│   ├── demo/ (테스트용 목 데이터)
-│   ├── dnd/ (인벤토리 DnD 타입 및 상수)
-│   ├── locales/ (i18n JSON 리소스)
-│   ├── save/ (세이브 시스템 및 세션 라이프사이클)
-│   ├── schemas/ (Zod 검증 스키마)
-│   ├── stores/ (Zustand 상태 관리 슬라이스)
-│   ├── styles/ (컴포넌트별 스타일: hotspot.css 등)
-│   ├── turn/ (턴 실행 엔진)
-│   ├── types/ (공통 타입 정의)
-│   └── utils/ (좌표 변환 등 유틸리티)
-├── public/ui/ (에셋 매니페스트 및 이미지 리소스)
-└── style.css (전역 스타일 및 디자인 토큰)
-shared/
-└── schemas/turn/ (JSON Schema SSOT)
-vibe/
-├── unit-plans/ (개발 계획서)
-├── unit-results/ (완료 보고서)
-├── unit-runbooks/ (실행 가이드 및 런북)
-└── ref/ (기술 가이드 및 레퍼런스)
+.
+├── backend/
+│   ├── src/unknown_world/
+│   │   ├── api/ (turn.py, scanner.py, image.py 등)
+│   │   ├── config/ (models.py)
+│   │   ├── models/ (turn.py, scanner.py)
+│   │   ├── orchestrator/ (pipeline.py, mock.py, prompt_loader.py 등)
+│   │   │   └── stages/ (parse.py, validate.py, render.py 등)
+│   │   ├── services/ (genai_client.py, image_generation.py, image_postprocess.py 등)
+│   │   ├── storage/ (local_storage.py, validation.py, paths.py)
+│   │   └── validation/ (language_gate.py, business_rules.py)
+│   ├── prompts/ (system/, turn/, image/ 하위 ko/en.md)
+│   └── tests/ (unit/, integration/, qa/)
+├── frontend/
+│   ├── src/
+│   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx 등)
+│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts 등)
+│   │   ├── turn/ (turnRunner.ts)
+│   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts)
+│   │   ├── api/ (turnStream.ts, scanner.ts)
+│   │   ├── locales/ (ko-KR/, en-US/ translation.json)
+│   │   └── schemas/ (turn.ts)
+│   └── public/ui/ (icons/, chrome/, manifest.json)
+├── shared/
+│   └── schemas/turn/ (turn_output.schema.json 등)
+└── vibe/
+    ├── unit-plans/
+    ├── unit-results/
+    └── unit-runbooks/
 ```
 
 ### 주요 디렉토리 설명
@@ -87,6 +73,15 @@ vibe/
 4. **모바일 및 접근성 (RULE-011)**:
     - **Touch Target**: 모바일 뷰포트에서 최소 44px의 터치 영역을 보장하고 툴팁 위치를 자동으로 최적화함.
     - **Reduced Motion**: 사용자의 OS 설정에 따라 과도한 점멸 및 이동 애니메이션을 자동으로 비활성화함.
+
+## 26. 언어 혼합 방지 및 행동 로그 정책 (U-062[Mvp])
+
+1. **행동 로그 프리픽스 정책 (MockOrchestrator)**:
+    - **User Input Omission**: 행동 로그 프리픽스(`[시도]`, `[ACTION]` 등)에서 사용자 입력 텍스트(`text`, `action_id`)를 제외하여 언어 혼합(ko/en) 발생 가능성을 원천 차단함.
+    - **System Identity Preservation**: 시스템이 생성한 `object_id`나 `item_id`는 프리픽스에 포함하여 맥락을 유지함.
+2. **언어 일관성 검증 (LanguageGate)**:
+    - 턴 응답의 전체 내러티브 언어가 세션 언어(`Language.KO`/`EN`)와 일치하는지 전수 검증함.
+    - 사용자 입력이 다른 언어일지라도 시스템 응답이 일관되게 세션 언어를 유지하도록 보장함.
 
 ---
 
