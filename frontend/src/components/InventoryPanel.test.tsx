@@ -71,4 +71,20 @@ describe('InventoryPanel Component', () => {
     expect(item).not.toHaveClass('selected');
     expect(useInventoryStore.getState().selectedItemId).toBeNull();
   });
+
+  it('아이템 호버 시 툴팁(title)이 표시되어야 한다 (U-056)', () => {
+    const { addItems } = useInventoryStore.getState();
+    addItems([
+      { id: 'item1', name: 'Long Item Name', quantity: 1 },
+      { id: 'item2', name: 'Stackable Item', quantity: 5 },
+    ]);
+
+    render(<InventoryPanel />);
+
+    const item1 = screen.getByText('Long Item Name').closest('.inventory-item');
+    const item2 = screen.getByText('Stackable Item').closest('.inventory-item');
+
+    expect(item1).toHaveAttribute('title', 'Long Item Name');
+    expect(item2).toHaveAttribute('title', 'Stackable Item x 5');
+  });
 });

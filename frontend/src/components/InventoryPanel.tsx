@@ -38,6 +38,7 @@ interface DraggableItemProps {
 /**
  * 드래그 가능한 인벤토리 아이템.
  * dnd-kit의 useDraggable 훅을 사용합니다.
+ * U-056: 잘린 아이템 이름에 대한 툴팁 지원
  */
 function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
   const { t } = useTranslation();
@@ -102,6 +103,8 @@ function DraggableItem({ item, isSelected, onSelect, disabled = false }: Draggab
       onClick={handleClick}
       aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
       aria-selected={isSelected}
+      // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
+      title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
       {...attributes}
       {...listeners}
     >

@@ -1,5 +1,34 @@
 # 프로젝트 진행 상황
 
+## [2026-02-01 18:50] [U-056[Mvp]] 인벤토리 아이템 이름 텍스트 잘림 최소화 및 툴팁 추가 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 인벤토리 아이템 이름 텍스트 오버플로우 처리(ellipsis) 및 네이티브 툴팁(title) 구현
+- **추가 컴포넌트**: `frontend/src/components/InventoryPanel.test.tsx` (단위 테스트 추가), `vibe/unit-results/U-056[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 6.7] 인벤토리 조작성 개선, [RULE-011] UI 가시성 확보
+
+### 기술적 구현 세부사항
+
+**텍스트 및 툴팁 정책**:
+- **Ellipsis Overflow**: `.inventory-item-name`에 `text-overflow: ellipsis`와 `display: block`을 적용하여 긴 이름이 레이아웃을 깨지 않고 시각적으로 잘림을 표시함.
+- **Native Tooltip**: 각 아이템 요소에 `title` 속성을 부여하여 호버 시 전체 이름과 수량을 표시함. 수량이 2개 이상일 경우 "이름 x 수량" 포맷을 적용하여 식별성을 높임.
+- **Test-Driven Improvement**: 단위 테스트를 통해 툴팁의 존재 여부와 동적 포맷팅 로직을 사전에 검증함.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── InventoryPanel.tsx (title 속성 추가)
+    │   └── InventoryPanel.test.tsx (툴팁 검증 테스트)
+    └── style.css (텍스트 오버플로우 레이아웃 보정)
+
+### 다음 단계
+- [U-057[Mvp]] 텍스트 번짐 식별성 개선
+- [U-058[Mvp]] 핫스팟 디자인 개선 (코너/스트로크/색상)
+
+---
+
 ## [2026-02-01 17:40] [U-054[Mvp]] 이미지 생성 폴백 및 실패 복구 체계 강화 완료
 
 ### 구현 완료 항목
