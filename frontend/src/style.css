@@ -59,6 +59,24 @@
   --header-height: 60px;
   --footer-height: 140px; /* U-050 v6: 컴팩트 카드에 맞춰 높이 조정 */
   --sidebar-width: 320px;
+
+  /* ===========================================
+     U-058: 핫스팟 디자인 토큰 (Magenta 계열)
+     - Q1 Option C: Magenta/Purple 계열
+     - Q2 Option A: L자 브라켓 스타일
+     =========================================== */
+  --hotspot-primary: #e040fb; /* 밝은 마젠타 (기본) */
+  --hotspot-primary-dim: #9c27b0; /* 어두운 퍼플 (비활성) */
+  --hotspot-hover: #f06292; /* 핑크 (호버) */
+  --hotspot-active: #ff4081; /* 밝은 핑크 (클릭/활성) */
+  --hotspot-drop: #ffab40; /* 앰버 (드롭 타겟) */
+  --hotspot-glow: rgba(224, 64, 251, 0.4); /* 글로우용 투명 마젠타 */
+  --hotspot-bg: rgba(224, 64, 251, 0.06); /* 배경용 미세 틴트 */
+
+  /* 코너 마커 크기 */
+  --hotspot-corner-size: 12px;
+  --hotspot-corner-thickness: 2px;
+  --hotspot-stroke-width: 1px;
 }
 
 /* ============================================

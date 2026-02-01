@@ -1,0 +1,497 @@
+/**
+ * Unknown World - 핫스팟 전용 스타일
+ *
+ * U-058[Mvp]: 핫스팟 디자인 개선
+ * - Q1 Option C: Magenta/Purple 계열 강조
+ * - Q2 Option A: L자 브라켓 코너 마커
+ *
+ * RULE-009 준수: 스타일만 변경, 좌표 로직 불변
+ * RULE-002 준수: 채팅 UI가 아닌 게임 UI
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ */
+
+/* ============================================
+   1. 핫스팟 레이어 (장면 이미지 위 오버레이)
+   ============================================ */
+
+.hotspot-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ============================================
+   2. 핫스팟 컴포넌트 기본 스타일
+   - L자 코너 마커 + 얇은 스트로크 + 반투명 배경
+   ============================================ */
+
+.hotspot {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+
+  /* 면: 미세한 마젠타 틴트 (콘텐츠 가시성 보호) */
+  background-color: var(--hotspot-bg);
+
+  /* 테두리: 얇은 마젠타 (기존 dashed 대신 solid) */
+  border: var(--hotspot-stroke-width) solid var(--hotspot-primary);
+  border-radius: 2px;
+
+  /* 글로우: 부드러운 마젠타 외곽선 */
+  box-shadow:
+    0 0 6px var(--hotspot-glow),
+    inset 0 0 2px rgba(224, 64, 251, 0.1);
+
+  /* GPU 가속: 다수 핫스팟 성능 최적화 */
+  will-change: transform, box-shadow;
+
+  /* 상태 전환 애니메이션 */
+  transition:
+    border-color 0.2s ease-out,
+    background-color 0.2s ease-out,
+    box-shadow 0.2s ease-out,
+    transform 0.15s ease-out;
+}
+
+/* ============================================
+   2.1 L자 코너 마커 (pseudo-elements)
+   - 4개 코너에 SF/터미널 느낌의 브라켓
+   ============================================ */
+
+/* 코너 마커 공통 스타일 */
+.hotspot::before,
+.hotspot::after,
+.hotspot-corners::before,
+.hotspot-corners::after {
+  content: '';
+  position: absolute;
+  width: var(--hotspot-corner-size);
+  height: var(--hotspot-corner-size);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 좌상단 코너 (::before) */
+.hotspot::before {
+  top: -1px;
+  left: -1px;
+  border-top: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-left: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-radius: 2px 0 0 0;
+}
+
+/* 우상단 코너 (::after) */
+.hotspot::after {
+  top: -1px;
+  right: -1px;
+  border-top: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-right: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-radius: 0 2px 0 0;
+}
+
+/* 좌하단, 우하단 코너는 내부 요소로 구현 */
+.hotspot-corners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hotspot-corners::before {
+  bottom: -1px;
+  left: -1px;
+  top: auto;
+  border-bottom: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-left: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-radius: 0 0 0 2px;
+}
+
+.hotspot-corners::after {
+  bottom: -1px;
+  right: -1px;
+  top: auto;
+  border-bottom: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-right: var(--hotspot-corner-thickness) solid var(--hotspot-primary);
+  border-radius: 0 0 2px 0;
+}
+
+/* ============================================
+   3. 호버 상태 (마우스 오버)
+   - 색상 밝기 증가 + 코너 마커 확대 효과
+   ============================================ */
+
+.hotspot.hovered {
+  background-color: rgba(240, 98, 146, 0.08);
+  border-color: var(--hotspot-hover);
+  box-shadow:
+    0 0 10px rgba(240, 98, 146, 0.5),
+    0 0 20px rgba(240, 98, 146, 0.2),
+    inset 0 0 4px rgba(240, 98, 146, 0.15);
+  transform: scale(1.01);
+}
+
+/* 호버 시 코너 마커 색상 변경 */
+.hotspot.hovered::before,
+.hotspot.hovered::after {
+  border-color: var(--hotspot-hover);
+}
+
+.hotspot.hovered .hotspot-corners::before,
+.hotspot.hovered .hotspot-corners::after {
+  border-color: var(--hotspot-hover);
+}
+
+/* 코너 마커 미세 펄스 애니메이션 (호버 시) */
+.hotspot.hovered::before,
+.hotspot.hovered::after,
+.hotspot.hovered .hotspot-corners::before,
+.hotspot.hovered .hotspot-corners::after {
+  animation: corner-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes corner-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ============================================
+   4. 포커스 상태 (키보드 접근성)
+   ============================================ */
+
+.hotspot:focus {
+  outline: none;
+}
+
+.hotspot:focus-visible {
+  outline: 2px solid var(--hotspot-active);
+  outline-offset: 3px;
+}
+
+/* ============================================
+   5. 드롭 타겟 상태 (DnD 드래그 오버)
+   - 앰버 색상 + 점멸 효과
+   ============================================ */
+
+.hotspot.drop-target-active {
+  background-color: rgba(255, 171, 64, 0.1);
+  border-color: var(--hotspot-drop);
+  border-width: 2px;
+  box-shadow:
+    0 0 12px rgba(255, 171, 64, 0.5),
+    0 0 24px rgba(255, 171, 64, 0.25),
+    inset 0 0 6px rgba(255, 171, 64, 0.2);
+  transform: scale(1.02);
+  animation: drop-target-glow 0.8s ease-in-out infinite;
+}
+
+@keyframes drop-target-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px rgba(255, 171, 64, 0.5),
+      0 0 24px rgba(255, 171, 64, 0.25),
+      inset 0 0 6px rgba(255, 171, 64, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(255, 171, 64, 0.7),
+      0 0 32px rgba(255, 171, 64, 0.35),
+      inset 0 0 8px rgba(255, 171, 64, 0.3);
+  }
+}
+
+/* 드롭 타겟 시 코너 마커 색상 변경 */
+.hotspot.drop-target-active::before,
+.hotspot.drop-target-active::after,
+.hotspot.drop-target-active .hotspot-corners::before,
+.hotspot.drop-target-active .hotspot-corners::after {
+  border-color: var(--hotspot-drop);
+  animation: corner-blink 0.6s ease-in-out infinite;
+}
+
+@keyframes corner-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   6. 비활성화 상태
+   - 흐릿한 색상 + 점선 테두리
+   ============================================ */
+
+.hotspot.disabled {
+  cursor: not-allowed;
+  background-color: rgba(156, 39, 176, 0.03);
+  border-color: var(--hotspot-primary-dim);
+  border-style: dashed;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+/* 비활성화 시 코너 마커 숨김 */
+.hotspot.disabled::before,
+.hotspot.disabled::after,
+.hotspot.disabled .hotspot-corners::before,
+.hotspot.disabled .hotspot-corners::after {
+  opacity: 0.3;
+  border-color: var(--hotspot-primary-dim);
+}
+
+.hotspot.disabled:hover {
+  transform: none;
+  border-color: var(--hotspot-primary-dim);
+  background-color: rgba(156, 39, 176, 0.03);
+}
+
+/* ============================================
+   7. 데모 상태 (시각적 힌트)
+   ============================================ */
+
+.hotspot.demo-target {
+  animation: demo-hint 2s ease-in-out infinite;
+}
+
+@keyframes demo-hint {
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px var(--hotspot-glow),
+      inset 0 0 2px rgba(224, 64, 251, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 12px var(--hotspot-glow),
+      0 0 20px rgba(224, 64, 251, 0.2),
+      inset 0 0 4px rgba(224, 64, 251, 0.15);
+  }
+}
+
+/* ============================================
+   8. 핫스팟 툴팁
+   - 마젠타 테마 적용
+   ============================================ */
+
+.hotspot-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 100px;
+  max-width: 220px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: rgba(20, 0, 30, 0.95);
+  border: 1px solid var(--hotspot-primary);
+  border-radius: 3px;
+  box-shadow:
+    0 0 8px var(--hotspot-glow),
+    0 4px 12px rgba(0, 0, 0, 0.8);
+  z-index: 20;
+  white-space: nowrap;
+  animation: tooltip-appear 0.15s ease-out;
+}
+
+@keyframes tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* 툴팁 화살표 */
+.hotspot-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--hotspot-primary);
+}
+
+/* 툴팁 라벨 */
+.hotspot-tooltip-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  color: var(--hotspot-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 4px rgba(224, 64, 251, 0.4);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 데모 힌트 */
+.hotspot-tooltip-demo {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--font-size-xs);
+  color: var(--hotspot-hover);
+  font-style: italic;
+}
+
+/* 상호작용 힌트 */
+.hotspot-tooltip-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+}
+
+/* 드롭 힌트 */
+.hotspot-tooltip-drop-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  color: var(--hotspot-drop);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: drop-hint-flash 0.6s ease-in-out infinite;
+}
+
+@keyframes drop-hint-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 드롭 타겟 활성 시 툴팁 테두리 색상 변경 */
+.hotspot.drop-target-active .hotspot-tooltip {
+  border-color: var(--hotspot-drop);
+  box-shadow:
+    0 0 10px rgba(255, 171, 64, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+.hotspot.drop-target-active .hotspot-tooltip::after {
+  border-top-color: var(--hotspot-drop);
+}
+
+/* ============================================
+   9. 모바일 조정
+   ============================================ */
+
+@media (max-width: 768px) {
+  .hotspot {
+    /* 터치 영역 최소 44px 보장 */
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* 모바일에서 툴팁은 아래로 표시 */
+  .hotspot-tooltip {
+    bottom: auto;
+    top: calc(100% + 8px);
+    max-width: 160px;
+  }
+
+  .hotspot-tooltip::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--hotspot-primary);
+  }
+
+  .hotspot.drop-target-active .hotspot-tooltip::after {
+    border-top-color: transparent;
+    border-bottom-color: var(--hotspot-drop);
+  }
+
+  /* 코너 마커 크기 축소 */
+  .hotspot::before,
+  .hotspot::after,
+  .hotspot-corners::before,
+  .hotspot-corners::after {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* ============================================
+   10. 접근성: reduced-motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .hotspot {
+    transition: none;
+    will-change: auto;
+  }
+
+  .hotspot.hovered {
+    transform: none;
+  }
+
+  .hotspot.drop-target-active {
+    animation: none;
+    transform: none;
+  }
+
+  .hotspot.demo-target {
+    animation: none;
+  }
+
+  .hotspot.hovered::before,
+  .hotspot.hovered::after,
+  .hotspot.hovered .hotspot-corners::before,
+  .hotspot.hovered .hotspot-corners::after,
+  .hotspot.drop-target-active::before,
+  .hotspot.drop-target-active::after,
+  .hotspot.drop-target-active .hotspot-corners::before,
+  .hotspot.drop-target-active .hotspot-corners::after {
+    animation: none;
+  }
+
+  .hotspot-tooltip {
+    animation: none;
+  }
+
+  .hotspot-tooltip-drop-hint {
+    animation: none;
+  }
+}
+
+/* ============================================
+   11. 고대비 모드 지원
+   ============================================ */
+
+@media (prefers-contrast: more) {
+  .hotspot {
+    border-width: 2px;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.8),
+      0 0 8px var(--hotspot-glow);
+  }
+
+  .hotspot::before,
+  .hotspot::after,
+  .hotspot-corners::before,
+  .hotspot-corners::after {
+    border-width: 3px;
+  }
+
+  .hotspot-tooltip {
+    border-width: 2px;
+  }
+}

@@ -19,162 +19,34 @@
  * - Q1 Option A: 이전 이미지 유지 + 로딩 인디케이터 표시
  * - 이미지 실패 시에도 핫스팟/패널/로그는 계속 동작 (텍스트-only 진행)
  *
+ * U-058[Mvp]: 핫스팟 디자인 개선
+ * - Q1 Option C: Magenta/Purple 계열 강조
+ * - Q2 Option A: L자 브라켓 코너 마커
+ * - Hotspot 컴포넌트 분리로 시각적 품질 향상
+ *
  * @module components/SceneCanvas
  */
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDroppable } from '@dnd-kit/core';
-import type { SceneObject, Box2D } from '../schemas/turn';
-import { box2dToPixel, type CanvasSize } from '../utils/box2d';
-import {
-  DND_TYPE,
-  type HotspotDropData,
-  isHotspotInteractionAllowed,
-  compareHotspotPriority,
-} from '../dnd/types';
+import { type CanvasSize } from '../utils/box2d';
+import { isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
 import { useWorldStore } from '../stores/worldStore';
 import { useAgentStore } from '../stores/agentStore';
 import { SceneImage } from './SceneImage';
+import { Hotspot, type HotspotClickData } from './Hotspot';
 
 // =============================================================================
-// 타입 정의
+// 타입 정의 (Re-export for backward compatibility)
 // =============================================================================
 
-/**
- * 핫스팟 클릭 이벤트 데이터 (Q1 결정: Option B - object_id + box_2d)
- */
-export interface HotspotClickData {
-  /** 클릭한 오브젝트 ID */
-  object_id: string;
-  /** 클릭한 오브젝트의 바운딩 박스 (0~1000 정규화) */
-  box_2d: Box2D;
-}
+export type { HotspotClickData };
 
 interface SceneCanvasProps {
   /** 핫스팟 클릭 콜백 */
   onHotspotClick?: (data: HotspotClickData) => void;
   /** 스트리밍 중 여부 (비활성화용, 생략 시 agentStore.isStreaming 사용) */
   disabled?: boolean;
-}
-
-// =============================================================================
-// 내부 컴포넌트: 핫스팟 오버레이
-// =============================================================================
-
-interface HotspotOverlayProps {
-  object: SceneObject;
-  canvasSize: CanvasSize;
-  onClick: (data: HotspotClickData) => void;
-  disabled: boolean;
-  /** RU-003-S2: 데모 상태 여부 (시각적 힌트 필요) */
-  isDemoState?: boolean;
-  /** RU-003-S2 Step 2: 우선순위 기반 z-index 스타일 */
-  style?: React.CSSProperties;
-}
-
-/**
- * 개별 핫스팟 오버레이 컴포넌트 (U-010 + U-012)
- *
- * - 클릭 시 object_id + box_2d 전송 (U-010)
- * - 드롭 타겟으로 동작 - dnd-kit useDroppable 사용 (U-012)
- */
-function HotspotOverlay({
-  object,
-  canvasSize,
-  onClick,
-  disabled,
-  isDemoState = false,
-  style,
-}: HotspotOverlayProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const { t } = useTranslation();
-
-  // U-012: useDroppable 훅으로 드롭 타겟 설정 (RU-003-Q1: 상수/타입 기반)
-  const dropData: HotspotDropData = {
-    type: DND_TYPE.HOTSPOT,
-    object_id: object.id,
-    box_2d: object.box_2d,
-    label: object.label,
-  };
-  const { isOver, setNodeRef } = useDroppable({
-    id: `hotspot-${object.id}`,
-    data: dropData,
-    disabled,
-  });
-
-  // box_2d(0~1000) → px 변환
-  const pixelBox = box2dToPixel(object.box_2d, canvasSize);
-
-  const handleClick = useCallback(() => {
-    if (disabled) return;
-    onClick({
-      object_id: object.id,
-      box_2d: object.box_2d,
-    });
-  }, [disabled, onClick, object.id, object.box_2d]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (disabled) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleClick();
-      }
-    },
-    [disabled, handleClick],
-  );
-
-  // 드래그 오버 상태 또는 마우스 호버 상태
-  const isHighlighted = isHovered || isOver;
-
-  // RU-003-S2: 데모 상태 클래스 추가
-  const demoClass = isDemoState ? 'demo-target' : '';
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`hotspot-overlay ${isHighlighted ? 'hovered' : ''} ${disabled ? 'disabled' : ''} ${isOver ? 'drop-target-active' : ''} ${demoClass}`}
-      style={{
-        position: 'absolute',
-        top: `${pixelBox.top}px`,
-        left: `${pixelBox.left}px`,
-        width: `${pixelBox.width}px`,
-        height: `${pixelBox.height}px`,
-        ...style,
-      }}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      aria-label={object.label}
-      aria-disabled={disabled}
-      data-drop-target={!disabled}
-      data-demo-state={isDemoState}
-    >
-      {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
-      {isHighlighted && !disabled && (
-        <div className="hotspot-tooltip">
-          <span className="hotspot-tooltip-label">{object.label}</span>
-          {/* RU-003-S2: 데모 상태 표시 */}
-          {isDemoState && (
-            <span className="hotspot-tooltip-demo">{t('scene.hotspot.demo_hint')}</span>
-          )}
-          {/* U-012: 드래그 오버 시 드롭 힌트 표시 */}
-          {isOver && (
-            <span className="hotspot-tooltip-drop-hint">{t('scene.hotspot.drop_hint')}</span>
-          )}
-          {!isOver && !isDemoState && object.interaction_hint && (
-            <span className="hotspot-tooltip-hint">
-              {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // =============================================================================
@@ -283,10 +155,11 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 
       {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
       {/* U-020: 이미지 유무와 무관하게 핫스팟은 항상 렌더 (RULE-004) */}
+      {/* U-058: Hotspot 컴포넌트 분리 (Magenta 테마 + L자 코너) */}
       {shouldRenderHotspots && (
         <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
           {sortedObjects.map((obj, index) => (
-            <HotspotOverlay
+            <Hotspot
               key={obj.id}
               object={obj}
               canvasSize={canvasSize}

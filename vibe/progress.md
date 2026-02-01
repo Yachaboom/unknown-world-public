@@ -1,5 +1,89 @@
 # 프로젝트 진행 상황
 
+## [2026-02-01 19:45] [U-057[Mvp]] 텍스트 번짐 식별성 개선 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: CRT 효과(text-shadow) 완화, 가독성 보호 클래스(.readable-text 등) 도입, 작은 텍스트 폰트 굵기 보정
+- **추가 컴포넌트**: `vibe/unit-runbooks/U-057-readable-text-runbook.md` (런북), `U-057-readability-check.png` (검증 샷), `vibe/unit-results/U-057[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 9.4/9.5] 가독성 및 CRT 효과 튜닝, [RULE-011] UI 가시성 확보
+
+### 기술적 구현 세부사항
+
+**가독성 최적화 전략**:
+- **Glow Reduction**: 전역 텍스트 번짐 효과를 5px에서 1~3px로 축소하여 레트로 미학을 유지하면서도 가독성을 대폭 개선함.
+- **Contextual Importance**: `.readable-text`(효과 제거)와 `.readable-glow`(미세 효과) 클래스를 분리하여 내러티브 본문은 선명하게, 제목은 테마 분위기를 유지하도록 계층화함.
+- **Micro Typography**: 12px 이하의 작은 텍스트에 `font-weight: 500`과 자간 보정을 적용하여 저해상도 폰트의 뭉침 현상을 해결함.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── style.css (가독성 보호 클래스 및 CRT 변수 튜닝)
+    └── components/ (주요 UI 요소에 가독성 클래스 적용)
+
+### 다음 단계
+- [CP-MVP-03] 체크포인트: 10분 데모 루프 (가독성 최종 사용자 테스트)
+
+---
+
+## [2026-02-01 19:15] [U-058[Mvp]] 핫스팟 디자인 개선 (코너/스트로크/색상) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 핫스팟 시각적 디자인 개선(Magenta 테마, L자 코너 마커), 호버/드롭 상태 피드백 강화
+- **추가 컴포넌트**: `frontend/src/components/Hotspot.tsx` (컴포넌트 분리), `frontend/src/styles/hotspot.css` (스타일), `vibe/unit-results/U-058[Mvp].md` (보고서)
+- **달성 요구사항**: [PRD 6.2] 구조화 UI(핫스팟), [RULE-009] bbox 0~1000 정규화 준수, [RULE-002] 게임 UI 미학 강화
+
+### 기술적 구현 세부사항
+
+**디자인 및 인터랙션**:
+- **Targeting System Aesthetic**: L자 형태의 브라켓 코너 마커와 마젠타(#e040fb) 강조색을 사용하여 게임 GM의 타겟팅 시스템 느낌을 강화함.
+- **Priority Sorting**: 핫스팟 면적을 계산하여 작은 오브젝트가 항상 상단(z-index)에 오도록 정렬, 겹치는 영역에서의 선택성을 개선함.
+- **Visual Feedback States**: 호버 시 펄스 효과, 드롭 타겟 진입 시 앰버 색상 점멸 애니메이션을 적용하여 상호작용 의도를 명확히 함.
+
+### 코드 구조
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── Hotspot.tsx (신규: 핫스팟 UI 캡슐화)
+    │   └── SceneCanvas.tsx (Hotspot 컴포넌트 통합 및 정렬 로직)
+    ├── styles/
+    │   └── hotspot.css (신규: 상태별 애니메이션 및 스타일)
+    └── style.css (핫스팟 전역 디자인 토큰 추가)
+
+### 다음 단계
+- [U-061[Mvp]] ⚡이미지 생성 지침(scene_prompt) 파이프라인 통합 및 i18n 정합성 강화
+- [CP-MVP-03] 체크포인트: 10분 데모 루프 (디자인 품질 최종 점검)
+
+---
+
+## [2026-02-01 19:00] [U-055[Mvp]] 이미지 파이프라인 Mock/Real 모드 통합 검증 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 이미지 생성 파이프라인(U-051~U-054) 통합 루프 검증, Mock/Real 모드별 런북 작성 및 이슈 식별
+- **추가 컴포넌트**: `vibe/unit-runbooks/U-055-image-pipeline-integration-runbook.md` (런북), `vibe/unit-results/U-055[Mvp].md` (보고서)
+- **달성 요구사항**: [RULE-004] 안전 폴백, [RULE-008] 텍스트 우선 + Lazy 이미지 원칙 준수
+
+### 기술적 구현 세부사항
+
+**통합 검증 및 이슈 관리**:
+- **Hybrid Pipeline Guard**: `UW_MODE` 설정에 따른 Mock/Real 모드 전환 안정성을 확인하고, 실제 Gemini 이미지 생성 시의 응답 지연 및 예외 처리 로직을 점검함.
+- **Debt Tracking**: 검증 과정에서 발견된 4대 핵심 이슈(언어 게이트, 재화 동기화, API 메서드, 스키마 복잡도)를 `vibe/debt-log.md`에 공식 기록함.
+- **Visual Proof**: Agent Console을 통해 이미지 생성 단계(Queue)와 결과 배지(Badges)가 실시간으로 스트리밍되는 것을 확인함.
+
+### 코드 구조
+repo-root/
+└── vibe/
+    ├── unit-runbooks/U-055-image-pipeline-integration-runbook.md (통합 검증 가이드)
+    └── unit-results/U-055[Mvp].md (통합 검증 결과 보고서)
+
+### 다음 단계
+- [U-064[Mvp]] ⚡Gemini 이미지 생성 API 호출 방식 수정
+- [U-065[Mvp]] ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응)
+
+---
+
 ## [2026-02-01 18:50] [U-056[Mvp]] 인벤토리 아이템 이름 텍스트 잘림 최소화 및 툴팁 추가 완료
 
 ### 구현 완료 항목

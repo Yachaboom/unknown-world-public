@@ -16,7 +16,7 @@ backend/
 │   ├── models/ (Pydantic 스키마)
 │   ├── orchestrator/ (7대 단계 파이프라인 및 복구 루프)
 │   │   ├── stages/ (Parse, Validate, Plan, Resolve, Render, Verify, Commit)
-│   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리)
+│   ├── services/ (GenAI 클라이언트, 이미지 생성/후처리/프리플라이트)
 │   ├── storage/ (로컬/GCS 스토리지 추상화 및 경로 관리)
 │   └── validation/ (비즈니스 룰 및 언어 게이트)
 ├── tests/ (유닛, 통합, QA 테스트)
@@ -24,7 +24,7 @@ backend/
 frontend/
 ├── src/
 │   ├── api/ (API 클라이언트 및 스트리밍 인터페이스)
-│   ├── components/ (게임 UI 컴포넌트: ActionDeck, SceneCanvas, AgentConsole 등)
+│   ├── components/ (게임 UI: ActionDeck, SceneCanvas, Hotspot, AgentConsole 등)
 │   ├── data/ (데모 프로필 프리셋)
 │   ├── demo/ (테스트용 목 데이터)
 │   ├── dnd/ (인벤토리 DnD 타입 및 상수)
@@ -32,11 +32,12 @@ frontend/
 │   ├── save/ (세이브 시스템 및 세션 라이프사이클)
 │   ├── schemas/ (Zod 검증 스키마)
 │   ├── stores/ (Zustand 상태 관리 슬라이스)
+│   ├── styles/ (컴포넌트별 스타일: hotspot.css 등)
 │   ├── turn/ (턴 실행 엔진)
 │   ├── types/ (공통 타입 정의)
 │   └── utils/ (좌표 변환 등 유틸리티)
 ├── public/ui/ (에셋 매니페스트 및 이미지 리소스)
-└── package.json
+└── style.css (전역 스타일 및 디자인 토큰)
 shared/
 └── schemas/turn/ (JSON Schema SSOT)
 vibe/
@@ -49,9 +50,26 @@ vibe/
 ### 주요 디렉토리 설명
 
 - `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
-- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치합니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
+- `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다 (U-058 핫스팟 디자인 등).
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 - `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
+---
+
+## 24. 핫스팟 디자인 및 시각적 품질 정책 (U-058[Mvp])
+
+1. **디자인 테마 (Option C - Magenta)**:
+    - **Primary Accent**: 터미널 녹색과 대비되는 `#e040fb` (Magenta) 계열을 강조색으로 사용하여 상호작용 지점을 명확히 함.
+    - **Visual Hierarchy**: 중요 정보(핫스팟, 재화)에 마젠타 글로우 효과를 적용하여 가시성 보호 계층 구조를 완성함.
+2. **SF UI 디자인 요소 (Option A - Corners)**:
+    - **L자 브라켓**: 4개 모서리에 L자형 코너 마커를 배치하여 "GM 타겟팅 시스템"의 미학적 감성을 전달.
+    - **Dynamic Feedback**: 호버 시 펄스 애니메이션, 드롭 타겟 진입 시 앰버 색상 점멸 효과를 통해 조작 상태를 직관적으로 피드백함.
+3. **렌더링 성능 및 가동성**:
+    - **GPU 가속**: `will-change: transform, box-shadow`를 적용하여 다수의 핫스팟이 동시에 애니메이션되어도 프레임 드롭을 최소화함.
+    - **Priority Sorting**: 핫스팟 면적 기반 정렬 로직을 통해 작은 오브젝트가 항상 상위에 렌더링되도록 보장하여 클릭 정합성 확보.
+4. **모바일 및 접근성 (RULE-011)**:
+    - **Touch Target**: 모바일 뷰포트에서 최소 44px의 터치 영역을 보장하고 툴팁 위치를 자동으로 최적화함.
+    - **Reduced Motion**: 사용자의 OS 설정에 따라 과도한 점멸 및 이동 애니메이션을 자동으로 비활성화함.
 
 ---
 
