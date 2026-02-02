@@ -219,11 +219,13 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
         status: 'blocked',
         message: output.safety.message ?? undefined,
       };
-    } else if (output.ui.scene?.image_url) {
+    } else if (output.ui.scene?.image_url || output.render?.image_url) {
+      // U-053: render.image_url 또는 ui.scene.image_url 중 하나라도 있으면 scene 상태로 전환
+      const imageUrl = output.ui.scene?.image_url || output.render?.image_url;
       newSceneState = {
         status: 'scene',
-        imageUrl: output.ui.scene.image_url,
-        message: output.ui.scene.alt_text ?? undefined,
+        imageUrl: imageUrl!,
+        message: output.ui.scene?.alt_text ?? undefined,
       };
     } else {
       newSceneState = {
@@ -245,13 +247,14 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     }
 
     // Economy Store 업데이트 (U-014: Ledger 기록)
+    // 기본 모델은 FAST, 추후 정밀조사 트리거 시 QUALITY 사용 예정
     const economyStore = useEconomyStore.getState();
     economyStore.addLedgerEntry({
       turnId: newTurnCount,
       reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
       cost: output.economy.cost,
       balanceAfter: output.economy.balance_after,
-      modelLabel: output.agent_console.badges.includes('schema_ok') ? 'QUALITY' : 'FAST',
+      modelLabel: 'FAST',
     });
     // 잔액 부족 상태 업데이트
     economyStore.updateBalanceLowStatus(newEconomy);

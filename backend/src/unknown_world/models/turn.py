@@ -264,22 +264,22 @@ class CostEstimate(BaseModel):
 
 
 class ActionCard(BaseModel):
-    """액션 카드 (Action Deck).
+    """액션 카드 (Action Deck) - U-065 단순화.
 
     매 턴 AI가 추천하는 행동 카드입니다.
-    각 카드에 비용/위험/보상 힌트가 포함됩니다.
+    Gemini Structured Outputs 제한 대응을 위해 핵심 필드만 유지합니다.
+
+    U-065 단순화:
+        - 제거된 필드: description, cost_estimate, hint, reward_hint, disabled_reason
+        - risk, is_alternative는 유지 (게임 메카닉에 필수)
+        - 제거된 정보는 narrative에서 자연어로 표현
 
     Attributes:
         id: 카드 고유 ID
         label: 카드 라벨 (표시용)
-        description: 카드 설명 (선택)
         cost: 예상 비용 (기본)
-        cost_estimate: 비용 추정 범위 (선택)
         risk: 위험도
-        hint: 예상 결과 힌트 (선택)
-        reward_hint: 보상 힌트 (선택)
         enabled: 실행 가능 여부 (서버 판단)
-        disabled_reason: 비활성화 사유 (선택)
         is_alternative: 저비용 대안 카드 여부
     """
 
@@ -287,14 +287,9 @@ class ActionCard(BaseModel):
 
     id: str = Field(description="카드 고유 ID")
     label: str = Field(description="카드 라벨 (표시용)")
-    description: str | None = Field(default=None, description="카드 설명 (선택)")
     cost: CurrencyAmount = Field(description="예상 비용 (기본)")
-    cost_estimate: CostEstimate | None = Field(default=None, description="비용 추정 범위 (선택)")
     risk: RiskLevel = Field(default=RiskLevel.LOW, description="위험도")
-    hint: str | None = Field(default=None, description="예상 결과 힌트 (선택)")
-    reward_hint: str | None = Field(default=None, description="보상 힌트 (선택)")
     enabled: bool = Field(default=True, description="실행 가능 여부 (서버 판단)")
-    disabled_reason: str | None = Field(default=None, description="비활성화 사유 (선택)")
     is_alternative: bool = Field(default=False, description="저비용 대안 카드 여부")
 
 
@@ -320,12 +315,15 @@ class SceneObject(BaseModel):
 
 
 class ActionDeck(BaseModel):
-    """액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+    """액션 덱 (Q1 결정: ui.action_deck.cards[] 구조) - U-065 단순화.
 
     매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
 
+    U-065 단순화:
+        - max_length: 10 → 5 (Gemini 스키마 제한 대응, Q2 결정)
+
     Attributes:
-        cards: 액션 카드 목록 (3~6장 권장)
+        cards: 액션 카드 목록 (3~5장 권장)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -333,26 +331,31 @@ class ActionDeck(BaseModel):
     cards: list[ActionCard] = Field(
         default=[],
         min_length=0,
-        max_length=10,
-        description="액션 카드 목록 (3~6장 권장)",
+        max_length=5,
+        description="액션 카드 목록 (3~5장 권장)",
     )
 
 
 class UIOutput(BaseModel):
-    """UI 출력 데이터.
+    """UI 출력 데이터 - U-065 단순화.
 
     AI가 생성한 UI 요소들입니다.
     채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
 
+    U-065 단순화:
+        - objects max_length: 5로 제한 (Q2 결정)
+
     Attributes:
         action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)
-        objects: 클릭 가능한 장면 오브젝트 목록
+        objects: 클릭 가능한 장면 오브젝트 목록 (최대 5개)
     """
 
     model_config = ConfigDict(extra="forbid")
 
     action_deck: ActionDeck = Field(default_factory=ActionDeck, description="액션 카드 덱")
-    objects: list[SceneObject] = Field(default=[], description="클릭 가능한 장면 오브젝트 목록")
+    objects: list[SceneObject] = Field(
+        default=[], max_length=5, description="클릭 가능한 장면 오브젝트 목록 (최대 5개)"
+    )
 
 
 # =============================================================================
@@ -415,28 +418,46 @@ class Quest(BaseModel):
 
 
 class WorldDelta(BaseModel):
-    """세계 상태 변화 (Q2 결정: Option A - delta 중심).
+    """세계 상태 변화 (Q2 결정: Option A - delta 중심) - U-065 단순화.
 
     이번 턴에서 변경된 세계 상태를 나타냅니다.
     snapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.
 
+    U-065 단순화 (Q3 결정: Option A):
+        - rules_changed, quests_updated → 배열 크기 제한 (최대 3개)
+        - memory_pins → 배열 크기 제한 (최대 2개)
+        - 복잡한 중첩 객체의 배열 크기 축소
+        - 상세 정보는 narrative에서 자연어로 표현
+
     Attributes:
-        rules_changed: 변경되거나 추가된 규칙 목록
-        inventory_added: 추가된 인벤토리 아이템
-        inventory_removed: 제거된 인벤토리 아이템
-        quests_updated: 업데이트된 퀘스트(목표) 목록
-        relationships_changed: 변경된 관계
-        memory_pins: 중요 설정 고정 후보
+        rules_changed: 변경되거나 추가된 규칙 목록 (최대 3개)
+        inventory_added: 추가된 인벤토리 아이템 (최대 5개)
+        inventory_removed: 제거된 인벤토리 아이템 (최대 5개)
+        quests_updated: 업데이트된 퀘스트(목표) 목록 (최대 3개)
+        relationships_changed: 변경된 관계 (최대 3개)
+        memory_pins: 중요 설정 고정 후보 (최대 2개)
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    rules_changed: list[WorldRule] = Field(default=[], description="변경된 규칙 목록")
-    inventory_added: list[str] = Field(default=[], description="추가된 인벤토리 아이템")
-    inventory_removed: list[str] = Field(default=[], description="제거된 인벤토리 아이템")
-    quests_updated: list[Quest] = Field(default=[], description="업데이트된 퀘스트/목표 목록")
-    relationships_changed: list[str] = Field(default=[], description="변경된 관계")
-    memory_pins: list[MemoryPin] = Field(default=[], description="중요 설정 고정 후보")
+    rules_changed: list[WorldRule] = Field(
+        default=[], max_length=3, description="변경된 규칙 목록 (최대 3개)"
+    )
+    inventory_added: list[str] = Field(
+        default=[], max_length=5, description="추가된 인벤토리 아이템 (최대 5개)"
+    )
+    inventory_removed: list[str] = Field(
+        default=[], max_length=5, description="제거된 인벤토리 아이템 (최대 5개)"
+    )
+    quests_updated: list[Quest] = Field(
+        default=[], max_length=3, description="업데이트된 퀘스트/목표 목록 (최대 3개)"
+    )
+    relationships_changed: list[str] = Field(
+        default=[], max_length=3, description="변경된 관계 (최대 3개)"
+    )
+    memory_pins: list[MemoryPin] = Field(
+        default=[], max_length=2, description="중요 설정 고정 후보 (최대 2개)"
+    )
 
 
 # =============================================================================
@@ -445,10 +466,14 @@ class WorldDelta(BaseModel):
 
 
 class ImageJob(BaseModel):
-    """이미지 생성 작업.
+    """이미지 생성 작업 - U-065 단순화.
 
     조건부 이미지 생성/편집 요청입니다.
     이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.
+
+    U-065 단순화:
+        - reference_image_ids: 배열 크기 제한 (최대 2개)
+        - 기타 필드는 유지 (이미지 파이프라인 필수)
 
     Attributes:
         should_generate: 이미지를 생성해야 하는지
@@ -456,7 +481,7 @@ class ImageJob(BaseModel):
         model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)
         aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
         image_size: 이미지 크기 (예: "1024x1024")
-        reference_image_ids: 참조 이미지 ID 목록 (선택)
+        reference_image_ids: 참조 이미지 ID 목록 (최대 2개)
         remove_background: 배경 제거 여부 (U-035, rembg 사용)
         image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
     """
@@ -468,7 +493,9 @@ class ImageJob(BaseModel):
     model_label: ModelLabel = Field(default=ModelLabel.FAST, description="모델 선택 라벨")
     aspect_ratio: str = Field(default="16:9", description="가로세로 비율")
     image_size: str = Field(default="1024x1024", description="이미지 크기")
-    reference_image_ids: list[str] = Field(default=[], description="참조 이미지 ID 목록 (선택)")
+    reference_image_ids: list[str] = Field(
+        default=[], max_length=2, description="참조 이미지 ID 목록 (최대 2개)"
+    )
     remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
     image_type_hint: str | None = Field(
         default=None,
@@ -559,21 +586,26 @@ class SafetyOutput(BaseModel):
 
 
 class AgentConsole(BaseModel):
-    """에이전트 콘솔 데이터 (RULE-008).
+    """에이전트 콘솔 데이터 (RULE-008) - U-065 단순화.
 
     에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
     계획/실행/검증/복구의 흔적을 표시합니다.
 
+    U-065 단순화:
+        - badges: 배열 크기 제한 (최대 4개)
+
     Attributes:
         current_phase: 현재 실행 단계
-        badges: 검증 배지 목록
+        badges: 검증 배지 목록 (최대 4개)
         repair_count: 자동 복구 시도 횟수
     """
 
     model_config = ConfigDict(extra="forbid")
 
     current_phase: AgentPhase = Field(default=AgentPhase.COMMIT, description="현재 실행 단계")
-    badges: list[ValidationBadge] = Field(default=[], description="검증 배지 목록")
+    badges: list[ValidationBadge] = Field(
+        default=[], max_length=4, description="검증 배지 목록 (최대 4개)"
+    )
     repair_count: Annotated[int, Field(ge=0, description="자동 복구 시도 횟수")] = 0
 
 

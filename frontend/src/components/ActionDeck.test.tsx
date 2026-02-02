@@ -21,48 +21,31 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// U-065: 단순화된 ActionCard 스키마 (제거됨: description, cost_estimate, hint, reward_hint, disabled_reason)
 describe('ActionDeck Component', () => {
   const mockCards: ActionCard[] = [
     {
       id: 'card-1',
       label: 'Regular Action',
-      description: 'Test Description',
       cost: { signal: 10, memory_shard: 0 },
-      cost_estimate: {
-        min: { signal: 8, memory_shard: 0 },
-        max: { signal: 12, memory_shard: 0 },
-      },
       risk: 'low',
-      hint: 'Positive hint',
-      reward_hint: 'Bonus item',
       enabled: true,
-      disabled_reason: null,
       is_alternative: false,
     },
     {
       id: 'card-2',
       label: 'Expensive Action',
-      description: null,
       cost: { signal: 50, memory_shard: 1 },
-      cost_estimate: null,
       risk: 'high',
-      hint: 'Risky hint',
-      reward_hint: null,
       enabled: true,
-      disabled_reason: null,
       is_alternative: false,
     },
     {
       id: 'card-alt',
       label: 'Alternative Action',
-      description: null,
       cost: { signal: 2, memory_shard: 0 },
-      cost_estimate: null,
       risk: 'low',
-      hint: null,
-      reward_hint: null,
       enabled: true,
-      disabled_reason: null,
       is_alternative: true,
     },
   ];
@@ -82,22 +65,24 @@ describe('ActionDeck Component', () => {
     expect(screen.getByText('Alternative Action')).toBeInTheDocument();
   });
 
-  it('displays cost estimates as ranges when available', () => {
+  // U-065: cost_estimate 제거됨, cost만 표시
+  it('displays cost values', () => {
     useActionDeckStore.setState({ cards: mockCards });
     render(<ActionDeck />);
-    // card-1 has cost_estimate: 8~12
-    expect(screen.getByText('8~12')).toBeInTheDocument();
+    // card-1 has cost: 10
+    expect(screen.getByText('10')).toBeInTheDocument();
     // card-2 has cost: 50
     expect(screen.getByText('50')).toBeInTheDocument();
   });
 
+  // U-065: cost_estimate 제거됨, cost만 사용
   it('disables cards when balance is insufficient in worldStore', () => {
     useActionDeckStore.setState({ cards: mockCards });
     useWorldStore.setState({ economy: { signal: 5, memory_shard: 0 } });
 
     render(<ActionDeck />);
 
-    // Regular Action (cost 10/estimate max 12) -> disabled
+    // Regular Action (cost 10) -> disabled
     const card1 = screen.getByRole('button', { name: /Regular Action/i });
     expect(card1).toBeDisabled();
     expect(screen.getAllByText('Insufficient Balance').length).toBeGreaterThan(0);
@@ -122,17 +107,19 @@ describe('ActionDeck Component', () => {
     expect(onCardClick).toHaveBeenCalledWith(expect.objectContaining({ id: 'card-1' }));
   });
 
-  it('displays server-provided disabled reason', () => {
+  // U-065: disabled_reason 제거됨, 서버에서 enabled=false면 기본 메시지 표시
+  it('displays default disabled message when server disables card', () => {
     const disabledCard: ActionCard[] = [
       {
         ...mockCards[0],
         enabled: false,
-        disabled_reason: 'Locked by story',
       },
     ];
     useActionDeckStore.setState({ cards: disabledCard });
     render(<ActionDeck />);
-    expect(screen.getByText('Locked by story')).toBeInTheDocument();
+    // action.server_disabled 키가 그대로 출력됨 (모킹에서 처리 안 됨)
+    const card = screen.getByRole('button', { name: /Regular Action/i });
+    expect(card).toBeDisabled();
   });
 
   it('renders default cards when store cards are empty', () => {

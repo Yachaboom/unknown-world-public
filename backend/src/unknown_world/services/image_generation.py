@@ -81,9 +81,10 @@ SUPPORTED_SIZES = SUPPORTED_IMAGE_SIZES
 DEFAULT_SIZE = DEFAULT_IMAGE_SIZE
 """기본 이미지 크기 (호환성 별칭)."""
 
-# U-064[Mvp] Q1 결정: 이미지 생성 타임아웃 60초
+# U-064[Mvp] Q1 결정: 이미지 생성 타임아웃
 # 이미지 생성은 15-20초 소요 가능하므로 충분한 여유를 둠
-IMAGE_GENERATION_TIMEOUT_SECONDS = 60
+# TODO: 테스트 후 적절한 값으로 조정 (현재 5분으로 설정)
+IMAGE_GENERATION_TIMEOUT_SECONDS = 300
 """이미지 생성 API 호출 타임아웃 (초)."""
 
 

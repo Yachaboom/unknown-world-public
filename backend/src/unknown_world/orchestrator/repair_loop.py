@@ -22,7 +22,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from unknown_world.config.models import ModelLabel
 from unknown_world.models.turn import (
     CurrencyAmount,
     Language,
@@ -132,7 +131,6 @@ class RepairLoopResult:
 async def run_repair_loop(
     turn_input: TurnInput,
     *,
-    model_label: ModelLabel | None = None,
     world_context: str = "",
     force_mock: bool = False,
     max_attempts: int = MAX_REPAIR_ATTEMPTS,
@@ -142,9 +140,12 @@ async def run_repair_loop(
     초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
     최종 실패 시 안전한 폴백을 반환합니다.
 
+    Note:
+        현재 항상 FAST 모델을 사용합니다.
+        QUALITY 모델은 추후 "정밀 조사" 기능 구현 시 별도 경로로 추가 예정.
+
     Args:
         turn_input: 사용자 턴 입력
-        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
         world_context: 현재 세계 상태 요약 (선택)
         force_mock: Mock 클라이언트 강제 사용 여부
         max_attempts: 최대 복구 시도 횟수
@@ -192,7 +193,6 @@ async def run_repair_loop(
         # 생성 시도
         gen_result = await generator.generate(
             turn_input,
-            model_label=model_label,
             world_context=current_context,
         )
 

@@ -207,19 +207,22 @@ def test_savegame_compatibility():
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 단순화 방식 선택?
+- [x] **Q1**: 단순화 방식 선택?
   - Option A: 필드 축소 (권장: 단순, 한 번에 해결)
   - Option B: 단계별 생성 (복잡, 지연 증가)
   - Option C: 부분 구조화 (중간 복잡도)
+  **A1**: Option A
 
-- [ ] **Q2**: 배열 크기 제한?
+- [x] **Q2**: 배열 크기 제한?
   - Option A: actions 5개, objects 5개, hotspots 5개 (보수적)
   - Option B: actions 3개, objects 3개, hotspots 3개 (더 단순)
+  **A2**: Option A
 
-- [ ] **Q3**: 제거할 필드?
-  - rule_mutations, world_changes → narrative에서 자연어로 표현
-  - objects.description → label만 유지
-  - action.reward/risk → 제거 또는 단순 정수로
+- [x] **Q3**: 제거할 필드?
+  - Option A: rule_mutations, world_changes → narrative에서 자연어로 표현
+  - Option B: objects.description → label만 유지
+  - Option C: action.reward/risk → 제거 또는 단순 정수로
+  **A3**: Option A
 
 ## 리스크 및 완화
 

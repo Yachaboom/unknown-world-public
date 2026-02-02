@@ -120,6 +120,10 @@ interface CardDisplayInfo extends ActionCard {
 // 기본 카드 생성 (i18n 기반)
 // =============================================================================
 
+/**
+ * 기본 카드 생성 (i18n 기반) - U-065 단순화.
+ * U-065: description, cost_estimate, hint, reward_hint, disabled_reason 필드 제거됨
+ */
 function useDefaultCards(): ActionCard[] {
   const { t } = useTranslation();
 
@@ -128,40 +132,25 @@ function useDefaultCards(): ActionCard[] {
       {
         id: 'default-explore',
         label: t('action.default.explore.label'),
-        description: t('action.default.explore.description'),
         cost: { signal: 1, memory_shard: 0 },
-        cost_estimate: null,
         risk: 'low' as const,
-        hint: null,
-        reward_hint: null,
         enabled: true,
-        disabled_reason: null,
         is_alternative: false,
       },
       {
         id: 'default-investigate',
         label: t('action.default.investigate.label'),
-        description: t('action.default.investigate.description'),
         cost: { signal: 2, memory_shard: 0 },
-        cost_estimate: null,
         risk: 'medium' as const,
-        hint: null,
-        reward_hint: null,
         enabled: true,
-        disabled_reason: null,
         is_alternative: false,
       },
       {
         id: 'default-talk',
         label: t('action.default.talk.label'),
-        description: t('action.default.talk.description'),
         cost: { signal: 1, memory_shard: 0 },
-        cost_estimate: null,
         risk: 'low' as const,
-        hint: null,
-        reward_hint: null,
         enabled: true,
-        disabled_reason: null,
         is_alternative: false,
       },
     ],
@@ -177,17 +166,16 @@ interface CardCostDisplayProps {
   card: CardDisplayInfo;
 }
 
+/**
+ * 비용 표시 컴포넌트 - U-065 단순화.
+ * cost_estimate 필드 제거됨, cost만 사용
+ */
 function CardCostDisplay({ card }: CardCostDisplayProps) {
   const { t } = useTranslation();
 
-  // 비용 추정 범위가 있으면 min~max 표시, 없으면 기본 cost 표시
-  const costDisplay = card.cost_estimate
-    ? `${card.cost_estimate.min.signal}~${card.cost_estimate.max.signal}`
-    : `${card.cost.signal}`;
-
-  const shardCost = card.cost_estimate
-    ? card.cost_estimate.max.memory_shard
-    : card.cost.memory_shard;
+  // U-065: cost_estimate 제거, cost만 사용
+  const costDisplay = `${card.cost.signal}`;
+  const shardCost = card.cost.memory_shard;
 
   return (
     <div className="action-card-cost" data-ui-importance="critical">
@@ -222,11 +210,7 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
             />
             <span className="icon-fallback">💎</span>
           </span>
-          <span className="cost-value">
-            {card.cost_estimate
-              ? `${card.cost_estimate.min.memory_shard}~${card.cost_estimate.max.memory_shard}`
-              : card.cost.memory_shard}
-          </span>
+          <span className="cost-value">{card.cost.memory_shard}</span>
         </span>
       )}
 
@@ -261,6 +245,10 @@ interface ActionCardItemProps {
   disabled: boolean;
 }
 
+/**
+ * 단일 카드 컴포넌트 - U-065 단순화.
+ * description, hint, reward_hint 필드 제거됨
+ */
 function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProps) {
   const { t } = useTranslation();
 
@@ -285,7 +273,7 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
       onBlur={() => onHover(null)}
       disabled={disabled || card.isDisabled}
       aria-disabled={disabled || card.isDisabled}
-      title={card.finalDisabledReason ?? card.description ?? undefined}
+      title={card.finalDisabledReason ?? undefined}
     >
       {/* 대안 카드 표시 */}
       {card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
@@ -293,29 +281,8 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
       {/* 카드 타이틀 */}
       <div className="action-card-title">{card.label}</div>
 
-      {/* 카드 설명 (있을 때만) */}
-      {card.description && <div className="action-card-description">{card.description}</div>}
-
       {/* 비용/위험도 정보 */}
       <CardCostDisplay card={card} />
-
-      {/* 힌트 영역 */}
-      {(card.hint || card.reward_hint) && (
-        <div className="action-card-hints">
-          {card.hint && (
-            <div className="hint-item hint-risk">
-              <span className="hint-icon">⚠</span>
-              <span className="hint-text">{card.hint}</span>
-            </div>
-          )}
-          {card.reward_hint && (
-            <div className="hint-item hint-reward">
-              <span className="hint-icon">★</span>
-              <span className="hint-text">{card.reward_hint}</span>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 비활성화 오버레이 */}
       {card.isDisabled && (
@@ -350,10 +317,11 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   const disabled = propsDisabled ?? isStreaming;
 
   // 카드 호버 핸들러 (U-014: 예상 비용 표시)
+  // U-065: cost_estimate 제거됨, cost만 전달
   const handleCardHover = useCallback(
     (card: CardDisplayInfo | null) => {
       if (card) {
-        setCostEstimateFromCard(card.cost, card.cost_estimate, card.id, card.label);
+        setCostEstimateFromCard(card.cost, null, card.id, card.label);
       } else {
         setCostEstimate(null);
       }
@@ -365,13 +333,15 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   const displayCards = cards.length > 0 ? cards : defaultCards;
 
   // 카드별 실행 가능 여부 계산 (Q1: Option A - 서버 우선, 클라이언트 폴백)
+  // U-065: cost_estimate, disabled_reason 필드 제거됨
   const processedCards: CardDisplayInfo[] = useMemo(() => {
     return displayCards.map((card) => {
       // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
       const serverEnabled = card.enabled;
 
       // 클라이언트 측 잔액 체크 (서버가 판단하지 않았을 때 폴백)
-      const costToCheck = card.cost_estimate?.max ?? card.cost;
+      // U-065: cost_estimate 제거됨, cost만 사용
+      const costToCheck = card.cost;
       const isAffordable =
         currentBalance.signal >= costToCheck.signal &&
         currentBalance.memory_shard >= costToCheck.memory_shard;
@@ -379,10 +349,10 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
       // 최종 비활성화 여부: 서버 판단 우선, 없으면 클라이언트 판단
       const isDisabled = !serverEnabled || !isAffordable;
 
-      // 비활성화 사유 결정
+      // 비활성화 사유 결정 (U-065: disabled_reason 제거됨)
       let finalDisabledReason: string | null = null;
-      if (!serverEnabled && card.disabled_reason) {
-        finalDisabledReason = card.disabled_reason;
+      if (!serverEnabled) {
+        finalDisabledReason = t('action.server_disabled');
       } else if (!isAffordable) {
         finalDisabledReason = t('action.insufficient_balance');
       }

@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 81/106 (76.4%) | **MVP**: 81/89 (91.0%) | **MMP**: 0/17 (0%)
+**전체**: 82/106 (77.4%) | **MVP**: 82/89 (92.1%) | **MMP**: 0/17 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-10
+**예상 완료(가정)**: MVP D-3 | MMP D-10
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-065[Mvp]](unit-plans/U-065[Mvp].md) / **최근 완료**: [U-064[Mvp]](unit-plans/U-064[Mvp].md) (2026-02-02)
+**진행 중(현재 포커스)**: [U-066[Mvp]](unit-plans/U-066[Mvp].md) / **최근 완료**: [U-065[Mvp]](unit-plans/U-065[Mvp].md) (2026-02-02)
 
 **블로커**: 없음
 
@@ -142,8 +142,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-065[Mvp]](unit-plans/U-065[Mvp].md) | ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응) | Depends=U-064 | 🚧
-ID=[U-066[Mvp]](unit-plans/U-066[Mvp].md) | ⚡이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) | Depends=U-065,U-055,U-020 | ⏸️
+ID=[U-065[Mvp]](unit-plans/U-065[Mvp].md) | ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응) | Depends=U-064 | ✅
+ID=[U-066[Mvp]](unit-plans/U-066[Mvp].md) | ⚡이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) | Depends=U-065,U-055,U-020 | 🚧
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
 ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
@@ -174,6 +174,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-065[Mvp]](unit-results/U-065[Mvp].md): TurnOutput 스키마 단순화 (Gemini API 제한 대응) (2026-02-02)
 - ✅ [U-064[Mvp]](unit-results/U-064[Mvp].md): Gemini 이미지 생성 API 호출 방식 수정 (2026-02-02)
 - ✅ [U-063[Mvp]](unit-results/U-063[Mvp].md): 프론트엔드 턴 실행 후 재화 잔액 버그 수정 (2026-02-02)
 - ✅ [U-062[Mvp]](unit-results/U-062[Mvp].md): MockOrchestrator 영어 입력 시 LanguageGate 수정 (2026-02-01)

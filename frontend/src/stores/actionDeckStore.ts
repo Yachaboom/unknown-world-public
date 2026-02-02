@@ -124,6 +124,8 @@ export const selectLastExecutedCardId = (state: ActionDeckStore) => state.lastEx
  * 잔액 기반으로 실행 가능한 카드만 필터링합니다.
  * (컴포넌트에서 사용하거나, 서버 응답이 enabled를 제공하지 않을 때 폴백으로 사용)
  *
+ * U-065: cost_estimate 필드 제거됨, cost만 사용
+ *
  * @param cards - 원본 카드 목록
  * @param balance - 현재 잔액
  * @returns 실행 가능한 카드 목록
@@ -136,8 +138,8 @@ export function filterAffordableCards(
     // 서버에서 이미 enabled=false로 판단했으면 제외
     if (!card.enabled) return false;
 
-    // 비용 추정치가 있으면 최대 비용으로 판단
-    const cost = card.cost_estimate?.max ?? card.cost;
+    // U-065: cost_estimate 제거됨, cost만 사용
+    const cost = card.cost;
     return balance.signal >= cost.signal && balance.memory_shard >= cost.memory_shard;
   });
 }

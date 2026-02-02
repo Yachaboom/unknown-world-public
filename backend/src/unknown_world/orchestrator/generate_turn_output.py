@@ -228,7 +228,6 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         self,
         turn_input: TurnInput,
         *,
-        model_label: ModelLabel | None = None,
         world_context: str = "",
     ) -> GenerationResult:
         """TurnOutput을 생성합니다.
@@ -236,15 +235,18 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         Structured Outputs(JSON Schema) 모드로 Gemini를 호출하고,
         Pydantic으로 응답을 검증합니다.
 
+        Note:
+            현재 항상 FAST 모델을 사용합니다.
+            QUALITY 모델은 추후 "정밀 조사" 기능 구현 시 별도 경로로 추가 예정.
+
         Args:
             turn_input: 사용자 턴 입력
-            model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
             world_context: 현재 세계 상태 요약 (선택)
 
         Returns:
             GenerationResult: 생성 결과 (status, output, error 등)
         """
-        label = model_label or self._default_model_label
+        label = self._default_model_label  # 항상 FAST
 
         # 로그에는 메타만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.info(
@@ -466,15 +468,17 @@ def get_turn_output_generator(
 async def generate_turn_output(
     turn_input: TurnInput,
     *,
-    model_label: ModelLabel | None = None,
     world_context: str = "",
     force_mock: bool = False,
 ) -> GenerationResult:
     """TurnOutput을 생성하는 편의 함수.
 
+    Note:
+        현재 항상 FAST 모델을 사용합니다.
+        QUALITY 모델은 추후 "정밀 조사" 기능 구현 시 별도 경로로 추가 예정.
+
     Args:
         turn_input: 사용자 턴 입력
-        model_label: 사용할 모델 라벨 (None이면 기본값 FAST)
         world_context: 현재 세계 상태 요약 (선택)
         force_mock: Mock 클라이언트 강제 사용 여부
 
@@ -489,6 +493,5 @@ async def generate_turn_output(
     generator = get_turn_output_generator(force_mock=force_mock)
     return await generator.generate(
         turn_input,
-        model_label=model_label,
         world_context=world_context,
     )

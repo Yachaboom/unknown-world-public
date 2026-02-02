@@ -149,7 +149,7 @@
   - **검증 결과**: 테스트 스크립트에서 56초 만에 이미지 생성 성공 (1.6MB)
 - **참고 문서**: https://ai.google.dev/gemini-api/docs/image-generation
 
-## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Gemini API 거부 (U-055 Real 모드 테스트 발견)
+## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Gemini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 
 - **발견 위치**: `backend/src/unknown_world/orchestrator/generate_turn_output.py:251`
 - **현상**: Real 모드에서 턴 생성 시 Gemini API가 400 에러 반환
@@ -160,16 +160,20 @@
   ```
 - **원인**: TurnOutput JSON Schema가 Gemini의 구조화된 출력(Controlled Generation) 제한을 초과
 - **영향**: Real Orchestrator 사용 불가, 항상 폴백 응답 반환
-- **추정 원인**:
-  - 스키마의 속성 수가 너무 많음
-  - 중첩된 배열/객체 구조
-  - enum 값이 너무 길거나 많음
-- **보류 사유**: U-055[Mvp] 런북 검증 범위 밖
-- **권장 조치**:
-  - TurnOutput 스키마 단순화 검토
-  - 불필요한 필드 제거 또는 선택적 필드로 변경
-  - 스키마를 분리하여 단계별로 생성하는 방식 검토
-  - Gemini API의 스키마 제한 문서 확인
+
+- **해결 완료**: [U-065[Mvp]](unit-plans/U-065[Mvp].md) (2026-02-02)
+  - **수정**: TurnOutput 스키마 단순화 (ActionCard 필드 축소 + 배열 제한 강화)
+  - **제거된 필드**: `ActionCard.description`, `cost_estimate`, `hint`, `reward_hint`, `disabled_reason`
+  - **배열 제한**: actions 5개, objects 5개, hotspots 5개
+  - **Pydantic + Zod 이중 검증**: 백엔드/프론트엔드 스키마 동기화 완료
+  - **수정 파일**:
+    - `backend/src/unknown_world/models/turn.py`: ActionCard 필드 단순화
+    - `backend/src/unknown_world/orchestrator/fallback.py`: ActionCard 생성 수정
+    - `backend/src/unknown_world/orchestrator/mock.py`: Mock 카드 생성 수정
+    - `backend/src/unknown_world/validation/language_gate.py`: 텍스트 추출 로직 수정
+    - `frontend/src/schemas/turn.ts`: Zod 스키마 동기화
+    - `frontend/src/components/ActionDeck.tsx`: UI 컴포넌트 수정
+    - `frontend/src/stores/actionDeckStore.ts`: 스토어 로직 수정
 
 ## 2026-02-01 이슈: test_turn_streaming_deterministic_seed - image_id 비결정성 (U-060 발견) ✅ 해결됨
 

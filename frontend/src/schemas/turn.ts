@@ -219,27 +219,21 @@ export const CostEstimateSchema = z
 export type CostEstimate = z.infer<typeof CostEstimateSchema>;
 
 /**
- * 액션 카드 (Action Deck).
+ * 액션 카드 (Action Deck) - U-065 단순화.
  * 매 턴 AI가 추천하는 행동 카드입니다.
  *
- * U-009 확장:
- *   - cost_estimate: 최소/최대 비용 범위 (RULE-005)
- *   - enabled: 서버 측 실행 가능 여부 판단 (Q1: Option A)
- *   - disabled_reason: 비활성화 사유 (잔액 부족 등)
- *   - is_alternative: 저비용/텍스트-only 대안 카드 여부
+ * U-065 단순화:
+ *   - 제거된 필드: description, cost_estimate, hint, reward_hint, disabled_reason
+ *   - risk, is_alternative는 유지 (게임 메카닉에 필수)
+ *   - 제거된 정보는 narrative에서 자연어로 표현
  */
 export const ActionCardSchema = z
   .object({
     id: z.string().describe('카드 고유 ID'),
     label: z.string().describe('카드 라벨 (표시용)'),
-    description: z.string().nullable().default(null).describe('카드 설명 (선택)'),
     cost: CurrencyAmountSchema.describe('예상 비용 (기본)'),
-    cost_estimate: CostEstimateSchema.nullable().default(null).describe('비용 추정 범위 (선택)'),
     risk: RiskLevelSchema.default('low').describe('위험도'),
-    hint: z.string().nullable().default(null).describe('예상 결과 힌트 (선택)'),
-    reward_hint: z.string().nullable().default(null).describe('보상 힌트 (선택)'),
     enabled: z.boolean().default(true).describe('실행 가능 여부 (서버 판단)'),
-    disabled_reason: z.string().nullable().default(null).describe('비활성화 사유 (선택)'),
     is_alternative: z.boolean().default(false).describe('저비용 대안 카드 여부'),
   })
   .strict();
@@ -260,12 +254,15 @@ export const SceneObjectSchema = z
 export type SceneObject = z.infer<typeof SceneObjectSchema>;
 
 /**
- * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조).
+ * 액션 덱 (Q1 결정: ui.action_deck.cards[] 구조) - U-065 단순화.
  * 매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+ *
+ * U-065 단순화:
+ *   - max_length: 10 → 5 (Gemini 스키마 제한 대응, Q2 결정)
  */
 export const ActionDeckSchema = z
   .object({
-    cards: z.array(ActionCardSchema).max(10).default([]).describe('액션 카드 목록 (3~6장 권장)'),
+    cards: z.array(ActionCardSchema).max(5).default([]).describe('액션 카드 목록 (3~5장 권장)'),
   })
   .strict();
 export type ActionDeck = z.infer<typeof ActionDeckSchema>;
@@ -295,11 +292,12 @@ export type SceneOutput = z.infer<typeof SceneOutputSchema>;
 const DEFAULT_SCENE_OUTPUT: SceneOutput = { image_url: null, alt_text: null };
 
 /**
- * UI 출력 데이터.
+ * UI 출력 데이터 - U-065 단순화.
  * AI가 생성한 UI 요소들입니다.
  * 채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
  *
  * RU-003-T1: scene 필드 추가 - Scene Canvas의 이미지 표시 정보 SSOT.
+ * U-065 단순화: objects 배열 크기 제한 (최대 5개, Q2 결정)
  *
  * 수정: scene 필드는 백엔드에서 null로 올 수 있으므로 nullish()를 사용하여
  * null/undefined 시 기본값으로 변환합니다.
@@ -307,7 +305,11 @@ const DEFAULT_SCENE_OUTPUT: SceneOutput = { image_url: null, alt_text: null };
 export const UIOutputSchema = z
   .object({
     action_deck: ActionDeckSchema.default({ cards: [] }).describe('액션 카드 덱'),
-    objects: z.array(SceneObjectSchema).default([]).describe('클릭 가능한 장면 오브젝트 목록'),
+    objects: z
+      .array(SceneObjectSchema)
+      .max(5)
+      .default([])
+      .describe('클릭 가능한 장면 오브젝트 목록 (최대 5개)'),
     scene: SceneOutputSchema.nullish()
       .transform((val) => val ?? DEFAULT_SCENE_OUTPUT)
       .describe('Scene 표시 정보 (RU-003-T1, null 허용)'),
@@ -359,17 +361,46 @@ export const QuestSchema = z
 export type Quest = z.infer<typeof QuestSchema>;
 
 /**
- * 세계 상태 변화 (Q2 결정: Option A - delta 중심).
+ * 세계 상태 변화 (Q2 결정: Option A - delta 중심) - U-065 단순화.
  * 이번 턴에서 변경된 세계 상태를 나타냅니다.
+ *
+ * U-065 단순화 (Q3 결정: Option A):
+ *   - rules_changed, quests_updated → 배열 크기 제한 (최대 3개)
+ *   - memory_pins → 배열 크기 제한 (최대 2개)
+ *   - 상세 정보는 narrative에서 자연어로 표현
  */
 export const WorldDeltaSchema = z
   .object({
-    rules_changed: z.array(WorldRuleSchema).default([]).describe('변경된 규칙 목록'),
-    inventory_added: z.array(z.string()).default([]).describe('추가된 인벤토리 아이템'),
-    inventory_removed: z.array(z.string()).default([]).describe('제거된 인벤토리 아이템'),
-    quests_updated: z.array(QuestSchema).default([]).describe('업데이트된 퀘스트/목표 목록'),
-    relationships_changed: z.array(z.string()).default([]).describe('변경된 관계'),
-    memory_pins: z.array(MemoryPinSchema).default([]).describe('중요 설정 고정 후보'),
+    rules_changed: z
+      .array(WorldRuleSchema)
+      .max(3)
+      .default([])
+      .describe('변경된 규칙 목록 (최대 3개)'),
+    inventory_added: z
+      .array(z.string())
+      .max(5)
+      .default([])
+      .describe('추가된 인벤토리 아이템 (최대 5개)'),
+    inventory_removed: z
+      .array(z.string())
+      .max(5)
+      .default([])
+      .describe('제거된 인벤토리 아이템 (최대 5개)'),
+    quests_updated: z
+      .array(QuestSchema)
+      .max(3)
+      .default([])
+      .describe('업데이트된 퀘스트/목표 목록 (최대 3개)'),
+    relationships_changed: z
+      .array(z.string())
+      .max(3)
+      .default([])
+      .describe('변경된 관계 (최대 3개)'),
+    memory_pins: z
+      .array(MemoryPinSchema)
+      .max(2)
+      .default([])
+      .describe('중요 설정 고정 후보 (최대 2개)'),
   })
   .strict();
 export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
@@ -379,10 +410,11 @@ export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
 // =============================================================================
 
 /**
- * 이미지 생성 작업.
+ * 이미지 생성 작업 - U-065 단순화.
  * 조건부 이미지 생성/편집 요청입니다.
  *
  * U-035: remove_background, image_type_hint 필드 추가 (rembg 배경 제거)
+ * U-065 단순화: reference_image_ids 배열 크기 제한 (최대 2개)
  */
 export const ImageJobSchema = z
   .object({
@@ -391,7 +423,11 @@ export const ImageJobSchema = z
     model_label: ModelLabelSchema.default('FAST').describe('모델 선택 라벨'),
     aspect_ratio: z.string().default('16:9').describe('가로세로 비율'),
     image_size: z.string().default('1024x1024').describe('이미지 크기'),
-    reference_image_ids: z.array(z.string()).default([]).describe('참조 이미지 ID 목록 (선택)'),
+    reference_image_ids: z
+      .array(z.string())
+      .max(2)
+      .default([])
+      .describe('참조 이미지 ID 목록 (최대 2개)'),
     remove_background: z.boolean().default(false).describe('배경 제거 여부 (U-035, rembg 사용)'),
     image_type_hint: z
       .string()
@@ -405,10 +441,30 @@ export type ImageJob = z.infer<typeof ImageJobSchema>;
 /**
  * 렌더링 출력 데이터.
  * 이미지 생성/편집 관련 정보입니다.
+ *
+ * U-053: image_url, image_id, generation_time_ms 필드 추가 (후처리에서 채움)
+ * U-035: background_removed 필드 추가 (rembg 배경 제거 결과)
  */
 export const RenderOutputSchema = z
   .object({
     image_job: ImageJobSchema.nullable().default(null).describe('이미지 생성 작업 (선택)'),
+    image_url: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('생성된 이미지 URL (후처리에서 채움, U-053)'),
+    image_id: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('생성된 이미지 ID (후처리에서 채움, U-053)'),
+    generation_time_ms: z
+      .number()
+      .int()
+      .nullable()
+      .default(null)
+      .describe('이미지 생성 소요 시간 (ms, U-053)'),
+    background_removed: z.boolean().default(false).describe('배경 제거 수행 여부 (U-035)'),
   })
   .strict();
 export type RenderOutput = z.infer<typeof RenderOutputSchema>;
@@ -473,13 +529,15 @@ export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
 // =============================================================================
 
 /**
- * 에이전트 콘솔 데이터 (RULE-008).
+ * 에이전트 콘솔 데이터 (RULE-008) - U-065 단순화.
  * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+ *
+ * U-065 단순화: badges 배열 크기 제한 (최대 4개)
  */
 export const AgentConsoleSchema = z
   .object({
     current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
-    badges: z.array(ValidationBadgeSchema).default([]).describe('검증 배지 목록'),
+    badges: z.array(ValidationBadgeSchema).max(4).default([]).describe('검증 배지 목록 (최대 4개)'),
     repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
   })
   .strict();

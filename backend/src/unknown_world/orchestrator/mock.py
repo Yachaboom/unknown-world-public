@@ -359,14 +359,13 @@ class MockOrchestrator:
             cost_signal = turn_rng.randint(1, 10)
             cost_shard = 1 if turn_rng.random() < 0.2 else 0  # 20% 확률로 shard 소비
 
+            # U-065: description, hint 필드 제거됨 (narrative에서 자연어로 표현)
             action_cards.append(
                 ActionCard(
                     id=f"action_{i + 1}",
                     label=template["label"],
-                    description=template["description"],
                     cost=CurrencyAmount(signal=cost_signal, memory_shard=cost_shard),
                     risk=turn_rng.choice(list(RiskLevel)),
-                    hint=None,
                 )
             )
 

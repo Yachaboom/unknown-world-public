@@ -252,33 +252,9 @@ def extract_user_facing_texts(turn_output: TurnOutput) -> list[ExtractedText]:
         texts.append(ExtractedText(field_path="narrative", text=turn_output.narrative))
 
     # 2. ui.action_deck.cards[]
+    # U-065: description, hint, reward_hint, disabled_reason 필드 제거됨
     for i, card in enumerate(turn_output.ui.action_deck.cards):
         texts.append(ExtractedText(field_path=f"ui.action_deck.cards[{i}].label", text=card.label))
-        if card.description:
-            texts.append(
-                ExtractedText(
-                    field_path=f"ui.action_deck.cards[{i}].description",
-                    text=card.description,
-                )
-            )
-        if card.hint:
-            texts.append(
-                ExtractedText(field_path=f"ui.action_deck.cards[{i}].hint", text=card.hint)
-            )
-        if card.reward_hint:
-            texts.append(
-                ExtractedText(
-                    field_path=f"ui.action_deck.cards[{i}].reward_hint",
-                    text=card.reward_hint,
-                )
-            )
-        if card.disabled_reason:
-            texts.append(
-                ExtractedText(
-                    field_path=f"ui.action_deck.cards[{i}].disabled_reason",
-                    text=card.disabled_reason,
-                )
-            )
 
     # 3. ui.objects[]
     for i, obj in enumerate(turn_output.ui.objects):

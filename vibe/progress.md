@@ -1,5 +1,37 @@
 # 프로젝트 진행 상황
 
+## [2026-02-02 23:40] [U-065[Mvp]] TurnOutput 스키마 단순화 (Gemini API 제한 대응) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Gemini API 400 에러(스키마 복잡도 제한) 해결을 위한 `ActionCard` 및 `TurnOutput` 필드 단순화 및 배열 크기 제약 강화
+- **추가 컴포넌트**: `backend/tests/unit/test_u065_schema_simplification.py` (스키마 검증 테스트), `vibe/unit-results/U-065[Mvp].md` (개발 보고서)
+- **달성 요구사항**: [RULE-003] 구조화 출력(Gemini 호환성 확보), [RULE-004] 안전 폴백 품질 유지, [RULE-005] 경제 시스템 연동(cost_estimate → cost 단일화)
+
+### 기술적 구현 세부사항
+
+**스키마 최적화 및 Gemini 호환성**:
+- **Field Pruning**: `ActionCard`에서 `description`, `hint`, `cost_estimate` 등 비핵심 필드를 제거하여 Gemini API의 상태 머신 복잡도를 Serving 가능한 수준으로 감축.
+- **Strict Array Limits**: `actions`(5), `objects`(5), `inventory_added`(5) 등 주요 리스트 필드에 엄격한 `max_length` 제약을 적용하여 스키마 상태 폭발 방지.
+- **Data Flow Alignment**: 프론트엔드 Zod 스키마와 백엔드 Pydantic 모델을 동시 수정하여 `cost_estimate` 기반 로직을 단일 `cost` 체계로 성공적으로 마이그레이션.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/
+│   ├── models/turn.py (스키마 단순화 및 제약 추가)
+│   └── orchestrator/ (Mock/Fallback 로직 수정)
+└── frontend/src/
+    ├── schemas/turn.ts (Zod 스키마 동기화)
+    ├── components/ActionDeck.tsx (제거된 필드 참조 제거)
+    └── stores/actionDeckStore.ts (비용 로직 마이그레이션)
+
+### 다음 단계
+
+- **U-066**: 이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY)
+- **CP-MVP-03**: 체크포인트: 10분 데모 루프 (전체 시스템 통합 점검)
+
+---
+
 ## [2026-02-02 16:30] [U-064[Mvp]] Gemini 이미지 생성 API 호출 방식 수정 완료
 
 ### 구현 완료 항목

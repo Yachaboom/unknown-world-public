@@ -7,31 +7,22 @@ describe('actionDeckStore', () => {
     useActionDeckStore.getState().reset();
   });
 
+  // U-065: 단순화된 ActionCard 스키마 (제거됨: description, cost_estimate, hint, reward_hint, disabled_reason)
   const mockCards: ActionCard[] = [
     {
       id: 'card-1',
       label: 'Card 1',
-      description: null,
       cost: { signal: 10, memory_shard: 0 },
-      cost_estimate: null,
       risk: 'low',
-      hint: null,
-      reward_hint: null,
       enabled: true,
-      disabled_reason: null,
       is_alternative: false,
     },
     {
       id: 'card-2',
       label: 'Card 2',
-      description: null,
       cost: { signal: 50, memory_shard: 1 },
-      cost_estimate: null,
       risk: 'high',
-      hint: null,
-      reward_hint: null,
       enabled: true,
-      disabled_reason: null,
       is_alternative: false,
     },
   ];

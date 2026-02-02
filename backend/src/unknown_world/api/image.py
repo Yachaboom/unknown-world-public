@@ -29,7 +29,9 @@ from unknown_world.models.turn import Language
 from unknown_world.services.image_generation import (
     ImageGenerationRequest,
     ImageGenerationStatus,
+    ImageGenerator,
     ImageGeneratorType,
+    MockImageGenerator,
     create_fallback_response,
     get_image_generator,
 )
@@ -316,12 +318,8 @@ async def image_health(
         헬스 상태 정보
     """
     is_available = generator.is_available()
-    mode = (
-        "mock"
-        if hasattr(generator, "_output_dir")
-        and isinstance(generator, type(get_image_generator(force_mock=True)))
-        else "real"
-    )
+    # MockImageGenerator 인스턴스인지 직접 확인 (싱글톤 캐시 오염 방지)
+    mode = "mock" if isinstance(generator, MockImageGenerator) else "real"
 
     return {
         "status": "ok" if is_available else "degraded",

@@ -15,6 +15,11 @@ export default defineConfig({
         target: 'http://localhost:8011',
         changeOrigin: true,
       },
+      // 정적 파일 프록시 (이미지 등)
+      '/static': {
+        target: 'http://localhost:8011',
+        changeOrigin: true,
+      },
     },
   },
   build: {

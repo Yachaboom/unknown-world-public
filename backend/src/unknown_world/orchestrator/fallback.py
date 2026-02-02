@@ -94,10 +94,10 @@ def create_safe_fallback(
     balance = economy_snapshot or CurrencyAmount(signal=100, memory_shard=5)
 
     # 저비용 대안 카드 제공 (RULE-005)
+    # U-065: description 필드 제거됨 (narrative에서 자연어로 표현)
     alternative_card = ActionCard(
         id="fallback_text_only",
         label=messages["alternative_label"],
-        description=messages["alternative_desc"],
         cost=CurrencyAmount(signal=1, memory_shard=0),
         risk=RiskLevel.LOW,
         enabled=True,

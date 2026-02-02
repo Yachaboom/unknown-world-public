@@ -15,8 +15,8 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 │   │   ├── api/ (turn.py, scanner.py, image.py 등)
 │   │   ├── config/ (models.py)
 │   │   ├── models/ (turn.py, scanner.py)
-│   │   ├── orchestrator/ (pipeline.py, mock.py, prompt_loader.py 등)
-│   │   │   └── stages/ (parse.py, validate.py, render.py 등)
+│   │   ├── orchestrator/ (pipeline.py, mock.py, prompt_loader.py, repair_loop.py 등)
+│   │   │   └── stages/ (parse.py, validate.py, render.py, verify.py 등)
 │   │   ├── services/ (genai_client.py, image_generation.py, image_postprocess.py 등)
 │   │   ├── storage/ (local_storage.py, validation.py, paths.py)
 │   │   └── validation/ (language_gate.py, business_rules.py)
@@ -25,7 +25,7 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ├── frontend/
 │   ├── src/
 │   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx 등)
-│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts 등)
+│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts 등)
 │   │   ├── turn/ (turnRunner.ts)
 │   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts)
 │   │   ├── api/ (turnStream.ts, scanner.ts)
@@ -36,8 +36,8 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 │   └── schemas/turn/ (turn_output.schema.json 등)
 └── vibe/
     ├── unit-plans/
-    ├── unit-results/ (U-062[Mvp].md, U-063[Mvp].md, U-064[Mvp].md 등)
-    └── unit-runbooks/ (U-064-gemini-image-api-runbook.md 등)
+    ├── unit-results/ (U-062[Mvp].md, U-063[Mvp].md, U-064[Mvp].md, U-065[Mvp].md 등)
+    └── unit-runbooks/ (U-064-gemini-image-api-runbook.md, U-065[Mvp]-runbook.md 등)
 ```
 
 ### 주요 디렉토리 설명
@@ -249,3 +249,15 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **타임아웃 및 예외 정책 (RULE-004)**:
     - **Increased Timeout**: 이미지 생성의 높은 연산 비용을 고려하여 API 호출 타임아웃을 **60초**로 상향 조정함.
     - **Graceful Fallback**: 타임아웃 또는 API 에러 발생 시 시스템 중단 없이 안전 폴백(`create_fallback_response`)을 통해 텍스트 전용 모드로 전이되도록 보장함.
+
+## 29. TurnOutput 스키마 단순화 및 Gemini 제한 대응 (U-065[Mvp])
+
+1. **스키마 복잡도 최적화 (Option A - 필드 축소)**:
+    - **Controlled Generation 제한 대응**: Gemini API의 "too many states" 400 에러를 해결하기 위해 `ActionCard` 및 `TurnOutput` 스키마에서 중복되거나 후순위인 필드(`description`, `hint`, `cost_estimate` 등)를 제거함.
+    - **Narrative 중심 정보 통합**: 제거된 필드의 시맨틱 정보는 `narrative` 필드 내에서 자연어로 표현하도록 유도하여 정보 손실을 최소화함.
+2. **배열 크기 및 제약 조건 강화 (Hard Limits)**:
+    - **Array Size Reduction**: `ActionCard` 목록을 최대 5개로 제한하고, `objects`, `hotspots`, `inventory_added` 등 모든 리스트 필드에 엄격한 `max_length` (3~5) 제약을 적용함.
+    - **String Length Optimization**: `narrative` 및 주요 텍스트 필드의 최대 길이를 조정하여 Gemini API의 상태 머신 복잡도를 Serving 가능한 수준으로 낮춤.
+3. **서버-클라이언트 스키마 동기화 (Pydantic & Zod)**:
+    - **Double Validation Alignment**: 백엔드의 Pydantic 모델 변경사항을 프론트엔드의 Zod 스키마에 즉시 반영하여 데이터 정합성 유지.
+    - **UI Interaction Compatibility**: 제거된 필드(`cost_estimate` 등)를 참조하던 UI 컴포넌트(`ActionDeck.tsx`)와 스토어 로직을 새로운 단일 필드(`cost`) 체계로 전환함.
