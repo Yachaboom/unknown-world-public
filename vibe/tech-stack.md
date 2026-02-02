@@ -43,7 +43,8 @@
   - (선택) 이미지/아티팩트 저장: `google-cloud-storage 3.7.0`
   - **모델 라인업(모델 ID 고정)**
     - 텍스트: `gemini-3-flash-preview`(FAST), `gemini-3-pro-preview`(QUALITY)
-    - 이미지(생성/편집): `gemini-3-pro-image-preview`(EDIT/QUALITY, 고정)
+    - 이미지(최종 생성/편집): `gemini-3-pro-image-preview`(EDIT/QUALITY, 기본)
+    - 이미지(저지연 프리뷰/초안, 선택): `gemini-2.5-flash-image`(IMAGE_FAST/FAST)
     - 비전/공간: `gemini-3-flash-preview`(bbox/segmentation)
 
 - **Infra (배포)**

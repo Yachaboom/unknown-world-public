@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 81/105 (77.1%) | **MVP**: 81/88 (92.0%) | **MMP**: 0/17 (0%)
+**전체**: 81/106 (76.4%) | **MVP**: 81/89 (91.0%) | **MMP**: 0/17 (0%)
 
 **예상 완료(가정)**: MVP D-4 | MMP D-10
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
@@ -21,6 +21,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - ko/en 혼합 출력 사례: `vibe/ref/en-ko-issue.png` (현상/원인 분류 및 수정 계획은 U-043/U-044에서 정리)
 - 로컬에서 `.env`가 자동 로딩되지 않으면 `UW_MODE`가 기본값(mock)으로 동작해 MockOrchestrator 템플릿("...라고 말했습니다", 고정 내러티브)이 반복 노출될 수 있다 → U-047(백엔드 `.env` 자동 로딩) + U-048(Mock 내러티브/액션 echo 개선)로 해결한다.
 - **[2026-02-01 추가]** MVP 품질 개선을 위한 신규 유닛 추가: UI 품질(U-056~U-058), 테스트 수정(U-060), 이미지 프롬프트 통합(U-061), 언어/재화/API 버그 수정(U-062~U-065). 프롬프트 ko/en 분리는 U-036에서 이미 완료됨.
+- **[2026-02-02 추가]** 이미지 생성 지연이 길어도 자연스러운 플로우(진행 연출/late binding/모델 티어링)를 위한 MVP 유닛 추가: U-066.
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -93,8 +94,9 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
-- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**, **Gemini 이미지 생성 API 호출 방식 수정**
+- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**, **Gemini 이미지 생성 API 호출 방식 수정**, **이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY)**
 - **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**, **U-061**, **U-064**
+- **책임 Unit(보강)**: **U-066**
 - **상태**: 🚧
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
@@ -119,6 +121,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | R-010 | 로컬/데모에서 실모델(real) 모드 환경변수 로딩 누락으로 mock 출력(고정 내러티브) 또는 인증 실패로 데모가 흔들릴 수 있음 | Medium | 25% | 백엔드 `.env` 자동 로딩(U-047) + real 모드 스모크 체크포인트(CP-MVP-07) + 실패 시 안전 폴백 |
 | R-011 | 오버레이(핫스팟/CRT) 색이 콘텐츠를 과도하게 덮거나, 패널 스크롤 전략이 불편해 “게임 UI” 체감이 저하될 수 있음 | Medium | 30% | 오버레이 팔레트/강도 토큰 튜닝(U-050) + 레이아웃/스크롤 설계 개선(U-049) + 가이드 기반 점검 |
 | R-012 | Action 실행 시 템플릿 문장(“...라고 말했습니다”)이 반복되어 몰입/자연스러움이 깨질 수 있음(특히 mock 모드) | Low | 35% | MockOrchestrator 액션 타입별 로그/내러티브 개선(U-048) + real 모드 기본 동선(CP-MVP-07) |
+| R-013 | 이미지 생성 지연이 길 때 “장면 갱신” 타이밍이 어긋나 몰입이 깨질 수 있음(늦게 도착한 이미지가 새 장면을 덮는 문제 포함) | Medium | 25% | U-066: late-binding 가드(turn_id/scene revision) + 모델 티어링(FAST) + “형성 중” 연출 |
 
 ## 메트릭
 
@@ -140,6 +143,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### MVP
 
 ID=[U-065[Mvp]](unit-plans/U-065[Mvp].md) | ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응) | Depends=U-064 | 🚧
+ID=[U-066[Mvp]](unit-plans/U-066[Mvp].md) | ⚡이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) | Depends=U-065,U-055,U-020 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
 ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
@@ -267,7 +271,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-056[Mvp]](unit-plans/U-056[Mvp].md) - 인벤토리 아이템 이름 텍스트 잘림 최소화 + 툴팁
+**현재 작업**: [U-065[Mvp]](unit-plans/U-065[Mvp].md) - TurnOutput 스키마 단순화 (Gemini API 제한 대응)
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
