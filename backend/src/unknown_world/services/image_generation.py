@@ -9,17 +9,27 @@
     - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
     - RULE-007: 프롬프트 원문 노출 금지
 
-페어링 질문 결정:
-    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
+페어링 질문 결정 (U-064[Mvp]):
+    - Q1: Option A (타임아웃 60초 - 이미지 생성은 15-20초 소요 가능)
+    - Q2: Option A (MVP에서는 재시도 없이 즉시 폴백)
+    - Q3: Option B (텍스트 응답도 로깅 - 디버깅용)
+
+API 호출 방식 (U-064[Mvp] 수정):
+    - generate_images() 대신 generate_content() 사용
+    - response_modalities=[Modality.TEXT, Modality.IMAGE] 설정
+    - 응답에서 part.inline_data.data로 이미지 바이트 추출
 
 참조:
     - vibe/tech-stack.md (모델 ID 고정)
     - vibe/unit-plans/U-019[Mvp].md
+    - vibe/unit-plans/U-064[Mvp].md
+    - https://ai.google.dev/gemini-api/docs/image-generation
     - .cursor/rules/20-backend-orchestrator.mdc
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import logging
@@ -70,6 +80,11 @@ SUPPORTED_SIZES = SUPPORTED_IMAGE_SIZES
 
 DEFAULT_SIZE = DEFAULT_IMAGE_SIZE
 """기본 이미지 크기 (호환성 별칭)."""
+
+# U-064[Mvp] Q1 결정: 이미지 생성 타임아웃 60초
+# 이미지 생성은 15-20초 소요 가능하므로 충분한 여유를 둠
+IMAGE_GENERATION_TIMEOUT_SECONDS = 60
+"""이미지 생성 API 호출 타임아웃 (초)."""
 
 
 class ImageGenerationStatus(StrEnum):
@@ -403,6 +418,10 @@ class ImageGenerator:
     async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
         """이미지를 생성합니다.
 
+        U-064[Mvp] 수정: generate_content() API를 사용하여 이미지 생성.
+        gemini-3-pro-image-preview 모델은 generate_images()가 아닌
+        generate_content()를 사용해야 함.
+
         Args:
             request: 이미지 생성 요청
 
@@ -425,126 +444,135 @@ class ImageGenerator:
             extra={
                 "prompt_hash": prompt_hash,
                 "size": request.image_size,
+                "aspect_ratio": request.aspect_ratio,
                 "model": MODEL_IMAGE,
                 "remove_background": request.remove_background,
             },
         )
 
         try:
-            from google.genai.types import GenerateImagesConfig
+            from google.genai.types import GenerateContentConfig, Modality
 
-            # 이미지 크기 검증 (현재 API에서 크기 지정은 제한적)
-            _ = SUPPORTED_SIZES.get(request.image_size, SUPPORTED_SIZES[DEFAULT_SIZE])
-
-            # Gemini 이미지 생성 호출
-            # 참고: gemini-3-pro-image-preview 모델 사용 (RULE-010 고정)
-            response = await self._client.aio.models.generate_images(
-                model=get_model_id(ModelLabel.IMAGE),
-                prompt=request.prompt,
-                config=GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/png",
-                    # Gemini 이미지 생성 API는 크기 지정 방식이 다를 수 있음
-                    # 실제 API 스펙에 맞게 조정 필요
+            # U-064: generate_content() API를 사용하여 이미지 생성
+            # response_modalities에 TEXT와 IMAGE를 모두 포함
+            # 참고: https://ai.google.dev/gemini-api/docs/image-generation
+            # Q1 결정: 타임아웃 60초 적용
+            response = await asyncio.wait_for(
+                self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
+                    model=get_model_id(ModelLabel.IMAGE),
+                    contents=request.prompt,
+                    config=GenerateContentConfig(
+                        response_modalities=[Modality.TEXT, Modality.IMAGE],
+                    ),
                 ),
+                timeout=IMAGE_GENERATION_TIMEOUT_SECONDS,
             )
 
-            # 이미지 데이터 추출 및 저장
-            if response and hasattr(response, "generated_images") and response.generated_images:
-                image_data = response.generated_images[0]
-                image_bytes: bytes | None = None
-                if (
-                    hasattr(image_data, "image")
-                    and image_data.image
-                    and hasattr(image_data.image, "image_bytes")
-                ):
-                    image_bytes = image_data.image.image_bytes
+            # U-064: 응답에서 이미지 추출 (메서드 분리)
+            image_bytes = self._extract_image_from_response(response)
 
-                if image_bytes is None:
-                    raise ValueError("이미지 데이터를 추출할 수 없습니다.")
-
-                # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
-                prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
-
-                # 고유 ID 및 파일 저장 (U-060: seed가 있으면 결정적 생성)
-                if request.seed is not None:
-                    # 시드와 프롬프트 해시를 조합하여 고유성 확보
-                    seed_rng = random.Random(f"{request.seed}_{prompt_hash}")
-                    image_id = f"img_{seed_rng.getrandbits(48):012x}"
-                else:
-                    image_id = f"img_{uuid.uuid4().hex[:12]}"
-
-                file_name = f"{image_id}.png"
-                file_path = self._output_dir / file_name
-                file_path.write_bytes(image_bytes)
-
-                # U-035: 배경 제거 후처리 (조건부)
-                background_removed = False
-                rembg_model_used: str | None = None
-                final_file_path = file_path
-                final_file_name = file_name
-
-                if request.remove_background:
-                    from unknown_world.services.image_postprocess import (
-                        get_image_postprocessor,
-                    )
-
-                    postprocessor = get_image_postprocessor()
-                    result = postprocessor.remove_background(
-                        input_path=file_path,
-                        image_type_hint=request.image_type_hint,
-                    )
-
-                    if result.status.value == "success":
-                        background_removed = True
-                        rembg_model_used = result.model_used
-                        final_file_path = result.output_path
-                        final_file_name = final_file_path.name
-
-                        logger.debug(
-                            "[ImageGen] 이미지 배경 제거 완료",
-                            extra={
-                                "image_id": image_id,
-                                "model": rembg_model_used,
-                                "rembg_time_ms": result.processing_time_ms,
-                            },
-                        )
-                    else:
-                        logger.warning(
-                            "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
-                            extra={"image_id": image_id, "message": result.message},
-                        )
-                        final_file_path = result.output_path
-                        final_file_name = final_file_path.name
-
-                # 서빙 URL 생성 (RU-006-Q5: 중앙화된 URL 빌더 사용)
-                image_url = build_image_url(final_file_name, category="generated")
+            if image_bytes is None:
                 elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-                logger.info(
-                    "[ImageGen] 이미지 생성 완료",
-                    extra={
-                        "image_id": image_id,
-                        "elapsed_ms": elapsed_ms,
-                        "size_bytes": len(image_bytes),
-                        "background_removed": background_removed,
-                    },
+                logger.warning(
+                    "[ImageGen] 이미지 생성 응답에 이미지 데이터가 없음",
+                    extra={"elapsed_ms": elapsed_ms},
                 )
-
-                return ImageGenerationResponse(
-                    status=ImageGenerationStatus.COMPLETED,
-                    image_id=image_id,
-                    image_url=image_url,
-                    message="이미지가 성공적으로 생성되었습니다.",
-                    generation_time_ms=elapsed_ms,
-                    background_removed=background_removed,
-                    rembg_model_used=rembg_model_used,
-                )
-            else:
                 return ImageGenerationResponse(
                     status=ImageGenerationStatus.FAILED,
-                    message="이미지 생성 응답이 비어있습니다.",
+                    message="이미지 생성 응답에 이미지 데이터가 없습니다.",
+                    generation_time_ms=elapsed_ms,
                 )
+
+            # 고유 ID 및 파일 저장 (U-060: seed가 있으면 결정적 생성)
+            if request.seed is not None:
+                # 시드와 프롬프트 해시를 조합하여 고유성 확보
+                seed_rng = random.Random(f"{request.seed}_{prompt_hash}")
+                image_id = f"img_{seed_rng.getrandbits(48):012x}"
+            else:
+                image_id = f"img_{uuid.uuid4().hex[:12]}"
+
+            file_name = f"{image_id}.png"
+            file_path = self._output_dir / file_name
+            file_path.write_bytes(image_bytes)
+
+            # U-035: 배경 제거 후처리 (조건부)
+            background_removed = False
+            rembg_model_used: str | None = None
+            final_file_path = file_path
+            final_file_name = file_name
+
+            if request.remove_background:
+                from unknown_world.services.image_postprocess import (
+                    get_image_postprocessor,
+                )
+
+                postprocessor = get_image_postprocessor()
+                result = postprocessor.remove_background(
+                    input_path=file_path,
+                    image_type_hint=request.image_type_hint,
+                )
+
+                if result.status.value == "success":
+                    background_removed = True
+                    rembg_model_used = result.model_used
+                    final_file_path = result.output_path
+                    final_file_name = final_file_path.name
+
+                    logger.debug(
+                        "[ImageGen] 이미지 배경 제거 완료",
+                        extra={
+                            "image_id": image_id,
+                            "model": rembg_model_used,
+                            "rembg_time_ms": result.processing_time_ms,
+                        },
+                    )
+                else:
+                    logger.warning(
+                        "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
+                        extra={"image_id": image_id, "message": result.message},
+                    )
+                    final_file_path = result.output_path
+                    final_file_name = final_file_path.name
+
+            # 서빙 URL 생성 (RU-006-Q5: 중앙화된 URL 빌더 사용)
+            image_url = build_image_url(final_file_name, category="generated")
+            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+            logger.info(
+                "[ImageGen] 이미지 생성 완료",
+                extra={
+                    "image_id": image_id,
+                    "elapsed_ms": elapsed_ms,
+                    "size_bytes": len(image_bytes),
+                    "background_removed": background_removed,
+                },
+            )
+
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.COMPLETED,
+                image_id=image_id,
+                image_url=image_url,
+                message="이미지가 성공적으로 생성되었습니다.",
+                generation_time_ms=elapsed_ms,
+                background_removed=background_removed,
+                rembg_model_used=rembg_model_used,
+            )
+
+        except TimeoutError:
+            # Q1 결정: 60초 타임아웃 초과 시 처리
+            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+            logger.warning(
+                "[ImageGen] 이미지 생성 타임아웃",
+                extra={
+                    "timeout_seconds": IMAGE_GENERATION_TIMEOUT_SECONDS,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
+            return ImageGenerationResponse(
+                status=ImageGenerationStatus.FAILED,
+                message=f"이미지 생성 타임아웃 ({IMAGE_GENERATION_TIMEOUT_SECONDS}초 초과)",
+                generation_time_ms=elapsed_ms,
+            )
 
         except Exception as e:
             elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
@@ -564,6 +592,57 @@ class ImageGenerator:
                 message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
                 generation_time_ms=elapsed_ms,
             )
+
+    def _extract_image_from_response(self, response: Any) -> bytes | None:
+        """generate_content 응답에서 이미지 바이트 추출.
+
+        Args:
+            response: Gemini API 응답 객체
+
+        Returns:
+            bytes | None: 추출된 이미지 바이트 또는 None
+        """
+        try:
+            if not response or not hasattr(response, "candidates") or not response.candidates:
+                return None
+
+            for candidate in response.candidates:
+                if not hasattr(candidate, "content") or not candidate.content:
+                    continue
+                if not hasattr(candidate.content, "parts") or not candidate.content.parts:
+                    continue
+
+                for part in candidate.content.parts:
+                    # Q3 결정: 텍스트 응답도 로깅 (디버깅용)
+                    if hasattr(part, "text") and part.text:
+                        text_preview = (
+                            part.text[:100] + "..." if len(part.text) > 100 else part.text
+                        )
+                        logger.debug(
+                            "[ImageGen] 텍스트 응답 (디버깅용)",
+                            extra={"text_preview": text_preview},
+                        )
+
+                    # 이미지 데이터 추출
+                    if (
+                        hasattr(part, "inline_data")
+                        and part.inline_data
+                        and hasattr(part.inline_data, "data")
+                        and part.inline_data.data
+                    ):
+                        logger.debug(
+                            "[ImageGen] 이미지 데이터 추출 성공",
+                            extra={"size_bytes": len(part.inline_data.data)},
+                        )
+                        return part.inline_data.data
+
+            return None
+        except Exception as e:
+            logger.warning(
+                "[ImageGen] 응답 파싱 중 오류 발생",
+                extra={"error_type": type(e).__name__, "message": str(e)},
+            )
+            return None
 
     def is_available(self) -> bool:
         """생성기가 사용 가능한 상태인지 확인합니다."""
@@ -651,3 +730,21 @@ def create_fallback_response(message: str | None = None) -> ImageGenerationRespo
         status=ImageGenerationStatus.SKIPPED,
         message=message or "이미지 생성을 건너뛰었습니다. 텍스트로 진행합니다.",
     )
+
+
+def validate_image_request(request: ImageGenerationRequest) -> str | None:
+    """이미지 생성 요청을 검증합니다.
+
+    Args:
+        request: 이미지 생성 요청 객체
+
+    Returns:
+        str | None: 오류 메시지 또는 성공 시 None
+    """
+    if not request.prompt or len(request.prompt.strip()) < 2:
+        return "프롬프트가 너무 짧습니다."
+
+    if request.image_size not in SUPPORTED_IMAGE_SIZES:
+        return f"지원하지 않는 이미지 크기: {request.image_size}"
+
+    return None

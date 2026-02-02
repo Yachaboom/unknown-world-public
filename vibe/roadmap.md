@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 80/105 (76.2%) | **MVP**: 80/88 (90.9%) | **MMP**: 0/17 (0%)
+**전체**: 81/105 (77.1%) | **MVP**: 81/88 (92.0%) | **MMP**: 0/17 (0%)
 
 **예상 완료(가정)**: MVP D-4 | MMP D-10
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-064[Mvp]](unit-plans/U-064[Mvp].md) / **최근 완료**: [U-063[Mvp]](unit-plans/U-063[Mvp].md) (2026-02-02)
+**진행 중(현재 포커스)**: [U-065[Mvp]](unit-plans/U-065[Mvp].md) / **최근 완료**: [U-064[Mvp]](unit-plans/U-064[Mvp].md) (2026-02-02)
 
 **블로커**: 없음
 
@@ -93,8 +93,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
-- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**
-- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**, **U-061**
+- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**, **Gemini 이미지 생성 API 호출 방식 수정**
+- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**, **U-061**, **U-064**
 - **상태**: 🚧
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
@@ -139,8 +139,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-064[Mvp]](unit-plans/U-064[Mvp].md) | ⚡Gemini 이미지 생성 API 호출 방식 수정 | Depends=U-055 | ⏸️
-ID=[U-065[Mvp]](unit-plans/U-065[Mvp].md) | ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응) | Depends=U-064 | ⏸️
+ID=[U-065[Mvp]](unit-plans/U-065[Mvp].md) | ⚡TurnOutput 스키마 단순화 (Gemini API 제한 대응) | Depends=U-064 | 🚧
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
 ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
@@ -171,6 +170,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-064[Mvp]](unit-results/U-064[Mvp].md): Gemini 이미지 생성 API 호출 방식 수정 (2026-02-02)
 - ✅ [U-063[Mvp]](unit-results/U-063[Mvp].md): 프론트엔드 턴 실행 후 재화 잔액 버그 수정 (2026-02-02)
 - ✅ [U-062[Mvp]](unit-results/U-062[Mvp].md): MockOrchestrator 영어 입력 시 LanguageGate 수정 (2026-02-01)
 - ✅ [U-061[Mvp]](unit-results/U-061[Mvp].md): 이미지 생성 지침(scene_prompt) 파이프라인 통합 및 i18n 정합성 강화 (2026-02-01)

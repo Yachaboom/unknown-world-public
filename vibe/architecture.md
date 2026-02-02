@@ -21,7 +21,7 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 │   │   ├── storage/ (local_storage.py, validation.py, paths.py)
 │   │   └── validation/ (language_gate.py, business_rules.py)
 │   ├── prompts/ (system/, turn/, image/ 하위 ko/en.md)
-│   └── tests/ (unit/, integration/, qa/)
+│   └── tests/ (unit/, integration/, qa/, manual_test_image.py, manual_test_rembg.py)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx 등)
@@ -36,8 +36,8 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 │   └── schemas/turn/ (turn_output.schema.json 등)
 └── vibe/
     ├── unit-plans/
-    ├── unit-results/ (U-062[Mvp].md, U-063[Mvp].md 등)
-    └── unit-runbooks/ (U-063-economy-balance-fix-runbook.md 등)
+    ├── unit-results/ (U-062[Mvp].md, U-063[Mvp].md, U-064[Mvp].md 등)
+    └── unit-runbooks/ (U-064-gemini-image-api-runbook.md 등)
 ```
 
 ### 주요 디렉토리 설명
@@ -238,13 +238,14 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ---
 
-## 23. 이미지 파이프라인 통합 및 검증 정책 (U-055[Mvp])
+## 28. Gemini 이미지 생성 API 호출 최적화 (U-064[Mvp])
 
-1. **모드별 동작 일관성 (Mock/Real SSOT)**:
-    - **Mock 모드**: 개발 생산성을 위해 로컬 플레이스홀더 이미지를 생성하며, 30% 확률로 생성 판정을 시뮬레이션하여 프론트엔드 렌더링 루프를 검증함.
-    - **Real 모드**: Vertex AI 기반 실제 Gemini 이미지 생성을 수행하며, TTFB(2s 이내) 및 전체 생성 시간(15s 이내) 지표를 관리함.
-2. **통합 검증 가드레일**:
-    - **UW_MODE 환경변수**: 백엔드 시작 시 `UW_MODE` 값을 통해 오케스트레이터 및 이미지 생성기 구현체를 원자적으로 교체함.
-    - **End-to-End 가시성**: 턴 요청부터 이미지 렌더링까지의 전 과정을 Agent Console의 단계(Queue) 및 배지(Badges) 시스템을 통해 관측 가능하게 유지함.
-3. **폴백 및 예외 통합**:
-    - 이미지 생성 성공 여부와 관계없이 턴 자체는 항상 성공적으로 완료되어야 하며, 실패 시 UI는 즉시 텍스트 전용 모드로 전이되어야 함.
+1. **API 호출 방식 전환 (generate_content)**:
+    - **Model Compatibility**: `gemini-3-pro-image-preview` 모델의 특성에 맞춰 `generate_images()` 대신 `generate_content()` 메서드를 사용하도록 파이프라인을 수정함.
+    - **Multimodal Configuration**: `GenerateContentConfig`를 통해 `TEXT`와 `IMAGE` 모달리티를 동시에 요청하여 모델의 추론(Thinking) 과정과 결과 이미지를 모두 수신할 수 있도록 구성함.
+2. **멀티모달 응답 파싱 및 이미지 추출**:
+    - **Part-based Extraction**: 모델의 응답 파트(`candidates[0].content.parts`)를 순회하며 `inline_data`가 포함된 파트를 식별하여 이미지 바이트를 추출하는 방어적 파싱 로직을 구현함.
+    - **Base64 Decoding**: API로부터 수신된 base64 인코딩 데이터를 디코딩하여 로컬 파일 시스템에 PNG로 저장함.
+3. **타임아웃 및 예외 정책 (RULE-004)**:
+    - **Increased Timeout**: 이미지 생성의 높은 연산 비용을 고려하여 API 호출 타임아웃을 **60초**로 상향 조정함.
+    - **Graceful Fallback**: 타임아웃 또는 API 에러 발생 시 시스템 중단 없이 안전 폴백(`create_fallback_response`)을 통해 텍스트 전용 모드로 전이되도록 보장함.

@@ -132,31 +132,22 @@
     - `frontend/src/schemas/turn.ts`: `createFallbackTurnOutput`, `safeParseTurnOutput` 함수
     - `frontend/src/api/turnStream.ts`: `createFallbackTurnOutput`, `dispatchEvent` 함수
 
-## 2026-02-01 이슈: Gemini 이미지 생성 API 호출 방식 오류 (U-055 Real 모드 테스트 발견)
+## 2026-02-01 이슈: Gemini 이미지 생성 API 호출 방식 오류 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 
 - **발견 위치**: `backend/src/unknown_world/services/image_generation.py:447`
 - **현상**: Real 모드에서 이미지 생성 시 `ClientError` 발생, 11초 후 실패
 - **에러 메시지**: `이미지 생성 중 오류가 발생했습니다: ClientError`
 - **원인**: 현재 코드가 `generate_images()` 메서드를 사용하고 있으나, `gemini-3-pro-image-preview` 모델은 **`generate_content()`** 메서드를 사용해야 함
-- **올바른 API 호출**:
-  ```python
-  from google.genai.types import GenerateContentConfig, Modality
 
-  response = await client.aio.models.generate_content(
-      model="gemini-3-pro-image-preview",
-      contents="이미지 프롬프트",
-      config=GenerateContentConfig(
-          response_modalities=[Modality.TEXT, Modality.IMAGE],
-      ),
-  )
-  # 응답에서 이미지 추출: response.candidates[0].content.parts[].inline_data.data
-  ```
-- **보류 사유**: U-055[Mvp] 런북 검증 범위 밖 (Mock 모드 검증이 주목적)
-- **권장 조치**:
-  - `ImageGenerator.generate()` 메서드를 `generate_content()` 호출로 수정
-  - `response_modalities=[Modality.TEXT, Modality.IMAGE]` 설정 추가
-  - 응답 파싱 로직 수정 (`part.inline_data.data`에서 이미지 바이트 추출)
-- **참고 문서**: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/image-generation
+- **해결 완료**: [U-064[Mvp]](unit-plans/U-064[Mvp].md) (2026-02-02)
+  - **수정**: `generate_images()` → `generate_content()` API 호출 변경
+  - **설정**: `response_modalities=[Modality.TEXT, Modality.IMAGE]` 추가
+  - **파싱**: `response.candidates[].content.parts[].inline_data.data`에서 이미지 바이트 추출
+  - **타임아웃**: 60초 설정 (Q1 결정)
+  - **로깅**: 텍스트 응답도 디버깅용 로깅 (Q3 결정)
+  - **수정 파일**: `backend/src/unknown_world/services/image_generation.py`
+  - **검증 결과**: 테스트 스크립트에서 56초 만에 이미지 생성 성공 (1.6MB)
+- **참고 문서**: https://ai.google.dev/gemini-api/docs/image-generation
 
 ## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Gemini API 거부 (U-055 Real 모드 테스트 발견)
 

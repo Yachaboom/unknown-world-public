@@ -1,5 +1,35 @@
 # 프로젝트 진행 상황
 
+## [2026-02-02 16:30] [U-064[Mvp]] Gemini 이미지 생성 API 호출 방식 수정 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: `gemini-3-pro-image-preview` 모델의 호출 방식을 `generate_content()`로 수정하여 Real 모드 이미지 생성 성공
+- **추가 컴포넌트**: `vibe/unit-results/U-064[Mvp].md` (개발 보고서), `backend/tests/manual_test_image.py` (검증 스크립트)
+- **달성 요구사항**: [RULE-010] 이미지 모델 ID 고정, [RULE-004] 안전 폴백(타임아웃 처리), [RULE-008] 텍스트 우선 + Lazy 이미지 원칙 준수
+
+### 기술적 구현 세부사항
+
+**API 및 응답 파싱 최적화**:
+- **API Transition**: `generate_images()` 메서드 대신 `aio.models.generate_content()`를 사용하여 모델 호환성 문제 해결.
+- **Multi-modal Parsing**: 응답 파트에서 `inline_data`를 추출하고 base64 디코딩하여 이미지 바이트를 획득하는 로직 구현.
+- **Timeout Management**: 이미지 생성의 높은 연산 비용을 고려하여 타임아웃을 60초로 설정하고, 실패 시 `create_fallback_response`를 통해 안전하게 수렴.
+
+### 코드 구조
+repo-root/
+└── backend/
+    ├── src/unknown_world/services/
+    │   └── image_generation.py (API 호출 및 파싱 로직 수정)
+    └── tests/
+        └── manual_test_image.py (Real 모드 검증용 스크립트)
+
+### 다음 단계
+
+- **U-065**: TurnOutput 스키마 단순화 (Gemini API 제한 대응)
+- **CP-MVP-03**: 체크포인트: 10분 데모 루프 (Real 모드 통합 점검)
+
+---
+
 ## [2026-02-02 14:15] [U-063[Mvp]] 프론트엔드 턴 실행 후 재화 잔액 버그 수정 완료
 
 ### 구현 완료 항목
