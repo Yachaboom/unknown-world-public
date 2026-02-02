@@ -96,6 +96,7 @@ Gemini 3 Flash의 **Agentic Vision(Code Execution)** 을 활용해 "생성된 �
 - **계획서/결과물**: [U-019[Mvp]](U-019[Mvp].md) - 생성 이미지 로컬 저장/서빙(기본), image_url 규약
 - **계획서/결과물**: [U-020[Mvp]](U-020[Mvp].md) - Scene Canvas 이미지 레이어/placeholder/폴백("이미지 없어도 진행")
 - **결과물**: [RU-005[Mvp]](../unit-results/RU-005[Mvp].md) - stage pipeline(Validate에서 생성, Repair loop 경계)
+- **계획서**: [U-076[Mvp]](U-076[Mvp].md) - MVP 선행 버전(사용자 트리거 기반 "정밀분석" 액션). 본 유닛에서 `agentic_vision.py` 서비스를 재사용하고, "자동 실행"으로 확장함.
 
 **다음 작업에 전달할 것**:
 
@@ -118,9 +119,10 @@ Gemini 3 Flash의 **Agentic Vision(Code Execution)** 을 활용해 "생성된 �
 ## 페어링 질문 (결정됨)
 
 - [x] **Q1**: Agentic Vision은 언제 실행할까?
-  - ~~Option A: "정밀 조사(비전)" 카드 선택 시에만 실행~~
-  - **Option C (신규): 이미지 생성 시 항상 자동 실행** ← 채택
+  - ~~Option A: "정밀 조사(비전)" 카드 선택 시에만 실행~~ → **MVP에서 U-076으로 구현됨**
+  - **Option C (신규): 이미지 생성 시 항상 자동 실행** ← MMP에서 채택
   - 사유: 핫스팟 정합성을 항상 보장하기 위해 자동 실행 필수. 비용/지연은 정합성 보장을 위해 감수.
+  - **참고**: MVP U-076에서 먼저 "정밀분석" 트리거 기반을 구현하고, MMP에서 자동 실행으로 확장함.
 - [x] **Q2**: TurnInput으로 이미지 참조를 어떻게 전달할까?
   - **Option A: 내부 처리** ← 채택
   - 사유: Render stage에서 이미지 생성 직후 내부적으로 비전 분석을 수행하므로, TurnInput 변경 불필요.
