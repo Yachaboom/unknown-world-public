@@ -161,89 +161,6 @@ RED-LINE > 사양서 > 의존성 개발보고 > 기술스택 > 아키텍처 > �
 - 어떤 형태의 자동 테스트 코드도 작성하지 않음
 - 대신 런북(Runbook)을 통한 수동 검증 시나리오 제공
 
-**이미지/아이콘 에셋 생성 규칙 (nanobanana-mcp)**
-
-프로젝트 구현 중 UI 아이콘, 로고, 일러스트, 썸네일 등 **정적 이미지 에셋**이 필요할 때 `nanobanana-mcp`를 활용하세요.  
-상세 가이드는 `vibe/ref/nanobanana-mcp.md`를 SSOT로 삼습니다.
-
-1. **필수 사용 상황**
-   - 🔴 **UI 아이콘/로고가 필요**한데 디자이너 에셋이 없거나 임시 에셋이 필요한 경우
-   - 🔴 **일러스트/캐릭터/썸네일**을 빠르게 제작해야 하는 경우
-   - 🔴 생성 이미지의 **작은 수정**(색상/구성/디테일 보정)이 필요한 경우 → `edit_image`
-   - 🔴 손상/노이즈가 있는 이미지의 **복원**이 필요한 경우 → `restore_image`
-
-2. **사용 방법 (권장 워크플로우)**
-   ```
-   [1. 프롬프트 설계] → [2. generate_image] → (선택) [3. edit/restore]
-                       → (권장) [4. rembg 배경 제거] → (권장) [5. ImageMagick 크롭/리사이즈]
-                       → [6. 저장/적용]
-   ```
-   - **출력 경로**: `./nanobanana-output/`
-   - **도구**
-     - `nanobanana-mcp:generate_image`
-       - prompt: 필수
-       - outputCount: 1~8 (기본 1)
-       - styles/variations/format/seed: 필요 시 옵션
-     - `nanobanana-mcp:edit_image`: 기존 이미지 파일 + 수정 프롬프트
-     - `nanobanana-mcp:restore_image`: 기존 이미지 파일 + 복원 프롬프트
-
-3. **프롬프트 작성 규칙 (핵심)**
-   - **기본 구조**
-     ```
-     [주제] + [스타일] + [색상/분위기] + [배경 지시] + [금지 사항]
-     ```
-   - **배경 제거(rembg) 품질을 위한 권장 프롬프트**
-     - 가능하면 **순백 배경(#FFFFFF)** + **그림자 제거** + **고대비/선명한 경계**를 명시
-     ```
-     "[주제 설명], [스타일], solid white background (#FFFFFF), no shadows, high contrast, sharp edges, no text"
-     ```
-   - **카테고리별 템플릿**
-     - UI 아이콘
-       ```
-       "A minimal [주제] icon, [스타일] style, solid [색상] silhouette, high contrast, sharp edges. No text, solid white background (#FFFFFF)."
-       ```
-     - 캐릭터/일러스트
-       ```
-       "A [주제] character, [스타일] style, [색상 팔레트], clean lines, no complex background. Solid white background (#FFFFFF) for post-processing."
-       ```
-     - 로고/심볼
-       ```
-       "A minimalist [주제] logo, [스타일] aesthetic, [색상], geometric shapes, no text. Solid white background (#FFFFFF), high contrast."
-       ```
-     - 배경/장면(배경 제거 불필요)
-       ```
-       "A [장면 설명], [스타일] style, [분위기], [색상 팔레트]. Cinematic composition, atmospheric lighting."
-       ```
-
-4. **후처리 최소 규칙 (권장)**
-   - **배경 제거(rembg)**
-     - 기본 모델: `birefnet-general` (UI 아이콘/로고/픽셀 아트/일반 오브젝트에 우선)
-     - 예시:
-       ```bash
-       rembg i -m birefnet-general icon.png icon_nobg.png
-       ```
-     - 상세: `vibe/ref/mcp/nanobanana/rembg-guide.md`
-   - **크롭/리사이즈(ImageMagick)**
-     - `trim/crop` 후에는 항상 `+repage`
-     - 예시(아이콘/썸네일):
-       ```bash
-       magick icon_nobg.png -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 icon_256.png
-       ```
-     - JPEG로 저장 시(투명 제거): `-background white -flatten`
-     - 상세: `vibe/ref/mcp/nanobanana/imagemagick-guide.md`
-
-5. **운영 원칙 / 금지 사항**
-   - **경로/파일명**: 한글 경로 ❌, 공백 ❌, 영문 + `snake_case` 권장
-   - **이미지 내 텍스트**: 가독성/i18n 문제로 최소화(가능하면 금지)
-   - **배경 제거 대상 에셋**: 복잡한 그라데이션/부드러운 그림자 지양(경계 품질 저하)
-   - **실사 스타일(photorealistic)**: 배경 제거 품질이 떨어질 수 있어 지양(특히 아이콘/로고)
-
-6. **참고 문서 (SSOT)**
-   - `vibe/ref/nanobanana-mcp.md`
-   - `vibe/ref/mcp/nanobanana/rembg-guide.md`
-   - `vibe/ref/mcp/nanobanana/imagemagick-guide.md`
-
-
 **프로젝트 특화 규칙**
 {프로젝트-특화규칙}
 
@@ -450,7 +367,6 @@ RED-LINE > 사양서 > 의존성 개발보고 > 기술스택 > 아키텍처 > �
    ```bash
    [명령어]
    ```
-
    - 최종 산출물: [파일/API 응답/UI 변화]
 
 ---

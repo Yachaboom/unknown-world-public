@@ -15,7 +15,6 @@ prompt = """
 추론 깊이: 상세 (코드 변경에 따른 문서 영향도 분석)
 출력 스타일: 간결하되 핵심 정보 누락 금지
 원칙: SMART-DOC (Systematic, Mandatory, Accurate, Real-time, Traceable)
-Shell 규칙: 체이닝(&&) 금지, 개별 명령어 실행 필수
 ```
 
 ---
