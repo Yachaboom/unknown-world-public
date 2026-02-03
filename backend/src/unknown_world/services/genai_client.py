@@ -68,7 +68,7 @@ ENV_VERTEX_PROJECT = "VERTEX_PROJECT"
 """Vertex AI 프로젝트 ID 환경변수"""
 
 ENV_VERTEX_LOCATION = "VERTEX_LOCATION"
-"""Vertex AI 리전 환경변수 (기본값: us-central1)"""
+"""Vertex AI 리전 환경변수 (기본값: global)"""
 
 
 # =============================================================================
@@ -220,7 +220,7 @@ class GenAIClient:
             RuntimeError: 인증 설정이 올바르지 않은 경우
         """
         self._project = project or os.environ.get(ENV_VERTEX_PROJECT)
-        self._location = location or os.environ.get(ENV_VERTEX_LOCATION, "us-central1")
+        self._location = location or os.environ.get(ENV_VERTEX_LOCATION, "global")
         self._client: Client | None = None
         self._available = False
 

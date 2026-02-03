@@ -104,15 +104,17 @@ class Settings(BaseSettings):
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Production 리전 선택?
+- [x] **Q1**: Production 리전 선택?
   - Option A: `us-central1` (가장 안정적, 모델 지원 폭 넓음)
   - Option B: `asia-northeast3` (한국 근접, 지연 최소화)
   - Option C: 환경별로 다르게 설정 가능하도록 구성
+  **A1**: global
 
-- [ ] **Q2**: 환경 분리 수준?
+- [x] **Q2**: 환경 분리 수준?
   - Option A: 단일 `.env` 파일에 환경별 주석으로 가이드
   - Option B: `.env.development`, `.env.production` 등 파일 분리
   - Option C: 환경 변수 `ENVIRONMENT`로 동적 로드
+  **A2**: Option A
 
 ## 참고 자료
 

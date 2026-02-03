@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 84/120 (70.0%) | **MVP**: 84/102 (82.4%) | **MMP**: 0/18 (0%)
+**전체**: 85/120 (70.8%) | **MVP**: 85/102 (83.3%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-9 | MMP D-15
+**예상 완료(가정)**: MVP D-8 | MMP D-14
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-067[Mvp]](unit-plans/U-067[Mvp].md) / **최근 완료**: [U-066[Mvp]](unit-results/U-066[Mvp].md) (2026-02-03)
+**진행 중(현재 포커스)**: [U-068[Mvp]](unit-plans/U-068[Mvp].md) / **최근 완료**: [U-067[Mvp]](unit-results/U-067[Mvp].md) (2026-02-04)
 
 **블로커**: 없음
 
@@ -64,7 +64,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | ---- | --------- | -------------------------------------- | ---------- | ------ | ---- |
 | MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 11/11  | ✅   |
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 10/23  | 🚧   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 11/23  | 🚧   |
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-24 | 10/10  | ✅   |
 | MVP  | CP-MVP-04 | **✓ 체크포인트: 실모델 Hard Gate**     | 2026-01-21 | -      | ✅   |
@@ -157,7 +157,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-067[Mvp]](unit-plans/U-067[Mvp].md) | ⚡핫픽스 - Vertex AI Production 설정 수정 | Depends=U-066 | ⏸️
 ID=[U-068[Mvp]](unit-plans/U-068[Mvp].md) | 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 | Depends=U-067,U-066 | ⏸️
 ID=[U-069[Mvp]](unit-plans/U-069[Mvp].md) | 텍스트 생성 FAST 모델 + "정밀조사" 트리거 Pro 모델 전환 | Depends=U-067 | ⏸️
 ID=[U-070[Mvp]](unit-plans/U-070[Mvp].md) | 아이템-핫스팟 사용 시 액션 로그 출력 | Depends=U-012 | ⏸️
@@ -201,6 +200,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-067[Mvp]](unit-results/U-067[Mvp].md): ⚡핫픽스 - Vertex AI Production 설정 수정 (2026-02-04)
 - ✅ [U-066[Mvp]](unit-results/U-066[Mvp].md): 이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) + 타이핑 효과 (2026-02-03)
 - ✅ [U-065[Mvp]](unit-results/U-065[Mvp].md): TurnOutput 스키마 단순화 (Gemini API 제한 대응) (2026-02-02)
 - ✅ [U-064[Mvp]](unit-results/U-064[Mvp].md): Gemini 이미지 생성 API 호출 방식 수정 (2026-02-02)
@@ -331,28 +331,10 @@ pnpm kill
 
 ---
 
-## 일일 스탠드업 (2026-02-03)
+## 일일 스탠드업 (2026-02-04)
 
-**완료**: [U-066[Mvp]](unit-results/U-066[Mvp].md) - 이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) + 타이핑 효과
+**완료**: [U-067[Mvp]](unit-results/U-067[Mvp].md) - 핫픽스 - Vertex AI Production 설정 수정
 
-**진행중**: [U-067[Mvp]](unit-plans/U-067[Mvp].md) - 핫픽스 - Vertex AI Production 설정 수정
-
-**추가된 MVP 유닛** (2026-02-03):
-- U-067: 핫픽스 - Vertex AI Production 설정 수정
-- U-068: 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화
-- U-069: 텍스트 생성 FAST 모델 + "정밀조사" 트리거 Pro 모델 전환
-- U-070: 아이템-핫스팟 사용 시 액션 로그 출력
-- U-071: Scene 처리중 UI 로딩 인디케이터 강화
-- U-072: Scanner 의미론적 사용 유도 UX
-- U-073: 레이아웃 확장 - 좌우 빈공간 활용
-- U-074: 핫스팟/아이템 인터랙션 안내 UX
-- U-075: 인벤토리 아이템 아이콘 동적 생성 및 이름 정합성
-- U-076: "정밀분석" 액션으로 기존 Scene 이미지 Agentic Vision 분석 및 핫스팟 추가
-- U-077: 인벤토리 패널 스크롤 및 아이템 관리 UX 개선
-- U-078: 게임 목표 시스템 강화 - 명확한 목표 제시 및 진행 가이드
-- U-079: 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화
-
-**추가된 MMP 유닛** (2026-02-03):
-- U-113: 세션 상태 영속성 - 새로고침 시 Scene/ActionDeck/상태 복원
+**진행중**: [U-068[Mvp]](unit-plans/U-068[Mvp].md) - 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화
 
 **블로커**: 없음

@@ -387,7 +387,7 @@ class ImageGenerator:
         self._output_dir = output_dir or get_generated_images_dir()
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._project = project or os.environ.get("VERTEX_PROJECT")
-        self._location = location or os.environ.get("VERTEX_LOCATION", "us-central1")
+        self._location = location or os.environ.get("VERTEX_LOCATION", "global")
         self._client: Client | None = None
         self._available = False
 

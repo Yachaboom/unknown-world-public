@@ -1,0 +1,13 @@
+{
+  "language": "ko-KR",
+  "text": "새로운 세계를 탐험한다",
+  "client": {
+    "viewport_w": 1920,
+    "viewport_h": 1080,
+    "theme": "dark"
+  },
+  "economy_snapshot": {
+    "signal": 100,
+    "memory_shard": 5
+  }
+}

@@ -188,3 +188,31 @@
   - **수정**: `ImageGenerationRequest`에 `seed` 필드 추가 및 `RenderStage`에서 전달
   - **결정성**: `MockImageGenerator`에서 `seed`와 `prompt_hash`를 조합하여 결정적인 `image_id` 생성
   - **수정 파일**: `backend/src/unknown_world/services/image_generation.py`, `backend/src/unknown_world/orchestrator/stages/render.py`
+
+## 2026-02-03 이슈: Frontend NarrativeFeed 테스트 window.matchMedia mock 누락 (U-067 테스트 발견)
+
+- **발견 위치**: `frontend/src/components/NarrativeFeed.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/components/DndInteraction.test.tsx`
+- **현상**: 4개 테스트 실패 - `TypeError: window.matchMedia is not a function`
+- **에러**:
+  ```
+  TypeError: window.matchMedia is not a function
+   ❯ src/components/NarrativeFeed.tsx:80:19
+      80|     return window.matchMedia('(prefers-reduced-motion: reduce)').match…
+  ```
+- **추정 원인**: U-066에서 도입된 `NarrativeFeed` 컴포넌트의 `useTypewriter` 훅이 `window.matchMedia` API를 사용하는데, Vitest 테스트 환경에서 이 API가 mock되지 않음
+- **영향**: 4개 테스트 실패 (NarrativeFeed 1개, App 1개, DndInteraction 2개)
+- **보류 사유**: U-067[Mvp] 범위 밖 (Vertex AI Production 설정 핫픽스와 무관한 테스트 환경 이슈)
+- **권장 조치**: 
+  - `frontend/src/test/setup.ts`에 `window.matchMedia` mock 추가
+  - 또는 개별 테스트 파일에서 `beforeAll`로 mock 설정
+
+## 2026-02-03 이슈: Backend test_real_generator_rembg_integration 인증 실패 (U-067 테스트 발견)
+
+- **발견 위치**: `backend/tests/unit/test_image_generation_integration.py:110`
+- **현상**: 테스트 실패 - `ImageGenerationStatus.FAILED != ImageGenerationStatus.COMPLETED`
+- **에러 로그**: `[ImageGen] 이미지 생성 실패`
+- **추정 원인**: 이 테스트는 실제 Vertex AI API를 호출하는 통합 테스트로, 테스트 환경에서 서비스 계정 인증이 설정되지 않아 실패
+- **보류 사유**: U-067[Mvp] 범위 밖 (인증이 필요한 통합 테스트는 CI/CD 환경에서 별도 처리 필요)
+- **권장 조치**: 
+  - 테스트에 `@pytest.mark.skipif` 데코레이터로 인증 환경 체크 추가
+  - 또는 테스트를 `tests/integration/`으로 이동하여 단위 테스트에서 분리

@@ -13,40 +13,54 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ├── backend/
 │   ├── src/unknown_world/
 │   │   ├── api/ (turn.py, scanner.py, image.py 등)
-│   │   ├── config/ (models.py)
-│   │   ├── models/ (turn.py, scanner.py)
+│   │   ├── config/ (models.py, settings.py 등)
+│   │   ├── models/ (turn.py, scanner.py 등)
 │   │   ├── orchestrator/ (pipeline.py, mock.py, prompt_loader.py, repair_loop.py 등)
 │   │   │   └── stages/ (parse.py, validate.py, render.py, verify.py 등)
-│   │   ├── services/ (genai_client.py, image_generation.py, image_postprocess.py 등)
+│   │   ├── services/ (genai_client.py, image_generation.py, image_postprocess.py, rembg_preflight.py 등)
 │   │   ├── storage/ (local_storage.py, validation.py, paths.py)
 │   │   └── validation/ (language_gate.py, business_rules.py)
 │   ├── prompts/ (system/, turn/, image/ 하위 ko/en.md)
-│   └── tests/ (unit/, integration/, qa/, manual_test_image.py, manual_test_rembg.py)
+│   └── tests/ (unit/, integration/, qa/, manual_test_image.py, manual_test_rembg.py 등)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx, NarrativeFeed.tsx 등)
-│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts 등)
+│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts, uiPrefsStore.ts 등)
 │   │   ├── turn/ (turnRunner.ts)
-│   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts)
+│   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts, constants.ts)
 │   │   ├── api/ (turnStream.ts, scanner.ts, image.ts)
 │   │   ├── locales/ (ko-KR/, en-US/ translation.json)
 │   │   └── schemas/ (turn.ts)
-│   └── public/ui/ (icons/, chrome/, manifest.json)
+│   └── public/ui/ (icons/, chrome/, placeholders/, manifest.json)
 ├── shared/
 │   └── schemas/turn/ (turn_output.schema.json 등)
 └── vibe/
-    ├── unit-plans/
-    ├── unit-results/ (U-062[Mvp].md, U-063[Mvp].md, U-064[Mvp].md, U-065[Mvp].md 등)
-    └── unit-runbooks/ (U-064-gemini-image-api-runbook.md, U-065[Mvp]-runbook.md 등)
+    ├── unit-plans/ (U-001~U-079 등)
+    ├── unit-results/ (U-001~U-067 등)
+    └── unit-runbooks/ (U-001~U-067 등)
 ```
 
 ### 주요 디렉토리 설명
 
 - `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
-- `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다 (U-058 핫스팟 디자인 등).
+- `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 - `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
+
+---
+
+## 31. Vertex AI Production 설정 및 리전 표준화 (U-067[Mvp])
+
+1. **리전 표준화 (Global Endpoint)**:
+    - **VERTEX_LOCATION**: 기본값을 `global`로 설정하여 특정 리전의 가용성 제약 및 Quota 제한에 유연하게 대응함.
+    - **Model Availability**: `gemini-3-*` 모델 라인업이 global 엔드포인트에서 안정적으로 서비스됨을 전제로 함.
+2. **환경별 설정 분리 (Settings Engine)**:
+    - **ENVIRONMENT**: `development`, `staging`, `production` 구분을 통해 로깅 수준 및 인증 전략 분리.
+    - **Production-ready Template**: `.env.example`에 프로덕션 환경을 위한 필수 설정(프로젝트 ID, 리전, 권장 리소스 등)을 명시함.
+3. **인증 아키텍처 (GCP IAM)**:
+    - **Local Development**: 서비스 계정 키 파일(JSON)을 통한 명시적 인증 유지.
+    - **Cloud Run / Production**: 키 파일 없이 서비스 계정 IAM 역할을 통한 ADC(Application Default Credentials) 인증 권장 구조 확립.
 ---
 
 ## 25. 이미지 생성 지침 통합 및 i18n 정책 (U-061[Mvp])
