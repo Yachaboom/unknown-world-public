@@ -118,6 +118,32 @@ export interface WorldActions {
 
   /** 상태 완전 초기화 */
   reset: () => void;
+
+  // ============ U-066: Late-binding 이미지 관리 ============
+
+  /**
+   * 이미지 로딩 상태를 설정합니다 (U-066).
+   * 이미지 생성 시작 시 호출하여 로딩 인디케이터를 표시합니다.
+   *
+   * @param turnId - 이미지를 요청한 턴 ID
+   */
+  setImageLoading: (turnId: number) => void;
+
+  /**
+   * Late-binding 이미지를 적용합니다 (U-066).
+   * 이미지 생성 완료 시 호출하여, turnId가 일치할 때만 이미지를 반영합니다.
+   *
+   * @param imageUrl - 생성된 이미지 URL
+   * @param turnId - 이미지를 요청한 턴 ID (가드용)
+   * @returns 이미지가 적용되었는지 여부
+   */
+  applyLateBindingImage: (imageUrl: string, turnId: number) => boolean;
+
+  /**
+   * 이미지 로딩을 취소합니다 (U-066).
+   * 새 턴 시작 또는 이미지 생성 실패 시 호출합니다.
+   */
+  cancelImageLoading: () => void;
 }
 
 export type WorldStore = WorldState & WorldActions;
@@ -363,6 +389,58 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
 
   reset: () => {
     set(createInitialState());
+  },
+
+  // ============ U-066: Late-binding 이미지 관리 ============
+
+  setImageLoading: (turnId) => {
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        imageLoading: true,
+        pendingImageTurnId: turnId,
+        sceneRevision: turnId,
+        // 이전 이미지 URL 보존 (Option A: 이전 이미지 유지)
+        previousImageUrl: state.sceneState.imageUrl ?? state.sceneState.previousImageUrl,
+      },
+    }));
+  },
+
+  applyLateBindingImage: (imageUrl, turnId) => {
+    const state = get();
+
+    // late-binding 가드: pendingImageTurnId와 일치할 때만 적용
+    if (state.sceneState.pendingImageTurnId !== turnId) {
+      // 이미 새 턴이 시작되어 이전 요청은 무시
+      return false;
+    }
+
+    set({
+      sceneState: {
+        status: 'scene',
+        imageUrl,
+        imageLoading: false,
+        pendingImageTurnId: undefined,
+        sceneRevision: turnId,
+        // 이전 이미지 URL은 성공 시 현재 이미지로 대체
+        previousImageUrl: undefined,
+      },
+    });
+
+    return true;
+  },
+
+  cancelImageLoading: () => {
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        imageLoading: false,
+        pendingImageTurnId: undefined,
+        // 이전 이미지 유지 (폴백)
+        imageUrl: state.sceneState.previousImageUrl ?? state.sceneState.imageUrl,
+        previousImageUrl: undefined,
+      },
+    }));
   },
 }));
 

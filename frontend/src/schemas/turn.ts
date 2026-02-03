@@ -582,7 +582,13 @@ export const TurnOutputSchema = z
     }).describe('세계 상태 변화 (delta)'),
 
     // 렌더링 필드
-    render: RenderOutputSchema.default({ image_job: null }).describe('렌더링 정보'),
+    render: RenderOutputSchema.default({
+      image_job: null,
+      image_url: null,
+      image_id: null,
+      generation_time_ms: null,
+      background_removed: false,
+    }).describe('렌더링 정보'),
 
     // 에이전트 콘솔 필드
     agent_console: AgentConsoleSchema.default({
@@ -658,6 +664,10 @@ export function createFallbackTurnOutput(
     },
     render: {
       image_job: null,
+      image_url: null,
+      image_id: null,
+      generation_time_ms: null,
+      background_removed: false,
     },
     agent_console: {
       current_phase: 'commit',

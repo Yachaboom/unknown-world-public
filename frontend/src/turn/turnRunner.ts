@@ -20,6 +20,7 @@
 import type { TurnInput, DropInput, Language } from '../schemas/turn';
 import type { HotspotClickData } from '../components/SceneCanvas';
 import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
+import { startImageGeneration, type ImageModelLabel } from '../api/image';
 import { useAgentStore } from '../stores/agentStore';
 import { useWorldStore } from '../stores/worldStore';
 
@@ -140,6 +141,9 @@ export function createTurnRunner(deps: {
   // 취소 함수 저장
   let cancelFn: (() => void) | null = null;
 
+  // U-066: 이미지 잡 AbortController
+  let imageJobController: AbortController | null = null;
+
   /**
    * 턴을 실행합니다.
    */
@@ -187,13 +191,55 @@ export function createTurnRunner(deps: {
       onNarrativeDelta: (event) => {
         useAgentStore.getState().handleNarrativeDelta(event);
       },
-      // Final → agentStore.handleFinal + worldStore.applyTurnOutput
+      // Final → agentStore.handleFinal + worldStore.applyTurnOutput + U-066 이미지 잡
       onFinal: (event) => {
         useAgentStore.getState().handleFinal(event);
         // RU-003-Q4: TurnOutput 반영 SSOT
         useWorldStore.getState().applyTurnOutput(event.data);
         // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
         useWorldStore.getState().setConnected(true);
+
+        // U-066: 이미지 잡 비동기 실행 (턴과 분리)
+        const imageJob = event.data.render?.image_job;
+        if (imageJob?.should_generate && imageJob.prompt) {
+          const worldStore = useWorldStore.getState();
+          const currentTurnId = worldStore.turnCount;
+
+          // 이전 이미지 잡 취소
+          imageJobController?.abort();
+
+          // 이미지 로딩 상태로 전환
+          worldStore.setImageLoading(currentTurnId);
+
+          // 모델 라벨 결정 (U-066 Q2/Q3: time budget 기반 + 프리뷰→최종 업그레이드)
+          // TODO: Key scene 판별 로직 추가 (현재는 기본 QUALITY)
+          const modelLabel: ImageModelLabel = imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
+
+          // 이미지 생성 시작
+          imageJobController = startImageGeneration(
+            {
+              prompt: imageJob.prompt,
+              language,
+              aspectRatio: imageJob.aspect_ratio ?? '16:9',
+              modelLabel,
+              turnId: currentTurnId,
+            },
+            (response) => {
+              // 성공/실패 모두 처리
+              if (response.success && response.imageUrl && response.turnId !== undefined) {
+                // late-binding 가드: turnId가 일치할 때만 적용
+                useWorldStore.getState().applyLateBindingImage(response.imageUrl, response.turnId);
+              } else {
+                // 실패 시 로딩 취소 (이전 이미지 유지)
+                useWorldStore.getState().cancelImageLoading();
+              }
+            },
+            () => {
+              // 에러 시 로딩 취소
+              useWorldStore.getState().cancelImageLoading();
+            },
+          );
+        }
       },
       // Error → agentStore.handleError + worldStore 상태 복구
       onError: (event) => {
@@ -277,6 +323,9 @@ export function useTurnRunner(deps: {
   // 취소 함수 저장 ref
   const cancelFnRef = useRef<(() => void) | null>(null);
 
+  // U-066: 이미지 잡 AbortController ref
+  const imageJobControllerRef = useRef<AbortController | null>(null);
+
   // runTurn을 useCallback으로 정의
   const runTurn = useCallback(
     (params: RunTurnParams): void => {
@@ -327,6 +376,46 @@ export function useTurnRunner(deps: {
           useWorldStore.getState().applyTurnOutput(event.data);
           // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
           useWorldStore.getState().setConnected(true);
+
+          // U-066: 이미지 잡 비동기 실행 (턴과 분리)
+          const imageJob = event.data.render?.image_job;
+          if (imageJob?.should_generate && imageJob.prompt) {
+            const worldStore = useWorldStore.getState();
+            const currentTurnId = worldStore.turnCount;
+
+            // 이전 이미지 잡 취소
+            imageJobControllerRef.current?.abort();
+
+            // 이미지 로딩 상태로 전환
+            worldStore.setImageLoading(currentTurnId);
+
+            // 모델 라벨 결정
+            const modelLabel: ImageModelLabel =
+              imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
+
+            // 이미지 생성 시작
+            imageJobControllerRef.current = startImageGeneration(
+              {
+                prompt: imageJob.prompt,
+                language,
+                aspectRatio: imageJob.aspect_ratio ?? '16:9',
+                modelLabel,
+                turnId: currentTurnId,
+              },
+              (response) => {
+                if (response.success && response.imageUrl && response.turnId !== undefined) {
+                  useWorldStore
+                    .getState()
+                    .applyLateBindingImage(response.imageUrl, response.turnId);
+                } else {
+                  useWorldStore.getState().cancelImageLoading();
+                }
+              },
+              () => {
+                useWorldStore.getState().cancelImageLoading();
+              },
+            );
+          }
         },
         onError: (event) => {
           useAgentStore.getState().handleError(event);
@@ -366,10 +455,11 @@ export function useTurnRunner(deps: {
     cancelFnRef.current = null;
   }, []);
 
-  // 컴포넌트 언마운트 시 스트림 취소
+  // 컴포넌트 언마운트 시 스트림 및 이미지 잡 취소
   useEffect(() => {
     return () => {
       cancelFnRef.current?.();
+      imageJobControllerRef.current?.abort();
     };
   }, []);
 

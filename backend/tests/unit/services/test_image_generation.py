@@ -72,3 +72,59 @@ async def test_image_request_validation():
     # 실패 케이스: 너무 짧은 프롬프트
     short_prompt = ImageGenerationRequest(prompt="A")
     assert validate_image_request(short_prompt) == "프롬프트가 너무 짧습니다."
+
+
+@pytest.mark.asyncio
+async def test_image_generator_model_tiering(temp_output_dir):
+    """모델 티어링(FAST/QUALITY) 라벨 처리를 테스트합니다."""
+    # MockImageGenerator는 model_label을 로깅하지만 동작은 동일함
+    generator = MockImageGenerator(output_dir=temp_output_dir)
+
+    # 1. FAST 모델 요청
+    fast_request = ImageGenerationRequest(
+        prompt="Fast preview",
+        model_label="FAST",
+    )
+    fast_response = await generator.generate(fast_request)
+    assert fast_response.status == ImageGenerationStatus.COMPLETED
+
+    # 2. QUALITY 모델 요청
+    quality_request = ImageGenerationRequest(
+        prompt="Quality image",
+        model_label="QUALITY",
+    )
+    quality_response = await generator.generate(quality_request)
+    assert quality_response.status == ImageGenerationStatus.COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_image_generator_real_model_selection():
+    """실제 ImageGenerator에서 model_label에 따른 모델 ID 선택을 테스트합니다."""
+    from unittest.mock import AsyncMock
+
+    from unknown_world.config.models import ModelLabel, get_model_id
+
+    # Mocking google.genai.Client to avoid real API calls
+    with patch("google.genai.Client") as mock_client_class:
+        mock_client = mock_client_class.return_value
+        # aio.models.generate_content 모킹
+        mock_gen = AsyncMock()
+        mock_client.aio.models.generate_content = mock_gen
+
+        generator = ImageGenerator()
+        # generator._client가 mock_client를 가리키도록 설정 (초기화 시점에 이미 설정됨)
+
+        # 1. FAST 요청
+        await generator.generate(ImageGenerationRequest(prompt="test", model_label="FAST"))
+        # IMAGE_FAST 모델 ID가 사용되었는지 확인
+        expected_fast_id = get_model_id(ModelLabel.IMAGE_FAST)
+        # call_args_list[0].kwargs['model'] 확인
+        args, kwargs = mock_gen.call_args
+        assert kwargs["model"] == expected_fast_id
+
+        # 2. QUALITY 요청
+        await generator.generate(ImageGenerationRequest(prompt="test", model_label="QUALITY"))
+        # IMAGE 모델 ID가 사용되었는지 확인
+        expected_quality_id = get_model_id(ModelLabel.IMAGE)
+        args, kwargs = mock_gen.call_args
+        assert kwargs["model"] == expected_quality_id

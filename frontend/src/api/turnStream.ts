@@ -332,6 +332,10 @@ function createFallbackTurnOutput(
     },
     render: {
       image_job: null,
+      image_url: null,
+      image_id: null,
+      generation_time_ms: null,
+      background_removed: false,
     },
     agent_console: {
       current_phase: 'commit',
@@ -510,6 +514,10 @@ function createClientFallbackTurnOutput(
     },
     render: {
       image_job: null,
+      image_url: null,
+      image_id: null,
+      generation_time_ms: null,
+      background_removed: false,
     },
     agent_console: {
       current_phase: 'commit',

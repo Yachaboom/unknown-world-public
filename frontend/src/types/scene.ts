@@ -34,6 +34,10 @@ export type ImageLoadingState = 'idle' | 'loading' | 'loaded' | 'error';
  * U-020[Mvp] 확장:
  * - imageLoading: 이미지 로딩 상태 플래그 (로딩 인디케이터 표시용)
  * - previousImageUrl: 이전 이미지 URL (Option A: 이전 이미지 유지)
+ *
+ * U-066[Mvp] 확장:
+ * - sceneRevision: late-binding 가드용 토큰 (turnCount 기반)
+ * - pendingImageTurnId: 대기 중인 이미지 요청의 턴 ID
  */
 export interface SceneCanvasState {
   status: SceneCanvasStatus;
@@ -43,6 +47,10 @@ export interface SceneCanvasState {
   imageLoading?: boolean;
   /** U-020: 이전 이미지 URL (새 이미지 로딩 중 표시용) */
   previousImageUrl?: string;
+  /** U-066: late-binding 가드용 토큰 (turnCount 기반) */
+  sceneRevision?: number;
+  /** U-066: 대기 중인 이미지 요청의 턴 ID */
+  pendingImageTurnId?: number;
 }
 
 /**

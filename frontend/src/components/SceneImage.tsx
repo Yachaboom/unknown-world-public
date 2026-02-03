@@ -52,6 +52,8 @@ interface SceneImageProps {
   imageUrl?: string;
   message?: string;
   className?: string;
+  /** U-066: 이미지 생성 중 여부 (외부 상태) */
+  isGenerating?: boolean;
 }
 
 // =============================================================================
@@ -64,8 +66,15 @@ interface SceneImageProps {
  * - Lazy loading: 새 이미지를 프리로드하고 완료 시 교체합니다.
  * - Option A: 새 이미지 로딩 중에도 이전 이미지를 유지합니다.
  * - 폴백: 로드 실패 시 에러 배지를 표시하고 이전 이미지를 유지합니다.
+ * - U-066: isGenerating 상태에서 "새 장면 생성 중" 인디케이터를 표시합니다.
  */
-export function SceneImage({ status, imageUrl, message, className = '' }: SceneImageProps) {
+export function SceneImage({
+  status,
+  imageUrl,
+  message,
+  className = '',
+  isGenerating = false,
+}: SceneImageProps) {
   const { t } = useTranslation();
 
   // 내부 상태 관리
@@ -151,11 +160,19 @@ export function SceneImage({ status, imageUrl, message, className = '' }: SceneI
         />
       )}
 
-      {/* 로딩 인디케이터 */}
-      {isImageLoading && (
+      {/* 로딩 인디케이터 (이미지 URL 로딩) */}
+      {isImageLoading && !isGenerating && (
         <div className="scene-loading-indicator" aria-live="polite">
           <div className="scene-loading-spinner" aria-hidden="true" />
           <span className="scene-loading-text">{t('scene.status.image_loading')}</span>
+        </div>
+      )}
+
+      {/* U-066: 이미지 생성 중 인디케이터 */}
+      {isGenerating && (
+        <div className="scene-generating-indicator" aria-live="polite">
+          <div className="scene-generating-spinner" aria-hidden="true" />
+          <span className="scene-generating-text">{t('scene.status.image_generating')}</span>
         </div>
       )}
 

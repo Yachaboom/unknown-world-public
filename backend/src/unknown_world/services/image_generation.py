@@ -125,6 +125,7 @@ class ImageGenerationRequest(BaseModel):
         session_id: 세션 ID (파일 그룹화용)
         remove_background: 배경 제거 여부 (U-035, rembg 사용)
         image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
+        model_label: 모델 티어링 라벨 (U-066: FAST/QUALITY)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -139,6 +140,10 @@ class ImageGenerationRequest(BaseModel):
     image_type_hint: str | None = Field(
         default=None,
         description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
+    )
+    model_label: str = Field(
+        default="QUALITY",
+        description="모델 티어링 라벨 (U-066: FAST=저지연 프리뷰, QUALITY=고품질)",
     )
 
 
@@ -247,6 +252,7 @@ class MockImageGenerator:
                 "prompt_hash": prompt_hash,
                 "size": request.image_size,
                 "aspect_ratio": request.aspect_ratio,
+                "model_label": request.model_label,
                 "remove_background": request.remove_background,
             },
         )
@@ -440,13 +446,22 @@ class ImageGenerator:
         # 프롬프트 해시 (원문 로깅 금지 - RULE-007)
         prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
 
+        # U-066: model_label에 따른 모델 선택
+        # FAST → gemini-2.5-flash-image (저지연 프리뷰)
+        # QUALITY (기본) → gemini-3-pro-image-preview (고품질)
+        selected_model_label = (
+            ModelLabel.IMAGE_FAST if request.model_label == "FAST" else ModelLabel.IMAGE
+        )
+        selected_model_id = get_model_id(selected_model_label)
+
         logger.debug(
             "[ImageGen] 이미지 생성 요청",
             extra={
                 "prompt_hash": prompt_hash,
                 "size": request.image_size,
                 "aspect_ratio": request.aspect_ratio,
-                "model": MODEL_IMAGE,
+                "model": selected_model_id,
+                "model_label": request.model_label,
                 "remove_background": request.remove_background,
             },
         )
@@ -460,7 +475,7 @@ class ImageGenerator:
             # Q1 결정: 타임아웃 60초 적용
             response = await asyncio.wait_for(
                 self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
-                    model=get_model_id(ModelLabel.IMAGE),
+                    model=selected_model_id,
                     contents=request.prompt,
                     config=GenerateContentConfig(
                         response_modalities=[Modality.TEXT, Modality.IMAGE],

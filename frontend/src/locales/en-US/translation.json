@@ -364,6 +364,8 @@
   "narrative": {
     "welcome": "Welcome to the Unknown World...",
     "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
+    "streaming_label": "[STREAMING]",
+    "fast_forward_title": "Click to fast-forward",
+    "fast_forward_aria": "Click or press Enter/Space to display text instantly"
   }
 }

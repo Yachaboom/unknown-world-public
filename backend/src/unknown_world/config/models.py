@@ -33,6 +33,9 @@ class ModelLabel(StrEnum):
     IMAGE = "IMAGE"
     """이미지 생성/편집 모델 (gemini-3-pro-image-preview, 고정)"""
 
+    IMAGE_FAST = "IMAGE_FAST"
+    """저지연 이미지 프리뷰 모델 (gemini-2.5-flash-image, U-066)"""
+
     VISION = "VISION"
     """비전/공간 분석 모델 (bbox/segmentation용, gemini-3-flash-preview)"""
 
@@ -52,6 +55,9 @@ MODEL_QUALITY: Final[str] = "gemini-3-pro-preview"
 MODEL_IMAGE: Final[str] = "gemini-3-pro-image-preview"
 """IMAGE 라벨 모델 ID - 이미지 생성/편집용 (고정, RULE-010)"""
 
+MODEL_IMAGE_FAST: Final[str] = "gemini-2.5-flash-image"
+"""IMAGE_FAST 라벨 모델 ID - 저지연 이미지 프리뷰용 (U-066)"""
+
 MODEL_VISION: Final[str] = "gemini-3-flash-preview"
 """VISION 라벨 모델 ID - 비전/공간 분석용 (bbox/segmentation)"""
 
@@ -61,6 +67,7 @@ _MODEL_MAP: Final[dict[ModelLabel, str]] = {
     ModelLabel.FAST: MODEL_FAST,
     ModelLabel.QUALITY: MODEL_QUALITY,
     ModelLabel.IMAGE: MODEL_IMAGE,
+    ModelLabel.IMAGE_FAST: MODEL_IMAGE_FAST,
     ModelLabel.VISION: MODEL_VISION,
 }
 

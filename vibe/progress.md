@@ -1,6 +1,44 @@
 # 프로젝트 진행 상황
 
-## [2026-02-02 23:40] [U-065[Mvp]] TurnOutput 스키마 단순화 (Gemini API 제한 대응) 완료
+## [2026-02-03 14:40] [U-066[Mvp]] 이미지 생성 지연 흡수 플로우 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 가변 속도 타이핑 효과(Time-buying), 비동기 Late-binding 이미지 로딩, 모델 티어링(FAST/QUALITY) 통합
+- **추가 컴포넌트**: `frontend/src/components/NarrativeFeed.tsx` (타이핑 엔진), `vibe/unit-results/U-066[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-066-image-delay-absorption-runbook.md` (런북)
+- **달성 요구사항**: [RULE-008] 텍스트 우선 + Lazy 이미지, [R-013] 이미지 생성 지연 흡수 및 late-binding 가드 준수
+
+### 기술적 구현 세부사항
+
+**지연 시간 흡수 UX (Typewriter)**:
+- **Variable CPS Engine**: 스트리밍 및 이미지 로딩 상태를 감지하여 텍스트 출력 속도를 동적으로 조절(CPS 3~10), 사용자가 인지하는 시스템 대기 시간을 내러티브 경험으로 전환.
+- **Interactive Controls**: 클릭, Enter, Space 키를 통한 Fast-forward 및 `prefers-reduced-motion` 지원으로 접근성과 편의성 확보.
+
+**이미지 파이프라인 최적화**:
+- **Async Late-binding**: 턴 스트리밍과 이미지 생성을 물리적으로 분리하여 텍스트 TTFB(<2s) 사수. `turn_id` 가드와 `sceneRevision`을 통해 이전 턴 이미지가 현재 장면을 오염시키는 문제 해결.
+- **Model Tiering**: `gemini-2.5-flash-image`(FAST)와 `gemini-3-pro-image-preview`(QUALITY)를 상황에 맞춰 선택 호출 가능하도록 백엔드 인프라 구축.
+- **Option A Policy**: 이미지 로드 중 이전 배경을 유지하고 로딩 인디케이터를 오버레이하여 시각적 연속성 보장.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/
+│   ├── config/models.py (IMAGE_FAST 모델 추가)
+│   ├── api/image.py (티어링 파라미터 대응)
+│   └── services/image_generation.py (모델 선택 로직)
+└── frontend/src/
+    ├── components/
+    │   ├── NarrativeFeed.tsx (타이핑 효과)
+    │   └── SceneImage.tsx (로딩 연출)
+    ├── stores/worldStore.ts (Late-binding 가드)
+    └── turn/turnRunner.ts (비동기 잡 관리)
+
+### 다음 단계
+
+- **U-067**: 핫픽스 - Vertex AI Production 설정 수정
+- **U-068**: 이전 턴 이미지 참조를 통한 시각적 일관성 강화
+
+---
+
 
 ### 구현 완료 항목
 

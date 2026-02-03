@@ -29,7 +29,6 @@ from unknown_world.models.turn import Language
 from unknown_world.services.image_generation import (
     ImageGenerationRequest,
     ImageGenerationStatus,
-    ImageGenerator,
     ImageGeneratorType,
     MockImageGenerator,
     create_fallback_response,
@@ -88,6 +87,8 @@ class GenerateImageRequest(BaseModel):
         reference_image_ids: 참조 이미지 ID 목록 (편집용)
         session_id: 세션 ID (파일 그룹화용)
         skip_on_failure: 실패 시 건너뛰기 (텍스트-only 진행)
+        model_label: 모델 티어링 라벨 (U-066: FAST/QUALITY)
+        turn_id: 턴 ID (late-binding 가드용, U-066)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -99,6 +100,8 @@ class GenerateImageRequest(BaseModel):
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
     session_id: str | None = Field(default=None, description="세션 ID")
     skip_on_failure: bool = Field(default=True, description="실패 시 건너뛰기 (텍스트-only 진행)")
+    model_label: str = Field(default="QUALITY", description="모델 티어링 라벨 (FAST/QUALITY)")
+    turn_id: int | None = Field(default=None, description="턴 ID (late-binding 가드용)")
 
 
 class GenerateImageResponse(BaseModel):
@@ -111,6 +114,8 @@ class GenerateImageResponse(BaseModel):
         image_url: 생성된 이미지 URL
         message: 상태 메시지
         generation_time_ms: 생성 소요 시간
+        model_label: 사용된 모델 라벨 (U-066)
+        turn_id: 요청 턴 ID (U-066, late-binding 가드용)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -121,6 +126,8 @@ class GenerateImageResponse(BaseModel):
     image_url: str | None = Field(default=None, description="생성된 이미지 URL")
     message: str | None = Field(default=None, description="상태 메시지")
     generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
+    model_label: str = Field(default="QUALITY", description="사용된 모델 라벨")
+    turn_id: int | None = Field(default=None, description="요청 턴 ID")
 
 
 class ImageStatusResponse(BaseModel):
@@ -201,6 +208,7 @@ async def generate_image(
                 image_size=request.image_size,
                 reference_image_ids=request.reference_image_ids,
                 session_id=request.session_id,
+                model_label=request.model_label,
             )
         )
 
@@ -213,6 +221,8 @@ async def generate_image(
             image_url=result.image_url,
             message=result.message,
             generation_time_ms=result.generation_time_ms,
+            model_label=request.model_label,
+            turn_id=request.turn_id,
         )
 
     except Exception as e:

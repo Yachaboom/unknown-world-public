@@ -364,6 +364,8 @@
   "narrative": {
     "welcome": "미지의 세계에 오신 것을 환영합니다...",
     "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]"
+    "streaming_label": "[STREAMING]",
+    "fast_forward_title": "클릭하여 빠르게 넘기기",
+    "fast_forward_aria": "클릭하거나 Enter/Space를 눌러 텍스트를 즉시 표시합니다"
   }
 }

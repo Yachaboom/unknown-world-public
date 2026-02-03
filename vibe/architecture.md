@@ -24,11 +24,11 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 │   └── tests/ (unit/, integration/, qa/, manual_test_image.py, manual_test_rembg.py)
 ├── frontend/
 │   ├── src/
-│   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx 등)
+│   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx, NarrativeFeed.tsx 등)
 │   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts 등)
 │   │   ├── turn/ (turnRunner.ts)
 │   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts)
-│   │   ├── api/ (turnStream.ts, scanner.ts)
+│   │   ├── api/ (turnStream.ts, scanner.ts, image.ts)
 │   │   ├── locales/ (ko-KR/, en-US/ translation.json)
 │   │   └── schemas/ (turn.ts)
 │   └── public/ui/ (icons/, chrome/, manifest.json)
@@ -261,3 +261,18 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **서버-클라이언트 스키마 동기화 (Pydantic & Zod)**:
     - **Double Validation Alignment**: 백엔드의 Pydantic 모델 변경사항을 프론트엔드의 Zod 스키마에 즉시 반영하여 데이터 정합성 유지.
     - **UI Interaction Compatibility**: 제거된 필드(`cost_estimate` 등)를 참조하던 UI 컴포넌트(`ActionDeck.tsx`)와 스토어 로직을 새로운 단일 필드(`cost`) 체계로 전환함.
+
+---
+
+## 30. 이미지 생성 지연 흡수 및 Late-binding 정책 (U-066[Mvp])
+
+1. **지연 시간 흡수 UX (Time-buying Strategy)**:
+    - **Variable CPS Typewriter**: 내러티브 텍스트 노출 시 가변 CPS(Characters Per Second) 엔진을 적용함. 스트리밍 중이거나 이미지 로딩 중일 때 속도를 늦춰(최소 CPS 3) 시스템 지연을 내러티브 연출로 승화함.
+    - **Fast-forward Mechanism**: 클릭/Enter/Space 입력 시 타이핑을 즉시 중단하고 전체 텍스트를 노출하여 UX 편의성을 보장함.
+2. **비동기 Late-binding 파이프라인**:
+    - **Non-blocking Response**: 텍스트 턴 응답(`onFinal`) 수신 직후 텍스트를 즉시 렌더링하고, 이미지 생성은 비동기 잡(`image_job`)으로 분리하여 실행함.
+    - **Revision Guard**: `turn_id` 기반의 late-binding 가드를 구현하여, 이전 턴의 이미지가 뒤늦게 도착했을 때 현재 장면(Scene)을 덮어쓰지 않도록 원천 차단함.
+3. **모델 티어링 (FAST/QUALITY)**:
+    - **Tiered Generation**: `model_label` 파라미터를 통해 `gemini-2.5-flash-image`(FAST, 저지연)와 `gemini-3-pro-image-preview`(QUALITY, 고품질) 모델을 선택적으로 호출 가능한 구조 구축.
+    - **Fallback Policy**: 로딩 중에는 이전 이미지를 유지(Option A)하고 로딩 인디케이터를 표시하며, 생성 실패 시 안전하게 이전 장면으로 수렴함.
+
