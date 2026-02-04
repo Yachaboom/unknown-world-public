@@ -1,5 +1,28 @@
 # 구현 완료 후 문서 자동 업데이트 지시서 (Post-Implementation Documentation Sync Guide)
 
+## ⛔ CRITICAL: 셸 명령어 체이닝 절대 금지
+
+> **최우선 적용 규칙**: Shell 도구 사용 시 아래 규칙을 반드시 준수하세요.
+
+| 금지된 연산자 | 이유 |
+|--------------|------|
+| `&&` | Windows Git Bash에서 불안정하게 동작 |
+| `\|\|` | Windows Git Bash에서 불안정하게 동작 |
+| `;` | Windows Git Bash에서 불안정하게 동작 |
+
+**올바른 접근 방식:**
+- 여러 명령어 실행 시 **각각 별도의 Shell 도구 호출**로 분리
+- `cd` 명령어 대신 Shell 도구의 `working_directory` 파라미터 사용
+- 명령어 간 의존성이 있을 경우, 첫 번째 명령어 성공 확인 후 다음 명령어 실행
+
+```
+❌ 잘못됨: cd project && repomix --output code-base.xml
+✅ 올바름: 
+   1. Shell 호출: repomix --output code-base.xml (working_directory: "project")
+```
+
+---
+
 ## 1) 역할 및 시스템 설정
 
 ### 1.1 역할 정의

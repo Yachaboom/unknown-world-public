@@ -1,5 +1,30 @@
 # Roadmap 단계별 코드 생성 지시서 (Roadmap Step-by-Step Code Generation Instructions)
 
+## ⛔ CRITICAL: 셸 명령어 체이닝 절대 금지
+
+> **최우선 적용 규칙**: Shell 도구 사용 시 아래 규칙을 반드시 준수하세요.
+
+| 금지된 연산자 | 이유 |
+|--------------|------|
+| `&&` | Windows Git Bash에서 불안정하게 동작 |
+| `\|\|` | Windows Git Bash에서 불안정하게 동작 |
+| `;` | Windows Git Bash에서 불안정하게 동작 |
+
+**올바른 접근 방식:**
+- 여러 명령어 실행 시 **각각 별도의 Shell 도구 호출**로 분리
+- `cd` 명령어 대신 Shell 도구의 `working_directory` 파라미터 사용
+- 린트/타입 체크/빌드는 각각 별도 Shell 호출로 순차 실행
+
+```
+❌ 잘못됨: npm install && npm run build && npm run lint
+✅ 올바름: 
+   1. Shell 호출 1: npm install
+   2. Shell 호출 2: npm run build (1번 성공 후)
+   3. Shell 호출 3: npm run lint (2번 성공 후)
+```
+
+---
+
 ## 1) 역할 및 시스템 설정
 
 ### 1.1 역할 정의
