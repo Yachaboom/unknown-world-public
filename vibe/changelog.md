@@ -1,5 +1,115 @@
 # 로드맵 변경 이력
 
+## 2026-02-05 15:30 - roadmap-update/api-key-only-priority
+
+### 변경 요약
+
+**U-080을 최우선 핫픽스로 배치**하고, **Vertex AI를 완전히 제거하여 API 키 인증 전용**으로 단순화했습니다. U-068/U-069의 의존성을 U-067에서 U-080으로 변경했습니다.
+
+### 영향받은 문서
+
+- ✏️ `vibe/roadmap.md`: U-080 최우선 배치(Depends=None, 🚧 진행중), 제약조건 "API 키 인증 기본"으로 변경
+- ✏️ `vibe/unit-plans/U-080[Mvp].md`: Vertex AI 완전 제거 → API 키 전용으로 계획서 전면 수정
+- ✏️ `vibe/unit-plans/U-068[Mvp].md`: 의존성 U-067 → U-080으로 변경
+- ✏️ `vibe/unit-plans/U-069[Mvp].md`: 의존성 U-067 → U-080으로 변경
+- ✏️ `vibe/changelog.md`: 본 변경 이력 추가
+
+### 백로그 변경
+
+**수정**:
+
+- U-080[Mvp]: "Vertex AI → API 키 전환" → "**Vertex AI 제거 → API 키 전용**" + Depends=None + 🚧 진행중
+- U-068[Mvp]: Depends 변경 (U-067,U-066 → **U-080,U-066**)
+- U-069[Mvp]: Depends 변경 (U-067 → **U-080**)
+
+### 의존성 변경
+
+- U-080[Mvp]: Depends=U-067 → **Depends=None** (최우선 독립 실행)
+- U-068[Mvp]: Depends=U-067,U-066 → **Depends=U-080,U-066**
+- U-069[Mvp]: Depends=U-067 → **Depends=U-080**
+
+### 품질 검증 결과
+
+- **수정된 유닛 계획서**: 3개(U-080, U-068, U-069) - 의존성/내용 정합 ✅
+
+### 주의사항
+
+- **Vertex AI 코드 완전 제거**: 서비스 계정 인증 분기 로직, `vertexai` import, `VERTEX_*` 환경변수 참조 모두 삭제
+- API 키는 [Google AI Studio](https://aistudio.google.com/apikey)에서 발급
+- MMP에서 엔터프라이즈 기능이 필요해지면 그때 Vertex AI 재도입 검토
+
+---
+
+## 2026-02-05 - roadmap-update/api-key-auth-ui-image-optimization
+
+### 변경 요약
+
+핫픽스로 **Vertex AI 서비스계정 → API 키 인증 방식 전환**(U-080)을 추가하고, MVP UI 품질 강화를 위해 **레이아웃 이슈 수정 3건**(U-081~U-083)과 **이미지 생성 최적화**(U-084)를 계획했습니다. API 키 인증으로 데모 환경 설정이 간편해지고, UI 레이아웃 안정성과 이미지 생성 속도가 개선됩니다.
+
+### 영향받은 문서
+
+- ✏️ `vibe/roadmap.md`: U-080~U-084 백로그 추가, 진행률 재계산(MVP 83.3%→79.4%), 핵심 기능 책임 Unit 확장
+- 🆕 `vibe/unit-plans/U-080[Mvp].md`: 핫픽스 - Vertex AI → API 키 인증 방식 전환 계획서
+- 🆕 `vibe/unit-plans/U-081[Mvp].md`: UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정 계획서
+- 🆕 `vibe/unit-plans/U-082[Mvp].md`: UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 계획서
+- 🆕 `vibe/unit-plans/U-083[Mvp].md`: UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 계획서
+- 🆕 `vibe/unit-plans/U-084[Mvp].md`: 이미지 생성 최적화 - 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정 계획서
+- ✏️ `vibe/changelog.md`: 본 변경 이력 추가
+
+### 백로그 변경
+
+**추가**:
+
+- U-080[Mvp]: 핫픽스 - Vertex AI → API 키 인증 방식 전환 - 데모 환경 설정 간소화
+- U-081[Mvp]: UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정 - 패널 영역 보호
+- U-082[Mvp]: UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 - 재화 가시성 향상
+- U-083[Mvp]: UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 - 카드 UI 안정화
+- U-084[Mvp]: 이미지 생성 최적화 - 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정 - 이미지 생성 속도 향상 + 텍스트 가독성 개선
+
+**수정**:
+
+- 없음
+
+**삭제/Skip**:
+
+- 없음
+
+### 의존성 변경
+
+- U-080[Mvp]: Depends=U-067
+- U-081[Mvp]: Depends=U-049,U-077
+- U-082[Mvp]: Depends=U-049
+- U-083[Mvp]: Depends=U-009
+- U-084[Mvp]: Depends=U-066,U-049
+
+### 진행률 변화
+
+- **MVP**: 85/102 (83.3%) → 85/107 (79.4%) (신규 유닛 5개 추가로 분모 증가)
+- **MMP**: 0/18 (0%) → 0/18 (0%) (변경 없음)
+- **전체**: 85/120 (70.8%) → 85/125 (68.0%) (신규 유닛 5개 추가로 분모 증가)
+
+### 품질 검증 결과
+
+- **품질 기준 문서**: U-077[Mvp]
+- **신규 유닛 계획서**: 5개 생성(U-080~U-084) - 필수 섹션/완료 기준/의존성/주의사항/페어링 질문 포함 ✅
+- **수정된 유닛 계획서**: 0개
+- **수정된 문서**: 로드맵 - 기존 섹션 유지, 정보량 감소 없음 ✅
+
+### 리스크 변경
+
+**신규**:
+
+- 없음 (기존 리스크로 커버됨)
+
+### 주의사항
+
+- **U-080**은 API 키 인증 방식으로 전환하는 핫픽스입니다. 기존 서비스계정 방식도 옵션으로 유지되어 필요 시 전환 가능합니다.
+- **U-081~U-083**은 UI 레이아웃 안정성을 위한 CSS/컴포넌트 수정입니다. flex-shrink/min-height 설정에 주의하세요.
+- **U-084**의 픽셀 아트 스타일은 CRT 테마와 조화를 이루며, `image-rendering: pixelated` CSS 속성으로 확대 시에도 선명하게 표시됩니다.
+- 이미지 사이즈 축소(512x512)로 핫스팟 좌표(0~1000 정규화)에는 영향이 없습니다.
+
+---
+
 ## 2026-02-03 - roadmap-update/gameplay-quality-enhancement
 
 ### 변경 요약

@@ -7,7 +7,7 @@
 | Unit ID   | U-068[Mvp]                              |
 | Phase     | MVP                                     |
 | 예상 소요 | 60분                                    |
-| 의존성    | U-067[Mvp], U-066[Mvp]                  |
+| 의존성    | U-080[Mvp], U-066[Mvp]                  |
 | 우선순위  | High (시각적 연속성/몰입감 강화)        |
 
 ## 작업 목표
@@ -117,7 +117,7 @@ class ImagePolicy:
 
 **이전 작업에서 가져올 것**:
 
-- **계획서**: [U-067[Mvp]](U-067[Mvp].md) - Vertex AI Production 설정 (안정적 API 호출 기반)
+- **계획서**: [U-080[Mvp]](U-080[Mvp].md) - API 키 인증 전용 (안정적 Gemini API 호출 기반)
 - **계획서**: [U-066[Mvp]](U-066[Mvp].md) - 이미지 지연 흡수 플로우(late binding, sceneRevision)
 - **참조**: `frontend/src/stores/worldStore.ts` - `previousImageUrl` 상태
 

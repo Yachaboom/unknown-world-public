@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 85/120 (70.8%) | **MVP**: 85/102 (83.3%) | **MMP**: 0/18 (0%)
+**전체**: 85/125 (68.0%) | **MVP**: 85/107 (79.4%) | **MMP**: 0/18 (0%)
 
 **예상 완료(가정)**: MVP D-8 | MMP D-14
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-068[Mvp]](unit-plans/U-068[Mvp].md) / **최근 완료**: [U-067[Mvp]](unit-results/U-067[Mvp].md) (2026-02-04)
+**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) ⚡핫픽스(최우선) / **최근 완료**: [U-067[Mvp]](unit-results/U-067[Mvp].md) (2026-02-04)
 
 **블로커**: 없음
 
@@ -26,6 +26,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **[2026-02-03 추가]** "정밀분석" 액션으로 기존 Scene 이미지에 대해 Agentic Vision 분석 및 핫스팟 추가 기능 계획(U-076). MMP U-109(자동 실행)의 MVP 선행 버전으로, 사용자 트리거 기반.
 - **[2026-02-03 추가]** MMP: 새로고침 시 날아가는 UI 상태(Scene 이미지, ActionDeck 등) 복원을 위한 세션 상태 영속성 유닛 추가(U-113).
 - **[2026-02-03 추가]** MVP 게임플레이 품질 강화: 인벤토리 스크롤(U-077), 명확한 목표 시스템(U-078), 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화(U-079).
+- **[2026-02-05 추가]** 핫픽스: Vertex AI 서비스계정 → API 키 인증 방식으로 전환(U-080). MVP UI 품질 강화: Quest/Rule 확장 시 Inventory 영역 침범 수정(U-081), Agent Console 축소 및 재화 현황 확대(U-082), 액션 카드 대안 뱃지 레이아웃 깨짐 수정(U-083), 이미지 생성 픽셀 스타일/사이즈 축소/Scene 영역 높이 조정(U-084).
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -38,7 +39,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 1. **Prompt-only wrapper / Generic chatbot 금지**: TurnInput/TurnOutput 계약 + State/Orchestrator/Artifacts 필수 (RULE-001/002)
 2. **구조화 출력 + 이중 검증 + Repair loop 필수**: Pydantic+Zod, 실패 시 안전 폴백, Hard Gate 준수 (RULE-003/004)
-3. **경제/보안/언어/좌표/버전 고정**: 잔액 음수 금지(거래 장부), Vertex 서비스계정(BYOK 금지), ko/en 혼합 금지, bbox 0~1000 규약, tech-stack 버전 고정 (RULE-005/006/007/009/010)
+3. **경제/보안/언어/좌표/버전 고정**: 잔액 음수 금지(거래 장부), **API 키 인증 기본**(BYOK 금지), ko/en 혼합 금지, bbox 0~1000 규약, tech-stack 버전 고정 (RULE-005/006/007/009/010)
 
 ### 기술적 리스크 (TOP 3)
 
@@ -86,8 +87,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
-- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**, **아이템→핫스팟 사용 시 액션 로그 출력**, **처리중 Scene UI 로딩 인디케이터**, **레이아웃 확장(좌우 빈공간 활용)**, **핫스팟/아이템 인터랙션 안내 UX**, **인벤토리 스크롤(아이템 많아질 때)**
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**, **U-070, U-071, U-073, U-074**, **U-077**
+- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**, **아이템→핫스팟 사용 시 액션 로그 출력**, **처리중 Scene UI 로딩 인디케이터**, **레이아웃 확장(좌우 빈공간 활용)**, **핫스팟/아이템 인터랙션 안내 UX**, **인벤토리 스크롤(아이템 많아질 때)**, **Quest/Rule 확장 시 Inventory 영역 보호**, **Agent Console 축소 + 재화 현황 확대**, **액션 카드 대안 뱃지 레이아웃 안정화**
+- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**, **U-070, U-071, U-073, U-074**, **U-077**, **U-081, U-082, U-083**
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
@@ -104,9 +105,9 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
-- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**, **Gemini 이미지 생성 API 호출 방식 수정**, **이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY)**, **이전 턴 이미지 참조로 연결성 강화**, **Scanner 의미론적 사용 유도 UX**, **인벤토리 아이템 아이콘 동적 생성(rembg/캐싱/i18n)**, **"정밀분석" 액션으로 기존 이미지 Agentic Vision 분석 및 핫스팟 추가**
+- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**, **Gemini 이미지 생성 API 호출 방식 수정**, **이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY)**, **이전 턴 이미지 참조로 연결성 강화**, **Scanner 의미론적 사용 유도 UX**, **인벤토리 아이템 아이콘 동적 생성(rembg/캐싱/i18n)**, **"정밀분석" 액션으로 기존 이미지 Agentic Vision 분석 및 핫스팟 추가**, **API 키 인증 방식 전환**, **이미지 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정**
 - **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**, **U-061**, **U-064**
-- **책임 Unit(보강)**: **U-066**, **U-067, U-068, U-069, U-072, U-075**, **U-076**
+- **책임 Unit(보강)**: **U-066**, **U-067, U-068, U-069, U-072, U-075**, **U-076**, **U-080, U-084**
 - **상태**: 🚧
 
 ### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
@@ -157,8 +158,9 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-068[Mvp]](unit-plans/U-068[Mvp].md) | 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 | Depends=U-067,U-066 | ⏸️
-ID=[U-069[Mvp]](unit-plans/U-069[Mvp].md) | 텍스트 생성 FAST 모델 + "정밀조사" 트리거 Pro 모델 전환 | Depends=U-067 | ⏸️
+ID=[U-080[Mvp]](unit-plans/U-080[Mvp].md) | ⚡**핫픽스(최우선)** - Vertex AI 제거 → API 키 인증 전용 | Depends=None | 🚧
+ID=[U-068[Mvp]](unit-plans/U-068[Mvp].md) | 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 | Depends=U-080,U-066 | ⏸️
+ID=[U-069[Mvp]](unit-plans/U-069[Mvp].md) | 텍스트 생성 FAST 모델 + "정밀조사" 트리거 Pro 모델 전환 | Depends=U-080 | ⏸️
 ID=[U-070[Mvp]](unit-plans/U-070[Mvp].md) | 아이템-핫스팟 사용 시 액션 로그 출력 | Depends=U-012 | ⏸️
 ID=[U-071[Mvp]](unit-plans/U-071[Mvp].md) | Scene 처리중 UI 로딩 인디케이터 강화 | Depends=U-066 | ⏸️
 ID=[U-072[Mvp]](unit-plans/U-072[Mvp].md) | Scanner 의미론적 사용 유도 UX | Depends=U-022 | ⏸️
@@ -169,6 +171,10 @@ ID=[U-076[Mvp]](unit-plans/U-076[Mvp].md) | "정밀분석" 액션으로 기존 S
 ID=[U-077[Mvp]](unit-plans/U-077[Mvp].md) | 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 | Depends=U-011,U-049 | ⏸️
 ID=[U-078[Mvp]](unit-plans/U-078[Mvp].md) | 게임 목표 시스템 강화 - 명확한 목표 제시 및 진행 가이드 | Depends=U-013,U-015 | ⏸️
 ID=[U-079[Mvp]](unit-plans/U-079[Mvp].md) | ⚡재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 | Depends=U-014,U-019,U-078 | ⏸️
+ID=[U-081[Mvp]](unit-plans/U-081[Mvp].md) | UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정 | Depends=U-049,U-077 | ⏸️
+ID=[U-082[Mvp]](unit-plans/U-082[Mvp].md) | UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 | Depends=U-049 | ⏸️
+ID=[U-083[Mvp]](unit-plans/U-083[Mvp].md) | UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 | Depends=U-009 | ⏸️
+ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 생성 최적화 - 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정 | Depends=U-066,U-049 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
 ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
@@ -331,10 +337,17 @@ pnpm kill
 
 ---
 
-## 일일 스탠드업 (2026-02-04)
+## 일일 스탠드업 (2026-02-05)
 
 **완료**: [U-067[Mvp]](unit-results/U-067[Mvp].md) - 핫픽스 - Vertex AI Production 설정 수정
 
-**진행중**: [U-068[Mvp]](unit-plans/U-068[Mvp].md) - 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화
+**진행중**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) - ⚡**핫픽스(최우선)** - Vertex AI 제거 → API 키 인증 전용
 
 **블로커**: 없음
+
+**신규 유닛 추가 (5개)**:
+- [U-080[Mvp]](unit-plans/U-080[Mvp].md) - 핫픽스 - API 키 인증
+- [U-081[Mvp]](unit-plans/U-081[Mvp].md) - Quest/Rule 확장 시 Inventory 침범 수정
+- [U-082[Mvp]](unit-plans/U-082[Mvp].md) - Agent Console 축소 + 재화 현황 확대
+- [U-083[Mvp]](unit-plans/U-083[Mvp].md) - 액션 카드 대안 뱃지 레이아웃 수정
+- [U-084[Mvp]](unit-plans/U-084[Mvp].md) - 이미지 픽셀 스타일 + Scene 영역 높이 조정
