@@ -35,9 +35,9 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ├── shared/
 │   └── schemas/turn/ (turn_output.schema.json 등)
 └── vibe/
-    ├── unit-plans/ (U-001~U-079 등)
-    ├── unit-results/ (U-001~U-067 등)
-    └── unit-runbooks/ (U-001~U-067 등)
+    ├── unit-plans/ (U-001~U-080 등)
+    ├── unit-results/ (U-001~U-080 등)
+    └── unit-runbooks/ (U-001~U-080 등)
 ```
 
 ### 주요 디렉토리 설명
@@ -50,17 +50,16 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 
 ---
 
-## 31. Vertex AI Production 설정 및 리전 표준화 (U-067[Mvp])
+## 32. API 키 인증 통합 및 Vertex AI 제거 (U-080[Mvp])
 
-1. **리전 표준화 (Global Endpoint)**:
-    - **VERTEX_LOCATION**: 기본값을 `global`로 설정하여 특정 리전의 가용성 제약 및 Quota 제한에 유연하게 대응함.
-    - **Model Availability**: `gemini-3-*` 모델 라인업이 global 엔드포인트에서 안정적으로 서비스됨을 전제로 함.
-2. **환경별 설정 분리 (Settings Engine)**:
-    - **ENVIRONMENT**: `development`, `staging`, `production` 구분을 통해 로깅 수준 및 인증 전략 분리.
-    - **Production-ready Template**: `.env.example`에 프로덕션 환경을 위한 필수 설정(프로젝트 ID, 리전, 권장 리소스 등)을 명시함.
-3. **인증 아키텍처 (GCP IAM)**:
-    - **Local Development**: 서비스 계정 키 파일(JSON)을 통한 명시적 인증 유지.
-    - **Cloud Run / Production**: 키 파일 없이 서비스 계정 IAM 역할을 통한 ADC(Application Default Credentials) 인증 권장 구조 확립.
+1. **인증 단순화 (API Key First)**:
+    - **GOOGLE_API_KEY**: 모든 Gemini 기능(텍스트/이미지)을 단일 API 키로 수행하도록 통합.
+    - **Vertex AI Removal**: 서비스 계정 키 파일 및 GCP IAM 권한 관리의 복잡도를 제거하여 데모 온보딩 속도를 최적화함.
+2. **서비스 통합 (google-genai)**:
+    - **Unified Client**: `genai_client.py`에서 `google.genai.Client(api_key=...)`를 통해 텍스트와 이미지 생성 서비스를 모두 처리함.
+    - **Mock Fallback**: 인증 정보 미설정 시에도 `MockGenAIClient`로 자동 전이되어 시스템 기동성을 사수함.
+3. **환경 변수 보안 (RULE-007)**:
+    - API 키는 `.env` 및 환경 변수로만 관리하며, 코드나 로그에는 절대 노출되지 않도록 마스킹 처리함.
 ---
 
 ## 25. 이미지 생성 지침 통합 및 i18n 정책 (U-061[Mvp])

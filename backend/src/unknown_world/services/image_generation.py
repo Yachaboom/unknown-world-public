@@ -369,25 +369,24 @@ class ImageGenerator:
 
     gemini-3-pro-image-preview 모델을 사용하여 이미지를 생성합니다.
     모델 ID는 RULE-010에 따라 고정됩니다.
+
+    U-080 핫픽스: Vertex AI 서비스 계정 인증 완전 제거, API 키 전용
     """
 
     def __init__(
         self,
         output_dir: Path | None = None,
-        project: str | None = None,
-        location: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         """ImageGenerator를 초기화합니다.
 
         Args:
             output_dir: 이미지 저장 디렉토리 (기본값: .data/images/generated)
-            project: Vertex AI 프로젝트 ID
-            location: Vertex AI 리전
+            api_key: Gemini API 키 (환경변수 GOOGLE_API_KEY 사용 가능)
         """
         self._output_dir = output_dir or get_generated_images_dir()
         self._output_dir.mkdir(parents=True, exist_ok=True)
-        self._project = project or os.environ.get("VERTEX_PROJECT")
-        self._location = location or os.environ.get("VERTEX_LOCATION", "global")
+        self._api_key = api_key or os.environ.get("GOOGLE_API_KEY")
         self._client: Client | None = None
         self._available = False
 
@@ -396,28 +395,30 @@ class ImageGenerator:
     def _initialize_client(self) -> None:
         """google-genai 클라이언트를 초기화합니다."""
         try:
+            if not self._api_key:
+                logger.warning(
+                    "[ImageGen] GOOGLE_API_KEY 환경변수가 설정되지 않음 - Mock 모드 권장",
+                )
+                self._available = False
+                return
+
             from google.genai import Client
 
-            client_options: dict[str, Any] = {}
-            if self._project:
-                client_options["project"] = self._project
-            if self._location:
-                client_options["location"] = self._location
-
-            self._client = Client(vertexai=True, **client_options)
+            # API 키 모드로 클라이언트 초기화 (Vertex AI 제거)
+            self._client = Client(api_key=self._api_key)
             self._available = True
 
+            # 로그에는 모델 ID만 기록 (API 키 노출 금지 - RULE-007)
             logger.info(
-                "[ImageGen] Vertex AI 이미지 생성기 초기화 완료",
+                "[ImageGen] API 키 이미지 생성기 초기화 완료",
                 extra={
                     "model": MODEL_IMAGE,
-                    "project": self._project or "(ADC 기본)",
-                    "location": self._location,
+                    "auth": "api_key",
                 },
             )
         except Exception as e:
             logger.warning(
-                "[ImageGen] Vertex AI 클라이언트 초기화 실패 - Mock 모드 권장",
+                "[ImageGen] API 키 클라이언트 초기화 실패 - Mock 모드 권장",
                 extra={"error_type": type(e).__name__},
             )
             self._available = False

@@ -144,6 +144,9 @@ export function createTurnRunner(deps: {
   // U-066: 이미지 잡 AbortController
   let imageJobController: AbortController | null = null;
 
+  // U-080: 이미지 생성 요청 중복 방지 (StrictMode 대응)
+  let imageJobPending = false;
+
   /**
    * 턴을 실행합니다.
    */
@@ -200,8 +203,15 @@ export function createTurnRunner(deps: {
         useWorldStore.getState().setConnected(true);
 
         // U-066: 이미지 잡 비동기 실행 (턴과 분리)
+        // U-080: StrictMode 대응 - 중복 요청 방지
         const imageJob = event.data.render?.image_job;
         if (imageJob?.should_generate && imageJob.prompt) {
+          // 이미 이미지 생성 요청이 진행 중이면 무시 (StrictMode 중복 방지)
+          if (imageJobPending) {
+            return;
+          }
+          imageJobPending = true;
+
           const worldStore = useWorldStore.getState();
           const currentTurnId = worldStore.turnCount;
 
@@ -225,6 +235,7 @@ export function createTurnRunner(deps: {
               turnId: currentTurnId,
             },
             (response) => {
+              imageJobPending = false; // 완료 시 플래그 해제
               // 성공/실패 모두 처리
               if (response.success && response.imageUrl && response.turnId !== undefined) {
                 // late-binding 가드: turnId가 일치할 때만 적용
@@ -235,6 +246,7 @@ export function createTurnRunner(deps: {
               }
             },
             () => {
+              imageJobPending = false; // 에러 시 플래그 해제
               // 에러 시 로딩 취소
               useWorldStore.getState().cancelImageLoading();
             },
@@ -326,6 +338,9 @@ export function useTurnRunner(deps: {
   // U-066: 이미지 잡 AbortController ref
   const imageJobControllerRef = useRef<AbortController | null>(null);
 
+  // U-080: 이미지 생성 요청 중복 방지 (StrictMode 대응)
+  const imageJobPendingRef = useRef<boolean>(false);
+
   // runTurn을 useCallback으로 정의
   const runTurn = useCallback(
     (params: RunTurnParams): void => {
@@ -378,8 +393,15 @@ export function useTurnRunner(deps: {
           useWorldStore.getState().setConnected(true);
 
           // U-066: 이미지 잡 비동기 실행 (턴과 분리)
+          // U-080: StrictMode 대응 - 중복 요청 방지
           const imageJob = event.data.render?.image_job;
           if (imageJob?.should_generate && imageJob.prompt) {
+            // 이미 이미지 생성 요청이 진행 중이면 무시 (StrictMode 중복 방지)
+            if (imageJobPendingRef.current) {
+              return;
+            }
+            imageJobPendingRef.current = true;
+
             const worldStore = useWorldStore.getState();
             const currentTurnId = worldStore.turnCount;
 
@@ -403,6 +425,7 @@ export function useTurnRunner(deps: {
                 turnId: currentTurnId,
               },
               (response) => {
+                imageJobPendingRef.current = false; // 완료 시 플래그 해제
                 if (response.success && response.imageUrl && response.turnId !== undefined) {
                   useWorldStore
                     .getState()
@@ -412,6 +435,7 @@ export function useTurnRunner(deps: {
                 }
               },
               () => {
+                imageJobPendingRef.current = false; // 에러 시 플래그 해제
                 useWorldStore.getState().cancelImageLoading();
               },
             );

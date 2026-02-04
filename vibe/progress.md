@@ -1,6 +1,39 @@
 # 프로젝트 진행 상황
 
-## [2026-02-03 14:40] [U-066[Mvp]] 이미지 생성 지연 흡수 플로우 완료
+## [2026-02-05 16:45] [U-080[Mvp]] ⚡핫픽스(최우선) - Vertex AI 제거 → API 키 인증 전용 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Vertex AI 서비스 계정 인증 완전 제거, Gemini API 키(`GOOGLE_API_KEY`) 기반 인증 통합
+- **추가 컴포넌트**: `vibe/unit-results/U-080[Mvp].md` (개발 보고서), `backend/.env.example` (설정 업데이트)
+- **달성 요구사항**: [RULE-007] 비밀정보 보안(API 키 환경변수 관리), [단순화] 인프라 복잡도 제거 및 온보딩 최적화
+
+### 기술적 구현 세부사항
+
+**인증 아키텍처 단순화**:
+- **Vertex AI Removal**: `google-cloud-aiplatform` 의존성을 실질적으로 배제하고, `google-genai` SDK의 `Client(api_key=...)` 방식을 텍스트(generate_content) 및 이미지 생성 서비스 전체에 적용.
+- **Unified Auth Flow**: 서비스 계정 키 파일 없이 API 키 하나로 모든 Gemini 모델 기능을 사용할 수 있도록 `genai_client.py` 및 `image_generation.py` 로직을 단일화.
+- **Graceful Mock Fallback**: API 키 미설정 시에도 서버가 중단되지 않고 `MockGenAIClient`로 안전하게 수렴하도록 설계.
+
+### 코드 구조
+repo-root/
+├── backend/
+│   ├── .env.example (Vertex 관련 필드 제거 및 API 키 명시)
+│   └── src/unknown_world/
+│       ├── config/settings.py (Vertex 설정 필드 삭제)
+│       └── services/
+│           ├── genai_client.py (API 키 전용 클라이언트로 단순화)
+│           └── image_generation.py (API 키 기반 generate_content 통합)
+└── vibe/
+    └── tech-stack.md (인증 방식 변경 사항 반영)
+
+### 다음 단계
+
+- **U-081**: UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정
+- **U-082**: UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대
+
+---
+
 
 ### 구현 완료 항목
 

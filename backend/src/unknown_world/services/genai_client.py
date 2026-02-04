@@ -1,23 +1,24 @@
 """Unknown World - GenAI 클라이언트 래퍼.
 
-이 모듈은 Vertex AI 서비스 계정 인증 기반의 google-genai 클라이언트를 제공합니다.
+이 모듈은 API 키 인증 기반의 google-genai 클라이언트를 제공합니다.
 환경변수로 실제 모델과 mock 모드를 전환할 수 있습니다.
 
-인증 방식:
-    - 로컬: ADC 또는 GOOGLE_APPLICATION_CREDENTIALS 환경변수
-    - 배포: Cloud Run 서비스 계정 권한 (키 파일 커밋 없음)
+인증 방식 (U-080 핫픽스: Vertex AI 제거):
+    - GOOGLE_API_KEY 환경변수로 API 키 인증 (필수)
+    - https://aistudio.google.com/apikey 에서 발급
 
 모드 전환 (페어링 질문 Q1 결정: Option A):
     - 환경변수 UW_MODE=mock → MockGenAIClient (테스트/개발용)
-    - 환경변수 UW_MODE=real → 실제 Vertex AI 호출 (기본값)
+    - 환경변수 UW_MODE=real → 실제 Gemini API 호출 (기본값)
 
 보안 규칙:
-    - BYOK(사용자 API 키 입력) 금지 (RULE-007)
+    - API 키는 환경변수로만 관리 (RULE-007)
     - 프롬프트 원문/비밀정보 로깅 금지 (RULE-007/008)
     - 로그에는 라벨/버전/정책 메타만 노출
 
 참조:
     - vibe/tech-stack.md (google-genai==1.56.0)
+    - vibe/unit-plans/U-080[Mvp].md (Vertex AI 제거)
     - .cursor/rules/20-backend-orchestrator.mdc
     - .cursor/rules/00-core-critical.mdc (RULE-007/010)
 """
@@ -64,11 +65,8 @@ class GenAIMode(StrEnum):
 ENV_UW_MODE = "UW_MODE"
 """동작 모드 환경변수 (mock|real)"""
 
-ENV_VERTEX_PROJECT = "VERTEX_PROJECT"
-"""Vertex AI 프로젝트 ID 환경변수"""
-
-ENV_VERTEX_LOCATION = "VERTEX_LOCATION"
-"""Vertex AI 리전 환경변수 (기본값: global)"""
+ENV_GOOGLE_API_KEY = "GOOGLE_API_KEY"
+"""Gemini API 키 환경변수 (필수)"""
 
 
 # =============================================================================
@@ -199,28 +197,27 @@ class MockGenAIClient:
 
 
 class GenAIClient:
-    """Vertex AI 기반 실제 GenAI 클라이언트.
+    """API 키 기반 실제 GenAI 클라이언트.
 
     google-genai SDK를 사용하여 Gemini 모델을 호출합니다.
-    서비스 계정 인증(ADC)을 사용하며, BYOK는 금지됩니다.
+    GOOGLE_API_KEY 환경변수로 API 키 인증을 수행합니다.
+
+    U-080 핫픽스: Vertex AI 서비스 계정 인증 완전 제거, API 키 전용
     """
 
     def __init__(
         self,
-        project: str | None = None,
-        location: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         """GenAIClient를 초기화합니다.
 
         Args:
-            project: Vertex AI 프로젝트 ID (환경변수 VERTEX_PROJECT 사용 가능)
-            location: Vertex AI 리전 (기본값: us-central1)
+            api_key: Gemini API 키 (환경변수 GOOGLE_API_KEY 사용 가능)
 
         Raises:
-            RuntimeError: 인증 설정이 올바르지 않은 경우
+            RuntimeError: API 키가 설정되지 않은 경우
         """
-        self._project = project or os.environ.get(ENV_VERTEX_PROJECT)
-        self._location = location or os.environ.get(ENV_VERTEX_LOCATION, "global")
+        self._api_key = api_key or os.environ.get(ENV_GOOGLE_API_KEY)
         self._client: Client | None = None
         self._available = False
 
@@ -229,36 +226,33 @@ class GenAIClient:
     def _initialize_client(self) -> None:
         """google-genai 클라이언트를 초기화합니다."""
         try:
+            if not self._api_key:
+                logger.warning(
+                    "[GenAI] GOOGLE_API_KEY 환경변수가 설정되지 않음 - Mock 모드로 전환 권장",
+                )
+                self._available = False
+                return
+
             from google.genai import Client
 
-            # Vertex AI 모드로 클라이언트 초기화
-            # 인증은 ADC(Application Default Credentials)를 사용
-            # - 로컬: gcloud auth application-default login
-            # - 배포: Cloud Run 서비스 계정 자동 인증
-            client_options: dict[str, Any] = {}
-            if self._project:
-                client_options["project"] = self._project
-            if self._location:
-                client_options["location"] = self._location
-
-            # vertexai=True로 Vertex AI 모드 활성화
-            self._client = Client(vertexai=True, **client_options)
+            # API 키 모드로 클라이언트 초기화 (Vertex AI 제거)
+            # vertexai=False (기본값)로 API 키 인증 사용
+            self._client = Client(api_key=self._api_key)
             self._available = True
 
-            # 로그에는 프로젝트/리전만 기록 (키/토큰 노출 금지)
+            # 로그에는 초기화 성공 여부만 기록 (API 키 노출 금지 - RULE-007)
             logger.info(
-                "[GenAI] Vertex AI 클라이언트 초기화 완료",
+                "[GenAI] API 키 클라이언트 초기화 완료",
                 extra={
                     "mode": GenAIMode.REAL,
-                    "project": self._project or "(ADC 기본)",
-                    "location": self._location,
+                    "auth": "api_key",
                 },
             )
         except Exception as e:
             # 인증 실패 시에도 앱이 멈추지 않도록 로깅만 수행
             # 오류 상세(스택트레이스)에 비밀정보가 포함될 수 있으므로 exc_info=False
             logger.warning(
-                "[GenAI] Vertex AI 클라이언트 초기화 실패 - Mock 모드로 전환 권장",
+                "[GenAI] API 키 클라이언트 초기화 실패 - Mock 모드로 전환 권장",
                 extra={"error_type": type(e).__name__},
             )
             self._available = False

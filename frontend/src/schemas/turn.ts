@@ -428,6 +428,11 @@ export const ImageJobSchema = z
       .max(2)
       .default([])
       .describe('참조 이미지 ID 목록 (최대 2개)'),
+    reference_image_url: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('참조 이미지 URL (선택, AI 모델 응답 호환용)'),
     remove_background: z.boolean().default(false).describe('배경 제거 여부 (U-035, rembg 사용)'),
     image_type_hint: z
       .string()

@@ -12,6 +12,7 @@ from unknown_world.config.models import (
     get_model_id,
 )
 from unknown_world.services.genai_client import (
+    ENV_GOOGLE_API_KEY,
     ENV_UW_MODE,
     GenAIClient,
     GenAIMode,
@@ -81,21 +82,15 @@ def test_singleton_pattern():
 
 
 def test_genai_client_initialization():
-    """GenAIClient(real)가 SDK를 올바르게 초기화하는지 확인합니다."""
+    """GenAIClient(real)가 API 키로 SDK를 올바르게 초기화하는지 확인합니다."""
     with patch("google.genai.Client") as mock_genai_client:
-        # VERTEX_PROJECT와 LOCATION 설정
-        project = "test-project"
-        location = "global"
+        api_key = "test-api-key"
+        with patch.dict(os.environ, {ENV_GOOGLE_API_KEY: api_key}):
+            client = GenAIClient()
 
-        client = GenAIClient(project=project, location=location)
-
-        # genai.Client가 vertexai=True와 함께 호출되었는지 확인
-        mock_genai_client.assert_called_once()
-        args, kwargs = mock_genai_client.call_args
-        assert kwargs["vertexai"] is True
-        assert kwargs["project"] == project
-        assert kwargs["location"] == location
-        assert client.is_available() is True
+            # genai.Client가 api_key와 함께 호출되었는지 확인
+            mock_genai_client.assert_called_once_with(api_key=api_key)
+            assert client.is_available() is True
 
 
 @pytest.mark.asyncio
@@ -113,22 +108,26 @@ async def test_genai_client_generate_real_call():
 
         mock_instance.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        client = GenAIClient(project="p", location="l")
-        request = GenerateRequest(prompt="hello", model_label=ModelLabel.QUALITY, max_tokens=100)
+        api_key = "test-api-key"
+        with patch.dict(os.environ, {ENV_GOOGLE_API_KEY: api_key}):
+            client = GenAIClient()
+            request = GenerateRequest(
+                prompt="hello", model_label=ModelLabel.QUALITY, max_tokens=100
+            )
 
-        response = await client.generate(request)
+            response = await client.generate(request)
 
-        # U-060: 호출 인자 확인 - GenerateContentConfig 객체로 전달되므로 타입 + 핵심 속성 검증
-        mock_instance.aio.models.generate_content.assert_called_once()
-        call_kwargs = mock_instance.aio.models.generate_content.call_args.kwargs
-        assert call_kwargs["model"] == MODEL_QUALITY
-        assert call_kwargs["contents"] == "hello"
-        # config는 GenerateContentConfig 객체이므로 속성 검증
-        config = call_kwargs["config"]
-        assert config is not None
-        assert config.max_output_tokens == 100
-        assert response.text == "Actual response"
-        assert response.usage["total_tokens"] == 30
+            # U-060: 호출 인자 확인
+            mock_instance.aio.models.generate_content.assert_called_once()
+            call_kwargs = mock_instance.aio.models.generate_content.call_args.kwargs
+            assert call_kwargs["model"] == MODEL_QUALITY
+            assert call_kwargs["contents"] == "hello"
+            # config는 GenerateContentConfig 객체이므로 속성 검증
+            config = call_kwargs["config"]
+            assert config is not None
+            assert config.max_output_tokens == 100
+            assert response.text == "Actual response"
+            assert response.usage["total_tokens"] == 30
 
 
 def test_genai_client_initialization_failure():
@@ -161,15 +160,17 @@ async def test_genai_client_generate_stream_real_call():
 
         mock_instance.aio.models.generate_content_stream = AsyncMock(return_value=mock_stream())
 
-        client = GenAIClient(project="p", location="l")
-        request = GenerateRequest(prompt="hello", model_label=ModelLabel.FAST)
+        api_key = "test-api-key"
+        with patch.dict(os.environ, {ENV_GOOGLE_API_KEY: api_key}):
+            client = GenAIClient()
+            request = GenerateRequest(prompt="hello", model_label=ModelLabel.FAST)
 
-        chunks = []
-        async for chunk in client.generate_stream(request):
-            chunks.append(chunk)
+            chunks = []
+            async for chunk in client.generate_stream(request):
+                chunks.append(chunk)
 
-        assert chunks == ["chunk1", "chunk2"]
-        mock_instance.aio.models.generate_content_stream.assert_called_once()
+            assert chunks == ["chunk1", "chunk2"]
+            mock_instance.aio.models.generate_content_stream.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -200,32 +201,34 @@ async def test_genai_client_full_config():
 
         mock_instance.aio.models.generate_content_stream = AsyncMock(return_value=mock_stream())
 
-        client = GenAIClient(project="p")
-        request = GenerateRequest(prompt="hi", max_tokens=50, temperature=0.7)
+        api_key = "test-api-key"
+        with patch.dict(os.environ, {ENV_GOOGLE_API_KEY: api_key}):
+            client = GenAIClient()
+            request = GenerateRequest(prompt="hi", max_tokens=50, temperature=0.7)
 
-        # generate 호출 검증
-        # U-060: GenerateContentConfig 객체로 전달되므로 타입 + 핵심 속성 검증
-        await client.generate(request)
-        mock_instance.aio.models.generate_content.assert_called_once()
-        gen_call_kwargs = mock_instance.aio.models.generate_content.call_args.kwargs
-        assert gen_call_kwargs["model"] == MODEL_FAST
-        assert gen_call_kwargs["contents"] == "hi"
-        gen_config = gen_call_kwargs["config"]
-        assert gen_config is not None
-        assert gen_config.max_output_tokens == 50
-        assert gen_config.temperature == 0.7
+            # generate 호출 검증
+            # U-060: GenerateContentConfig 객체로 전달되므로 타입 + 핵심 속성 검증
+            await client.generate(request)
+            mock_instance.aio.models.generate_content.assert_called_once()
+            gen_call_kwargs = mock_instance.aio.models.generate_content.call_args.kwargs
+            assert gen_call_kwargs["model"] == MODEL_FAST
+            assert gen_call_kwargs["contents"] == "hi"
+            gen_config = gen_call_kwargs["config"]
+            assert gen_config is not None
+            assert gen_config.max_output_tokens == 50
+            assert gen_config.temperature == 0.7
 
-        # generate_stream 호출 검증
-        async for _ in client.generate_stream(request):
-            pass
-        mock_instance.aio.models.generate_content_stream.assert_called_once()
-        stream_call_kwargs = mock_instance.aio.models.generate_content_stream.call_args.kwargs
-        assert stream_call_kwargs["model"] == MODEL_FAST
-        assert stream_call_kwargs["contents"] == "hi"
-        stream_config = stream_call_kwargs["config"]
-        assert stream_config is not None
-        assert stream_config.max_output_tokens == 50
-        assert stream_config.temperature == 0.7
+            # generate_stream 호출 검증
+            async for _ in client.generate_stream(request):
+                pass
+            mock_instance.aio.models.generate_content_stream.assert_called_once()
+            stream_call_kwargs = mock_instance.aio.models.generate_content_stream.call_args.kwargs
+            assert stream_call_kwargs["model"] == MODEL_FAST
+            assert stream_call_kwargs["contents"] == "hi"
+            stream_config = stream_call_kwargs["config"]
+            assert stream_config is not None
+            assert stream_config.max_output_tokens == 50
+            assert stream_config.temperature == 0.7
 
 
 def test_get_genai_client_real_init_failure_fallback():

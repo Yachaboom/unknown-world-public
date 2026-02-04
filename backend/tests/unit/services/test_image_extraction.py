@@ -12,7 +12,7 @@ def generator():
     """ImageGenerator 인스턴스 픽스처 (클라이언트 초기화 생략)."""
     with MagicMock():
         # Client 초기화를 모킹하여 실제 Vertex AI 연결 방지
-        return ImageGenerator(project="test-project", location="test-location")
+        return ImageGenerator()
 
 
 def test_extract_image_success(generator):

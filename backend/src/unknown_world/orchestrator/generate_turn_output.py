@@ -26,7 +26,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import ValidationError
 
@@ -53,6 +53,55 @@ from unknown_world.services.genai_client import (
 # =============================================================================
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Gemini API 스키마 호환성 (U-080 핫픽스)
+# =============================================================================
+
+
+def _strip_additional_properties(schema: dict[str, Any]) -> dict[str, Any]:
+    """JSON Schema에서 additionalProperties 필드를 재귀적으로 제거합니다.
+
+    Gemini API는 Pydantic이 생성하는 `additionalProperties` 필드를 인식하지 못하여
+    `400 INVALID_ARGUMENT: Unknown name "additional_properties"` 에러가 발생합니다.
+    이 함수는 스키마에서 해당 필드를 제거하여 Gemini API와 호환되게 합니다.
+
+    Args:
+        schema: Pydantic model_json_schema()로 생성된 JSON Schema
+
+    Returns:
+        additionalProperties가 제거된 JSON Schema
+    """
+    # 현재 레벨에서 additionalProperties 제거
+    cleaned: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key == "additionalProperties":
+            continue
+
+        # 값 타입에 따라 재귀 처리
+        cleaned_value: Any
+        if isinstance(value, dict):
+            # dict인 경우 재귀 호출
+            nested_dict = cast(dict[str, Any], value)
+            cleaned_value = _strip_additional_properties(nested_dict)
+        elif isinstance(value, list):
+            # list인 경우 각 요소 처리
+            cleaned_list: list[Any] = []
+            value_list = cast(list[Any], value)
+            for item in value_list:
+                if isinstance(item, dict):
+                    nested_item = cast(dict[str, Any], item)
+                    cleaned_list.append(_strip_additional_properties(nested_item))
+                else:
+                    cleaned_list.append(item)
+            cleaned_value = cleaned_list
+        else:
+            cleaned_value = value
+
+        cleaned[key] = cleaned_value
+
+    return cleaned
 
 
 # =============================================================================
@@ -135,9 +184,17 @@ class TurnOutputGenerator:
         self._json_schema: dict[str, Any] | None = None
 
     def _get_json_schema(self) -> dict[str, Any]:
-        """TurnOutput JSON Schema를 반환합니다 (캐싱)."""
-        if self._json_schema is None:
-            self._json_schema = TurnOutput.model_json_schema()
+        """TurnOutput JSON Schema를 반환합니다 (캐싱).
+
+        U-080 핫픽스: Gemini API 호환성을 위해 additionalProperties 필드를 제거합니다.
+        Gemini API는 이 필드를 인식하지 못하여 400 에러가 발생합니다.
+        """
+        if self._json_schema is not None:
+            return self._json_schema
+
+        raw_schema = TurnOutput.model_json_schema()
+        # Gemini API 호환성: additionalProperties 제거
+        self._json_schema = _strip_additional_properties(raw_schema)
         return self._json_schema
 
     def _build_prompt(

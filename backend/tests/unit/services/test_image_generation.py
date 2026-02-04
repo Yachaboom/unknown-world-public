@@ -1,6 +1,6 @@
 """Unknown World - 이미지 생성 서비스 단위 테스트."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -105,20 +105,31 @@ async def test_image_generator_real_model_selection():
     from unknown_world.config.models import ModelLabel, get_model_id
 
     # Mocking google.genai.Client to avoid real API calls
-    with patch("google.genai.Client") as mock_client_class:
+    with (
+        patch("google.genai.Client") as mock_client_class,
+        patch.dict("os.environ", {"GOOGLE_API_KEY": "test-api-key"}),
+    ):
         mock_client = mock_client_class.return_value
         # aio.models.generate_content 모킹
-        mock_gen = AsyncMock()
+        # 이미지 추출 성공을 위해 텍스트 + 이미지 데이터를 포함한 mock 응답 필요
+        mock_response = MagicMock()
+        mock_response.candidates = [
+            MagicMock(
+                content=MagicMock(
+                    parts=[MagicMock(inline_data=MagicMock(data=b"fake-image-bytes"))]
+                )
+            )
+        ]
+        mock_gen = AsyncMock(return_value=mock_response)
         mock_client.aio.models.generate_content = mock_gen
 
         generator = ImageGenerator()
-        # generator._client가 mock_client를 가리키도록 설정 (초기화 시점에 이미 설정됨)
+        # generator._client가 mock_client를 가리키도록 설정됨
 
         # 1. FAST 요청
         await generator.generate(ImageGenerationRequest(prompt="test", model_label="FAST"))
         # IMAGE_FAST 모델 ID가 사용되었는지 확인
         expected_fast_id = get_model_id(ModelLabel.IMAGE_FAST)
-        # call_args_list[0].kwargs['model'] 확인
         args, kwargs = mock_gen.call_args
         assert kwargs["model"] == expected_fast_id
 

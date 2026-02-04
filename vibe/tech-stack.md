@@ -36,11 +36,10 @@
   - 데모 프로필(심사자용 프리셋 유저) 3종(페르소나 기반)
   - MVP는 “로그인/가입 없이 즉시 시작 + 즉시 리셋” 우선(외부 OAuth는 후순위)
 
-- **GenAI (Gemini + Vertex AI)**
-  - 인증: **Vertex AI 서비스 계정**(백엔드에서만)
-  - Google GenAI SDK (Python): `google-genai 1.56.0`
-  - (선택) Vertex 플랫폼 연동: `google-cloud-aiplatform 1.132.0`
-  - (선택) 이미지/아티팩트 저장: `google-cloud-storage 3.7.0`
+- **GenAI (Gemini API 전용)**
+  - 인증: **Gemini API 키**(백엔드에서만 환경변수 관리)
+  - Google GenAI SDK (Python): `google-genai 1.60.0`
+  - (제거) Vertex AI 서비스 계정 및 Google Cloud SDK 연동 제거 (단순화)
   - **모델 라인업(모델 ID 고정)**
     - 텍스트: `gemini-3-flash-preview`(FAST), `gemini-3-pro-preview`(QUALITY)
     - 이미지(최종 생성/편집): `gemini-3-pro-image-preview`(EDIT/QUALITY, 기본)
@@ -90,7 +89,7 @@
 | 이미지 “선택적” 생성/편집      | `gemini-3-pro-image-preview`    | 편집/일관성 우선    |
 | 이미지 업로드→단서/아이템화    | Gemini 비전 + Files API         | 멀티모달 핵심       |
 | 오브젝트 이미지 배경 제거      | rembg (조건부 후처리)           | 투명 합성 지원      |
-| API 키 노출 없이 Gemini 사용   | Vertex AI 서비스계정            | 보안/운영 단순      |
+| API 키 노출 없이 Gemini 사용   | Gemini API 키 (서버 관리)        | 단순화/운영 최적화   |
 
 ## 3. 대안 기술 비교 (빠른 판단)
 
