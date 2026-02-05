@@ -7,7 +7,7 @@
 | Unit ID   | U-084[Mvp]                        |
 | Phase     | MVP                               |
 | 예상 소요 | 60분                              |
-| 의존성    | U-066[Mvp], U-049[Mvp]            |
+| 의존성    | U-066[Mvp], U-049[Mvp], U-085[Mvp] |
 | 우선순위  | High (이미지 생성 속도 + UI 개선) |
 
 ## 작업 목표
@@ -19,7 +19,7 @@
 **완료 기준**:
 
 - 이미지 생성 프롬프트에 **픽셀 아트 스타일 지시**가 포함됨
-- 이미지 출력 사이즈가 **기존 대비 축소**됨 (예: 1024x1024 → 512x512)
+- 이미지 출력 사이즈/비율이 **UI 레이아웃(Scene Canvas)** 에 맞는 프리셋으로 스냅되며, 가능한 범위에서 **더 작은(최소 1K) 프리셋 우선**으로 선택됨 (예: 1:1 → 1024x1024, 16:9 → 1280x768)
 - Scene Canvas 영역 **높이가 줄어들고** NarrativeFeed 영역이 확대됨
 - 이미지 생성 시간이 **체감상 빨라짐** (목표: 평균 8초 이내)
 - 픽셀 아트 스타일이 CRT 테마와 조화를 이룸
@@ -30,8 +30,8 @@
 
 - `backend/prompts/image/scene_prompt.ko.md` - 픽셀 아트 스타일 지시 추가
 - `backend/prompts/image/scene_prompt.en.md` - 픽셀 아트 스타일 지시 추가
-- `backend/src/unknown_world/services/image_generation.py` - 출력 사이즈 조정
-- `backend/src/unknown_world/config/models.py` - 이미지 사이즈 상수 추가
+- `backend/src/unknown_world/services/image_generation.py` - 출력 비율/사이즈 적용 및 픽셀 스타일 정합
+- `backend/src/unknown_world/storage/validation.py` - `SUPPORTED_IMAGE_SIZES`(SSOT) 및 기본값/프리셋 정책 정합
 - `frontend/src/components/SceneImage.tsx` - Scene 영역 높이 조정
 - `frontend/src/components/NarrativeFeed.tsx` - 높이 확대 적용
 - `frontend/src/style.css` - Scene/NarrativeFeed 레이아웃 CSS
@@ -40,6 +40,7 @@
 
 - `vibe/unit-plans/U-066[Mvp].md` - 이미지 생성 지연 흡수 플로우
 - `vibe/unit-plans/U-049[Mvp].md` - 레이아웃/스크롤 설계 원칙
+- `vibe/unit-plans/U-085[Mvp].md` - UI 레이아웃 기반 비율/크기 선택 + `image_config` 적용(전제)
 - `vibe/ref/image-generate-guide.md` - 이미지 생성 가이드
 
 ## 구현 흐름
@@ -80,23 +81,21 @@
 
 ### 2단계: 이미지 출력 사이즈 축소
 
-- `image_generation.py`에서 기본 출력 사이즈 변경
-- 사이즈 옵션 상수화
+- `image_generation.py`에서 **요청된 `image_size/aspect_ratio`가 실제 호출에 반영**되도록 하고,
+- UI 레이아웃에 맞는 프리셋을 선택하는 정책(U-085)을 전제로 “가능한 범위에서 작은 프리셋(최소 1K)”을 우선한다.
 
 ```python
-# backend/src/unknown_world/config/models.py
-IMAGE_SIZE_FAST = "512x512"      # 픽셀 아트용 (빠른 생성)
-IMAGE_SIZE_STANDARD = "768x768"  # 표준
-IMAGE_SIZE_QUALITY = "1024x1024" # 고품질
-
-DEFAULT_IMAGE_SIZE = IMAGE_SIZE_FAST  # 기본값 변경
+# backend/src/unknown_world/storage/validation.py (SSOT)
+# - 지원 프리셋(예): 1024x1024, 1280x768, 768x1280, 1536x1024, 1024x1536
+# - UI 레이아웃 비율(예: 16:9)에 맞춰 프리셋을 선택한다.
+# - “더 작은 프리셋”은 지원 목록 내에서만 선택한다(검증/안전).
 ```
 
 ```python
 # backend/src/unknown_world/services/image_generation.py
 async def generate_image(
     prompt: str,
-    size: str = DEFAULT_IMAGE_SIZE,  # 512x512 기본
+    size: str = DEFAULT_IMAGE_SIZE,  # SSOT 기본값(예: 1024x1024)
     ...
 ):
     ...
@@ -169,6 +168,7 @@ async def generate_image(
 
 - **계획서**: [U-066[Mvp]](U-066[Mvp].md) - 이미지 생성 지연 흡수 플로우, 모델 티어링
 - **계획서**: [U-049[Mvp]](U-049[Mvp].md) - 레이아웃/스크롤 설계 원칙
+- **계획서**: [U-085[Mvp]](U-085[Mvp].md) - UI 레이아웃에 맞춘 `aspect_ratio/image_size` 선택 및 백엔드 `image_config` 적용
 
 **다음 작업에 전달할 것**:
 
@@ -187,15 +187,15 @@ async def generate_image(
 **잠재적 리스크**:
 
 - 픽셀 아트 스타일이 모델에 따라 품질 편차가 있을 수 있음 → FAST/QUALITY 모델별 테스트
-- 너무 작은 이미지(256x256 이하)는 핫스팟 클릭 영역이 좁아질 수 있음 → 최소 512x512 유지
+- 지원하지 않는 프리셋을 요청하면 검증 단계에서 실패할 수 있음 → `SUPPORTED_IMAGE_SIZES`(SSOT) 내 값으로만 스냅하고, 실패 시 기본값으로 폴백
 - Scene 영역이 너무 작으면 핫스팟 식별이 어려울 수 있음 → min-height 보장
 
 ## 페어링 질문 (결정 필요)
 
 - [ ] **Q1**: 기본 이미지 사이즈는?
-  - Option A: **512x512** (빠른 생성 + 픽셀 아트 최적)
-  - Option B: 768x768 (밸런스)
-  - Option C: 재화/정책에 따라 동적 선택
+  - Option A: **1024x1024** (1K 기본, 안정적)
+  - Option B: **1280x768** (16:9, Scene 매칭)
+  - Option C: **UI 레이아웃 기반 동적 선택**(U-085 전제, 권장)
 
 - [ ] **Q2**: 픽셀 아트 스타일 강도는?
   - Option A: **16비트 스타일** (선명한 픽셀, 제한된 팔레트)
@@ -216,6 +216,7 @@ async def generate_image(
 
 - `vibe/unit-plans/U-066[Mvp].md` - 이미지 생성 지연 흡수 플로우
 - `vibe/unit-plans/U-049[Mvp].md` - 레이아웃/스크롤 설계
+- `vibe/unit-plans/U-085[Mvp].md` - UI 레이아웃 기반 이미지 비율/크기 선택(핫픽스)
 - `vibe/ref/image-generate-guide.md` - 이미지 생성 가이드
 - `vibe/prd.md` 9.1절 - CRT 터미널 레트로 미학
 - [CSS image-rendering](https://developer.mozilla.org/en-US/docs/Web/CSS/image-rendering)

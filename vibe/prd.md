@@ -149,6 +149,8 @@
   - **Scene 처리중 UI 로딩 인디케이터 강화**: `processingPhase`(`processing`, `image_pending`, `rendering`)를 인식하여 CRT 테마의 애니메이션 오버레이와 단계별 메시지(장면 생성 중, 이미지 형성 중 등)를 제공함으로써 시스템 활동을 증명하고 사용자 대기 경험을 개선한다. ✅ (U-071)
   - 이미지가 늦게 도착해도 **해당 턴/씬에만 반영**(늦게 끝난 이전 요청이 새 장면을 덮지 않도록 turn_id/scene revision 가드) ✅ (U-066)
   - 상황에 따라 **저지연 이미지 모델**(`gemini-2.5-flash-image`)을 사용해 타이밍을 맞출 수 있음(계획: U-066)
+  - (보강, MVP) 이미지 생성 요청은 **현재 Scene Canvas 레이아웃**(실제 표시 영역)에 최대한 맞춰 `aspect_ratio/image_size`를 선택한다(지원 프리셋으로 스냅). ⏸️ (U-085)
+  - (보강, MVP) 이미지 pending 동안 **내러티브 타이핑/상태 라인 연출**을 동기화하여 “텍스트는 끝났는데 이미지가 안 와서 멈춘 느낌”을 완화한다. ⏸️ (U-086)
 - **오브젝트/아이템 이미지 배경 제거(조건부)**: 투명 합성이 필요한 경우 `rembg`를 사용해 배경을 제거한다. (가이드: `vibe/ref/rembg-guide.md`) ⏸️ (에셋 파이프라인 내 구현됨)
   - (운영/로컬) rembg는 첫 실행 시 모델 다운로드가 발생할 수 있으므로, 서버 부팅 시 **모델 사전 점검/다운로드(preflight)** 로 첫 사용 지연을 턴 경로에서 제거한다.
 
@@ -259,11 +261,11 @@
 - **Frontend**: React 19 + Vite 7
 - **상태 관리**: 세션 WorldState + 요약 메모리 + 거래 장부(Resource Log)
 
-### 8.2 인증/런타임: Vertex AI 서비스 계정(✅ .gitignore 보안 설정 완료)
+### 8.2 인증/런타임: Gemini API 키(서버 관리, BYOK 금지)
 
-- 백엔드는 **Vertex AI(서비스 계정)** 로 Google 인증을 수행한다.
-- 사용자에게 API 키 입력(BYOK)을 요구하지 않는다(필요 시 “추후 옵션”으로만 고려).
-- (로컬 개발) `backend/.env`로 `UW_MODE`, `GOOGLE_APPLICATION_CREDENTIALS`, `VERTEX_*` 등을 설정하고, 서버 시작 시 **.env 자동 로딩**으로 쉘 export 없이 실행 가능해야 한다. 단, `.env`/키 파일은 레포에 커밋하지 않고 `.env.example`만 SSOT로 유지한다. (보안: RULE-007)
+- 백엔드는 **Gemini API 키를 서버 환경변수로 관리**하여 Google GenAI SDK를 사용한다(예: `GOOGLE_API_KEY`).
+- 사용자에게 API 키 입력(BYOK)을 요구하지 않는다(MVP). (필요 시 “추후 옵션”으로만 고려)
+- (로컬 개발) `backend/.env`로 `UW_MODE`, `GOOGLE_API_KEY` 등을 설정하고, 서버 시작 시 **.env 자동 로딩**으로 쉘 export 없이 실행 가능해야 한다. 단, `.env`/키 파일은 레포에 커밋하지 않고 `.env.example`만 SSOT로 유지한다. (보안: RULE-007)
 
 ### 8.3 Gemini 텍스트 생성(Text Generation)
 
@@ -452,6 +454,7 @@
 ### 9.4 접근성/입력
 
 - 키보드: Enter로 실행, Tab 포커스, 스크린리더 고려
+- **(보강, MVP) 처리중 입력 잠금(필수)**: 대기열(턴 처리)/이미지 pending 등 시스템이 처리 중일 때(`isStreaming` 또는 `processingPhase != idle` 또는 `imageLoading`)는 **모든 사용자 입력(Action Deck/핫스팟 클릭/DnD/Scanner/커맨드 입력)** 을 비활성화하고, 잠금 상태를 시각적으로 명시한다(허위 액션 로그 금지). ⏸️ (U-087)
 - 색상만으로 의미 전달 금지(텍스트/아이콘 병행)
 - **가독성(필수)**: 기본 폰트가 “너무 작게” 보이지 않도록 전역 UI 스케일(폰트) 조절을 제공하고, 설정은 로컬에 유지한다.
 - **Readable 모드(제거)**: 별도의 “Readable 토글”로 전체 CRT를 약화/제거하는 방식은 채택하지 않는다.
