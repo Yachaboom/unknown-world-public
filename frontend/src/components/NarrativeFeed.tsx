@@ -243,11 +243,30 @@ export function NarrativeFeed({
           return null;
         }
 
+        // U-070: 엔트리 타입에 따른 클래스 및 스타일 결정
+        const entryType = entry.type ?? 'narrative';
+        const isActionLog = entryType === 'action_log';
+        const isSystem = entryType === 'system';
+        const entryClassName = [
+          'narrative-entry',
+          isActionLog && 'action-log-entry',
+          isSystem && 'system-entry',
+        ]
+          .filter(Boolean)
+          .join(' ');
+
         return (
-          <div key={`${entry.turn}-${index}`} className="narrative-entry">
-            <span className="narrative-timestamp">
-              {t('narrative.turn_label', { turn: entry.turn })}
-            </span>
+          <div key={`${entry.turn}-${index}`} className={entryClassName}>
+            {/* U-070: 액션 로그는 ▶ 아이콘 표시, 턴 라벨 숨김 */}
+            {isActionLog ? (
+              <span className="action-log-icon" aria-hidden="true">
+                ▶
+              </span>
+            ) : (
+              <span className="narrative-timestamp">
+                {t('narrative.turn_label', { turn: entry.turn })}
+              </span>
+            )}
             <span className="narrative-text">{entry.text}</span>
           </div>
         );

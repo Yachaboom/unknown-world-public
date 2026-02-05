@@ -117,8 +117,14 @@ function App() {
 
   // Store 상태
   const worldStore = useWorldStore();
-  const { economy, isConnected, sceneObjects, narrativeEntries, appendSystemNarrative } =
-    worldStore;
+  const {
+    economy,
+    isConnected,
+    sceneObjects,
+    narrativeEntries,
+    appendSystemNarrative,
+    appendActionLog,
+  } = worldStore;
 
   const { startDrag, endDrag } = useInventoryStore();
   const { isStreaming, narrativeBuffer } = useAgentStore();
@@ -264,16 +270,20 @@ function App() {
 
   /**
    * 카드 클릭 핸들러
+   * U-070: Q2 Option A - 모든 플레이어 행동에 액션 로그 적용
    */
   const handleCardClick = useCallback(
     (card: ActionCard) => {
+      // U-070: 액션 로그 추가 (TurnInput 전송 전에 즉각적 피드백)
+      appendActionLog(t('action_log.click_action', { action: card.label }));
       executeTurn(card.label, card.id);
     },
-    [executeTurn],
+    [executeTurn, appendActionLog, t],
   );
 
   /**
    * 핫스팟 클릭 핸들러 (U-010)
+   * U-070: 핫스팟 클릭에도 액션 로그 적용
    */
   const handleHotspotClick = useCallback(
     (data: HotspotClickData) => {
@@ -282,9 +292,13 @@ function App() {
         ? t('scene.hotspot.click_action', { label: clickedObject.label })
         : data.object_id;
 
+      // U-070: 액션 로그 추가 (TurnInput 전송 전에 즉각적 피드백)
+      const hotspotLabel = clickedObject?.label ?? data.object_id;
+      appendActionLog(t('action_log.click_hotspot', { hotspot: hotspotLabel }));
+
       executeTurn(clickText, undefined, data);
     },
-    [executeTurn, sceneObjects, t],
+    [executeTurn, sceneObjects, t, appendActionLog],
   );
 
   /**
@@ -315,6 +329,7 @@ function App() {
 
   /**
    * 드래그 종료 핸들러 (U-011 + U-012)
+   * U-070: 아이템→핫스팟 드롭 시 액션 로그 추가
    */
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -339,6 +354,14 @@ function App() {
 
       const { object_id: targetObjectId, box_2d: targetBox2d, label: targetLabel } = overData;
 
+      // U-070: 액션 로그 추가 (TurnInput 전송 전에 즉각적 피드백)
+      appendActionLog(
+        t('action_log.use_item_on_hotspot', {
+          item: itemName,
+          hotspot: targetLabel,
+        }),
+      );
+
       const dropText = t('scene.hotspot.drop_action', {
         item: itemName,
         target: targetLabel,
@@ -352,7 +375,7 @@ function App() {
 
       executeTurn(dropText, undefined, undefined, dropInput);
     },
-    [endDrag, executeTurn, appendSystemNarrative, t],
+    [endDrag, executeTurn, appendSystemNarrative, appendActionLog, t],
   );
 
   // dnd-kit 센서 설정

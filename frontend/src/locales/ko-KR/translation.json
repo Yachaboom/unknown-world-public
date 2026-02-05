@@ -373,5 +373,10 @@
     "streaming_label": "[STREAMING]",
     "fast_forward_title": "클릭하여 빠르게 넘기기",
     "fast_forward_aria": "클릭하거나 Enter/Space를 눌러 텍스트를 즉시 표시합니다"
+  },
+  "action_log": {
+    "use_item_on_hotspot": "행동 실행: {{item}}을(를) {{hotspot}}에 사용한다",
+    "click_hotspot": "행동 실행: {{hotspot}}을(를) 조사한다",
+    "click_action": "행동 실행: {{action}}"
   }
 }

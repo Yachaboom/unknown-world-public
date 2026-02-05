@@ -1020,6 +1020,47 @@ body {
 }
 
 /* ============================================
+   8.1. U-070: Action Log Entry 스타일
+   - 액션 로그는 내러티브와 시각적으로 구분됨
+   - PRD 9.0: "행동 실행: ..." 형식으로 표시
+   - Q1 Option A: 동일 영역에 다른 스타일(dim, 이탤릭)
+   ============================================ */
+
+.action-log-entry {
+  color: var(--text-muted, #4a7a4a);
+  font-style: italic;
+  font-size: 0.8em;
+  padding-left: 0.8em;
+  border-left: 1px solid var(--text-muted, #4a7a4a);
+  border-bottom: none;
+  margin: 2px 0;
+  opacity: 0.7;
+}
+
+.action-log-entry .narrative-text {
+  color: var(--text-muted, #4a7a4a);
+  font-style: italic;
+}
+
+.action-log-icon {
+  color: var(--text-muted, #4a7a4a);
+  margin-right: 4px;
+  font-style: normal;
+  font-size: 0.9em;
+}
+
+/* System entry 스타일 (드롭 실패 등) */
+.system-entry {
+  color: var(--text-dim);
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+.system-entry .narrative-text {
+  color: var(--text-dim);
+}
+
+/* ============================================
    9. Sidebar (Right) 영역
    - Agent Console, Memory Pin, Scanner Slot
    - U-049: 컬럼 전체 스크롤 제거, 패널 콘텐츠 단위 스크롤

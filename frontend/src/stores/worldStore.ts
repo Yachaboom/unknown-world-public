@@ -37,10 +37,22 @@ export interface EconomyState {
   memory_shard: number;
 }
 
+/**
+ * 내러티브 엔트리 타입
+ *
+ * U-070[Mvp]: 액션 로그 지원을 위해 type 필드 추가
+ * - "narrative": 일반 게임 내러티브 (서버에서 생성)
+ * - "action_log": 플레이어 행동 로그 (클라이언트에서 생성, 즉각적 피드백)
+ * - "system": 시스템 메시지 (드롭 실패 등)
+ */
+export type NarrativeEntryType = 'narrative' | 'action_log' | 'system';
+
 /** 내러티브 엔트리 */
 export interface NarrativeEntry {
   turn: number;
   text: string;
+  /** U-070: 엔트리 타입 (기본값: "narrative") */
+  type?: NarrativeEntryType;
 }
 
 /**
@@ -100,6 +112,13 @@ export interface WorldActions {
    * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
    */
   appendSystemNarrative: (text: string) => void;
+
+  /**
+   * U-070[Mvp]: 액션 로그를 추가합니다.
+   * 플레이어 행동에 대한 즉각적 피드백으로, TurnInput 전송 전에 호출합니다.
+   * PRD 9.0: "행동 실행: ..." 형식으로 표시됩니다.
+   */
+  appendActionLog: (text: string) => void;
 
   /** Scene 상태 설정 */
   setSceneState: (state: SceneCanvasState) => void;
@@ -220,10 +239,11 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // 1. 턴 카운트 증가
     const newTurnCount = state.turnCount + 1;
 
-    // 2. 내러티브 추가
+    // 2. 내러티브 추가 (U-070: type 명시)
     const newNarrativeEntry: NarrativeEntry = {
       turn: newTurnCount,
       text: output.narrative,
+      type: 'narrative',
     };
 
     // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
@@ -365,6 +385,21 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
         {
           turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
           text,
+          type: 'system',
+        },
+      ],
+    }));
+  },
+
+  // U-070[Mvp]: 액션 로그 추가
+  appendActionLog: (text) => {
+    set((state) => ({
+      narrativeEntries: [
+        ...state.narrativeEntries,
+        {
+          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
+          text,
+          type: 'action_log',
         },
       ],
     }));
@@ -389,7 +424,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
   initialize: (welcomeMessage) => {
     set({
       ...createInitialState(),
-      narrativeEntries: [{ turn: 0, text: welcomeMessage }],
+      narrativeEntries: [{ turn: 0, text: welcomeMessage, type: 'narrative' }],
     });
   },
 

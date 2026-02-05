@@ -206,15 +206,17 @@ const SceneImage: React.FC = () => {
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 로딩 인디케이터 위치?
+- [x] **Q1**: 로딩 인디케이터 위치?
   - Option A: Scene Canvas 중앙에 오버레이
   - Option B: Scene Canvas 하단에 슬림 프로그레스 바
   - Option C: Scene Canvas 코너에 작은 스피너 + 라벨
+  **A1**: Option A
 
-- [ ] **Q2**: 이전 이미지 처리?
+- [x] **Q2**: 이전 이미지 처리?
   - Option A: 이전 이미지 위에 반투명 오버레이 (이미지 유지)
   - Option B: 이전 이미지에 블러 효과 + 로딩 인디케이터
   - Option C: placeholder로 교체 후 로딩 인디케이터
+  **A2**: Option C
 
 ## 참고 자료
 

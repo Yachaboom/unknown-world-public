@@ -373,5 +373,10 @@
     "streaming_label": "[STREAMING]",
     "fast_forward_title": "Click to fast-forward",
     "fast_forward_aria": "Click or press Enter/Space to display text instantly"
+  },
+  "action_log": {
+    "use_item_on_hotspot": "Action: Use {{item}} on {{hotspot}}",
+    "click_hotspot": "Action: Examine {{hotspot}}",
+    "click_action": "Action: {{action}}"
   }
 }

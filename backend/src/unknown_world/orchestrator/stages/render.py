@@ -355,9 +355,7 @@ def _update_render_output(
     updated_image_job = None
     if old_render.image_job is not None:
         # should_generate를 False로 변경하여 클라이언트 중복 생성 방지
-        updated_image_job = old_render.image_job.model_copy(
-            update={"should_generate": False}
-        )
+        updated_image_job = old_render.image_job.model_copy(update={"should_generate": False})
 
     new_render = RenderOutput(
         image_job=updated_image_job,

@@ -1,5 +1,32 @@
 # 프로젝트 진행 상황
 
+## [2026-02-05 17:50] [U-070[Mvp]] 아이템-핫스팟 사용 시 액션 로그 출력 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 사용자의 직접 조작(카드 클릭, 핫스팟 클릭, 아이템 드롭) 시 NarrativeFeed에 즉각적인 행동 로그 출력
+- **추가 컴포넌트**: `vibe/unit-results/U-070[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-070-action-log-runbook.md` (런북)
+- **달성 요구사항**: [PRD 9.0] 행동 로그 규격 준수, [RULE-002] 상호작용 피드백 강화
+
+### 기술적 구현 세부사항
+
+**액션 로그 파이프라인**:
+- **Immediate Feedback**: 서버 응답 전 클라이언트 사이드에서 즉시 로그를 생성하여 시스템 반응성 극대화.
+- **i18n Template**: `action_log.use_item_on_hotspot` 등 다국어 템플릿을 사용하여 조작 맥락(아이템명, 대상명)을 정확히 전달.
+- **Visual Separation**: 전용 스타일(`.action-log-entry`)과 `▶` 아이콘을 적용하여 게임 마스터의 내러티브와 사용자 행동을 시각적으로 구분.
+
+### 코드 구조
+repo-root/
+├── frontend/src/
+│   ├── stores/worldStore.ts (`action_log` 타입 및 액션 추가)
+│   ├── components/NarrativeFeed.tsx (로그 전용 렌더링 로직)
+│   ├── components/SceneCanvas.tsx (핫스팟 클릭 로그 연동)
+│   └── App.tsx (카드 클릭 및 드롭 로그 연동)
+└── frontend/src/locales/
+    └── ko-KR/en-US/translation.json (액션 로그 템플릿)
+
+---
+
 ## [2026-02-05 16:40] [U-069[Mvp]] 텍스트 생성 FAST 모델 기본 + "정밀조사" 트리거 Pro 모델 전환 완료
 
 ### 구현 완료 항목

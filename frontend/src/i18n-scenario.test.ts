@@ -117,18 +117,13 @@ describe('U-044[Mvp] i18n Session SSOT Scenario', () => {
 
       const mockInput = {
         language: 'ko-KR' as const,
-
         text: 'Hello',
-
         action_id: null,
-
         click: null,
-
         drop: null,
-
         client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-
         economy_snapshot: { signal: 100, memory_shard: 0 },
+        previous_image_url: null,
       };
 
       const onError = vi.fn();
@@ -163,18 +158,13 @@ describe('U-044[Mvp] i18n Session SSOT Scenario', () => {
 
       const mockInput = {
         language: 'en-US' as const,
-
         text: 'Hello',
-
         action_id: null,
-
         click: null,
-
         drop: null,
-
         client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-
         economy_snapshot: { signal: 100, memory_shard: 0 },
+        previous_image_url: null,
       };
 
       const onFinal = vi.fn();

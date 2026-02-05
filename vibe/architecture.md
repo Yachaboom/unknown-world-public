@@ -9,54 +9,69 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ### 디렉토리 구조
 
 ```text
-.
-├── .gemini/
-│   ├── rules/ (backend-orchestrator-rules.md, commit-rules.md, docs-ssot-rules.md, economy-rules.md, frontend-ui-rules.md, i18n-prompt-rules.md, image-rules.md, observability-replay-rules.md, safety-repair-rules.md, structured-output-rules.md 등)
-│   └── commands/ (doc-update.toml, unit-impl.toml 등)
-├── backend/
-│   ├── .data/
-│   │   ├── artifacts/ (U-050-initial-state.png 등)
-│   │   └── images/ (generated/, uploaded/)
-│   ├── prompts/
-│   │   ├── system/ (game_master.ko.md, game_master.en.md)
-│   │   ├── turn/ (turn_output_instructions.ko.md, turn_output_instructions.en.md)
-│   │   └── image/ (scene_prompt.ko.md, scene_prompt.en.md)
-│   ├── src/unknown_world/
-│   │   ├── api/ (turn.py, scanner.py, image.py 등)
-│   │   ├── config/ (models.py, settings.py 등)
-│   │   ├── models/ (turn.py, scanner.py, common.py 등)
-│   │   ├── orchestrator/ (pipeline.py, mock.py, prompt_loader.py, repair_loop.py 등)
-│   │   │   └── stages/ (parse.py, validate.py, plan.py, resolve.py, render.py, verify.py, commit.py)
-│   │   ├── services/ (genai_client.py, image_generation.py, image_postprocess.py, rembg_preflight.py 등)
-│   │   ├── storage/ (local_storage.py, validation.py, paths.py)
-│   │   └── validation/ (language_gate.py, business_rules.py)
-│   └── tests/ (unit/, integration/, qa/, manual_test_image.py, manual_test_rembg.py 등)
-├── frontend/
-│   ├── public/ui/ (icons/, chrome/, placeholders/, manifest.json)
-│   ├── src/
-│   │   ├── api/ (turnStream.ts, scanner.ts, image.ts)
-│   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, SceneImage.tsx, InventoryPanel.tsx, NarrativeFeed.tsx, EconomyHud.tsx, QuestPanel.tsx, RuleBoard.tsx, AgentConsole.tsx 등)
-│   │   ├── data/ (demoProfiles.ts)
-│   │   ├── dnd/ (types.ts)
-│   │   ├── hooks/ (useTypewriter.ts 등)
-│   │   ├── locales/ (ko-KR/, en-US/ translation.json)
-│   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts, constants.ts)
-│   │   ├── schemas/ (turn.ts)
-│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts, inventoryStore.ts, uiPrefsStore.ts)
-│   │   ├── turn/ (turnRunner.ts)
-│   │   └── utils/ (box2d.ts)
-│   └── index.html
-├── shared/
-│   └── schemas/turn/ (turn_output.schema.json 등)
-└── vibe/
-    ├── prd.md
-    ├── roadmap.md
-    ├── progress.md
-    ├── tech-stack.md
-    ├── architecture.md
-    ├── unit-plans/ (U-001~U-084 등)
-    ├── unit-results/ (U-001~U-084 등)
-    └── unit-runbooks/ (U-001~U-084 등)
+backend/pyproject.toml
+backend/src/unknown_world/__init__.py
+backend/src/unknown_world/api/image.py
+backend/src/unknown_world/api/scanner.py
+backend/src/unknown_world/api/turn_stream_events.py
+backend/src/unknown_world/api/turn_streaming_helpers.py
+backend/src/unknown_world/api/turn.py
+backend/src/unknown_world/config/models.py
+backend/src/unknown_world/main.py
+backend/src/unknown_world/models/scanner.py
+backend/src/unknown_world/models/turn.py
+backend/src/unknown_world/orchestrator/fallback.py
+backend/src/unknown_world/orchestrator/generate_turn_output.py
+backend/src/unknown_world/orchestrator/mock.py
+backend/src/unknown_world/orchestrator/pipeline.py
+backend/src/unknown_world/orchestrator/prompt_loader.py
+backend/src/unknown_world/orchestrator/repair_loop.py
+backend/src/unknown_world/orchestrator/stages/commit.py
+backend/src/unknown_world/orchestrator/stages/parse.py
+backend/src/unknown_world/orchestrator/stages/plan.py
+backend/src/unknown_world/orchestrator/stages/render_helpers.py
+backend/src/unknown_world/orchestrator/stages/render.py
+backend/src/unknown_world/orchestrator/stages/resolve.py
+backend/src/unknown_world/orchestrator/stages/types.py
+backend/src/unknown_world/orchestrator/stages/validate.py
+backend/src/unknown_world/orchestrator/stages/verify.py
+backend/src/unknown_world/services/genai_client.py
+backend/src/unknown_world/services/image_generation.py
+backend/src/unknown_world/services/image_postprocess.py
+backend/src/unknown_world/services/image_understanding.py
+backend/src/unknown_world/services/rembg_preflight.py
+backend/src/unknown_world/storage/local_storage.py
+backend/src/unknown_world/storage/paths.py
+backend/src/unknown_world/storage/storage.py
+backend/src/unknown_world/storage/validation.py
+backend/src/unknown_world/validation/business_rules.py
+backend/src/unknown_world/validation/language_gate.py
+frontend/package.json
+frontend/src/App.tsx
+frontend/src/main.tsx
+frontend/src/i18n.ts
+frontend/src/api/turnStream.ts
+frontend/src/components/ActionDeck.tsx
+frontend/src/components/AgentConsole.tsx
+frontend/src/components/EconomyHud.tsx
+frontend/src/components/InventoryPanel.tsx
+frontend/src/components/NarrativeFeed.tsx
+frontend/src/components/QuestPanel.tsx
+frontend/src/components/RuleBoard.tsx
+frontend/src/components/SceneCanvas.tsx
+frontend/src/components/SceneImage.tsx
+frontend/src/save/sessionLifecycle.ts
+frontend/src/save/saveGame.ts
+frontend/src/save/migrations.ts
+frontend/src/save/constants.ts
+frontend/src/schemas/turn.ts
+frontend/src/stores/worldStore.ts
+frontend/src/stores/economyStore.ts
+frontend/src/stores/agentStore.ts
+frontend/src/stores/actionDeckStore.ts
+frontend/src/stores/inventoryStore.ts
+frontend/src/turn/turnRunner.ts
+shared/schemas/turn/turn_output.schema.json
 ```
 
 ### 주요 디렉토리 설명
@@ -90,49 +105,6 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
     - **Mock Fallback**: 인증 정보 미설정 시에도 `MockGenAIClient`로 자동 전이되어 시스템 기동성을 사수함.
 3. **환경 변수 보안 (RULE-007)**:
     - API 키는 `.env` 및 환경 변수로만 관리하며, 코드나 로그에는 절대 노출되지 않도록 마스킹 처리함.
----
-
-## 25. 이미지 생성 지침 통합 및 i18n 정책 (U-061[Mvp])
-
-1. **지침 통합 방식 (Option A)**:
-    - **System Prompt Fusion**: `scene_prompt.md`의 가이드라인을 별도 턴 단계로 분리하지 않고, Game Master의 시스템 프롬프트 하단에 `## 이미지 생성 지침` 섹션으로 직접 주입함.
-    - **LLM Context Alignment**: LLM이 내러티브 생성 시점부터 이미지 생성에 최적화된 키워드(Cinematic, Dark Fantasy, 16:9 등)를 문맥에 포함하도록 유도하여 `image_job.prompt` 품질을 상향 평준화함.
-2. **언어 정합성 및 폴백 (RULE-006)**:
-    - **Language Synchronization**: 세션 언어(`ko-KR`, `en-US`)에 따라 자동으로 해당 언어의 지침 파일(`scene_prompt.{lang}.md`)을 로드함.
-    - **Safe Fallback**: 특정 언어의 지침 파일이 부재할 경우 기본값인 `ko`(한국어) 지침으로 폴백하여 파이프라인 중단을 방지함.
-3. **서비스 레이어 경량화**:
-    - **Role Consolidation**: 이미지 프롬프트 생성에 관한 스타일 지침을 오케스트레이터(프롬프트 계층)로 일원화하고, `image_generation.py` 등 서비스 레이어의 하드코딩된 스타일 가이드라인을 제거하여 역할 책임을 분리함.
-
-
-1. **디자인 테마 (Option C - Magenta)**:
-    - **Primary Accent**: 터미널 녹색과 대비되는 `#e040fb` (Magenta) 계열을 강조색으로 사용하여 상호작용 지점을 명확히 함.
-    - **Visual Hierarchy**: 중요 정보(핫스팟, 재화)에 마젠타 글로우 효과를 적용하여 가시성 보호 계층 구조를 완성함.
-2. **SF UI 디자인 요소 (Option A - Corners)**:
-    - **L자 브라켓**: 4개 모서리에 L자형 코너 마커를 배치하여 "GM 타겟팅 시스템"의 미학적 감성을 전달.
-    - **Dynamic Feedback**: 호버 시 펄스 애니메이션, 드롭 타겟 진입 시 앰버 색상 점멸 효과를 통해 조작 상태를 직관적으로 피드백함.
-3. **렌더링 성능 및 가동성**:
-    - **GPU 가속**: `will-change: transform, box-shadow`를 적용하여 다수의 핫스팟이 동시에 애니메이션되어도 프레임 드롭을 최소화함.
-    - **Priority Sorting**: 핫스팟 면적 기반 정렬 로직을 통해 작은 오브젝트가 항상 상위에 렌더링되도록 보장하여 클릭 정합성 확보.
-4. **모바일 및 접근성 (RULE-011)**:
-    - **Touch Target**: 모바일 뷰포트에서 최소 44px의 터치 영역을 보장하고 툴팁 위치를 자동으로 최적화함.
-    - **Reduced Motion**: 사용자의 OS 설정에 따라 과도한 점멸 및 이동 애니메이션을 자동으로 비활성화함.
-
-## 26. 언어 혼합 방지 및 행동 로그 정책 (U-062[Mvp])
-
-1. **행동 로그 프리픽스 정책 (MockOrchestrator)**:
-    - **User Input Omission**: 행동 로그 프리픽스(`[시도]`, `[ACTION]` 등)에서 사용자 입력 텍스트(`text`, `action_id`)를 제외하여 언어 혼합(ko/en) 발생 가능성을 원천 차단함.
-    - **System Identity Preservation**: 시스템이 생성한 `object_id`나 `item_id`는 프리픽스에 포함하여 맥락을 유지함.
-2. **언어 일관성 검증 (LanguageGate)**:
-    - 턴 응답의 전체 내러티브 언어가 세션 언어(`Language.KO`/`EN`)와 일치하는지 전수 검증함.
-    - 사용자 입력이 다른 언어일지라도 시스템 응답이 일관되게 세션 언어를 유지하도록 보장함.
-
-## 27. 재화 잔액 보존 및 폴백 정책 (U-063[Mvp])
-
-1. **폴백 재화 보존 (Snapshot Persistence)**:
-    - **RULE-005 준수**: 스키마 검증 실패(`schema_fail`) 등으로 인한 폴백 응답 생성 시, 사용자의 재화 잔액이 0으로 초기화되지 않도록 **입력 시점의 재화 스냅샷(`economy_snapshot`)**을 폴백 결과의 `balance_after`로 보존함.
-    - **SSOT 기반 복구**: 프론트엔드 파서(`safeParseTurnOutput`)와 폴백 생성기(`createFallbackTurnOutput`)에 스냅샷 주입 구조를 일원화하여 정책 드리프트 방지.
-2. **안전한 폴백 비용 정책**:
-    - 폴백 상황에서는 실제 비용 계산이 불가능하거나 신뢰할 수 없으므로, 사용자 보호를 위해 **비용(`cost`)을 항상 0**으로 처리함.
 
 ---
 
@@ -147,6 +119,20 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 3. **비용 및 UI 정책**:
     - **2x Cost Multiplier**: QUALITY 모델 사용 시 기본 생성 비용의 2배(2x)를 차감하여 경제적 밸런싱 유지.
     - **Visual Evidence**: Agent Console에 현재 사용 중인 모델 라벨(`⚡ FAST` / `★ QUALITY`)을 표시하고, Action Deck의 대상 카드에 `QUALITY` 배지와 `x2` 비용을 명시하여 관측 가능성 확보.
+
+---
+
+## 34. 사용자 행동 로그 시스템 (U-070[Mvp])
+
+1. **즉각적 피드백 루프 (Local Execution)**:
+    - **Client-Side Generation**: 서버 응답을 기다리지 않고 조작 직후 클라이언트에서 로그를 생성하여 시스템의 기민함(Snappiness)을 증명함.
+    - **Event Integration**: 액션 카드 클릭, 핫스팟 클릭, 아이템 드래그 앤 드롭 등 모든 주요 인터랙션에 대해 로그를 배출함.
+2. **행동 로그 규격 (PRD 9.0)**:
+    - **Semantic Template**: `"행동 실행: {조작대상}..."` 형식을 고수하여 단순 채팅 대화가 아닌 게임 시스템의 처리 결과임을 명시함.
+    - **Visual Hierarchy**: 이탤릭체, 흐린 녹색(dim), `▶` 아이콘을 사용하여 내러티브(GM의 말)와 플레이어의 행동을 명확히 대조함.
+3. **상태 영속성 및 i18n**:
+    - **Snapshot Preservation**: 생성된 로그는 `NarrativeEntry`의 일부로 저장되어 새로고침 후에도 플레이어의 과거 행동 궤적을 보존함.
+    - **Dual-Language Policy**: 세션 언어에 따라 실시간으로 언어를 전환하여 혼합 출력을 방지함.
 
 ---
 
@@ -169,7 +155,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Stage Modularity**: 각 단계는 독립된 함수로 모듈화되어 있으며, `PipelineContext`를 통해 상태 전이.
     - **Service Injection (U-051)**: `PipelineContext` 생성 시 `image_generator` 등 핵심 서비스를 주입하거나 자동으로 획득하여 단계 간 서비스 공유.
     - **Conditional Image Generation (U-052)**: 모델의 `image_job` 요청을 경제 잔액, 프롬프트 유효성, `should_generate` 플래그를 기반으로 종합 판정하여 불필요한 비용 및 지연 방지.
-    - **Async Data Synchronization (U-053)**: 비동기(`await`) 이미지 생성을 수행하고, 생성된 `image_url` 및 메타데이터를 `TurnOutput` 응답에 원자적으로 동기화하여 프론트엔드에 전달.
+    - **Async Data Synchronization (U-053)**: 비동기(`await`) 이미지 생성을 수행하고, 생성된 `image_url` 및 메타데이터를 `TurnOutput` 객체에 직접 주입.
     - **Mock/Real Integrated Validation (U-055)**: 개발 모드(Mock)와 실모델 모드(Real) 간의 이미지 파이프라인 동작 일관성을 통합 검증함.
     - **Image Prompt Integration (U-061)**: 시스템 프롬프트에 이미지 가이드라인을 동적으로 삽입하여 LLM의 이미지 프롬프트 생성 품질을 상향 평준화하고 i18n 정합성을 확보함.
     - **Deterministic Diversity (U-048[Mvp])**: Mock 모드에서도 per-turn RNG를 통해 결정적 다양성 확보.
@@ -332,4 +318,3 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **모델 티어링 (FAST/QUALITY)**:
     - **Tiered Generation**: `model_label` 파라미터를 통해 `gemini-2.5-flash-image`(FAST, 저지연)와 `gemini-3-pro-image-preview`(QUALITY, 고품질) 모델을 선택적으로 호출 가능한 구조 구축.
     - **Fallback Policy**: 로딩 중에는 이전 이미지를 유지(Option A)하고 로딩 인디케이터를 표시하며, 생성 실패 시 안전하게 이전 장면으로 수렴함.
-

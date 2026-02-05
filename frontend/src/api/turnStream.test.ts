@@ -73,6 +73,7 @@ describe('executeTurnStream', () => {
     drop: null, // U-012: 드롭 입력 필드 추가
     client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
     economy_snapshot: { signal: 100, memory_shard: 0 },
+    previous_image_url: null,
   };
 
   const mockCallbacks = {

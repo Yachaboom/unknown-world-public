@@ -149,7 +149,8 @@
   - **검증 결과**: 테스트 스크립트에서 56초 만에 이미지 생성 성공 (1.6MB)
 - **참고 문서**: https://ai.google.dev/gemini-api/docs/image-generation
 
-## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Gemini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
+## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Ge
+mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 
 - **발견 위치**: `backend/src/unknown_world/orchestrator/generate_turn_output.py:251`
 - **현상**: Real 모드에서 턴 생성 시 Gemini API가 400 에러 반환
@@ -216,4 +217,18 @@
 - **권장 조치**: 
   - 테스트에 `@pytest.mark.skipif` 데코레이터로 인증 환경 체크 추가
   - 또는 테스트를 `tests/integration/`으로 이동하여 단위 테스트에서 분리
-`n## 2026-02-05 �̽�: U-066 Ÿ�ڱ� ȿ�� �ӵ� ���� ���� �ҿ���`n`n- **�߰� ��ġ**: frontend/src/components/NarrativeFeed.tsx`n- **����**: TYPING_TICK_MS(90ms)�� MAX_CPS(10)�� �������� ���� charsPerTick�� �׻� 1�� ����. `isImageLoading` ���� �ӵ� ����(shouldBuyTime) �ɼ��� ���������� �������� ����.`n- **���� ����**: ��������� �ʹ� ���������� �����Ǿ� �ְų�, CPS ��� ������ �������� ����.`n- **���� ����**: �̹� ����(U-069) ���� ���̸�, ���� �ӵ��ε� ����� ������. ���� TYPING_TICK_MS�� �������� �����ϰų� MAX_CPS�� �����ϴ� ���� �ʿ�.
+
+## 2026-02-05 이슈: U-066 타자기 효과 속도 조절 로직 불완전
+
+- **발견 위치**: `frontend/src/components/NarrativeFeed.tsx`
+- **현상**: `TYPING_TICK_MS(90ms)`와 `MAX_CPS(10)`의 조합으로 인해 `charsPerTick`이 항상 1로 계산됨. `isImageLoading` 등의 속도 지연(shouldBuyTime) 옵션이 실질적으로 동작하지 않음.
+- **추정 원인**: 상수값들이 너무 보수적으로 설정되어 있거나, CPS 기반 계산식이 정밀하지 않음.
+- **보류 사유**: 이번 유닛(U-069) 범위 밖이며, 현재 속도로도 데모는 가능함. 추후 `TYPING_TICK_MS`를 동적으로 조절하거나 `MAX_CPS`를 상향하는 개선 필요.
+
+## 2026-02-05 이슈: 기존 타입 에러(테스트 파일의 previous_image_url 누락)
+
+- **발견 위치**: `frontend/src/api/turnStream.economy.test.ts`, `frontend/src/api/turnStream.test.ts`, `frontend/src/i18n-scenario.test.ts`
+- **현상**: `pnpm run typecheck` 실행 시 `TurnInput` 스키마에 `previous_image_url` 필드가 누락되었다는 TS2345 에러 발생.
+- **추정 원인**: `TurnInput` 스키마가 변경되어 `previous_image_url`이 필수 필드가 되었으나, 기존 테스트 코드의 모의 데이터(Mock data)가 업데이트되지 않음.
+- **보류 사유**: U-070[Mvp] 범위 밖 (액션 로그 출력 기능과 무관한 기존 테스트 코드의 타입 정합성 이슈).
+- **권장 조치**: 테스트 파일 내의 `TurnInput` 모의 데이터에 `previous_image_url: null` 추가.

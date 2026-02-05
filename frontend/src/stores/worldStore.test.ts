@@ -286,4 +286,17 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       expect(state.narrativeEntries[0].turn).toBe(0);
     });
   });
+
+  describe('Action Log (U-070[Mvp])', () => {
+    it('appendActionLog 액션은 action_log 타입의 엔트리를 추가해야 한다', () => {
+      const logMsg = '행동 실행: 아이템 사용';
+      useWorldStore.getState().appendActionLog(logMsg);
+
+      const state = useWorldStore.getState();
+      const lastEntry = state.narrativeEntries[state.narrativeEntries.length - 1];
+      expect(lastEntry.text).toBe(logMsg);
+      expect(lastEntry.type).toBe('action_log');
+      expect(lastEntry.turn).toBe(state.turnCount);
+    });
+  });
 });

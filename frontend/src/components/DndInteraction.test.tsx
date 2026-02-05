@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
 import * as turnStream from '../api/turnStream';
@@ -47,6 +47,9 @@ vi.mock('react-i18next', () => ({
       if (key === 'scene.hotspot.drop_invalid') {
         return `Invalid: ${options?.item}`;
       }
+      if (key === 'action_log.use_item_on_hotspot') {
+        return `Action: Use ${options?.item} on ${options?.hotspot}`;
+      }
       if (key === 'connection.online') return 'ONLINE';
       return key;
     },
@@ -79,6 +82,26 @@ describe('DnD Interaction - Logic Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+
+    // prefers-reduced-motion 모킹 (NarrativeFeed에서 사용)
+    // true로 설정하여 타이핑 효과를 생략하고 즉시 텍스트가 표시되게 함
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    //
   });
 
   it('should trigger turn execution when handleDragEnd is called with a hotspot target', async () => {
@@ -144,6 +167,11 @@ describe('DnD Interaction - Logic Test', () => {
       target_object_id: 'demo-terminal',
       target_box_2d: { ymin: 300, xmin: 100, ymax: 600, xmax: 400 },
     });
+
+    // U-070: 드롭 즉시 NarrativeFeed에 액션 로그가 표시되어야 함
+    const actionLog = await screen.findByText(/Action: Use 키카드 A on 터미널/);
+    expect(actionLog).toBeInTheDocument();
+    expect(actionLog.closest('.narrative-entry')).toHaveClass('action-log-entry');
   });
 
   it('should show failure feedback when handleDragEnd is called with an invalid target', async () => {
@@ -190,8 +218,8 @@ describe('DnD Interaction - Logic Test', () => {
     // turn 실행은 발생하지 않아야 함
     expect(turnStream.startTurnStream).not.toHaveBeenCalled();
 
-    // 내러티브 피드에 실패 메시지가 나타나야 함 (타자기 효과 고려하여 timeout 증가)
-    const failureMessage = await screen.findByText(/Invalid: 키카드 A/, {}, { timeout: 3000 });
+    // 내러티브 피드에 실패 메시지가 나타나야 함
+    const failureMessage = await screen.findByText(/Invalid: 키카드 A/);
     expect(failureMessage).toBeInTheDocument();
   });
 });

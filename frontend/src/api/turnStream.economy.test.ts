@@ -12,6 +12,7 @@ describe('U-063: Economy Balance Preservation in executeTurnStream', () => {
     drop: null,
     client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
     economy_snapshot: economySnapshot,
+    previous_image_url: null,
   };
 
   const mockCallbacks = {

@@ -122,4 +122,18 @@ describe('NarrativeFeed (U-066: Typewriter Effect)', () => {
     // 따라서 len1과 len2가 같을 수 있음. (U-066 속도 조절 로직 개선 필요)
     expect(len2).toBeLessThanOrEqual(len1);
   });
+
+  it('action_log 타입의 엔트리는 ▶ 아이콘과 함께 표시되어야 한다 (U-070)', () => {
+    const entries = [{ turn: 1, text: 'Action log message', type: 'action_log' as const }];
+    render(<NarrativeFeed entries={entries} streamingText="" />);
+
+    // Fast-forward로 즉시 표시
+    fireEvent.click(screen.getByRole('log'));
+
+    expect(screen.getByText('Action log message')).toBeDefined();
+    expect(screen.getByText('▶')).toBeDefined();
+    // action-log-entry 클래스가 포함된 요소가 있어야 함
+    const entry = screen.getByText('Action log message').closest('.narrative-entry');
+    expect(entry?.className).toContain('action-log-entry');
+  });
 });
