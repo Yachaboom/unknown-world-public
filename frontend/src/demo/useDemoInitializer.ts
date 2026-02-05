@@ -38,12 +38,14 @@ export function useDemoInitializer() {
     // DEV: 데모용 mock 데이터 초기화 (RU-003-Q5: DEV 가드 + i18n 키 기반)
     if (isDemoEnvironment()) {
       // 데모용 mock 인벤토리 초기화 (U-011)
+      // U-075: 데모 아이템은 이모지 아이콘을 유지하므로 iconStatus: 'completed'로 설정
       if (inventoryItems.length === 0) {
         const demoInventory = DEMO_INVENTORY_ITEMS.map((item) => ({
           id: item.id,
           name: t(getDemoItemNameKey(item.id)),
           icon: item.icon,
           quantity: item.quantity,
+          iconStatus: 'completed' as const, // U-075: 아이콘 생성 트리거 방지
         }));
         addInventoryItems(demoInventory);
       }

@@ -655,19 +655,15 @@ class ImageUnderstandingService:
         )
 
         # google-genai SDK 호출 (멀티모달 입력)
-        from google.genai.types import Content, GenerateContentConfig, Part
+        from google.genai.types import GenerateContentConfig, Part
 
         # 멀티모달 입력 구성 (이미지 먼저, 텍스트 뒤에 - PRD 8.6 권장)
         contents = [
-            Content(
-                parts=[
-                    Part.from_bytes(
-                        data=image_content,
-                        mime_type=content_type,
-                    ),
-                    Part.from_text(text=prompt_text),
-                ]
-            )
+            Part.from_bytes(
+                data=image_content,
+                mime_type=content_type,
+            ),
+            Part.from_text(text=prompt_text),
         ]
 
         # JSON 응답 강제 + 충분한 출력 토큰 확보
@@ -678,7 +674,7 @@ class ImageUnderstandingService:
 
         response = await self._genai_client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
             model=model_id,
-            contents=contents,
+            contents=contents,  # type: ignore[reportArgumentType]
             config=config,
         )
 

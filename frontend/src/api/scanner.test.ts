@@ -121,7 +121,7 @@ describe('Scanner API Client', () => {
   });
 
   describe('candidateToInventoryItem', () => {
-    it('correctly maps ItemCandidate to InventoryItem', () => {
+    it('correctly maps ItemCandidate to InventoryItem with pending iconStatus (U-075)', () => {
       const candidate = {
         id: 'c-1',
         label: 'Rusty Key',
@@ -136,6 +136,7 @@ describe('Scanner API Client', () => {
         description: 'An old key',
         icon: '🔑',
         quantity: 1,
+        iconStatus: 'pending', // U-075: 아이콘 생성 트리거
       });
     });
 
@@ -148,6 +149,7 @@ describe('Scanner API Client', () => {
       };
       const item = candidateToInventoryItem(candidate);
       expect(item.icon).toBe('📦');
+      expect(item.iconStatus).toBe('pending'); // U-075
     });
   });
 });

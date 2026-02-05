@@ -39,7 +39,14 @@ def test_turn_output_simplified_schema_validation_success():
         },
         "world": {
             "rules_changed": [],
-            "inventory_added": ["item_1"],
+            "inventory_added": [
+                {
+                    "id": "item_1",
+                    "label": "아이템 1",
+                    "description": "테스트 아이템입니다.",
+                    "quantity": 1,
+                }
+            ],
             "quests_updated": [],
             "memory_pins": [],
         },

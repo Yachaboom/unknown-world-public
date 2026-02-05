@@ -90,6 +90,8 @@ export const SaveGameSchema = z
           description: z.string().optional(),
           icon: z.string().optional(),
           quantity: z.number().int().min(1),
+          // U-075: 아이콘 생성 상태 (선택, 복원 시 없으면 'pending'으로 간주)
+          iconStatus: z.enum(['pending', 'generating', 'completed', 'failed', 'cached']).optional(),
         }),
       )
       .default([])
@@ -218,6 +220,7 @@ export function createSaveGame(input: SaveGameInput): SaveGame {
       description: item.description,
       icon: item.icon,
       quantity: item.quantity,
+      iconStatus: item.iconStatus, // U-075: 아이콘 생성 상태 저장
     })),
     quests: input.quests.map((quest) => ({
       id: quest.id,

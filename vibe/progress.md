@@ -1,6 +1,42 @@
 # 프로젝트 진행 상황
 
-## [2026-02-05 18:10] [U-072[Mvp]] Scanner 의미론적 사용 유도 UX 완료
+## [2026-02-06 17:40] [U-075[Mvp]] 인벤토리 아이템 아이콘 동적 생성 및 이름 정합성 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 아이템 설명 기반 아이콘 동적 생성 파이프라인(배경 제거, 캐싱 포함) 및 다국어 이름 정합성 확보
+- **추가 컴포넌트**: `vibe/unit-results/U-075[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-075-item-icon-dynamic-runbook.md` (런북)
+- **달성 요구사항**: [PRD 6.7] 인벤토리 시각화 강화, [RULE-006] ko/en 이름 정합성 보장, [RULE-008] 텍스트 우선 + 비동기 이미지 생성
+
+### 기술적 구현 세부사항
+
+**아이콘 생성 파이프라인**:
+- **Dynamic Generation**: 아이템 획득 시 설명을 분석하여 전용 모델(`IMAGE_FAST`)로 64x64 픽셀 아트 아이콘을 백그라운드에서 자동 생성.
+- **Efficient Caching**: 설명 해시 기반 파일 시스템 캐싱을 도입하여 동일 아이템에 대한 중복 생성 비용 및 지연을 원천 차단.
+- **Background Removal**: `rembg`(U-035)를 연동하여 생성된 이미지의 배경을 투명화 처리함으로써 게임 UI와의 시각적 합성을 최적화.
+
+**인벤토리 UI 및 정합성**:
+- **Asynchronous Sync**: 프론트엔드 `inventoryStore`와 백엔드 API 간의 폴링/상태 동기화를 통해 placeholder(📦)에서 생성된 아이콘으로 부드럽게 전환되는 UX 구현.
+- **Language Gate**: 턴 생성 지시사항(`turn_output_instructions`)을 강화하여 아이템 이름이 세션 언어와 100% 일치하도록 보장, ko/en 혼합 출력 문제 해결.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/
+│   ├── services/item_icon_generator.py (생성/캐시 엔진)
+│   ├── api/item_icon.py (아이콘 API 엔드포인트)
+│   └── models/turn.py (InventoryItem 스키마 확장)
+└── frontend/src/
+    ├── stores/inventoryStore.ts (아이콘 상태 관리)
+    ├── components/InventoryPanel.tsx (동적 아이콘 렌더링)
+    └── style.css (아이콘 로딩 및 스캔라인 효과)
+
+### 다음 단계
+
+- **CP-MVP-03**: 체크포인트 - 10분 데모 루프 통합 검증
+- **U-081**: UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정
+
+---
+
 
 ### 구현 완료 항목
 

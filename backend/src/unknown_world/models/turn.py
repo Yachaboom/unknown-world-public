@@ -421,6 +421,29 @@ class Quest(BaseModel):
     is_completed: bool = Field(default=False, description="달성 여부")
 
 
+class InventoryItemData(BaseModel):
+    """인벤토리 아이템 데이터 (U-075[Mvp]).
+
+    TurnOutput에서 추가되는 아이템의 상세 정보입니다.
+    아이콘 URL은 별도 API로 생성됩니다 (Q1: placeholder 먼저 표시).
+
+    Attributes:
+        id: 아이템 고유 ID
+        label: 아이템 표시 이름 (현재 언어에 맞게)
+        description: 아이템 설명 (아이콘 생성용)
+        icon_url: 아이콘 URL (선택, 캐시된 경우)
+        quantity: 아이템 수량
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="아이템 고유 ID")
+    label: str = Field(description="아이템 표시 이름 (현재 언어에 맞게)")
+    description: str = Field(default="", description="아이템 설명 (아이콘 생성용)")
+    icon_url: str | None = Field(default=None, description="아이콘 URL (선택, 캐시된 경우)")
+    quantity: int = Field(default=1, ge=1, description="아이템 수량")
+
+
 class WorldDelta(BaseModel):
     """세계 상태 변화 (Q2 결정: Option A - delta 중심) - U-065 단순화.
 
@@ -447,7 +470,7 @@ class WorldDelta(BaseModel):
     rules_changed: list[WorldRule] = Field(
         default=[], max_length=3, description="변경된 규칙 목록 (최대 3개)"
     )
-    inventory_added: list[str] = Field(
+    inventory_added: list[InventoryItemData] = Field(
         default=[], max_length=5, description="추가된 인벤토리 아이템 (최대 5개)"
     )
     inventory_removed: list[str] = Field(

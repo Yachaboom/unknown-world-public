@@ -28,6 +28,7 @@ from unknown_world.models.turn import (
     CurrencyAmount,
     EconomyOutput,
     ImageJob,
+    InventoryItemData,
     Language,
     MemoryPin,
     ModelLabel,
@@ -480,12 +481,48 @@ class MockOrchestrator:
             )
 
         # 인벤토리 추가 (30% 확률)
-        inventory_added: list[str] = []
+        inventory_added: list[InventoryItemData] = []
         if use_rng.random() < 0.3:
-            items_ko = ["낡은 열쇠", "신비로운 구슬", "고대의 두루마리"]
-            items_en = ["Old Key", "Mysterious Orb", "Ancient Scroll"]
-            items = items_ko if is_korean else items_en
-            inventory_added.append(use_rng.choice(items))
+            items_ko = [
+                {
+                    "id": "old_key",
+                    "label": "낡은 열쇠",
+                    "description": "녹슬고 오래된 철제 열쇠입니다.",
+                },
+                {
+                    "id": "mystic_orb",
+                    "label": "신비로운 구슬",
+                    "description": "은은한 푸른 빛을 내뿜는 투명한 구슬입니다.",
+                },
+                {
+                    "id": "ancient_scroll",
+                    "label": "고대의 두루마리",
+                    "description": "알 수 없는 문자가 적힌 낡은 양피지 두루마리입니다.",
+                },
+            ]
+            items_en = [
+                {"id": "old_key", "label": "Old Key", "description": "A rusty and old iron key."},
+                {
+                    "id": "mystic_orb",
+                    "label": "Mysterious Orb",
+                    "description": "A transparent orb emitting a faint blue light.",
+                },
+                {
+                    "id": "ancient_scroll",
+                    "label": "Ancient Scroll",
+                    "description": "An old parchment scroll with unknown characters.",
+                },
+            ]
+            templates = items_ko if is_korean else items_en
+            selected = use_rng.choice(templates)
+            inventory_added.append(
+                InventoryItemData(
+                    id=selected["id"],
+                    label=selected["label"],
+                    description=selected["description"],
+                    quantity=1,
+                )
+            )
 
         # 퀘스트 업데이트 (25% 확률)
         quests_updated: list[Quest] = []

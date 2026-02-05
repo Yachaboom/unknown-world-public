@@ -239,6 +239,10 @@ export function isSupportedImageFile(file: File): boolean {
 /**
  * ItemCandidate를 InventoryItem으로 변환합니다.
  *
+ * U-075: iconStatus를 'pending'으로 설정하여 아이콘 생성 트리거
+ * - icon 필드에는 임시 이모지를 설정 (생성 전 표시용)
+ * - InventoryPanel에서 iconStatus가 'pending'이면 아이콘 생성 요청
+ *
  * @param candidate - 아이템 후보
  * @returns InventoryItem 형태의 객체
  */
@@ -249,6 +253,7 @@ export function candidateToInventoryItem(candidate: ItemCandidate) {
     description: candidate.description,
     icon: getItemTypeEmoji(candidate.item_type),
     quantity: 1,
+    iconStatus: 'pending' as const, // U-075: 아이콘 생성 트리거
   };
 }
 

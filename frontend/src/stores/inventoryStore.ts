@@ -8,6 +8,10 @@
  *   - U-006 의존: WorldDelta.inventory_added / inventory_removed 필드 연동
  *   - U-012 연결: 드래그 데이터에 item_id를 실어 드롭 타겟(핫스팟)에 전달
  *
+ * U-075[Mvp]: 아이템 아이콘 동적 생성
+ *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
+ *   - 아이콘 생성 상태 추적 및 URL 업데이트
+ *
  * @module stores/inventoryStore
  */
 
@@ -18,8 +22,15 @@ import { create } from 'zustand';
 // =============================================================================
 
 /**
+ * 아이콘 생성 상태.
+ */
+export type IconStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'cached';
+
+/**
  * 인벤토리 아이템.
  * MVP에서는 최소 필드만 정의합니다.
+ *
+ * U-075: icon 필드는 URL 또는 이모지, iconStatus로 생성 상태 추적
  */
 export interface InventoryItem {
   /** 아이템 고유 ID */
@@ -32,6 +43,8 @@ export interface InventoryItem {
   icon?: string;
   /** 아이템 수량 (기본값: 1) */
   quantity: number;
+  /** U-075: 아이콘 생성 상태 (선택) */
+  iconStatus?: IconStatus;
 }
 
 /** Inventory 상태 */
@@ -60,6 +73,10 @@ export interface InventoryActions {
   selectItem: (itemId: string | null) => void;
   /** 상태 초기화 */
   reset: () => void;
+  /** U-075: 아이템 아이콘 업데이트 */
+  updateItemIcon: (itemId: string, icon: string, status: IconStatus) => void;
+  /** U-075: 아이템 아이콘 상태만 업데이트 */
+  setItemIconStatus: (itemId: string, status: IconStatus) => void;
 }
 
 export type InventoryStore = InventoryState & InventoryActions;
@@ -162,6 +179,24 @@ export const useInventoryStore = create<InventoryStore>((set) => ({
   reset: () => {
     set(createInitialState());
   },
+
+  // U-075: 아이템 아이콘 업데이트
+  updateItemIcon: (itemId, icon, status) => {
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.id === itemId ? { ...item, icon, iconStatus: status } : item,
+      ),
+    }));
+  },
+
+  // U-075: 아이템 아이콘 상태만 업데이트
+  setItemIconStatus: (itemId, status) => {
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.id === itemId ? { ...item, iconStatus: status } : item,
+      ),
+    }));
+  },
 }));
 
 // =============================================================================
@@ -203,7 +238,9 @@ export function parseInventoryAdded(addedIds: string[]): InventoryItem[] {
   return addedIds.map((id) => ({
     id,
     name: id, // MVP: ID를 이름으로 사용
+    description: id, // U-075: 아이콘 생성용 설명 (MVP: ID 사용)
     quantity: 1,
+    iconStatus: 'pending' as IconStatus, // U-075: 아이콘 생성 대기
   }));
 }
 
@@ -216,4 +253,88 @@ export function parseInventoryAdded(addedIds: string[]): InventoryItem[] {
  */
 export function findItemById(items: InventoryItem[], itemId: string): InventoryItem | undefined {
   return items.find((item) => item.id === itemId);
+}
+
+// =============================================================================
+// U-075: 아이콘 생성 API
+// =============================================================================
+
+/** 아이콘 생성 API 응답 */
+interface IconApiResponse {
+  status: string;
+  icon_url: string;
+  item_id: string;
+  is_placeholder: boolean;
+  message?: string;
+}
+
+/**
+ * 아이템 아이콘 생성을 요청합니다 (U-075[Mvp]).
+ *
+ * Q1 결정: Option B - placeholder 먼저 반환, 백그라운드 생성
+ *
+ * @param itemId - 아이템 ID
+ * @param description - 아이템 설명
+ * @param language - 세션 언어
+ * @returns 아이콘 URL 및 상태
+ */
+export async function requestItemIcon(
+  itemId: string,
+  description: string,
+  language: string = 'ko-KR',
+): Promise<{ iconUrl: string; status: IconStatus; isPlaceholder: boolean }> {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
+
+  try {
+    const response = await fetch(`${apiUrl}/api/item/icon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        item_id: itemId,
+        description: description,
+        language: language,
+        wait: false, // Q1: placeholder 즉시 반환
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`[ItemIcon] API 요청 실패: ${response.status}`);
+      return { iconUrl: '', status: 'failed', isPlaceholder: true };
+    }
+
+    const data: IconApiResponse = await response.json();
+    return {
+      iconUrl: data.icon_url,
+      status: data.status as IconStatus,
+      isPlaceholder: data.is_placeholder,
+    };
+  } catch (error) {
+    console.warn('[ItemIcon] 아이콘 생성 요청 실패:', error);
+    return { iconUrl: '', status: 'failed', isPlaceholder: true };
+  }
+}
+
+/**
+ * 아이콘 생성 상태를 폴링합니다 (U-075[Mvp]).
+ *
+ * @param itemId - 아이템 ID
+ * @returns 현재 상태
+ */
+export async function pollIconStatus(itemId: string): Promise<IconStatus> {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
+
+  try {
+    const response = await fetch(`${apiUrl}/api/item/icon/${itemId}/status`);
+
+    if (!response.ok) {
+      return 'failed';
+    }
+
+    const data = await response.json();
+    return data.status as IconStatus;
+  } catch {
+    return 'failed';
+  }
 }

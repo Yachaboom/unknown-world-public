@@ -53,7 +53,11 @@ Specify the rules for each field in the TurnOutput JSON schema.
 
 ### world
 - rules_changed[]: Changed world rules
-- inventory_added[]: Added item IDs
+- inventory_added[]: Added item information (U-075[Mvp])
+  - id: Unique item ID
+  - label: Display label (English)
+  - description: Item description (for icon generation)
+  - quantity: Quantity (default 1)
 - inventory_removed[]: Removed item IDs
 - quests_updated[]: Updated quests
 - memory_pins[]: Pin candidates
@@ -98,7 +102,20 @@ Specify the rules for each field in the TurnOutput JSON schema.
     },
     "objects": []
   },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
+  "world": {
+    "rules_changed": [],
+    "inventory_added": [
+      {
+        "id": "iron_key",
+        "label": "Iron Key",
+        "description": "A heavy, rusted iron key.",
+        "quantity": 1
+      }
+    ],
+    "inventory_removed": [],
+    "quests_updated": [],
+    "memory_pins": []
+  },
   "render": {"image_job": null},
   "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
 }

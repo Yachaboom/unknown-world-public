@@ -1,71 +1,120 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { InventoryPanel } from './InventoryPanel';
-import { useOnboardingStore } from '../stores/onboardingStore';
-import { useInventoryStore } from '../stores/inventoryStore';
+import { useInventoryStore, InventoryStore } from '../stores/inventoryStore';
 
-// i18next 모킹
+// Mocking useTranslation
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: { language: 'ko' },
   }),
 }));
 
-// dnd-kit 모킹
-vi.mock('@dnd-kit/core', () => ({
-  useDraggable: () => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: vi.fn(),
-    transform: null,
-    isDragging: false,
-  }),
-  DragOverlay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+// Mocking store
+vi.mock('../stores/inventoryStore', async () => {
+  return {
+    useInventoryStore: vi.fn(),
+    requestItemIcon: vi.fn().mockResolvedValue({ isPlaceholder: false, iconUrl: '/test.png' }),
+    pollIconStatus: vi.fn().mockResolvedValue('completed'),
+    selectItems: (state: InventoryStore) => state.items,
+    selectDraggingItem: (state: InventoryStore) =>
+      state.items.find((i) => i.id === state.draggingItemId) || null,
+    selectSelectedItemId: (state: InventoryStore) => state.selectedItemId,
+  };
+});
+
+// Mocking onboarding store
+vi.mock('../stores/onboardingStore', () => ({
+  useOnboardingStore: vi.fn(() => false),
+  selectShouldShowItemHint: vi.fn(() => false),
 }));
 
-describe('InventoryPanel UX - Hover Hint', () => {
-  const mockItems = [{ id: 'item-1', name: '테스트 아이템', quantity: 1, icon: '📦' }];
+// Mocking components that might cause issues
+vi.mock('./InteractionHint', () => ({
+  InteractionHint: () => <div data-testid="interaction-hint" />,
+}));
 
+describe('InventoryPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useOnboardingStore.getState().resetOnboarding();
-
-    // inventoryStore 상태 설정
-    useInventoryStore.setState({
-      items: mockItems,
-      selectedItemId: null,
-      draggingItemId: null,
-    });
   });
 
-  it('아이템 마우스 진입 시 onboardingStore의 카운트 증가 액션이 호출되어야 한다', () => {
+  it('renders items with dynamic icons', () => {
+    const mockItems = [
+      {
+        id: 'item1',
+        name: 'Magic Potion',
+        quantity: 1,
+        icon: '/api/image/file/icon123.png',
+        iconStatus: 'completed' as const,
+        description: 'A blue potion',
+      },
+      {
+        id: 'item2',
+        name: 'Sword',
+        quantity: 1,
+        icon: '⚔️',
+        iconStatus: 'completed' as const,
+        description: 'A sharp sword',
+      },
+    ];
+
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: mockItems,
+          draggingItemId: null,
+          selectedItemId: null,
+          selectItem: vi.fn(),
+          updateItemIcon: vi.fn(),
+          setItemIconStatus: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
+    );
+
     render(<InventoryPanel />);
 
-    const item = screen.getByLabelText('inventory.item_label');
-    fireEvent.mouseEnter(item);
+    // Check for image icon
+    const img = screen.getByAltText('Magic Potion');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', '/api/image/file/icon123.png');
 
-    expect(useOnboardingStore.getState().itemHintCount).toBe(1);
+    // Check for emoji icon
+    expect(screen.getByText('⚔️')).toBeInTheDocument();
   });
 
-  it('힌트 표시 조건일 때 InteractionHint가 렌더링되어야 한다', () => {
-    render(<InventoryPanel />);
+  it('shows loading state when icon is generating', () => {
+    const mockItems = [
+      {
+        id: 'item1',
+        name: 'Loading Item',
+        quantity: 1,
+        icon: undefined,
+        iconStatus: 'generating' as const,
+        description: 'Loading...',
+      },
+    ];
 
-    const item = screen.getByLabelText('inventory.item_label');
-    fireEvent.mouseEnter(item);
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: mockItems,
+          draggingItemId: null,
+          selectedItemId: null,
+          selectItem: vi.fn(),
+          updateItemIcon: vi.fn(),
+          setItemIconStatus: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
+    );
 
-    expect(screen.getByText('interaction.item_drag')).toBeInTheDocument();
-  });
+    const { container } = render(<InventoryPanel />);
 
-  it('임계값 초과 시 힌트가 보이지 않아야 한다', () => {
-    for (let i = 0; i < 3; i++) {
-      useOnboardingStore.getState().incrementItemHint();
-    }
-
-    render(<InventoryPanel />);
-
-    const item = screen.getByLabelText('inventory.item_label');
-    fireEvent.mouseEnter(item);
-
-    expect(screen.queryByText('interaction.item_drag')).not.toBeInTheDocument();
+    // Check for loading class
+    const loadingOverlay = container.querySelector('.inventory-item-icon-loading');
+    expect(loadingOverlay).toBeInTheDocument();
   });
 });

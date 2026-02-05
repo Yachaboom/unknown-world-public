@@ -168,7 +168,14 @@ def test_turn_output_full(valid_currency_amount, valid_box_2d):
             "objects": [{"id": "obj1", "label": "Object 1", "box_2d": valid_box_2d}],
         },
         "world": {
-            "inventory_added": ["key"],
+            "inventory_added": [
+                {
+                    "id": "key",
+                    "label": "열쇠",
+                    "description": "낡은 철제 열쇠입니다.",
+                    "quantity": 1,
+                }
+            ],
             "rules_changed": [{"id": "r1", "label": "Gravity", "description": "Low gravity"}],
             "quests_updated": [{"id": "q1", "label": "Find key", "is_completed": False}],
             "memory_pins": [

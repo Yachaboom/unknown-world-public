@@ -12,6 +12,7 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 backend/pyproject.toml
 backend/src/unknown_world/__init__.py
 backend/src/unknown_world/api/image.py
+backend/src/unknown_world/api/item_icon.py
 backend/src/unknown_world/api/scanner.py
 backend/src/unknown_world/api/turn_stream_events.py
 backend/src/unknown_world/api/turn_streaming_helpers.py
@@ -39,6 +40,7 @@ backend/src/unknown_world/services/genai_client.py
 backend/src/unknown_world/services/image_generation.py
 backend/src/unknown_world/services/image_postprocess.py
 backend/src/unknown_world/services/image_understanding.py
+backend/src/unknown_world/services/item_icon_generator.py
 backend/src/unknown_world/services/rembg_preflight.py
 backend/src/unknown_world/storage/local_storage.py
 backend/src/unknown_world/storage/paths.py
@@ -46,6 +48,9 @@ backend/src/unknown_world/storage/storage.py
 backend/src/unknown_world/storage/validation.py
 backend/src/unknown_world/validation/business_rules.py
 backend/src/unknown_world/validation/language_gate.py
+backend/tests/integration/test_item_icon_api.py
+backend/tests/unit/services/test_item_icon_generator.py
+backend/tests/unit/services/test_u075_verification.py
 frontend/package.json
 frontend/src/App.tsx
 frontend/src/main.tsx
@@ -198,11 +203,25 @@ shared/schemas/turn/turn_output.schema.json
 3. **접근성 및 디자인**:
     - **SVG Visuals**: 별도의 이미지 에셋 없이 인라인 SVG 아이콘을 사용하여 클릭/드래그 행위를 직관적으로 시각화함.
     - **Keyboard Accessibility**: ESC(스킵), Enter/Space(다음) 단축키를 지원하여 가이드 조작 편의성을 확보함.
-
----
-
-## 3. 실행 및 도구 설정 (SSOT)
-
+    
+    ---
+    
+    ## 39. 인벤토리 아이템 아이콘 동적 생성 (U-075[Mvp])
+    
+    1. **아이콘 생성 파이프라인 (Backend)**:
+        - **Description-based Generation**: 아이템 설명을 기반으로 `IMAGE_FAST` 모델(gemini-2.5-flash-image)을 호출하여 64x64 픽셀 아트 아이콘을 생성함.
+        - **rembg Integration**: 생성된 이미지의 배경을 `rembg` 서비스를 통해 투명화 처리하여 인벤토리 슬롯과의 시각적 조화를 꾀함.
+        - **Language Consistency**: 아이템 이름이 세션 언어와 일치하도록 프롬프트를 제어하여 다국어 환경에서의 정합성을 보장함.
+    2. **효율적 캐싱 및 비동기 처리**:
+        - **MD5 Hash Caching**: 아이템 설명의 MD5 해시를 캐시 키로 사용하여 동일한 아이템에 대한 중복 생성을 방지하고 응답 속도를 극대화함.
+        - **Option B Policy (Background Gen)**: 턴 응답 시에는 placeholder(📦)를 먼저 반환하고, 실제 아이콘은 백그라운드에서 비동기로 생성하여 텍스트 TTFB를 보호함.
+    3. **인벤토리 UI 동기화 (Frontend)**:
+        - **Dynamic Icon URL**: `inventoryStore`에서 아이템별 `icon_url`을 관리하며, 백엔드로부터 생성 완료 신호를 받거나 폴링을 통해 실제 아이콘으로 교체함.
+        - **Visual Feedback**: 아이콘 생성 중에는 스캔라인 애니메이션 및 로딩 상태를 표시하여 시스템의 활동성을 체감하게 함.
+    
+    ---
+    
+    ## 3. 실행 및 도구 설정 (SSOT)
 Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음 SSOT 정책을 따릅니다.
 
 1. **실행 커맨드 SSOT**: 루트 `package.json`의 `scripts`.

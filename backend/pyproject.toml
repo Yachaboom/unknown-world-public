@@ -17,6 +17,7 @@ dependencies = [
     "google-genai==1.60.0",
     "python-dotenv>=1.2.1",
     "python-multipart>=0.0.22",
+    "pillow>=12.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]

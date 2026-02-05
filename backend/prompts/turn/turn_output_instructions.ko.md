@@ -53,7 +53,11 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
 
 ### world
 - rules_changed[]: 변경된 세계 규칙
-- inventory_added[]: 추가된 아이템 ID
+- inventory_added[]: 추가된 아이템 정보 (U-075[Mvp])
+  - id: 아이템 고유 ID
+  - label: 표시 이름 (한국어)
+  - description: 아이템 설명 (아이콘 생성용)
+  - quantity: 수량 (기본 1)
 - inventory_removed[]: 제거된 아이템 ID
 - quests_updated[]: 업데이트된 퀘스트
 - memory_pins[]: 고정 후보
@@ -98,7 +102,20 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
     },
     "objects": []
   },
-  "world": {"rules_changed": [], "inventory_added": [], "inventory_removed": [], "quests_updated": [], "memory_pins": []},
+  "world": {
+    "rules_changed": [],
+    "inventory_added": [
+      {
+        "id": "iron_key",
+        "label": "철제 열쇠",
+        "description": "묵직하고 녹슨 철제 열쇠입니다.",
+        "quantity": 1
+      }
+    ],
+    "inventory_removed": [],
+    "quests_updated": [],
+    "memory_pins": []
+  },
   "render": {"image_job": null},
   "agent_console": {"current_phase": "commit", "badges": ["schema_ok", "economy_ok", "safety_ok"], "repair_count": 0}
 }

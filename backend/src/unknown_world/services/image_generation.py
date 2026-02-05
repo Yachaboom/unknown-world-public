@@ -565,9 +565,12 @@ class ImageGenerator:
             # 참조 이미지를 먼저 넣고, 프롬프트를 그 다음에 배치
             if has_reference and reference_image_bytes is not None:
                 # 멀티모달 contents: [참조 이미지, 프롬프트 텍스트]
+                # type: ignore[reportUnknownVariableType]
                 contents = [
                     Part.from_bytes(data=reference_image_bytes, mime_type="image/png"),
-                    f"이전 장면의 이미지입니다. 이 이미지의 스타일, 톤, 캐릭터/오브젝트 외형을 참조하여 다음 장면을 생성해주세요:\n\n{request.prompt}",
+                    Part.from_text(
+                        text=f"이전 장면의 이미지입니다. 이 이미지의 스타일, 톤, 캐릭터/오브젝트 외형을 참조하여 다음 장면을 생성해주세요:\n\n{request.prompt}"
+                    ),
                 ]
             else:
                 # 참조 이미지 없이 프롬프트만 전달
@@ -580,7 +583,7 @@ class ImageGenerator:
             response = await asyncio.wait_for(
                 self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
                     model=selected_model_id,
-                    contents=contents,
+                    contents=contents,  # type: ignore[reportArgumentType]
                     config=GenerateContentConfig(
                         response_modalities=[Modality.TEXT, Modality.IMAGE],
                     ),

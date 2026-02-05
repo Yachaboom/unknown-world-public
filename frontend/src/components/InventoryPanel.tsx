@@ -12,10 +12,15 @@
  *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
  *   - hover 시 "드래그하여 사용" 힌트 표시
  *
+ * U-075[Mvp]: 아이템 아이콘 동적 생성
+ *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
+ *   - Q2: Option A (64x64 픽셀)
+ *   - Q3: Option A (픽셀 아트 스타일)
+ *
  * @module components/InventoryPanel
  */
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useDraggable, DragOverlay } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +30,8 @@ import {
   selectItems,
   selectDraggingItem,
   selectSelectedItemId,
+  requestItemIcon,
+  pollIconStatus,
 } from '../stores/inventoryStore';
 import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
 import { InteractionHint } from './InteractionHint';
@@ -92,26 +99,43 @@ function DraggableItem({ item, isSelected, onSelect, disabled = false }: Draggab
     }
   }, [disabled, item.id, onSelect]);
 
-  // 아이콘 렌더링 (이모지 또는 이미지)
+  // U-075: 아이콘 렌더링 (이모지 또는 이미지, 로딩 상태 포함)
   const renderIcon = () => {
+    const isLoading = item.iconStatus === 'generating' || item.iconStatus === 'pending';
+
     if (item.icon) {
-      // URL 형태면 이미지, 아니면 이모지
+      // URL 형태면 이미지
       if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
         return (
-          <img
-            src={item.icon}
-            alt={item.name}
-            className="inventory-item-icon-img"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+          <div className="inventory-item-icon-wrapper">
+            <img
+              src={item.icon}
+              alt={item.name}
+              className={`inventory-item-icon-img ${isLoading ? 'loading' : ''}`}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            {isLoading && <div className="inventory-item-icon-loading" />}
+          </div>
         );
       }
-      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+      // 이모지 + 로딩 상태 (U-075: 이모지여도 생성 중이면 스피너 표시)
+      return (
+        <div className="inventory-item-icon-wrapper">
+          <span className="inventory-item-icon-emoji">{item.icon}</span>
+          {isLoading && <div className="inventory-item-icon-loading" />}
+        </div>
+      );
     }
-    // 기본 아이콘 (📦)
-    return <span className="inventory-item-icon-emoji">📦</span>;
+
+    // 기본 아이콘 (📦) + 로딩 상태
+    return (
+      <div className="inventory-item-icon-wrapper">
+        <span className="inventory-item-icon-emoji">📦</span>
+        {isLoading && <div className="inventory-item-icon-loading" />}
+      </div>
+    );
   };
 
   return (
@@ -198,19 +222,104 @@ interface InventoryPanelProps {
  * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
  * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
  *
+ * U-075: 아이템 추가 시 아이콘 동적 생성 요청
+ *
  * @example
  * ```tsx
  * <InventoryPanel disabled={isStreaming} />
  * ```
  */
 export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Store 상태
   const items = useInventoryStore(selectItems);
   const draggingItem = useInventoryStore(selectDraggingItem);
   const selectedItemId = useInventoryStore(selectSelectedItemId);
   const selectItem = useInventoryStore((state) => state.selectItem);
+  const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
+  const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
+
+  // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
+  const iconRequestedRef = useRef<Set<string>>(new Set());
+
+  // U-075: 아이템 추가 시 아이콘 생성 요청
+  useEffect(() => {
+    const requestIconsForNewItems = async () => {
+      for (const item of items) {
+        // 이미 요청한 경우 스킵
+        if (iconRequestedRef.current.has(item.id)) continue;
+
+        // 이미 완료된 아이콘이 있는 경우 스킵
+        if (item.iconStatus === 'completed' || item.iconStatus === 'cached') continue;
+
+        // URL 형태의 실제 아이콘이 있으면 스킵 (이모지는 무시)
+        const hasRealIcon =
+          item.icon &&
+          (item.icon.startsWith('http') || item.icon.startsWith('/')) &&
+          !item.icon.includes('placeholder');
+        if (hasRealIcon) continue;
+
+        // iconStatus가 없거나 pending/generating/failed인 경우 아이콘 생성 시도
+        // (failed인 경우도 재시도 허용)
+
+        // 요청 추적
+        iconRequestedRef.current.add(item.id);
+
+        // 아이콘 생성 요청 (비동기)
+        const description = item.description || item.name;
+        const language = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
+
+        setItemIconStatus(item.id, 'generating');
+
+        try {
+          const result = await requestItemIcon(item.id, description, language);
+
+          if (result.isPlaceholder) {
+            // Placeholder 반환됨 - 폴링 시작
+            setItemIconStatus(item.id, 'generating');
+
+            // 백그라운드에서 폴링 (최대 30초)
+            let attempts = 0;
+            const maxAttempts = 15;
+            const pollInterval = 2000; // 2초
+
+            const poll = async () => {
+              if (attempts >= maxAttempts) {
+                setItemIconStatus(item.id, 'failed');
+                return;
+              }
+              attempts++;
+
+              const status = await pollIconStatus(item.id);
+              if (status === 'completed' || status === 'cached') {
+                // 완료됨 - 아이콘 URL 다시 요청
+                const finalResult = await requestItemIcon(item.id, description, language);
+                if (!finalResult.isPlaceholder && finalResult.iconUrl) {
+                  updateItemIcon(item.id, finalResult.iconUrl, 'completed');
+                }
+              } else if (status === 'failed') {
+                setItemIconStatus(item.id, 'failed');
+              } else {
+                // 계속 생성 중 - 다시 폴링
+                setTimeout(poll, pollInterval);
+              }
+            };
+
+            setTimeout(poll, pollInterval);
+          } else if (result.iconUrl) {
+            // 즉시 완료 (캐시)
+            updateItemIcon(item.id, result.iconUrl, result.status);
+          }
+        } catch (error) {
+          console.warn(`[InventoryPanel] 아이콘 생성 실패: ${item.id}`, error);
+          setItemIconStatus(item.id, 'failed');
+        }
+      }
+    };
+
+    requestIconsForNewItems();
+  }, [items, i18n.language, updateItemIcon, setItemIconStatus]);
 
   // 아이템 선택 핸들러
   const handleSelect = useCallback(

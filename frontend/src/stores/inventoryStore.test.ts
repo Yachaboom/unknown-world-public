@@ -74,12 +74,25 @@ describe('inventoryStore', () => {
     expect(useInventoryStore.getState().draggingItemId).toBeNull();
   });
 
-  it('parseInventoryAdded: 문자열 ID 목록을 InventoryItem 배열로 변환해야 한다', () => {
+  it('parseInventoryAdded: 문자열 ID 목록을 InventoryItem 배열로 변환해야 한다 (U-075)', () => {
     const addedIds = ['item-a', 'item-b'];
     const parsed = parseInventoryAdded(addedIds);
 
     expect(parsed).toHaveLength(2);
-    expect(parsed[0]).toEqual({ id: 'item-a', name: 'item-a', quantity: 1 });
-    expect(parsed[1]).toEqual({ id: 'item-b', name: 'item-b', quantity: 1 });
+    // U-075: description과 iconStatus 필드 추가됨
+    expect(parsed[0]).toEqual({
+      id: 'item-a',
+      name: 'item-a',
+      description: 'item-a',
+      quantity: 1,
+      iconStatus: 'pending',
+    });
+    expect(parsed[1]).toEqual({
+      id: 'item-b',
+      name: 'item-b',
+      description: 'item-b',
+      quantity: 1,
+      iconStatus: 'pending',
+    });
   });
 });

@@ -4151,6 +4151,42 @@ button:disabled,
   font-size: 1.8rem; /* 1.5rem -> 1.8rem */
 }
 
+/* U-075: 아이콘 로딩 상태 */
+.inventory-item-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.inventory-item-icon-img.loading {
+  opacity: 0.5;
+}
+
+.inventory-item-icon-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: icon-loading-spin 1s linear infinite;
+}
+
+@keyframes icon-loading-spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
 /* 아이템 정보 */
 .inventory-item-info {
   display: flex;
