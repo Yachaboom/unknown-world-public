@@ -1,5 +1,38 @@
 # 프로젝트 진행 상황
 
+## [2026-02-05 16:40] [U-069[Mvp]] 텍스트 생성 FAST 모델 기본 + "정밀조사" 트리거 Pro 모델 전환 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 텍스트 생성 시 FAST 모델(`gemini-3-flash-preview`)을 기본으로 사용하고, 특정 키워드나 액션 발생 시 QUALITY 모델(`gemini-3-pro-preview`)로 자동 전환 및 2x 비용 부과
+- **추가 컴포넌트**: `vibe/unit-results/U-069[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-069-model-tiering-runbook.md` (런북)
+- **달성 요구사항**: [Economy OK] 모델 티어링을 통한 비용/품질 밸런싱, [RULE-008] Agent Console 내 모델 라벨(`FAST`/`QUALITY`) 가시화
+
+### 기술적 구현 세부사항
+
+**모델 티어링 및 트리거 로직**:
+- **Trigger Detection**: 액션 ID(`deep_investigate` 등) 및 입력 텍스트 내 키워드("정밀조사", "자세히" 등) 매칭을 통해 QUALITY 모델 사용 여부 판별.
+- **Cost Multiplier**: QUALITY 모델 적용 시 기본 비용의 2배를 계산하여 `TurnOutput` 및 `EconomyStore` 잔액에 반영.
+- **Visual Feedback**: Agent Console 배지 및 Action Deck 카드 내 `x2` 배수와 `QUALITY` 배지 표시로 사용자 인지 강화.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/
+│   ├── config/models.py (`TextModelTiering` 트리거 로직)
+│   ├── orchestrator/generate_turn_output.py (모델 선택 및 비용 배수 적용)
+│   └── models/turn.py (`AgentConsole` 모델 확장)
+└── frontend/src/
+    ├── schemas/turn.ts (Zod 스키마 동기화)
+    ├── components/AgentConsole.tsx (모델 라벨 표시)
+    └── components/ActionDeck.tsx (QUALITY 액션 배지 및 비용 표시)
+
+### 다음 단계
+
+- **U-070**: 아이템-핫스팟 사용 시 액션 로그 출력
+- **U-071**: Scene 처리중 UI 로딩 인디케이터 강화
+
+---
+
 ## [2026-02-05 16:20] [U-068[Mvp]] 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 완료
 
 ### 구현 완료 항목

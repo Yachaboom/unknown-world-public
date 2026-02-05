@@ -238,6 +238,7 @@ def decide_image_generation(
     turn_output: TurnOutput,
     economy_snapshot: EconomySnapshot,
     language: str = "ko-KR",
+    previous_image_url: str | None = None,
 ) -> ImageGenerationDecision:
     """이미지 생성 여부를 종합적으로 판정합니다.
 
@@ -251,6 +252,7 @@ def decide_image_generation(
         turn_output: 검증할 TurnOutput
         economy_snapshot: 현재 재화 스냅샷
         language: 폴백 메시지 언어 (기본: ko-KR)
+        previous_image_url: 이전 턴 이미지 URL (U-068: 참조 이미지로 사용)
 
     Returns:
         ImageGenerationDecision: 판정 결과
@@ -284,6 +286,10 @@ def decide_image_generation(
     # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
     prompt_hash = get_prompt_hash(image_job.prompt)
 
+    # U-068: 참조 이미지 URL 결정 (TurnInput 우선, image_job 폴백)
+    # 클라이언트에서 제공한 이전 이미지를 우선 사용하여 연속성 유지
+    effective_reference_url = previous_image_url or image_job.reference_image_url
+
     # 4. 잔액 확인 (RULE-005)
     if not can_afford_image_generation(economy_snapshot, IMAGE_GENERATION_COST_SIGNAL):
         fallback_msg = get_fallback_message(language)
@@ -301,7 +307,7 @@ def decide_image_generation(
             prompt_hash=prompt_hash,
             aspect_ratio=image_job.aspect_ratio,
             image_size=image_job.image_size,
-            reference_image_url=image_job.reference_image_url,
+            reference_image_url=effective_reference_url,
             estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
             fallback_message=fallback_msg,
         )
@@ -313,7 +319,8 @@ def decide_image_generation(
             "prompt_hash": prompt_hash,
             "aspect_ratio": image_job.aspect_ratio,
             "image_size": image_job.image_size,
-            "reference_image_url": image_job.reference_image_url,
+            "reference_image_url": effective_reference_url,
+            "has_previous_image": bool(previous_image_url),
             "estimated_cost": IMAGE_GENERATION_COST_SIGNAL,
         },
     )
@@ -324,7 +331,7 @@ def decide_image_generation(
         prompt_hash=prompt_hash,
         aspect_ratio=image_job.aspect_ratio,
         image_size=image_job.image_size,
-        reference_image_url=image_job.reference_image_url,
+        reference_image_url=effective_reference_url,
         estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
     )
 

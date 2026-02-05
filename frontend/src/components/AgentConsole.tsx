@@ -19,9 +19,10 @@ import {
   selectBadges,
   selectRepairCount,
   selectError,
+  selectModelLabel,
   type PhaseInfo,
 } from '../stores/agentStore';
-import type { ValidationBadge } from '../schemas/turn';
+import type { ValidationBadge, ModelLabel } from '../schemas/turn';
 
 // =============================================================================
 // 상수 정의
@@ -49,6 +50,19 @@ const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> =
   consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
   consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
 };
+
+/** 모델 라벨 표시 정보 (U-069: FAST/QUALITY) */
+const MODEL_LABEL_INFO: Record<ModelLabel, { labelKey: string; icon: string; colorClass: string }> =
+  {
+    FAST: { labelKey: 'agent.console.model.fast', icon: '\u26A1', colorClass: 'model-fast' },
+    QUALITY: {
+      labelKey: 'agent.console.model.quality',
+      icon: '\u2605',
+      colorClass: 'model-quality',
+    },
+    CHEAP: { labelKey: 'agent.console.model.cheap', icon: '\u{1F4B0}', colorClass: 'model-cheap' },
+    REF: { labelKey: 'agent.console.model.ref', icon: '\u{1F4F7}', colorClass: 'model-ref' },
+  };
 
 // =============================================================================
 // 하위 컴포넌트
@@ -182,6 +196,31 @@ function RepairTrace() {
   );
 }
 
+/**
+ * 모델 라벨 배지 (U-069: FAST/QUALITY 표시)
+ *
+ * 현재 텍스트 생성에 사용된 모델을 시각적으로 표시합니다.
+ * - FAST: 빠른 응답, 기본 비용 (⚡)
+ * - QUALITY: 고품질 응답, 2배 비용 (★)
+ */
+function ModelLabelBadge() {
+  const { t } = useTranslation();
+  const modelLabel = useAgentStore(selectModelLabel);
+  const info = MODEL_LABEL_INFO[modelLabel];
+
+  if (!info) return null;
+
+  // i18n 키가 없으면 폴백 텍스트 사용
+  const label = t(info.labelKey, { defaultValue: modelLabel });
+
+  return (
+    <div className={`model-label-badge ${info.colorClass}`}>
+      <span className="model-icon">{info.icon}</span>
+      <span className="model-text">{label}</span>
+    </div>
+  );
+}
+
 /** 에러 표시 */
 function ErrorDisplay() {
   const error = useAgentStore(selectError);
@@ -223,11 +262,13 @@ function StreamingStatus() {
  * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
  *
  * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
+ * U-069: 현재 사용 중인 모델 라벨(FAST/QUALITY) 표시 추가
  */
 export function AgentConsole() {
   return (
     <div className="agent-console-content" data-ui-importance="critical">
       <StreamingStatus />
+      <ModelLabelBadge />
       <PhaseQueue />
       <BadgesPanel />
       <RepairTrace />

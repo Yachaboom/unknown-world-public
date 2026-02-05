@@ -487,23 +487,23 @@ class ImageUnderstandingService:
         try:
             from google.genai import Client
 
-            # Vertex AI 모드로 클라이언트 초기화
-            project = os.environ.get("VERTEX_PROJECT")
-            location = os.environ.get("VERTEX_LOCATION", "us-central1")
+            # U-080 핫픽스: API 키 모드로 클라이언트 초기화 (Vertex AI 제거)
+            api_key = os.environ.get("GOOGLE_API_KEY")
+            if not api_key:
+                logger.warning(
+                    "[ImageUnderstanding] GOOGLE_API_KEY 환경변수가 설정되지 않음 - Mock 모드로 전환",
+                )
+                self._is_mock = True
+                self._genai_client = None
+                return
 
-            client_options: dict[str, Any] = {}
-            if project:
-                client_options["project"] = project
-            if location:
-                client_options["location"] = location
-
-            self._genai_client = Client(vertexai=True, **client_options)
+            self._genai_client = Client(api_key=api_key)
+            self._is_mock = False
 
             logger.info(
-                "[ImageUnderstanding] Vertex AI 클라이언트 초기화 완료",
+                "[ImageUnderstanding] API 키 클라이언트 초기화 완료",
                 extra={
-                    "project": project or "(ADC 기본)",
-                    "location": location,
+                    "auth": "api_key",
                 },
             )
         except Exception as e:

@@ -190,8 +190,8 @@ describe('DnD Interaction - Logic Test', () => {
     // turn 실행은 발생하지 않아야 함
     expect(turnStream.startTurnStream).not.toHaveBeenCalled();
 
-    // 내러티브 피드에 실패 메시지가 나타나야 함
-    const failureMessage = await screen.findByText(/Invalid: 키카드 A/);
+    // 내러티브 피드에 실패 메시지가 나타나야 함 (타자기 효과 고려하여 timeout 증가)
+    const failureMessage = await screen.findByText(/Invalid: 키카드 A/, {}, { timeout: 3000 });
     expect(failureMessage).toBeInTheDocument();
   });
 });

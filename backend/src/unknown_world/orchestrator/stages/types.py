@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from unknown_world.models.turn import (
     AgentPhase,
     CurrencyAmount,
+    ModelLabel,
     TurnInput,
     TurnOutput,
     ValidationBadge,
@@ -108,6 +109,8 @@ class PipelineContext:
         image_generator: 이미지 생성 서비스 (U-051, 선택적 주입)
             None이면 이미지 생성을 건너뛰고 pass-through로 동작합니다.
             테스트 시 MockImageGenerator를 주입하여 실제 API 호출 없이 검증 가능합니다.
+        model_label: 현재 사용 중인 텍스트 모델 라벨 (U-069: FAST/QUALITY)
+        cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
     """
 
     turn_input: TurnInput
@@ -121,6 +124,8 @@ class PipelineContext:
     is_mock: bool = False
     seed: int | None = None
     image_generator: ImageGeneratorType | None = None
+    model_label: ModelLabel = ModelLabel.FAST
+    cost_multiplier: float = 1.0
 
 
 # =============================================================================

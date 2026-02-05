@@ -198,6 +198,11 @@ export const TurnInputSchema = z
     drop: DropInputSchema.nullable().default(null).describe('아이템 드롭 정보 (선택, U-012)'),
     client: ClientInfoSchema.describe('클라이언트 환경 정보'),
     economy_snapshot: EconomySnapshotSchema.describe('현재 재화 상태'),
+    previous_image_url: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe('이전 턴 이미지 URL (U-068: 참조 이미지로 사용하여 연속성 유지)'),
   })
   .strict();
 export type TurnInput = z.infer<typeof TurnInputSchema>;
@@ -538,12 +543,16 @@ export type SafetyOutput = z.infer<typeof SafetyOutputSchema>;
  * 에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
  *
  * U-065 단순화: badges 배열 크기 제한 (최대 4개)
+ * U-069: model_label 필드 추가 - 현재 사용 중인 텍스트 모델 표시
  */
 export const AgentConsoleSchema = z
   .object({
     current_phase: AgentPhaseSchema.default('commit').describe('현재 실행 단계'),
     badges: z.array(ValidationBadgeSchema).max(4).default([]).describe('검증 배지 목록 (최대 4개)'),
     repair_count: z.number().int().min(0).default(0).describe('자동 복구 시도 횟수'),
+    model_label: ModelLabelSchema.default('FAST').describe(
+      '현재 사용 중인 텍스트 모델 라벨 (U-069)',
+    ),
   })
   .strict();
 export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
@@ -600,6 +609,7 @@ export const TurnOutputSchema = z
       current_phase: 'commit',
       badges: [],
       repair_count: 0,
+      model_label: 'FAST',
     }).describe('에이전트 실행 정보'),
   })
   .strict();
@@ -678,6 +688,7 @@ export function createFallbackTurnOutput(
       current_phase: 'commit',
       badges: ['schema_fail'],
       repair_count: repairCount,
+      model_label: 'FAST',
     },
   };
 }

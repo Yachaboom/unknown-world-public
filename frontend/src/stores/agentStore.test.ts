@@ -104,6 +104,7 @@ describe('agentStore', () => {
         repair_count: 2,
         current_phase: 'commit',
         badges: [],
+        model_label: 'FAST',
       },
     } as TurnOutput;
 

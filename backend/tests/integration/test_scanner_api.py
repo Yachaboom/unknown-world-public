@@ -1,5 +1,10 @@
 """U-021 이미지 이해(Scanner) API 통합 테스트."""
 
+import os
+
+# U-080 대응: 테스트 환경에서 Mock 모드 강제 (다른 임포트보다 먼저 실행)
+os.environ["UW_MODE"] = "mock"
+
 from fastapi.testclient import TestClient
 
 from unknown_world.main import app

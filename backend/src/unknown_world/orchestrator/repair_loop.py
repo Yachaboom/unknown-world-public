@@ -22,6 +22,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from unknown_world.config.models import ModelLabel
 from unknown_world.models.turn import (
     CurrencyAmount,
     Language,
@@ -113,6 +114,8 @@ class RepairLoopResult:
         is_fallback: 폴백으로 종료되었는지
         badges: 검증 배지 목록
         error_messages: 각 시도의 에러 메시지 (UI 노출용)
+        model_label: 사용된 텍스트 모델 라벨 (U-069: FAST/QUALITY)
+        cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
     """
 
     output: TurnOutput
@@ -121,6 +124,8 @@ class RepairLoopResult:
     is_fallback: bool = False
     badges: list[ValidationBadge] = field(default_factory=lambda: [])
     error_messages: list[str] = field(default_factory=lambda: [])
+    model_label: ModelLabel = ModelLabel.FAST
+    cost_multiplier: float = 1.0
 
 
 # =============================================================================
@@ -140,9 +145,10 @@ async def run_repair_loop(
     초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
     최종 실패 시 안전한 폴백을 반환합니다.
 
-    Note:
-        현재 항상 FAST 모델을 사용합니다.
-        QUALITY 모델은 추후 "정밀 조사" 기능 구현 시 별도 경로로 추가 예정.
+    U-069: 모델 티어링
+        - 기본: FAST 모델 (gemini-3-flash-preview)
+        - 트리거: action_id 또는 키워드 매칭 시 QUALITY 모델 (gemini-3-pro-preview)
+        - 비용 배수: FAST=1.0, QUALITY=2.0
 
     Args:
         turn_input: 사용자 턴 입력
@@ -151,12 +157,13 @@ async def run_repair_loop(
         max_attempts: 최대 복구 시도 횟수
 
     Returns:
-        RepairLoopResult: 최종 결과 (성공 또는 폴백)
+        RepairLoopResult: 최종 결과 (성공 또는 폴백, 모델 라벨/비용 배수 포함)
 
     Example:
         >>> result = await run_repair_loop(turn_input)
         >>> if result.is_fallback:
         ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
+        >>> print(f"사용 모델: {result.model_label}, 비용 배수: {result.cost_multiplier}")
         >>> print(result.output.narrative)
     """
     generator = get_turn_output_generator(force_mock=force_mock)
@@ -168,6 +175,10 @@ async def run_repair_loop(
     error_messages: list[str] = []
     badges: list[ValidationBadge] = []
     repair_context = ""  # 재시도 시 추가할 컨텍스트
+
+    # U-069: 모델 티어링 - 최초 시도에서 결정된 모델 정보 저장
+    selected_model_label: ModelLabel = ModelLabel.FAST
+    selected_cost_multiplier: float = 1.0
 
     last_attempt = 0
     for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
@@ -195,6 +206,10 @@ async def run_repair_loop(
             turn_input,
             world_context=current_context,
         )
+
+        # U-069: 모델 티어링 - 생성 결과에서 모델 정보 저장 (매 시도 동일하나 명시적으로 갱신)
+        selected_model_label = gen_result.model_label
+        selected_cost_multiplier = gen_result.cost_multiplier
 
         # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
         if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
@@ -249,6 +264,8 @@ async def run_repair_loop(
                     is_fallback=False,
                     badges=badges,
                     error_messages=error_messages,
+                    model_label=selected_model_label,
+                    cost_multiplier=selected_cost_multiplier,
                 )
 
             # 비즈니스 룰 실패
@@ -291,6 +308,8 @@ async def run_repair_loop(
         is_fallback=True,
         badges=badges,
         error_messages=error_messages,
+        model_label=selected_model_label,
+        cost_multiplier=selected_cost_multiplier,
     )
 
 

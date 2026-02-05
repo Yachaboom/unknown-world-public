@@ -341,6 +341,7 @@ function createFallbackTurnOutput(
       current_phase: 'commit',
       badges: ['schema_fail'],
       repair_count: 1,
+      model_label: 'FAST',
     },
   };
 }
@@ -523,6 +524,7 @@ function createClientFallbackTurnOutput(
       current_phase: 'commit',
       badges: ['schema_fail'],
       repair_count: 1,
+      model_label: 'FAST',
     },
   };
 }

@@ -279,14 +279,14 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     }
 
     // Economy Store 업데이트 (U-014: Ledger 기록)
-    // 기본 모델은 FAST, 추후 정밀조사 트리거 시 QUALITY 사용 예정
+    // U-069: 서버에서 전달된 model_label 사용 (FAST/QUALITY 티어링)
     const economyStore = useEconomyStore.getState();
     economyStore.addLedgerEntry({
       turnId: newTurnCount,
       reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
       cost: output.economy.cost,
       balanceAfter: output.economy.balance_after,
-      modelLabel: 'FAST',
+      modelLabel: output.agent_console.model_label ?? 'FAST',
     });
     // 잔액 부족 상태 업데이트
     economyStore.updateBalanceLowStatus(newEconomy);

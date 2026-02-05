@@ -146,10 +146,12 @@ async def emit_error_with_fallback(
         repair_count=repair_count,
         is_blocked=is_blocked,
     )
+    # U-069: TurnOutput을 먼저 직렬화하여 모든 필드 포함
+    fallback_dict = fallback.model_dump(mode="json")
     yield serialize_event(
         FinalEvent(
             type=StreamEventType.FINAL,
-            data=fallback,
+            data=fallback_dict,
         ).model_dump(mode="json")
     )
 
@@ -162,11 +164,19 @@ async def emit_final(output: TurnOutput) -> AsyncGenerator[str]:
 
     Yields:
         str: NDJSON 라인 (final 이벤트)
+
+    Note:
+        U-069 버그 수정: TurnOutput을 먼저 model_dump()로 직렬화하여
+        agent_console.model_label 등 모든 필드가 포함되도록 합니다.
+        FinalEvent.data가 Any 타입이라 중첩 Pydantic 모델이
+        자동 직렬화되지 않는 문제를 해결합니다.
     """
+    # U-069: TurnOutput을 먼저 직렬화하여 모든 필드 포함
+    output_dict = output.model_dump(mode="json")
     yield serialize_event(
         FinalEvent(
             type=StreamEventType.FINAL,
-            data=output,
+            data=output_dict,
         ).model_dump(mode="json")
     )
 

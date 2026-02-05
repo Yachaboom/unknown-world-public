@@ -4,6 +4,10 @@ NDJSON 스트리밍 이벤트의 순서, 구조, 데이터 정밀도를 검증�
 """
 
 import json
+import os
+
+# U-080 대응: 테스트 환경에서 Mock 모드 강제 (다른 임포트보다 먼저 실행)
+os.environ["UW_MODE"] = "mock"
 
 from fastapi.testclient import TestClient
 

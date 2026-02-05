@@ -231,6 +231,12 @@
         "consistency": "Consistency",
         "ok": "OK",
         "fail": "FAIL"
+      },
+      "model": {
+        "fast": "빠름 (FAST)",
+        "quality": "고품질 (QUALITY)",
+        "cheap": "저비용",
+        "ref": "참조"
       }
     }
   },

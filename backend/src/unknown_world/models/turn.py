@@ -247,6 +247,10 @@ class TurnInput(BaseModel):
     drop: DropInput | None = Field(default=None, description="아이템 드롭 정보 (선택, U-012)")
     client: ClientInfo = Field(description="클라이언트 환경 정보")
     economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
+    previous_image_url: str | None = Field(
+        default=None,
+        description="이전 턴 이미지 URL (U-068: 참조 이미지로 사용하여 연속성 유지)",
+    )
 
 
 # =============================================================================
@@ -598,10 +602,14 @@ class AgentConsole(BaseModel):
     U-065 단순화:
         - badges: 배열 크기 제한 (최대 4개)
 
+    U-069 추가:
+        - model_label: 현재 사용 중인 텍스트 모델 라벨 (FAST/QUALITY)
+
     Attributes:
         current_phase: 현재 실행 단계
         badges: 검증 배지 목록 (최대 4개)
         repair_count: 자동 복구 시도 횟수
+        model_label: 현재 사용 중인 텍스트 모델 라벨 (U-069)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -611,6 +619,10 @@ class AgentConsole(BaseModel):
         default=[], max_length=4, description="검증 배지 목록 (최대 4개)"
     )
     repair_count: Annotated[int, Field(ge=0, description="자동 복구 시도 횟수")] = 0
+    model_label: ModelLabel = Field(
+        default=ModelLabel.FAST,
+        description="현재 사용 중인 텍스트 모델 라벨 (U-069: FAST/QUALITY)",
+    )
 
 
 # =============================================================================

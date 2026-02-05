@@ -30,7 +30,7 @@ from typing import Any, cast
 
 from pydantic import ValidationError
 
-from unknown_world.config.models import ModelLabel
+from unknown_world.config.models import ModelLabel, TextModelTiering
 from unknown_world.models.turn import (
     CurrencyAmount,
     Language,
@@ -138,6 +138,7 @@ class GenerationResult:
         error_message: 에러 메시지 (실패 시, 사용자 표시용)
         error_details: 상세 에러 정보 (내부용, UI 노출 금지)
         model_label: 사용된 모델 라벨
+        cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
         raw_response: 원본 응답 텍스트 (디버그용, UI 노출 금지)
     """
 
@@ -146,6 +147,7 @@ class GenerationResult:
     error_message: str = ""
     error_details: dict[str, Any] = field(default_factory=lambda: {})
     model_label: ModelLabel = ModelLabel.FAST
+    cost_multiplier: float = 1.0
     raw_response: str = ""
 
 
@@ -182,6 +184,41 @@ class TurnOutputGenerator:
         self._default_model_label = default_model_label
         self._force_mock = force_mock
         self._json_schema: dict[str, Any] | None = None
+
+    def _select_text_model(self, turn_input: TurnInput) -> tuple[ModelLabel, float]:
+        """액션 기반 텍스트 모델을 선택합니다 (U-069).
+
+        FAST 모델 기본 + "정밀조사" 트리거 시 QUALITY 모델 전환.
+
+        페어링 질문 결정:
+            - Q1: Option B - 액션 ID + 키워드 매칭
+            - Q2: Option A - 2x (기본 비용의 2배)
+
+        Args:
+            turn_input: 사용자 턴 입력
+
+        Returns:
+            (model_label, cost_multiplier) 튜플
+        """
+        action_id = turn_input.action_id
+        text = turn_input.text
+
+        # QUALITY 트리거 검사
+        if TextModelTiering.is_quality_trigger(action_id, text):
+            model_label = ModelLabel.QUALITY
+            logger.info(
+                "[TurnOutputGenerator] QUALITY 모델 트리거 감지 (U-069)",
+                extra={
+                    "action_id": action_id,
+                    "has_trigger_keyword": bool(text),
+                    "model_label": model_label,
+                },
+            )
+        else:
+            model_label = self._default_model_label
+
+        cost_multiplier = TextModelTiering.get_cost_multiplier(model_label)
+        return model_label, cost_multiplier
 
     def _get_json_schema(self) -> dict[str, Any]:
         """TurnOutput JSON Schema를 반환합니다 (캐싱).
@@ -292,9 +329,9 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         Structured Outputs(JSON Schema) 모드로 Gemini를 호출하고,
         Pydantic으로 응답을 검증합니다.
 
-        Note:
-            현재 항상 FAST 모델을 사용합니다.
-            QUALITY 모델은 추후 "정밀 조사" 기능 구현 시 별도 경로로 추가 예정.
+        U-069: FAST 모델 기본 + "정밀조사" 트리거 시 QUALITY 모델 전환.
+            - Q1: Option B - 액션 ID + 키워드 매칭
+            - Q2: Option A - 2x (기본 비용의 2배)
 
         Args:
             turn_input: 사용자 턴 입력
@@ -303,7 +340,8 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         Returns:
             GenerationResult: 생성 결과 (status, output, error 등)
         """
-        label = self._default_model_label  # 항상 FAST
+        # U-069: 모델 티어링 - 액션/키워드 기반 모델 선택
+        label, cost_multiplier = self._select_text_model(turn_input)
 
         # 로그에는 메타만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.info(
@@ -311,6 +349,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
             extra={
                 "language": turn_input.language.value,
                 "model_label": label,
+                "cost_multiplier": cost_multiplier,
                 "has_text": bool(turn_input.text),
                 "has_action_id": bool(turn_input.action_id),
             },
@@ -348,11 +387,40 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                 # model_validate_json: JSON 문자열을 직접 파싱+검증 (U-017 완료 기준)
                 turn_output = TurnOutput.model_validate_json(json_text)
 
+                # U-069: QUALITY 모델 비용 배수 적용
+                # 비즈니스 룰 검증 전에 비용과 balance_after를 조정합니다.
+                if cost_multiplier > 1.0:
+                    original_signal = turn_output.economy.cost.signal
+                    original_shard = turn_output.economy.cost.memory_shard
+
+                    # 추가 비용 계산
+                    additional_signal = int(original_signal * (cost_multiplier - 1))
+                    additional_shard = int(original_shard * (cost_multiplier - 1))
+
+                    # 비용 증가
+                    turn_output.economy.cost.signal = original_signal + additional_signal
+                    turn_output.economy.cost.memory_shard = original_shard + additional_shard
+
+                    # balance_after 감소 (추가 비용만큼)
+                    turn_output.economy.balance_after.signal -= additional_signal
+                    turn_output.economy.balance_after.memory_shard -= additional_shard
+
+                    logger.info(
+                        "[TurnOutputGenerator] 비용 배수 적용 (U-069)",
+                        extra={
+                            "original_signal": original_signal,
+                            "multiplied_signal": turn_output.economy.cost.signal,
+                            "additional_signal": additional_signal,
+                            "cost_multiplier": cost_multiplier,
+                        },
+                    )
+
                 # 성공
                 logger.info(
                     "[TurnOutputGenerator] 생성 성공",
                     extra={
                         "model_label": label,
+                        "cost_multiplier": cost_multiplier,
                         "has_narrative": bool(turn_output.narrative),
                         "cost_signal": turn_output.economy.cost.signal,
                     },
@@ -362,6 +430,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                     status=GenerationStatus.SUCCESS,
                     output=turn_output,
                     model_label=label,
+                    cost_multiplier=cost_multiplier,
                     raw_response=raw_text,
                 )
 
@@ -385,6 +454,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                         ]
                     },
                     model_label=label,
+                    cost_multiplier=cost_multiplier,
                     raw_response=raw_text,
                 )
             except json.JSONDecodeError as e:
@@ -400,6 +470,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                     else "Failed to parse response",
                     error_details={"json_error": str(e)},
                     model_label=label,
+                    cost_multiplier=cost_multiplier,
                     raw_response=raw_text,
                 )
 
@@ -416,6 +487,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                 else "Unable to connect to service",
                 error_details={"api_error": str(e)},
                 model_label=label,
+                cost_multiplier=cost_multiplier,
             )
 
         except Exception as e:
@@ -431,6 +503,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                 else "An error occurred during processing",
                 error_details={"unexpected_error": type(e).__name__},
                 model_label=label,
+                cost_multiplier=cost_multiplier,
             )
 
     def _extract_json(self, text: str) -> str:

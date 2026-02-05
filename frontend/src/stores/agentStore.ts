@@ -245,3 +245,7 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 
 /** 에러 셀렉터 */
 export const selectError = (state: AgentStore) => state.error;
+
+/** 모델 라벨 셀렉터 (U-069: FAST/QUALITY 표시) */
+export const selectModelLabel = (state: AgentStore) =>
+  state.finalOutput?.agent_console?.model_label ?? 'FAST';

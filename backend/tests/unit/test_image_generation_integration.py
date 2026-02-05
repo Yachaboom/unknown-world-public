@@ -75,21 +75,28 @@ class TestImageGenerationIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_real_generator_rembg_integration(
         self, mock_remove: MagicMock, mock_init: MagicMock
     ) -> None:
-        """실제 ImageGenerator(Vertex AI)와 rembg 통합을 테스트합니다."""
+        """실제 ImageGenerator(Gemini API)와 rembg 통합을 테스트합니다."""
         from unknown_world.services.image_generation import ImageGenerator
 
-        # 클라이언트 모킹
+        # 클라이언트 모킹 (U-080 대응: generate_images -> generate_content)
         mock_client = MagicMock()
-        mock_client.aio.models.generate_images = AsyncMock()
+        mock_client.aio.models.generate_content = AsyncMock()
 
-        # 모의 이미지 생성 결과
-        mock_image = MagicMock()
-        mock_image.image.image_bytes = b"fake_png_data"
+        # 모의 이미지 생성 결과 (Candidate 구조 모킹)
+        mock_image_part = MagicMock()
+        mock_image_part.inline_data.data = b"fake_png_data"
+        mock_image_part.inline_data.mime_type = "image/png"
+        # part에 image_bytes 대신 inline_data.data가 있도록 함
+        del mock_image_part.text  # 텍스트가 없는 순수 이미지 파트
+
+        mock_candidate = MagicMock()
+        mock_candidate.content.parts = [mock_image_part]
+
         mock_resp = MagicMock()
-        mock_resp.generated_images = [mock_image]
-        mock_client.aio.models.generate_images.return_value = mock_resp
+        mock_resp.candidates = [mock_candidate]
+        mock_client.aio.models.generate_content.return_value = mock_resp
 
-        generator = ImageGenerator(output_dir=Path("test_output"))
+        generator = ImageGenerator(api_key="fake_key", output_dir=Path("test_output"))
         generator._client = mock_client
         generator._available = True
 

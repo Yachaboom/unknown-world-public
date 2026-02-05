@@ -216,3 +216,4 @@
 - **ê¶Œìž¥ ì¡°ì¹˜**: 
   - í…ŒìŠ¤íŠ¸ì— `@pytest.mark.skipif` ë°ì½”ë ˆì´í„°ë¡œ ì¸ì¦ í™˜ê²½ ì²´í¬ ì¶”ê°€
   - ë˜ëŠ” í…ŒìŠ¤íŠ¸ë¥¼ `tests/integration/`ìœ¼ë¡œ ì´ë™í•˜ì—¬ ë‹¨ìœ„ í…ŒìŠ¤íŠ¸ì—ì„œ ë¶„ë¦¬
+`n## 2026-02-05 ÀÌ½´: U-066 Å¸ÀÚ±â È¿°ú ¼Óµµ Á¶Àý ·ÎÁ÷ ºÒ¿ÏÀü`n`n- **¹ß°ß À§Ä¡**: frontend/src/components/NarrativeFeed.tsx`n- **Çö»ó**: TYPING_TICK_MS(90ms)¿Í MAX_CPS(10)ÀÇ Á¶ÇÕÀ¸·Î ÀÎÇØ charsPerTickÀÌ Ç×»ó 1·Î °è»êµÊ. `isImageLoading` µîÀÇ ¼Óµµ Áö¿¬(shouldBuyTime) ¿É¼ÇÀÌ ½ÇÁúÀûÀ¸·Î µ¿ÀÛÇÏÁö ¾ÊÀ½.`n- **ÃßÁ¤ ¿øÀÎ**: »ó¼ö°ªµéÀÌ ³Ê¹« º¸¼öÀûÀ¸·Î ¼³Á¤µÇ¾î ÀÖ°Å³ª, CPS ±â¹Ý °è»ê½ÄÀÌ Á¤¹ÐÇÏÁö ¾ÊÀ½.`n- **º¸·ù »çÀ¯**: ÀÌ¹ø À¯´Ö(U-069) ¹üÀ§ ¹ÛÀÌ¸ç, ÇöÀç ¼Óµµ·Îµµ µ¥¸ð´Â °¡´ÉÇÔ. ÃßÈÄ TYPING_TICK_MS¸¦ µ¿ÀûÀ¸·Î Á¶ÀýÇÏ°Å³ª MAX_CPS¸¦ »óÇâÇÏ´Â °³¼± ÇÊ¿ä.

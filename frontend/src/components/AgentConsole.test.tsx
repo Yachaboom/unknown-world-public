@@ -20,12 +20,14 @@ vi.mock('../stores/agentStore', () => ({
       repairCount: 0,
       error: null,
       isStreaming: false,
+      modelLabel: 'FAST',
     }),
   selectIsStreaming: (state: { isStreaming: boolean }) => state.isStreaming,
   selectPhases: (state: { phases: unknown[] }) => state.phases,
   selectBadges: (state: { badges: unknown[] }) => state.badges,
   selectRepairCount: (state: { repairCount: number }) => state.repairCount,
   selectError: (state: { error: unknown }) => state.error,
+  selectModelLabel: (state: { modelLabel: string }) => state.modelLabel,
 }));
 
 describe('AgentConsole (U-037)', () => {

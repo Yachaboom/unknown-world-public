@@ -204,3 +204,12 @@ async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
     ctx.badges = list(result.badges)
     ctx.repair_attempts = result.repair_attempts
     ctx.is_fallback = result.is_fallback
+
+    # U-069: 모델 티어링 정보 전달 (PipelineContext + TurnOutput)
+    # config.models.ModelLabel을 models.turn.ModelLabel로 변환하여 할당 (Pyright 대응)
+    from unknown_world.models.turn import ModelLabel as TurnModelLabel
+
+    ctx.model_label = TurnModelLabel(result.model_label.value)
+    ctx.cost_multiplier = result.cost_multiplier
+    if ctx.output:
+        ctx.output.agent_console.model_label = TurnModelLabel(result.model_label.value)

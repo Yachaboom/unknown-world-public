@@ -231,6 +231,12 @@
         "consistency": "Consistency",
         "ok": "OK",
         "fail": "FAIL"
+      },
+      "model": {
+        "fast": "Fast (FAST)",
+        "quality": "Quality (QUALITY)",
+        "cheap": "Cheap",
+        "ref": "Reference"
       }
     }
   },

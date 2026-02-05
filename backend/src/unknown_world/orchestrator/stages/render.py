@@ -349,9 +349,18 @@ def _update_render_output(
         return ctx
 
     # 기존 RenderOutput을 복사하고 새 필드 추가
+    # U-069: 백엔드에서 이미지 생성 완료 후 should_generate=False로 설정
+    # 클라이언트가 중복 생성 요청을 보내지 않도록 함
     old_render = ctx.output.render
+    updated_image_job = None
+    if old_render.image_job is not None:
+        # should_generate를 False로 변경하여 클라이언트 중복 생성 방지
+        updated_image_job = old_render.image_job.model_copy(
+            update={"should_generate": False}
+        )
+
     new_render = RenderOutput(
-        image_job=old_render.image_job,
+        image_job=updated_image_job,
         image_url=image_url,
         image_id=image_id,
         generation_time_ms=generation_time_ms,
@@ -420,11 +429,12 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
                 memory_shard=ctx.economy_snapshot.memory_shard,
             )
 
-            # 판정 수행
+            # 판정 수행 (U-068: 이전 이미지 URL을 참조 이미지로 전달)
             image_decision = decide_image_generation(
                 turn_output=ctx.output,
                 economy_snapshot=economy_snapshot,
                 language=ctx.turn_input.language.value,
+                previous_image_url=ctx.turn_input.previous_image_url,
             )
 
             # 판정 결과 로깅 (프롬프트 원문 제외 - RULE-007)

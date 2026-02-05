@@ -63,6 +63,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         current_phase: 'commit',
         badges: ['schema_ok'],
         repair_count: 0,
+        model_label: 'FAST',
       },
       safety: { blocked: false, message: null },
     };
@@ -100,6 +101,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         current_phase: 'commit',
         badges: ['schema_ok'],
         repair_count: 0,
+        model_label: 'FAST',
       },
       safety: { blocked: false, message: null },
     };
@@ -129,6 +131,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         current_phase: 'commit',
         badges: ['schema_ok'],
         repair_count: 0,
+        model_label: 'FAST',
       },
       safety: { blocked: false, message: null },
     };
@@ -169,6 +172,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         current_phase: 'commit',
         badges: ['schema_ok'],
         repair_count: 0,
+        model_label: 'FAST',
       },
       safety: { blocked: false, message: null },
     };
@@ -209,6 +213,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         current_phase: 'commit',
         badges: ['schema_ok'],
         repair_count: 0,
+        model_label: 'FAST',
       },
       safety: { blocked: false, message: null },
     };
@@ -238,6 +243,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         current_phase: 'commit',
         badges: ['schema_ok'],
         repair_count: 0,
+        model_label: 'FAST',
       },
       safety: { blocked: false, message: null },
     };

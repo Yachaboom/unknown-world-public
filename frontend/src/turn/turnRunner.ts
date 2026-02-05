@@ -17,6 +17,7 @@
  * @module turn/turnRunner
  */
 
+import { useCallback, useEffect, useRef } from 'react';
 import type { TurnInput, DropInput, Language } from '../schemas/turn';
 import type { HotspotClickData } from '../components/SceneCanvas';
 import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
@@ -44,6 +45,8 @@ export interface BuildTurnInputParams {
   theme: 'dark' | 'light';
   /** U-044: 세션 언어 (외부 주입, SSOT) */
   language: Language;
+  /** U-068: 이전 턴 이미지 URL (참조 이미지로 사용) */
+  previousImageUrl?: string | null;
 }
 
 /** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
@@ -78,7 +81,8 @@ export interface TurnRunner {
  * 서버로 전송할 TurnInput을 생성합니다.
  */
 export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
-  const { text, actionId, click, drop, economySnapshot, theme, language } = params;
+  const { text, actionId, click, drop, economySnapshot, theme, language, previousImageUrl } =
+    params;
 
   return {
     language,
@@ -99,6 +103,8 @@ export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
       theme,
     },
     economy_snapshot: economySnapshot,
+    // U-068: 이전 턴 이미지 URL (참조 이미지로 사용하여 연속성 유지)
+    previous_image_url: previousImageUrl ?? null,
   };
 }
 
@@ -162,6 +168,10 @@ export function createTurnRunner(deps: {
     // 재화 스냅샷 가져오기
     const economySnapshot = worldStore.economy;
 
+    // U-068: 이전 이미지 URL 가져오기 (참조 이미지로 사용)
+    const previousImageUrl =
+      worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
     // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
     const turnInput = buildTurnInput({
       text:
@@ -173,6 +183,7 @@ export function createTurnRunner(deps: {
       economySnapshot,
       theme,
       language,
+      previousImageUrl,
     });
 
     // Agent Store 시작
@@ -329,7 +340,6 @@ export function createTurnRunner(deps: {
  * });
  * ```
  */
-import { useCallback, useEffect, useRef } from 'react';
 
 export function useTurnRunner(deps: {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -362,6 +372,10 @@ export function useTurnRunner(deps: {
       // 재화 스냅샷 가져오기
       const economySnapshot = worldStore.economy;
 
+      // U-068: 이전 이미지 URL 가져오기 (참조 이미지로 사용)
+      const previousImageUrl =
+        worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
       // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
       const turnInput = buildTurnInput({
         text:
@@ -373,6 +387,7 @@ export function useTurnRunner(deps: {
         economySnapshot,
         theme,
         language,
+        previousImageUrl,
       });
 
       // Agent Store 시작

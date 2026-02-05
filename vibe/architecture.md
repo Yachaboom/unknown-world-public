@@ -136,6 +136,20 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 
 ---
 
+## 33. 텍스트 생성 모델 티어링 (U-069[Mvp])
+
+1. **모델 라인업 및 티어링 (Tiering Logic)**:
+    - **FAST (Default)**: 빠른 응답을 위해 `gemini-3-flash-preview` 모델을 기본으로 사용함.
+    - **QUALITY (Triggered)**: 정밀한 묘사나 조사가 필요할 때 `gemini-3-pro-preview` 모델로 자동 전환함.
+2. **모델 전환 트리거 (Trigger Mechanism)**:
+    - **Action ID Trigger**: Action Deck에서 `deep_investigate`, `analyze` 등 조사를 암시하는 액션 선택 시 작동.
+    - **Keyword Trigger**: 사용자 입력 텍스트에 "정밀조사", "자세히", "thoroughly" 등 트리거 키워드가 포함될 때 작동.
+3. **비용 및 UI 정책**:
+    - **2x Cost Multiplier**: QUALITY 모델 사용 시 기본 생성 비용의 2배(2x)를 차감하여 경제적 밸런싱 유지.
+    - **Visual Evidence**: Agent Console에 현재 사용 중인 모델 라벨(`⚡ FAST` / `★ QUALITY`)을 표시하고, Action Deck의 대상 카드에 `QUALITY` 배지와 `x2` 비용을 명시하여 관측 가능성 확보.
+
+---
+
 ## 3. 실행 및 도구 설정 (SSOT)
 
 Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음 SSOT 정책을 따릅니다.

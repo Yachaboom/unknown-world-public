@@ -97,6 +97,30 @@ function useDragScroll() {
 }
 
 // =============================================================================
+// 상수 정의 (U-069: QUALITY 트리거 액션)
+// =============================================================================
+
+/**
+ * QUALITY 모델 트리거 액션 ID 목록 (U-069).
+ * 백엔드 TextModelTiering.QUALITY_TRIGGER_ACTION_IDS와 동기화 필요.
+ * 이 목록에 포함된 액션은 QUALITY 배지와 2x 비용이 표시됩니다.
+ */
+const QUALITY_TRIGGER_ACTION_IDS: ReadonlySet<string> = new Set([
+  'deep_investigate',
+  '정밀조사',
+  'analyze',
+  'examine_closely',
+  'investigate_detail',
+  'scrutinize',
+  'thorough_search',
+  'use_magnifier',
+  'use_magnifying_glass',
+]);
+
+/** QUALITY 모델 비용 배수 (U-069: 2x) */
+const QUALITY_COST_MULTIPLIER = 2;
+
+// =============================================================================
 // 타입 정의
 // =============================================================================
 
@@ -114,6 +138,10 @@ interface CardDisplayInfo extends ActionCard {
   isDisabled: boolean;
   /** 최종 비활성화 사유 */
   finalDisabledReason: string | null;
+  /** U-069: QUALITY 모델 사용 여부 */
+  isQualityAction: boolean;
+  /** U-069: 배수 적용된 표시 비용 */
+  displayCost: { signal: number; memory_shard: number };
 }
 
 // =============================================================================
@@ -167,15 +195,15 @@ interface CardCostDisplayProps {
 }
 
 /**
- * 비용 표시 컴포넌트 - U-065 단순화.
- * cost_estimate 필드 제거됨, cost만 사용
+ * 비용 표시 컴포넌트 - U-065 단순화, U-069 QUALITY 배수 지원.
+ * cost_estimate 필드 제거됨, displayCost(배수 적용) 사용
  */
 function CardCostDisplay({ card }: CardCostDisplayProps) {
   const { t } = useTranslation();
 
-  // U-065: cost_estimate 제거, cost만 사용
-  const costDisplay = `${card.cost.signal}`;
-  const shardCost = card.cost.memory_shard;
+  // U-069: displayCost 사용 (QUALITY 액션은 2x 배수 적용됨)
+  const costDisplay = `${card.displayCost.signal}`;
+  const shardCost = card.displayCost.memory_shard;
 
   return (
     <div className="action-card-cost" data-ui-importance="critical">
@@ -190,9 +218,12 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
             style={{ width: 14, height: 14 }}
             onError={(e) => e.currentTarget.classList.add('hidden')}
           />
-          <span className="icon-fallback">⚡</span>
+          <span className="icon-fallback">{'\u26A1'}</span>
         </span>
-        <span className="cost-value">{costDisplay}</span>
+        <span className={`cost-value ${card.isQualityAction ? 'quality-cost' : ''}`}>
+          {costDisplay}
+          {card.isQualityAction && <span className="cost-multiplier">x2</span>}
+        </span>
       </span>
 
       {/* Shard 비용 (0보다 클 때만 표시) */}
@@ -208,9 +239,12 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
               style={{ width: 14, height: 14 }}
               onError={(e) => e.currentTarget.classList.add('hidden')}
             />
-            <span className="icon-fallback">💎</span>
+            <span className="icon-fallback">{'\u{1F48E}'}</span>
           </span>
-          <span className="cost-value">{card.cost.memory_shard}</span>
+          <span className={`cost-value ${card.isQualityAction ? 'quality-cost' : ''}`}>
+            {shardCost}
+            {card.isQualityAction && <span className="cost-multiplier">x2</span>}
+          </span>
         </span>
       )}
 
@@ -226,7 +260,7 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
             style={{ width: 14, height: 14 }}
             onError={(e) => e.currentTarget.classList.add('hidden')}
           />
-          <span className="icon-fallback">⚠</span>
+          <span className="icon-fallback">{'\u26A0'}</span>
         </span>
         <span className={`risk-label risk-${card.risk}`}>{t(`action.risk.${card.risk}`)}</span>
       </span>
@@ -246,7 +280,7 @@ interface ActionCardItemProps {
 }
 
 /**
- * 단일 카드 컴포넌트 - U-065 단순화.
+ * 단일 카드 컴포넌트 - U-065 단순화, U-069 QUALITY 배지 지원.
  * description, hint, reward_hint 필드 제거됨
  */
 function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProps) {
@@ -257,6 +291,7 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
     'has-chrome',
     card.isDisabled ? 'card-disabled' : '',
     card.is_alternative ? 'card-alternative' : '',
+    card.isQualityAction ? 'card-quality' : '',
     `risk-border-${card.risk}`,
   ]
     .filter(Boolean)
@@ -275,8 +310,17 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
       aria-disabled={disabled || card.isDisabled}
       title={card.finalDisabledReason ?? undefined}
     >
-      {/* 대안 카드 표시 */}
-      {card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
+      {/* U-069: QUALITY 모델 배지 (대안 배지보다 우선 표시) */}
+      {card.isQualityAction && (
+        <span className="quality-badge" title={t('economy.model_label.QUALITY')}>
+          {'\u2605'} QUALITY
+        </span>
+      )}
+
+      {/* 대안 카드 표시 (QUALITY가 아닐 때만) */}
+      {!card.isQualityAction && card.is_alternative && (
+        <span className="alternative-badge">{t('action.alternative')}</span>
+      )}
 
       {/* 카드 타이틀 */}
       <div className="action-card-title">{card.label}</div>
@@ -317,11 +361,12 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   const disabled = propsDisabled ?? isStreaming;
 
   // 카드 호버 핸들러 (U-014: 예상 비용 표시)
-  // U-065: cost_estimate 제거됨, cost만 전달
+  // U-065: cost_estimate 제거됨
+  // U-069: displayCost (배수 적용) 사용
   const handleCardHover = useCallback(
     (card: CardDisplayInfo | null) => {
       if (card) {
-        setCostEstimateFromCard(card.cost, null, card.id, card.label);
+        setCostEstimateFromCard(card.displayCost, null, card.id, card.label);
       } else {
         setCostEstimate(null);
       }
@@ -334,14 +379,26 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
 
   // 카드별 실행 가능 여부 계산 (Q1: Option A - 서버 우선, 클라이언트 폴백)
   // U-065: cost_estimate, disabled_reason 필드 제거됨
+  // U-069: QUALITY 모델 트리거 및 비용 배수 계산 추가
   const processedCards: CardDisplayInfo[] = useMemo(() => {
     return displayCards.map((card) => {
+      // U-069: QUALITY 모델 트리거 체크
+      const isQualityAction = QUALITY_TRIGGER_ACTION_IDS.has(card.id);
+
+      // U-069: 배수 적용된 표시 비용 계산
+      const displayCost = isQualityAction
+        ? {
+            signal: card.cost.signal * QUALITY_COST_MULTIPLIER,
+            memory_shard: card.cost.memory_shard * QUALITY_COST_MULTIPLIER,
+          }
+        : { ...card.cost };
+
       // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
       const serverEnabled = card.enabled;
 
       // 클라이언트 측 잔액 체크 (서버가 판단하지 않았을 때 폴백)
-      // U-065: cost_estimate 제거됨, cost만 사용
-      const costToCheck = card.cost;
+      // U-069: QUALITY 액션은 배수 적용된 비용으로 체크
+      const costToCheck = displayCost;
       const isAffordable =
         currentBalance.signal >= costToCheck.signal &&
         currentBalance.memory_shard >= costToCheck.memory_shard;
@@ -362,6 +419,8 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
         isAffordable,
         isDisabled,
         finalDisabledReason,
+        isQualityAction,
+        displayCost,
       };
     });
   }, [displayCards, currentBalance, t]);

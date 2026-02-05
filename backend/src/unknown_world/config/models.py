@@ -62,6 +62,105 @@ MODEL_VISION: Final[str] = "gemini-3-flash-preview"
 """VISION 라벨 모델 ID - 비전/공간 분석용 (bbox/segmentation)"""
 
 
+# =============================================================================
+# 텍스트 모델 티어링 설정 (U-069)
+# =============================================================================
+# Q1 결정: Option B - 액션 ID + 키워드 매칭
+
+
+class TextModelTiering:
+    """텍스트 모델 티어링 설정.
+
+    FAST 모델 기본 + "정밀조사" 트리거 시 QUALITY 모델 전환.
+
+    페어링 질문 결정:
+        - Q1: Option B - 액션 ID + 키워드 매칭
+        - Q2: Option A - 2x (기본 비용의 2배)
+        - Q3: Option B + C - 특정 상황 등장 + 아이템 활성화
+    """
+
+    # QUALITY 트리거 액션 ID 목록
+    # "정밀조사" 및 관련 액션
+    QUALITY_TRIGGER_ACTION_IDS: Final[frozenset[str]] = frozenset(
+        {
+            "deep_investigate",
+            "정밀조사",
+            "analyze",
+            "examine_closely",
+            "investigate_detail",
+            "scrutinize",
+            "thorough_search",
+            # 돋보기 아이템 사용 액션 (Q3 결정: Option C)
+            "use_magnifier",
+            "use_magnifying_glass",
+        }
+    )
+
+    # QUALITY 트리거 키워드 목록 (소문자)
+    # Q1 결정: Option B - 키워드 매칭 포함
+    QUALITY_TRIGGER_KEYWORDS: Final[tuple[str, ...]] = (
+        "정밀조사",
+        "자세히",
+        "깊이",
+        "꼼꼼히",
+        "면밀히",
+        "세밀하게",
+        "thoroughly",
+        "in detail",
+        "closely examine",
+        "scrutinize",
+    )
+
+    # 비용 배수 (Q2 결정: Option A - 2x)
+    FAST_COST_MULTIPLIER: Final[float] = 1.0
+    """FAST 모델 비용 배수 (기본)"""
+
+    QUALITY_COST_MULTIPLIER: Final[float] = 2.0
+    """QUALITY 모델 비용 배수 (Q2 결정: Option A - 2x)"""
+
+    @classmethod
+    def is_quality_trigger(
+        cls,
+        action_id: str | None,
+        text: str | None,
+    ) -> bool:
+        """QUALITY 모델 트리거 여부를 판단합니다.
+
+        Args:
+            action_id: 선택된 액션 ID (선택)
+            text: 사용자 입력 텍스트 (선택)
+
+        Returns:
+            QUALITY 모델을 사용해야 하는지 여부
+        """
+        # 액션 ID 검사
+        if action_id and action_id in cls.QUALITY_TRIGGER_ACTION_IDS:
+            return True
+
+        # 키워드 검사 (대소문자 무시)
+        if text:
+            text_lower = text.lower()
+            for keyword in cls.QUALITY_TRIGGER_KEYWORDS:
+                if keyword.lower() in text_lower:
+                    return True
+
+        return False
+
+    @classmethod
+    def get_cost_multiplier(cls, model_label: ModelLabel) -> float:
+        """모델 라벨에 따른 비용 배수를 반환합니다.
+
+        Args:
+            model_label: 모델 라벨 (FAST, QUALITY)
+
+        Returns:
+            비용 배수
+        """
+        if model_label == ModelLabel.QUALITY:
+            return cls.QUALITY_COST_MULTIPLIER
+        return cls.FAST_COST_MULTIPLIER
+
+
 # 라벨-ID 매핑 테이블
 _MODEL_MAP: Final[dict[ModelLabel, str]] = {
     ModelLabel.FAST: MODEL_FAST,
