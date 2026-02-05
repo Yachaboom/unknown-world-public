@@ -299,4 +299,25 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       expect(lastEntry.turn).toBe(state.turnCount);
     });
   });
+
+  describe('Processing Phase (U-071[Mvp])', () => {
+    it('setProcessingPhase 액션은 sceneState의 processingPhase를 업데이트해야 한다', () => {
+      const store = useWorldStore.getState();
+
+      // 1. 초기 상태 확인
+      expect(store.sceneState.processingPhase).toBeUndefined(); // 또는 'idle' (초기값 정책에 따라 다름)
+
+      // 2. 단계 변경
+      store.setProcessingPhase('processing');
+      expect(useWorldStore.getState().sceneState.processingPhase).toBe('processing');
+
+      // 3. 단계 변경 (image_pending)
+      store.setProcessingPhase('image_pending');
+      expect(useWorldStore.getState().sceneState.processingPhase).toBe('image_pending');
+
+      // 4. 유휴 상태로 복귀
+      store.setProcessingPhase('idle');
+      expect(useWorldStore.getState().sceneState.processingPhase).toBe('idle');
+    });
+  });
 });

@@ -75,7 +75,8 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 
   const disabled = propsDisabled ?? isStreaming;
 
-  const { status, imageUrl, message } = state;
+  // U-071: 처리 단계 및 이미지 로딩 상태 추출
+  const { status, imageUrl, message, processingPhase, imageLoading } = state;
 
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -151,7 +152,14 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
   return (
     <div ref={canvasRef} className="scene-canvas">
       {/* U-020: 장면 이미지 (Lazy loading + placeholder/폴백 포함) */}
-      <SceneImage status={status} imageUrl={imageUrl} message={message} />
+      {/* U-071: 처리 단계 및 이미지 생성 상태 전달 */}
+      <SceneImage
+        status={status}
+        imageUrl={imageUrl}
+        message={message}
+        processingPhase={processingPhase}
+        isGenerating={imageLoading}
+      />
 
       {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
       {/* U-020: 이미지 유무와 무관하게 핫스팟은 항상 렌더 (RULE-004) */}

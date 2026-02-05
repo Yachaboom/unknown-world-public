@@ -3,6 +3,15 @@
  */
 
 /**
+ * Scene 처리 단계 타입 (U-071: 로딩 인디케이터 강화)
+ * - idle: 유휴 상태 (처리 없음)
+ * - processing: 턴 처리 중 (텍스트 스트리밍)
+ * - image_pending: 이미지 생성 대기/진행 중
+ * - rendering: 결과 렌더링 중
+ */
+export type SceneProcessingPhase = 'idle' | 'processing' | 'image_pending' | 'rendering';
+
+/**
  * Scene Canvas 상태 타입
  * - default: 기본 상태 (장면 이미지 없음)
  * - loading: 데이터 로딩 중
@@ -51,6 +60,8 @@ export interface SceneCanvasState {
   sceneRevision?: number;
   /** U-066: 대기 중인 이미지 요청의 턴 ID */
   pendingImageTurnId?: number;
+  /** U-071: 현재 처리 단계 (로딩 인디케이터 표시용) */
+  processingPhase?: SceneProcessingPhase;
 }
 
 /**

@@ -637,7 +637,224 @@ body {
 }
 
 /* ============================================
-   8.0.2 이미지 에러 배지 (U-020)
+   8.0.2 처리 중 오버레이 (U-071)
+   - Scene Canvas 중앙에 CRT 테마 로딩 인디케이터
+   - 처리 단계별 메시지 표시 (processing, image_pending)
+   - prefers-reduced-motion 지원
+   ============================================ */
+
+/* 처리 중 컨테이너 상태 */
+.scene-image-container.scene-processing {
+  /* 배경을 placeholder 이미지로 대체 (Option C) */
+  background-color: rgba(0, 10, 0, 0.9);
+}
+
+/* 처리 중 오버레이 (중앙 배치) */
+.scene-processing-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 30, 0, 0.95) 0%,
+    rgba(0, 10, 0, 0.98) 100%
+  );
+  z-index: 25;
+  animation: processing-fade-in 0.3s ease-out;
+}
+
+@keyframes processing-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* CRT 테마 스피너 */
+.scene-processing-spinner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.scene-processing-spinner .spinner-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.scene-processing-spinner .spinner-ring-outer {
+  inset: 0;
+  border-top-color: var(--text-color);
+  border-right-color: var(--text-color);
+  animation: spin-outer 1.5s linear infinite;
+  box-shadow: 0 0 10px var(--text-color);
+}
+
+.scene-processing-spinner .spinner-ring-inner {
+  inset: 8px;
+  border-bottom-color: var(--accent-color);
+  border-left-color: var(--accent-color);
+  animation: spin-inner 1s linear infinite reverse;
+  box-shadow: 0 0 8px var(--accent-color);
+}
+
+.scene-processing-spinner .spinner-glow {
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(51, 255, 0, 0.15) 0%, transparent 70%);
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes spin-outer {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-inner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* 처리 단계 메시지 텍스트 */
+.scene-processing-text {
+  font-size: var(--font-size-lg);
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px var(--text-color);
+  animation: text-flicker 3s ease-in-out infinite;
+}
+
+@keyframes text-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.95;
+  }
+}
+
+/* CRT 스캔라인 효과 (오버레이 내부) */
+.scene-processing-scanlines {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  animation: scanline-scroll 8s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes scanline-scroll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 100%;
+  }
+}
+
+/* U-066: 이미지 생성 중 인디케이터 - processing과 동일 스타일 적용 */
+.scene-generating-indicator {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  background: radial-gradient(ellipse at center, rgba(0, 30, 0, 0.9) 0%, rgba(0, 10, 0, 0.95) 100%);
+  z-index: 20;
+}
+
+.scene-generating-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--text-dim);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 15px var(--accent-color);
+}
+
+.scene-generating-text {
+  font-size: var(--font-size-sm);
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px var(--accent-color);
+}
+
+/* reduced-motion: 처리 중 애니메이션 완화 (U-071) */
+@media (prefers-reduced-motion: reduce) {
+  .scene-processing-overlay {
+    animation: none;
+  }
+
+  .scene-processing-spinner .spinner-ring-outer,
+  .scene-processing-spinner .spinner-ring-inner {
+    animation: none;
+    border-color: var(--text-color);
+  }
+
+  .scene-processing-spinner .spinner-ring-inner {
+    border-color: var(--accent-color);
+  }
+
+  .scene-processing-spinner .spinner-glow {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .scene-processing-text {
+    animation: none;
+  }
+
+  .scene-processing-scanlines {
+    animation: none;
+    opacity: 0.3;
+  }
+
+  .scene-generating-spinner {
+    animation: none;
+    border-color: var(--accent-color);
+  }
+}
+
+/* ============================================
+   8.0.3 이미지 에러 배지 (U-020)
    - RULE-004: 실패 시 안전한 폴백
    ============================================ */
 

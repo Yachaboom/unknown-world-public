@@ -60,6 +60,7 @@ frontend/src/components/QuestPanel.tsx
 frontend/src/components/RuleBoard.tsx
 frontend/src/components/SceneCanvas.tsx
 frontend/src/components/SceneImage.tsx
+frontend/src/components/Hotspot.tsx
 frontend/src/save/sessionLifecycle.ts
 frontend/src/save/saveGame.ts
 frontend/src/save/migrations.ts
@@ -77,7 +78,7 @@ shared/schemas/turn/turn_output.schema.json
 ### 주요 디렉토리 설명
 
 - `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
-- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다. 특히 `SceneImage.tsx`는 `processingPhase`를 통해 장면 생성 전 과정을 시각적으로 관리합니다.
 - `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 - `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
@@ -133,6 +134,20 @@ shared/schemas/turn/turn_output.schema.json
 3. **상태 영속성 및 i18n**:
     - **Snapshot Preservation**: 생성된 로그는 `NarrativeEntry`의 일부로 저장되어 새로고침 후에도 플레이어의 과거 행동 궤적을 보존함.
     - **Dual-Language Policy**: 세션 언어에 따라 실시간으로 언어를 전환하여 혼합 출력을 방지함.
+
+---
+
+## 35. Scene 처리중 UI 로딩 인디케이터 강화 (U-071[Mvp])
+
+1. **처리 단계별 가시성 확보 (Phase-based UI)**:
+    - **processingPhase 인식**: `processing`(장면 생성), `image_pending`(이미지 형성), `rendering` 등 시스템 처리 단계를 Scene Canvas UI에 즉각 반영함.
+    - **Option C 정책 (State Transition)**: 처리 중일 때 이전 이미지를 숨기고 placeholder 상태로 전환하여 "현재 세계가 갱신 중임"을 명확히 전달함.
+2. **CRT 테마 로딩 오버레이**:
+    - **Visual Effects**: 스피너 애니메이션, 글로우 효과, 스캔라인 오버레이를 결합하여 게임의 CRT 미학을 유지하면서도 시스템 활동을 증명함.
+    - **Status Messaging**: 다국어 지원(`ko`/`en`)을 통해 "장면 생성 중...", "이미지 형성 중..." 등 구체적인 단계 메시지를 출력함.
+3. **접근성 및 안정성**:
+    - **Reduced Motion Support**: `prefers-reduced-motion` 감지 시 모든 애니메이션을 정적 상태로 전환하여 가독성을 보호함.
+    - **Fail-safe Cleanup**: 에러 발생이나 턴 종료 시 `idle` 상태로 자동 복구되어 인터랙션 차단을 방지함.
 
 ---
 

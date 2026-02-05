@@ -134,4 +134,39 @@ describe('SceneImage Component (U-020)', () => {
     expect(screen.getByText('scene.status.default')).toBeInTheDocument();
     expect(screen.getByText('⚠️')).toBeInTheDocument();
   });
+
+  describe('Processing Overlay (U-071[Mvp])', () => {
+    it('processingPhase가 processing일 때 처리 중 오버레이와 올바른 메시지를 표시해야 함', () => {
+      render(<SceneImage status="scene" processingPhase="processing" />);
+
+      expect(screen.getByText('scene.processing.processing')).toBeInTheDocument();
+      // CRT 스피너 요소 존재 확인
+      expect(document.querySelector('.scene-processing-spinner')).toBeInTheDocument();
+    });
+
+    it('processingPhase가 image_pending일 때 이미지 형성 중 메시지를 표시해야 함', () => {
+      render(<SceneImage status="scene" processingPhase="image_pending" />);
+
+      expect(screen.getByText('scene.processing.image_pending')).toBeInTheDocument();
+    });
+
+    it('처리 중일 때는 이전 이미지가 있더라도 숨겨야 함 (Option C)', async () => {
+      const { rerender } = render(<SceneImage status="scene" imageUrl="old-url.png" />);
+
+      // 1. 첫 번째 이미지 로드 완료
+      await act(async () => {
+        if (imageInstances[0]?.onload) imageInstances[0].onload();
+      });
+
+      expect(screen.getByAltText('scene.status.alt')).toHaveAttribute('src', 'old-url.png');
+
+      // 2. 처리 중으로 전환
+      rerender(<SceneImage status="scene" imageUrl="old-url.png" processingPhase="processing" />);
+
+      // 이미지 요소가 렌더링되지 않아야 함 (Option C: 처리 중 숨김)
+      expect(screen.queryByAltText('scene.status.alt')).not.toBeInTheDocument();
+      // 오버레이는 표시되어야 함
+      expect(screen.getByText('scene.processing.processing')).toBeInTheDocument();
+    });
+  });
 });

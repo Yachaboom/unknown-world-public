@@ -22,7 +22,7 @@
 
 import { create } from 'zustand';
 import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
-import type { SceneCanvasState } from '../types/scene';
+import type { SceneCanvasState, SceneProcessingPhase } from '../types/scene';
 import { useActionDeckStore } from './actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
 import { useEconomyStore } from './economyStore';
@@ -163,6 +163,16 @@ export interface WorldActions {
    * 새 턴 시작 또는 이미지 생성 실패 시 호출합니다.
    */
   cancelImageLoading: () => void;
+
+  // ============ U-071: 처리 단계 UI 관리 ============
+
+  /**
+   * 처리 단계를 설정합니다 (U-071).
+   * Scene Canvas에 현재 처리 상태를 표시하기 위해 사용합니다.
+   *
+   * @param phase - 현재 처리 단계 (idle, processing, image_pending, rendering)
+   */
+  setProcessingPhase: (phase: SceneProcessingPhase) => void;
 }
 
 export type WorldStore = WorldState & WorldActions;
@@ -406,7 +416,13 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
   },
 
   setSceneState: (sceneState) => {
-    set({ sceneState });
+    // U-071 버그 수정: processingPhase를 보존하며 병합
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        ...sceneState,
+      },
+    }));
   },
 
   setConnected: (isConnected) => {
@@ -480,6 +496,17 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
         // 이전 이미지 유지 (폴백)
         imageUrl: state.sceneState.previousImageUrl ?? state.sceneState.imageUrl,
         previousImageUrl: undefined,
+      },
+    }));
+  },
+
+  // ============ U-071: 처리 단계 UI 관리 ============
+
+  setProcessingPhase: (phase) => {
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        processingPhase: phase,
       },
     }));
   },

@@ -194,6 +194,11 @@
       "syncing": "데이터 동기화 중...",
       "alt": "장면 이미지"
     },
+    "processing": {
+      "processing": "장면 생성 중...",
+      "image_pending": "이미지 형성 중...",
+      "rendering": "결과 적용 중..."
+    },
     "hotspot": {
       "layer_label": "클릭 가능한 오브젝트 영역",
       "hint_prefix": "힌트",

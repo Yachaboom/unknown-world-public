@@ -9,7 +9,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SceneCanvasStatus, PlaceholderInfo, ImageLoadingState } from '../types/scene';
+import type {
+  SceneCanvasStatus,
+  PlaceholderInfo,
+  ImageLoadingState,
+  SceneProcessingPhase,
+} from '../types/scene';
 
 // =============================================================================
 // 상수 정의
@@ -54,6 +59,8 @@ interface SceneImageProps {
   className?: string;
   /** U-066: 이미지 생성 중 여부 (외부 상태) */
   isGenerating?: boolean;
+  /** U-071: 현재 처리 단계 (로딩 인디케이터 강화) */
+  processingPhase?: SceneProcessingPhase;
 }
 
 // =============================================================================
@@ -74,8 +81,12 @@ export function SceneImage({
   message,
   className = '',
   isGenerating = false,
+  processingPhase = 'idle',
 }: SceneImageProps) {
   const { t } = useTranslation();
+
+  // U-071: 처리 중 여부 (processing 또는 image_pending)
+  const isProcessing = processingPhase === 'processing' || processingPhase === 'image_pending';
 
   // 내부 상태 관리
   const [imageError, setImageError] = useState(false);
@@ -135,24 +146,39 @@ export function SceneImage({
   }, [isImageLoading, imageError, displayImageUrl]);
 
   const hasDisplayImage = !!displayImageUrl;
-  const isSceneActive = status === 'scene' && hasDisplayImage && !imageError;
+  // U-071: 처리 중일 때는 scene-active 해제 (placeholder 표시를 위해)
+  const isSceneActive = status === 'scene' && hasDisplayImage && !imageError && !isProcessing;
 
   // placeholder 정보 결정
-  const effectiveStatus = status === 'scene' && !hasDisplayImage ? 'default' : status;
+  // U-071 Option C: 처리 중일 때도 placeholder 상태로 전환
+  const effectiveStatus = isProcessing
+    ? 'loading'
+    : status === 'scene' && !hasDisplayImage
+      ? 'default'
+      : status;
 
-  const isPlaceholderVisible = !hasDisplayImage;
+  // U-071 Option C: 처리 중일 때 placeholder + 오버레이 표시
+  const isPlaceholderVisible = !hasDisplayImage || isProcessing;
 
   const placeholder = isPlaceholderVisible
     ? SCENE_PLACEHOLDERS[effectiveStatus as Exclude<SceneCanvasStatus, 'scene'>]
     : null;
 
+  // U-071: 처리 단계별 메시지 키 매핑
+  const processingMessageKey =
+    processingPhase === 'image_pending'
+      ? 'scene.processing.image_pending'
+      : processingPhase === 'rendering'
+        ? 'scene.processing.rendering'
+        : 'scene.processing.processing';
+
   return (
     <div
-      className={`scene-image-container ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`} ${isImageLoading ? 'image-loading' : ''} ${className}`}
+      className={`scene-image-container ${isSceneActive ? 'scene-active' : `scene-status-${effectiveStatus}`} ${isImageLoading ? 'image-loading' : ''} ${isProcessing ? 'scene-processing' : ''} ${className}`}
       style={placeholder ? { backgroundImage: `url('${placeholder.imagePath}')` } : {}}
     >
-      {/* 장면 이미지 */}
-      {hasDisplayImage && (
+      {/* 장면 이미지 - U-071 Option C: 처리 중일 때 숨김 */}
+      {hasDisplayImage && !isProcessing && (
         <img
           src={displayImageUrl}
           alt={t('scene.status.alt')}
@@ -160,24 +186,38 @@ export function SceneImage({
         />
       )}
 
-      {/* 로딩 인디케이터 (이미지 URL 로딩) */}
-      {isImageLoading && !isGenerating && (
+      {/* U-071: 처리 중 오버레이 (CRT 테마) */}
+      {isProcessing && (
+        <div className="scene-processing-overlay" aria-live="polite" role="status">
+          <div className="scene-processing-spinner" aria-hidden="true">
+            <div className="spinner-ring spinner-ring-outer" />
+            <div className="spinner-ring spinner-ring-inner" />
+            <div className="spinner-glow" />
+          </div>
+          <span className="scene-processing-text">{t(processingMessageKey)}</span>
+          {/* CRT 스캔라인 효과 */}
+          <div className="scene-processing-scanlines" aria-hidden="true" />
+        </div>
+      )}
+
+      {/* 로딩 인디케이터 (이미지 URL 로딩) - 처리 중이 아닐 때만 */}
+      {isImageLoading && !isGenerating && !isProcessing && (
         <div className="scene-loading-indicator" aria-live="polite">
           <div className="scene-loading-spinner" aria-hidden="true" />
           <span className="scene-loading-text">{t('scene.status.image_loading')}</span>
         </div>
       )}
 
-      {/* U-066: 이미지 생성 중 인디케이터 */}
-      {isGenerating && (
+      {/* U-066: 이미지 생성 중 인디케이터 - 처리 중이 아닐 때만 */}
+      {isGenerating && !isProcessing && (
         <div className="scene-generating-indicator" aria-live="polite">
           <div className="scene-generating-spinner" aria-hidden="true" />
           <span className="scene-generating-text">{t('scene.status.image_generating')}</span>
         </div>
       )}
 
-      {/* 이미지 에러 배지 */}
-      {imageError && (
+      {/* 이미지 에러 배지 - 처리 중이 아닐 때만 */}
+      {imageError && !isProcessing && (
         <div className="scene-error-badge" role="alert">
           <span className="scene-error-icon" aria-hidden="true">
             ⚠️
@@ -186,8 +226,8 @@ export function SceneImage({
         </div>
       )}
 
-      {/* Placeholder 영역 */}
-      {isPlaceholderVisible && placeholder && (
+      {/* Placeholder 영역 - 처리 중일 때는 오버레이만 표시 */}
+      {isPlaceholderVisible && placeholder && !isProcessing && (
         <div className="scene-placeholder">
           <p className="text-glow scene-status-label">
             <span className="scene-status-emoji" aria-hidden="true">

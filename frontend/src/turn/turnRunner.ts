@@ -208,6 +208,8 @@ export function createTurnRunner(deps: {
       // Final → agentStore.handleFinal + worldStore.applyTurnOutput + U-066 이미지 잡
       onFinal: (event) => {
         useAgentStore.getState().handleFinal(event);
+        // U-071: 결과 렌더링 단계로 전환
+        useWorldStore.getState().setProcessingPhase('rendering');
         // RU-003-Q4: TurnOutput 반영 SSOT
         useWorldStore.getState().applyTurnOutput(event.data);
         // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
@@ -217,6 +219,8 @@ export function createTurnRunner(deps: {
         // U-080: StrictMode 대응 - 중복 요청 방지
         const imageJob = event.data.render?.image_job;
         if (imageJob?.should_generate && imageJob.prompt) {
+          // U-071: 이미지 생성 대기 단계로 전환
+          useWorldStore.getState().setProcessingPhase('image_pending');
           // 이미 이미지 생성 요청이 진행 중이면 무시 (StrictMode 중복 방지)
           if (imageJobPending) {
             return;
@@ -262,11 +266,15 @@ export function createTurnRunner(deps: {
                 // 실패 시 로딩 취소 (이전 이미지 유지)
                 useWorldStore.getState().cancelImageLoading();
               }
+              // U-071: 이미지 생성 완료 후 idle로 전환
+              useWorldStore.getState().setProcessingPhase('idle');
             },
             () => {
               imageJobPending = false; // 에러 시 플래그 해제
               // 에러 시 로딩 취소
               useWorldStore.getState().cancelImageLoading();
+              // U-071: 에러 시에도 idle로 전환
+              useWorldStore.getState().setProcessingPhase('idle');
             },
           );
         }
@@ -275,6 +283,8 @@ export function createTurnRunner(deps: {
       onError: (event) => {
         useAgentStore.getState().handleError(event);
         useWorldStore.getState().setConnected(false);
+        // U-071: 에러 시 idle로 전환
+        useWorldStore.getState().setProcessingPhase('idle');
         // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
         const errorCode = event.code;
         if (errorCode === 'SAFETY_BLOCKED') {
@@ -293,6 +303,12 @@ export function createTurnRunner(deps: {
         useAgentStore.getState().completeStream();
         // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
         // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
+
+        // U-071: 이미지 잡이 없는 경우에만 idle로 전환
+        // 이미지 잡이 있으면 이미지 생성 완료/실패 시 idle로 전환됨
+        if (!imageJobPending) {
+          useWorldStore.getState().setProcessingPhase('idle');
+        }
       },
     };
 
@@ -393,6 +409,9 @@ export function useTurnRunner(deps: {
       // Agent Store 시작
       agentStore.startStream();
 
+      // U-071: 처리 단계를 'processing'으로 전환
+      worldStore.setProcessingPhase('processing');
+
       // Scene Canvas를 로딩 상태로 전환 (U-031)
       worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
 
@@ -410,6 +429,8 @@ export function useTurnRunner(deps: {
         },
         onFinal: (event) => {
           useAgentStore.getState().handleFinal(event);
+          // U-071: 결과 렌더링 단계로 전환
+          useWorldStore.getState().setProcessingPhase('rendering');
           useWorldStore.getState().applyTurnOutput(event.data);
           // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
           useWorldStore.getState().setConnected(true);
@@ -423,6 +444,9 @@ export function useTurnRunner(deps: {
               return;
             }
             imageJobPendingRef.current = true;
+
+            // U-071: 이미지 생성 대기 단계로 전환
+            useWorldStore.getState().setProcessingPhase('image_pending');
 
             const worldStore = useWorldStore.getState();
             const currentTurnId = worldStore.turnCount;
@@ -462,10 +486,14 @@ export function useTurnRunner(deps: {
                 } else {
                   useWorldStore.getState().cancelImageLoading();
                 }
+                // U-071: 이미지 생성 완료 후 idle로 전환
+                useWorldStore.getState().setProcessingPhase('idle');
               },
               () => {
                 imageJobPendingRef.current = false; // 에러 시 플래그 해제
                 useWorldStore.getState().cancelImageLoading();
+                // U-071: 에러 시에도 idle로 전환
+                useWorldStore.getState().setProcessingPhase('idle');
               },
             );
           }
@@ -473,6 +501,8 @@ export function useTurnRunner(deps: {
         onError: (event) => {
           useAgentStore.getState().handleError(event);
           useWorldStore.getState().setConnected(false);
+          // U-071: 에러 시 idle로 전환
+          useWorldStore.getState().setProcessingPhase('idle');
           // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
           const errorCode = event.code;
           if (errorCode === 'SAFETY_BLOCKED') {
@@ -493,6 +523,12 @@ export function useTurnRunner(deps: {
           useAgentStore.getState().completeStream();
           // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
           // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
+
+          // U-071: 이미지 잡이 없는 경우에만 idle로 전환
+          // 이미지 잡이 있으면 이미지 생성 완료/실패 시 idle로 전환됨
+          if (!imageJobPendingRef.current) {
+            useWorldStore.getState().setProcessingPhase('idle');
+          }
         },
       };
 
