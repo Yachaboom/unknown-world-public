@@ -8,10 +8,14 @@
  *   - tech-stack: dnd-kit 기반 draggable 구현
  *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
  *
+ * U-074[Mvp]: 아이템 인터랙션 안내 UX
+ *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
+ *   - hover 시 "드래그하여 사용" 힌트 표시
+ *
  * @module components/InventoryPanel
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useDraggable, DragOverlay } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +26,8 @@ import {
   selectDraggingItem,
   selectSelectedItemId,
 } from '../stores/inventoryStore';
+import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
+import { InteractionHint } from './InteractionHint';
 import { DND_TYPE, type InventoryDragData } from '../dnd/types';
 
 // =============================================================================
@@ -39,9 +45,22 @@ interface DraggableItemProps {
  * 드래그 가능한 인벤토리 아이템.
  * dnd-kit의 useDraggable 훅을 사용합니다.
  * U-056: 잘린 아이템 이름에 대한 툴팁 지원
+ * U-074: 첫 N번만 hover 힌트 표시
  */
 function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
   const { t } = useTranslation();
+  const [isHovered, setIsHovered] = useState(false);
+
+  // U-074: 아이템 힌트 상태 (첫 N번만 표시)
+  const shouldShowHint = useOnboardingStore(selectShouldShowItemHint);
+  const incrementItemHint = useOnboardingStore((state) => state.incrementItemHint);
+
+  // U-074: hover 시작 시 힌트 카운트 증가
+  useEffect(() => {
+    if (isHovered && !disabled) {
+      incrementItemHint();
+    }
+  }, [isHovered, disabled, incrementItemHint]);
 
   // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
   const dragData: InventoryDragData = {
@@ -101,6 +120,8 @@ function DraggableItem({ item, isSelected, onSelect, disabled = false }: Draggab
       style={style}
       className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''}`}
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
       aria-selected={isSelected}
       // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
@@ -113,6 +134,16 @@ function DraggableItem({ item, isSelected, onSelect, disabled = false }: Draggab
         <span className="inventory-item-name">{item.name}</span>
         {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
       </div>
+
+      {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
+      {isHovered && !disabled && !isDragging && shouldShowHint && (
+        <InteractionHint
+          text={t('interaction.item_drag')}
+          icon="drag"
+          position="top"
+          className="interaction-hint--inventory"
+        />
+      )}
     </div>
   );
 }

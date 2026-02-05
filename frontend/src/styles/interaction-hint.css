@@ -1,0 +1,225 @@
+/**
+ * Unknown World - 인터랙션 힌트 스타일
+ *
+ * U-074[Mvp]: 핫스팟/아이템 인터랙션 안내 UX
+ * - 힌트 툴팁 스타일 (클릭/드래그 힌트)
+ * - CRT 테마 일관성 유지
+ *
+ * @see vibe/ref/frontend-style-guide.md
+ */
+
+/* ============================================
+   1. 인터랙션 힌트 기본 스타일
+   ============================================ */
+
+.interaction-hint {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  animation: hint-fade-in 0.2s ease-out;
+}
+
+@keyframes hint-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   2. 힌트 내용 컨테이너
+   ============================================ */
+
+.interaction-hint-content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: rgba(0, 255, 128, 0.12);
+  border: 1px solid var(--accent-color);
+  border-radius: 3px;
+  box-shadow:
+    0 0 8px rgba(0, 255, 128, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+/* ============================================
+   3. 힌트 텍스트
+   ============================================ */
+
+.interaction-hint-text {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 4px rgba(0, 255, 128, 0.4);
+}
+
+/* ============================================
+   4. 힌트 아이콘
+   ============================================ */
+
+.interaction-hint-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-color);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 2px rgba(0, 255, 128, 0.4));
+}
+
+/* ============================================
+   5. 위치 변형 (top/bottom/left/right)
+   ============================================ */
+
+/* 상단 (기본) */
+.interaction-hint--top {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.interaction-hint--top .interaction-hint-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--accent-color);
+}
+
+/* 하단 */
+.interaction-hint--bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.interaction-hint--bottom .interaction-hint-content::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: var(--accent-color);
+}
+
+/* 좌측 */
+.interaction-hint--left {
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+}
+
+.interaction-hint--left .interaction-hint-content::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: var(--accent-color);
+}
+
+/* 우측 */
+.interaction-hint--right {
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+}
+
+.interaction-hint--right .interaction-hint-content::after {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--accent-color);
+}
+
+/* ============================================
+   6. 핫스팟용 힌트 (마젠타 테마)
+   ============================================ */
+
+.interaction-hint--hotspot .interaction-hint-content {
+  background-color: rgba(224, 64, 251, 0.15);
+  border-color: var(--hotspot-primary);
+  box-shadow:
+    0 0 8px var(--hotspot-glow),
+    0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.interaction-hint--hotspot .interaction-hint-text {
+  color: var(--hotspot-primary);
+  text-shadow: 0 0 4px rgba(224, 64, 251, 0.4);
+}
+
+.interaction-hint--hotspot .interaction-hint-icon {
+  color: var(--hotspot-primary);
+  filter: drop-shadow(0 0 2px rgba(224, 64, 251, 0.4));
+}
+
+.interaction-hint--hotspot.interaction-hint--top .interaction-hint-content::after {
+  border-top-color: var(--hotspot-primary);
+}
+
+.interaction-hint--hotspot.interaction-hint--bottom .interaction-hint-content::after {
+  border-bottom-color: var(--hotspot-primary);
+}
+
+/* ============================================
+   7. 인벤토리용 힌트 (기본 그린 테마)
+   ============================================ */
+
+.interaction-hint--inventory .interaction-hint-content {
+  background-color: rgba(0, 255, 128, 0.12);
+  border-color: var(--accent-color);
+}
+
+/* ============================================
+   8. 반응형 조정
+   ============================================ */
+
+@media (max-width: 768px) {
+  .interaction-hint-content {
+    padding: 4px 8px;
+  }
+
+  .interaction-hint-text {
+    font-size: 10px;
+  }
+
+  .interaction-hint-icon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* ============================================
+   9. 접근성: reduced-motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .interaction-hint {
+    animation: none;
+  }
+}
+
+/* ============================================
+   10. 고대비 모드
+   ============================================ */
+
+@media (prefers-contrast: more) {
+  .interaction-hint-content {
+    border-width: 2px;
+    background-color: rgba(0, 0, 0, 0.9);
+  }
+}

@@ -62,6 +62,8 @@ frontend/src/components/ScannerSlot.tsx
 frontend/src/components/SceneCanvas.tsx
 frontend/src/components/SceneImage.tsx
 frontend/src/components/Hotspot.tsx
+frontend/src/components/InteractionHint.tsx
+frontend/src/components/OnboardingGuide.tsx
 frontend/src/locales/ko-KR/translation.json
 frontend/src/locales/en-US/translation.json
 frontend/src/save/sessionLifecycle.ts
@@ -74,6 +76,7 @@ frontend/src/stores/economyStore.ts
 frontend/src/stores/agentStore.ts
 frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/inventoryStore.ts
+frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 ```
@@ -83,6 +86,7 @@ shared/schemas/turn/turn_output.schema.json
 - `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다. 특히 `SceneImage.tsx`는 `processingPhase`를 통해 장면 생성 전 과정을 시각적으로 관리합니다.
 - `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다.
+- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 - `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
 
@@ -182,6 +186,18 @@ shared/schemas/turn/turn_output.schema.json
 4. **반응형 브레이크포인트 최적화**:
     - **Adaptive Layout**: 1920px(Wide), 1366px(Normal), 1024px(Compact), 768px(Mobile) 단계별 미디어 쿼리를 통해 패널 너비, 간격, 노출 여부를 자동 조정함.
     - **Mobile Single Column**: 모바일 환경에서는 모든 사이드바를 숨기고 헤더-센터-푸터의 단일 컬럼 구조로 전환하여 가독성을 극대화함.
+
+## 38. 핫스팟/아이템 인터랙션 안내 UX (U-074[Mvp])
+
+1. **발견성 강화 (Interaction Hints)**:
+    - **Contextual Tooltips**: 핫스팟(클릭) 및 인벤토리 아이템(드래그)에 마우스를 올릴 때 조작법을 안내하는 `InteractionHint`를 노출함.
+    - **Learning-based Visibility**: 플레이어가 조작법을 익혔다고 가정하는 임계값(Threshold: 3회)을 설정하여, 초기 학습 후에는 힌트가 자동으로 사라져 시각적 노이즈를 최소화함.
+2. **온보딩 가이드 시스템**:
+    - **Step-by-Step Popups**: 첫 세션 시작 시 화면 우하단에 핫스팟, 인벤토리, 스캐너의 사용법을 순차적으로 안내하는 3단계 가이드를 제공함.
+    - **Persistent Knowledge**: 온보딩 완료 상태를 `onboardingStore`와 `localStorage`를 통해 영구 저장하여 재접속 시 중복 노출을 방지함.
+3. **접근성 및 디자인**:
+    - **SVG Visuals**: 별도의 이미지 에셋 없이 인라인 SVG 아이콘을 사용하여 클릭/드래그 행위를 직관적으로 시각화함.
+    - **Keyboard Accessibility**: ESC(스킵), Enter/Space(다음) 단축키를 지원하여 가이드 조작 편의성을 확보함.
 
 ---
 

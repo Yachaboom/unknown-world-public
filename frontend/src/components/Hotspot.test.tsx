@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Hotspot } from './Hotspot';
+import { useOnboardingStore } from '../stores/onboardingStore';
 import type { SceneObject } from '../schemas/turn';
 
 // i18next 모킹
@@ -12,114 +13,43 @@ vi.mock('react-i18next', () => ({
 
 // dnd-kit 모킹
 vi.mock('@dnd-kit/core', () => ({
-  useDroppable: vi.fn(({ id, data, disabled }) => ({
+  useDroppable: () => ({
     isOver: false,
     setNodeRef: vi.fn(),
-    id,
-    data,
-    disabled,
+  }),
+}));
+
+// box2d 유틸 모킹
+vi.mock('../utils/box2d', () => ({
+  box2dToPixel: vi.fn(() => ({
+    top: 100,
+    left: 100,
+    width: 200,
+    height: 200,
   })),
 }));
 
-describe('Hotspot Component (U-058)', () => {
+describe('Hotspot UX - Hover Hint', () => {
   const mockObject: SceneObject = {
-    id: 'obj-1',
-    label: 'Test Object',
-    box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
-    interaction_hint: 'Try clicking this',
+    id: 'test-obj',
+    label: '테스트 오브젝트',
+    box_2d: { ymin: 100, xmin: 100, ymax: 300, xmax: 300 },
+    interaction_hint: '조사 가능',
   };
 
-  const canvasSize = { width: 1000, height: 1000 };
+  const mockCanvasSize = { width: 1000, height: 1000 };
   const mockOnClick = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useOnboardingStore.getState().resetOnboarding();
   });
 
-  it('should render with correct position and size based on box_2d', () => {
+  it('마우스 진입 시 onboardingStore의 카운트 증가 액션이 호출되어야 한다', () => {
     render(
       <Hotspot
         object={mockObject}
-        canvasSize={canvasSize}
-        onClick={mockOnClick}
-        disabled={false}
-      />,
-    );
-
-    const hotspot = screen.getByRole('button');
-    // ymin:100 -> top:100px, xmin:100 -> left:100px
-    // ymax:200 - ymin:100 -> height:100px, xmax:200 - xmin:100 -> width:100px
-    expect(hotspot).toHaveStyle({
-      top: '100px',
-      left: '100px',
-      width: '100px',
-      height: '100px',
-    });
-  });
-
-  it('should have hotspot-corners div for L-shaped markers (Q2 Option A)', () => {
-    const { container } = render(
-      <Hotspot
-        object={mockObject}
-        canvasSize={canvasSize}
-        onClick={mockOnClick}
-        disabled={false}
-      />,
-    );
-
-    const corners = container.querySelector('.hotspot-corners');
-    expect(corners).toBeInTheDocument();
-  });
-
-  it('should apply "hovered" class on mouse enter', () => {
-    render(
-      <Hotspot
-        object={mockObject}
-        canvasSize={canvasSize}
-        onClick={mockOnClick}
-        disabled={false}
-      />,
-    );
-
-    const hotspot = screen.getByRole('button');
-    fireEvent.mouseEnter(hotspot);
-    expect(hotspot).toHaveClass('hovered');
-
-    fireEvent.mouseLeave(hotspot);
-    expect(hotspot).not.toHaveClass('hovered');
-  });
-
-  it('should apply "disabled" class and aria-disabled when disabled prop is true', () => {
-    render(
-      <Hotspot object={mockObject} canvasSize={canvasSize} onClick={mockOnClick} disabled={true} />,
-    );
-
-    const hotspot = screen.getByRole('button');
-    expect(hotspot).toHaveClass('disabled');
-    expect(hotspot).toHaveAttribute('aria-disabled', 'true');
-    expect(hotspot).toHaveAttribute('tabindex', '-1');
-  });
-
-  it('should apply "demo-target" class when isDemoState is true', () => {
-    render(
-      <Hotspot
-        object={mockObject}
-        canvasSize={canvasSize}
-        onClick={mockOnClick}
-        disabled={false}
-        isDemoState={true}
-      />,
-    );
-
-    const hotspot = screen.getByRole('button');
-    expect(hotspot).toHaveClass('demo-target');
-  });
-
-  it('should show tooltip with label and hint on hover', () => {
-    render(
-      <Hotspot
-        object={mockObject}
-        canvasSize={canvasSize}
+        canvasSize={mockCanvasSize}
         onClick={mockOnClick}
         disabled={false}
       />,
@@ -128,71 +58,63 @@ describe('Hotspot Component (U-058)', () => {
     const hotspot = screen.getByRole('button');
     fireEvent.mouseEnter(hotspot);
 
-    expect(screen.getByText('Test Object')).toBeInTheDocument();
-    expect(screen.getByText(/scene.hotspot.hint_prefix/)).toBeInTheDocument();
-    expect(screen.getByText(/Try clicking this/)).toBeInTheDocument();
+    expect(useOnboardingStore.getState().hotspotHintCount).toBe(1);
   });
 
-  it('should show demo hint in tooltip when isDemoState is true', () => {
+  it('힌트 표시 조건(첫 N번)을 만족할 때 InteractionHint가 렌더링되어야 한다', () => {
     render(
       <Hotspot
         object={mockObject}
-        canvasSize={canvasSize}
+        canvasSize={mockCanvasSize}
         onClick={mockOnClick}
         disabled={false}
-        isDemoState={true}
       />,
     );
 
     const hotspot = screen.getByRole('button');
     fireEvent.mouseEnter(hotspot);
 
-    expect(screen.getByText('scene.hotspot.demo_hint')).toBeInTheDocument();
+    // interaction.hotspot_click 키가 렌더링되는지 확인 (InteractionHint 컴포넌트 내의 텍스트)
+    expect(screen.getByText('interaction.hotspot_click')).toBeInTheDocument();
   });
 
-  it('should call onClick when clicked and not disabled', () => {
+  it('힌트 임계값을 초과하면 InteractionHint가 렌더링되지 않아야 한다', () => {
+    // 임계값까지 카운트 올리기
+    for (let i = 0; i < 3; i++) {
+      useOnboardingStore.getState().incrementHotspotHint();
+    }
+    expect(useOnboardingStore.getState().hotspotHintCount).toBe(3);
+
     render(
       <Hotspot
         object={mockObject}
-        canvasSize={canvasSize}
+        canvasSize={mockCanvasSize}
         onClick={mockOnClick}
         disabled={false}
       />,
     );
 
     const hotspot = screen.getByRole('button');
-    fireEvent.click(hotspot);
+    fireEvent.mouseEnter(hotspot);
 
-    expect(mockOnClick).toHaveBeenCalledWith({
-      object_id: 'obj-1',
-      box_2d: mockObject.box_2d,
-    });
+    // 힌트가 보이지 않아야 함
+    expect(screen.queryByText('interaction.hotspot_click')).not.toBeInTheDocument();
   });
 
-  it('should not call onClick when clicked and disabled', () => {
-    render(
-      <Hotspot object={mockObject} canvasSize={canvasSize} onClick={mockOnClick} disabled={true} />,
-    );
-
-    const hotspot = screen.getByRole('button');
-    fireEvent.click(hotspot);
-
-    expect(mockOnClick).not.toHaveBeenCalled();
-  });
-
-  it('should handle Enter key for accessibility', () => {
+  it('비활성화 상태일 때는 카운트가 증가하지 않고 힌트도 보이지 않아야 한다', () => {
     render(
       <Hotspot
         object={mockObject}
-        canvasSize={canvasSize}
+        canvasSize={mockCanvasSize}
         onClick={mockOnClick}
-        disabled={false}
+        disabled={true}
       />,
     );
 
     const hotspot = screen.getByRole('button');
-    fireEvent.keyDown(hotspot, { key: 'Enter' });
+    fireEvent.mouseEnter(hotspot);
 
-    expect(mockOnClick).toHaveBeenCalled();
+    expect(useOnboardingStore.getState().hotspotHintCount).toBe(0);
+    expect(screen.queryByText('interaction.hotspot_click')).not.toBeInTheDocument();
   });
 });

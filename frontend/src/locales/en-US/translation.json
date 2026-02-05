@@ -289,6 +289,20 @@
     "item_label": "{{name}} (Qty: {{quantity}})",
     "drag_hint": "Drag to use"
   },
+  "interaction": {
+    "hotspot_click": "Click to investigate",
+    "item_drag": "Drag to use",
+    "drop_here": "Drop here",
+    "onboarding_title": "Controls Guide",
+    "onboarding_hotspot": "Click the highlighted areas on the scene to investigate them",
+    "onboarding_item": "Drag inventory items onto scene objects to use them",
+    "onboarding_scanner": "Upload images to the Scanner to convert them into items",
+    "onboarding_skip": "Skip",
+    "onboarding_start": "Start"
+  },
+  "common": {
+    "next": "Next"
+  },
   "panel": {
     "inventory": {
       "title": "Inventory",

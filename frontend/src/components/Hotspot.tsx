@@ -5,6 +5,10 @@
  * - Q1 Option C: Magenta/Purple 계열 강조
  * - Q2 Option A: L자 브라켓 코너 마커
  *
+ * U-074[Mvp]: 핫스팟 인터랙션 안내 UX
+ * - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
+ * - hover 시 "클릭하여 조사" 힌트 표시
+ *
  * RULE-002 준수: 채팅 버블이 아닌 게임 UI
  * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
  *
@@ -14,12 +18,14 @@
  * @module components/Hotspot
  */
 
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDroppable } from '@dnd-kit/core';
 import type { SceneObject, Box2D } from '../schemas/turn';
 import { box2dToPixel, type CanvasSize } from '../utils/box2d';
 import { DND_TYPE, type HotspotDropData } from '../dnd/types';
+import { useOnboardingStore, selectShouldShowHotspotHint } from '../stores/onboardingStore';
+import { InteractionHint } from './InteractionHint';
 import '../styles/hotspot.css';
 
 // =============================================================================
@@ -81,6 +87,17 @@ function HotspotComponent({
 }: HotspotProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
+
+  // U-074: 핫스팟 힌트 상태 (첫 N번만 표시)
+  const shouldShowHint = useOnboardingStore(selectShouldShowHotspotHint);
+  const incrementHotspotHint = useOnboardingStore((state) => state.incrementHotspotHint);
+
+  // U-074: hover 시작 시 힌트 카운트 증가
+  useEffect(() => {
+    if (isHovered && !disabled) {
+      incrementHotspotHint();
+    }
+  }, [isHovered, disabled, incrementHotspotHint]);
 
   // U-012: useDroppable 훅으로 드롭 타겟 설정
   const dropData: HotspotDropData = {
@@ -182,6 +199,16 @@ function HotspotComponent({
             </span>
           )}
         </div>
+      )}
+
+      {/* U-074: 첫 N번만 표시되는 클릭 힌트 (툴팁 외부) */}
+      {isHovered && !disabled && !isOver && shouldShowHint && (
+        <InteractionHint
+          text={t('interaction.hotspot_click')}
+          icon="click"
+          position="bottom"
+          className="interaction-hint--hotspot"
+        />
       )}
     </div>
   );

@@ -53,6 +53,8 @@ import { ScannerSlot } from './components/ScannerSlot';
 // U-015: SaveGame + Demo Profiles
 import { DemoProfileSelect } from './components/DemoProfileSelect';
 import { ResetButton, ChangeProfileButton } from './components/ResetButton';
+// U-074: 온보딩 가이드
+import { OnboardingGuide } from './components/OnboardingGuide';
 import { useAgentStore } from './stores/agentStore';
 import { useInventoryStore } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
@@ -61,6 +63,8 @@ import { useTurnRunner } from './turn/turnRunner';
 import type { ActionCard, DropInput } from './schemas/turn';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
+// U-074: 온보딩 상태
+import { initializeOnboarding } from './stores/onboardingStore';
 // RU-004-Q4: 세션 라이프사이클 SSOT
 // U-044: 세션 언어 SSOT API 추가
 import {
@@ -222,6 +226,13 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // U-074: 게임 시작 시 온보딩 가이드 초기화 (Q3 Option B: 데모 프로필도 표시)
+  useEffect(() => {
+    if (gamePhase === 'playing') {
+      initializeOnboarding();
+    }
+  }, [gamePhase]);
 
   // 턴 완료 시 자동 저장 (turnCount 변화 감지)
   // RU-004-Q4: sessionLifecycle.saveCurrentSession 호출
@@ -489,6 +500,9 @@ function App() {
           </footer>
         </div>
       </DndContext>
+
+      {/* U-074: 온보딩 가이드 (화면 우하단 팝업) */}
+      <OnboardingGuide />
     </>
   );
 }

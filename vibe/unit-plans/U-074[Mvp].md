@@ -219,20 +219,23 @@ const OnboardingGuide: React.FC = () => {
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: hover 힌트 표시 조건?
+- [x] **Q1**: hover 힌트 표시 조건?
   - Option A: 모든 핫스팟/아이템에 항상 표시
   - Option B: 첫 N번만 표시 후 숨김 (학습 후 사라짐)
   - Option C: 설정에서 "힌트 표시" 토글
+  **A1**: Option B
 
-- [ ] **Q2**: 온보딩 가이드 형태?
+- [x] **Q2**: 온보딩 가이드 형태?
   - Option A: 풀스크린 오버레이 + 단계별 하이라이트
   - Option B: 화면 코너에 작은 팝업 가이드
   - Option C: 첫 턴 내러티브에 자연스럽게 녹여서 안내
+  **A2**: Option B
 
-- [ ] **Q3**: 데모 프로필에서 온보딩?
+- [x] **Q3**: 데모 프로필에서 온보딩?
   - Option A: 데모 프로필은 온보딩 스킵 (이미 알고 있다고 가정)
   - Option B: 데모 프로필도 첫 접속 시 온보딩 표시
   - Option C: 프로필별 선택 가능 (Narrator=온보딩O, Explorer=온보딩X 등)
+  **A3**: Option B
 
 ## 참고 자료
 

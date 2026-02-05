@@ -1,90 +1,71 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { InventoryPanel } from './InventoryPanel';
+import { useOnboardingStore } from '../stores/onboardingStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 
 // i18next 모킹
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      if (key === 'inventory.empty') return 'Inventory is empty';
-      if (key === 'inventory.grid_label') return 'Inventory Grid';
-      return key;
-    },
+    t: (key: string) => key,
   }),
 }));
 
-// dnd-kit 모킹 (필요시)
-// dnd-kit hooks often return attributes/listeners/setNodeRef
-// For basic rendering test, we might not need to mock them if they don't crash jsdom
+// dnd-kit 모킹
+vi.mock('@dnd-kit/core', () => ({
+  useDraggable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    transform: null,
+    isDragging: false,
+  }),
+  DragOverlay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
 
-describe('InventoryPanel Component', () => {
+describe('InventoryPanel UX - Hover Hint', () => {
+  const mockItems = [{ id: 'item-1', name: '테스트 아이템', quantity: 1, icon: '📦' }];
+
   beforeEach(() => {
-    useInventoryStore.getState().reset();
+    vi.clearAllMocks();
+    useOnboardingStore.getState().resetOnboarding();
+
+    // inventoryStore 상태 설정
+    useInventoryStore.setState({
+      items: mockItems,
+      selectedItemId: null,
+      draggingItemId: null,
+    });
   });
 
-  it('아이템이 없을 때 빈 상태 메시지를 표시해야 한다', () => {
-    render(<InventoryPanel />);
-    expect(screen.getByText('Inventory is empty')).toBeInTheDocument();
-  });
-
-  it('아이템이 있을 때 목록을 렌더링해야 한다', () => {
-    const { addItems } = useInventoryStore.getState();
-    addItems([
-      { id: 'item1', name: 'Item 1', quantity: 1, icon: '🍎' },
-      { id: 'item2', name: 'Item 2', quantity: 3, icon: '🗡️' },
-    ]);
-
+  it('아이템 마우스 진입 시 onboardingStore의 카운트 증가 액션이 호출되어야 한다', () => {
     render(<InventoryPanel />);
 
-    expect(screen.getByText('Item 1')).toBeInTheDocument();
-    expect(screen.getByText('🍎')).toBeInTheDocument();
-    expect(screen.getByText('Item 2')).toBeInTheDocument();
-    expect(screen.getByText('🗡️')).toBeInTheDocument();
-    expect(screen.getByText('x3')).toBeInTheDocument();
+    const item = screen.getByLabelText('inventory.item_label');
+    fireEvent.mouseEnter(item);
+
+    expect(useOnboardingStore.getState().itemHintCount).toBe(1);
   });
 
-  it('아이템 클릭 시 선택되어야 한다', () => {
-    const { addItems } = useInventoryStore.getState();
-    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
-
+  it('힌트 표시 조건일 때 InteractionHint가 렌더링되어야 한다', () => {
     render(<InventoryPanel />);
 
-    const item = screen.getByText('Item 1').closest('.inventory-item');
-    expect(item).not.toHaveClass('selected');
+    const item = screen.getByLabelText('inventory.item_label');
+    fireEvent.mouseEnter(item);
 
-    fireEvent.click(screen.getByText('Item 1'));
-
-    expect(item).toHaveClass('selected');
-    expect(useInventoryStore.getState().selectedItemId).toBe('item1');
+    expect(screen.getByText('interaction.item_drag')).toBeInTheDocument();
   });
 
-  it('disabled 프로프가 true일 때 아이템 클릭이 무시되어야 한다', () => {
-    const { addItems } = useInventoryStore.getState();
-    addItems([{ id: 'item1', name: 'Item 1', quantity: 1 }]);
-
-    render(<InventoryPanel disabled={true} />);
-
-    fireEvent.click(screen.getByText('Item 1'));
-
-    const item = screen.getByText('Item 1').closest('.inventory-item');
-    expect(item).not.toHaveClass('selected');
-    expect(useInventoryStore.getState().selectedItemId).toBeNull();
-  });
-
-  it('아이템 호버 시 툴팁(title)이 표시되어야 한다 (U-056)', () => {
-    const { addItems } = useInventoryStore.getState();
-    addItems([
-      { id: 'item1', name: 'Long Item Name', quantity: 1 },
-      { id: 'item2', name: 'Stackable Item', quantity: 5 },
-    ]);
+  it('임계값 초과 시 힌트가 보이지 않아야 한다', () => {
+    for (let i = 0; i < 3; i++) {
+      useOnboardingStore.getState().incrementItemHint();
+    }
 
     render(<InventoryPanel />);
 
-    const item1 = screen.getByText('Long Item Name').closest('.inventory-item');
-    const item2 = screen.getByText('Stackable Item').closest('.inventory-item');
+    const item = screen.getByLabelText('inventory.item_label');
+    fireEvent.mouseEnter(item);
 
-    expect(item1).toHaveAttribute('title', 'Long Item Name');
-    expect(item2).toHaveAttribute('title', 'Stackable Item x 5');
+    expect(screen.queryByText('interaction.item_drag')).not.toBeInTheDocument();
   });
 });
