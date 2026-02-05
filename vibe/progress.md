@@ -1,6 +1,32 @@
 # 프로젝트 진행 상황
 
-## [2026-02-05 16:45] [U-080[Mvp]] ⚡핫픽스(최우선) - Vertex AI 제거 → API 키 인증 전용 완료
+## [2026-02-05 16:20] [U-068[Mvp]] 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 이전 턴 생성 이미지를 다음 턴 이미지 생성의 참조 이미지(Reference Image)로 전달하여 시각적 일관성 확보
+- **추가 컴포넌트**: `vibe/unit-results/U-068[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-068-reference-image-runbook.md` (런북)
+- **달성 요구사항**: [Consistency OK] 연속 장면 간 아트 스타일 및 캐릭터 일관성 유지, [RULE-008] 텍스트 우선 + Late-binding 이미지 결합
+
+### 기술적 구현 세부사항
+
+**참조 이미지 파이프라인**:
+- **Reference Tracking**: 프론트엔드 `worldStore`에서 현재 장면 이미지 URL을 `previousImageUrl`로 캡처하고, 다음 `ImageJob` 요청 시 이를 `reference_image_url`로 주입.
+- **Backend Integration**: 백엔드 `image_generation.py` 서비스에서 전달받은 URL로부터 이미지를 로드하여 Gemini API의 `image_reference` 매개변수로 전달.
+- **Observability**: 이미지 생성 로그 및 에이전트 콘솔 메타데이터에 `has_reference` 플래그를 추가하여 연결성 동작 여부를 가시화.
+
+### 코드 구조
+repo-root/
+├── backend/src/unknown_world/
+│   ├── models/turn.py (`ImageJob`에 `reference_image_url` 필드 추가)
+│   └── services/image_generation.py (Gemini API 참조 이미지 연동)
+└── frontend/src/stores/
+    └── worldStore.ts (이전 턴 이미지 추적 및 요청 시 주입)
+
+### 다음 단계
+
+- **U-069**: 텍스트 생성 FAST 모델 + "정밀조사" 트리거 Pro 모델 전환
+- **U-070**: 아이템-핫스팟 사용 시 액션 로그 출력
 
 ### 구현 완료 항목
 

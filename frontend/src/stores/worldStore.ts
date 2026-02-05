@@ -240,10 +240,13 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // - 없으면 'default' 상태 유지
     // - safety.blocked인 경우 'blocked' 상태로 전환
     let newSceneState: SceneCanvasState;
+    const currentImageUrl = state.sceneState.imageUrl ?? state.sceneState.previousImageUrl;
+
     if (output.safety.blocked) {
       newSceneState = {
         status: 'blocked',
         message: output.safety.message ?? undefined,
+        previousImageUrl: currentImageUrl,
       };
     } else if (output.ui.scene?.image_url || output.render?.image_url) {
       // U-053: render.image_url 또는 ui.scene.image_url 중 하나라도 있으면 scene 상태로 전환
@@ -252,11 +255,14 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
         status: 'scene',
         imageUrl: imageUrl!,
         message: output.ui.scene?.alt_text ?? undefined,
+        // 새로운 이미지가 왔으므로 이전 이미지는 보존 (로딩 중이 아님)
+        previousImageUrl: currentImageUrl,
       };
     } else {
       newSceneState = {
         status: 'default',
         message: '',
+        previousImageUrl: currentImageUrl,
       };
     }
 

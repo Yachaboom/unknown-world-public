@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 86/126 (68.3%) | **MVP**: 86/108 (79.6%) | **MMP**: 0/18 (0%)
+**전체**: 87/126 (69.0%) | **MVP**: 87/108 (80.5%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-8 | MMP D-14
+**예상 완료(가정)**: MVP D-7 | MMP D-13
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-081[Mvp]](unit-plans/U-081[Mvp].md) UI 레이아웃 수정 / **최근 완료**: [U-080[Mvp]](unit-results/U-080[Mvp].md) (2026-02-05)
+**진행 중(현재 포커스)**: [U-081[Mvp]](unit-plans/U-081[Mvp].md) UI 레이아웃 수정 / **최근 완료**: [U-068[Mvp]](unit-results/U-068[Mvp].md) (2026-02-05)
 
 **블로커**: 없음
 
@@ -158,7 +158,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-068[Mvp]](unit-plans/U-068[Mvp].md) | 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 | Depends=U-080,U-066 | ⏸️
 ID=[U-069[Mvp]](unit-plans/U-069[Mvp].md) | 텍스트 생성 FAST 모델 + "정밀조사" 트리거 Pro 모델 전환 | Depends=U-080 | ⏸️
 ID=[U-070[Mvp]](unit-plans/U-070[Mvp].md) | 아이템-핫스팟 사용 시 액션 로그 출력 | Depends=U-012 | ⏸️
 ID=[U-071[Mvp]](unit-plans/U-071[Mvp].md) | Scene 처리중 UI 로딩 인디케이터 강화 | Depends=U-066 | ⏸️
@@ -205,6 +204,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-068[Mvp]](unit-results/U-068[Mvp].md): 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 (2026-02-05)
 - ✅ [U-067[Mvp]](unit-results/U-067[Mvp].md): ⚡핫픽스 - Vertex AI Production 설정 수정 (2026-02-04)
 - ✅ [U-066[Mvp]](unit-results/U-066[Mvp].md): 이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) + 타이핑 효과 (2026-02-03)
 - ✅ [U-065[Mvp]](unit-results/U-065[Mvp].md): TurnOutput 스키마 단순화 (Gemini API 제한 대응) (2026-02-02)

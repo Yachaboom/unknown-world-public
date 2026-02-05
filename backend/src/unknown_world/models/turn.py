@@ -496,6 +496,10 @@ class ImageJob(BaseModel):
     reference_image_ids: list[str] = Field(
         default=[], max_length=2, description="참조 이미지 ID 목록 (최대 2개)"
     )
+    reference_image_url: str | None = Field(
+        default=None,
+        description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
+    )
     remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
     image_type_hint: str | None = Field(
         default=None,

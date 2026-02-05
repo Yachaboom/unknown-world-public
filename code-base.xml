@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{py,toml,json,yaml,ts,tsx,js,jsx}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .clude/**, .gemini/**, .vscode/**, vibe/**, backend/.venv/**, frontend/node_modules/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, backend/.venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -122,6 +122,7 @@ backend/tests/unit/test_orchestrator_repair.py
 backend/tests/unit/test_u034_verification.py
 backend/tests/unit/test_u043_language_gate.py
 backend/tests/unit/test_u065_schema_simplification.py
+backend/tests/unit/test_u068_reference_image.py
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -1473,6 +1474,376 @@ window.addEventListener('load', addSorting);
     }
   }
 }
+</file>
+
+<file path="frontend/src/components/AgentConsole.test.tsx">
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { AgentConsole } from './AgentConsole';
+
+// Mock i18n
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// Mock dependencies
+type MockSelector<T> = (state: unknown) => T;
+
+vi.mock('../stores/agentStore', () => ({
+  useAgentStore: <T,>(selector: MockSelector<T>) =>
+    selector({
+      phases: [],
+      badges: [],
+      repairCount: 0,
+      error: null,
+      isStreaming: false,
+    }),
+  selectIsStreaming: (state: { isStreaming: boolean }) => state.isStreaming,
+  selectPhases: (state: { phases: unknown[] }) => state.phases,
+  selectBadges: (state: { badges: unknown[] }) => state.badges,
+  selectRepairCount: (state: { repairCount: number }) => state.repairCount,
+  selectError: (state: { error: unknown }) => state.error,
+}));
+
+describe('AgentConsole (U-037)', () => {
+  it('should render with "critical" importance attribute', () => {
+    const { container } = render(<AgentConsole />);
+
+    // The root element of AgentConsole should have data-ui-importance="critical"
+    const consoleElement = container.firstChild as HTMLElement;
+
+    expect(consoleElement).toHaveAttribute('data-ui-importance', 'critical');
+  });
+
+  it('should render streaming status', () => {
+    render(<AgentConsole />);
+    // Verify that the correct i18n key is used
+    expect(screen.getByText('agent.console.status.idle')).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/AgentConsole.tsx">
+/**
+ * Unknown World - Agent Console 컴포넌트.
+ *
+ * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
+ * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
+ *
+ * @module components/AgentConsole
+ */
+
+import { useTranslation } from 'react-i18next';
+import {
+  useAgentStore,
+  selectIsStreaming,
+  selectPhases,
+  selectBadges,
+  selectRepairCount,
+  selectError,
+  type PhaseInfo,
+} from '../stores/agentStore';
+import type { ValidationBadge } from '../schemas/turn';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/** 단계 표시 이름 i18n 키 */
+const PHASE_KEYS: Record<string, string> = {
+  parse: 'agent.console.phase.parse',
+  validate: 'agent.console.phase.validate',
+  plan: 'agent.console.phase.plan',
+  resolve: 'agent.console.phase.resolve',
+  render: 'agent.console.phase.render',
+  verify: 'agent.console.phase.verify',
+  commit: 'agent.console.phase.commit',
+};
+
+/** 배지 표시 정보 (i18n 키 기반) */
+const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> = {
+  schema_ok: { labelKey: 'agent.console.badge.schema', isOk: true },
+  schema_fail: { labelKey: 'agent.console.badge.schema', isOk: false },
+  economy_ok: { labelKey: 'agent.console.badge.economy', isOk: true },
+  economy_fail: { labelKey: 'agent.console.badge.economy', isOk: false },
+  safety_ok: { labelKey: 'agent.console.badge.safety', isOk: true },
+  safety_blocked: { labelKey: 'agent.console.badge.safety', isOk: false },
+  consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
+  consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
+};
+
+// =============================================================================
+// 하위 컴포넌트
+// =============================================================================
+
+/** 단계 상태 아이콘 */
+function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
+  switch (status) {
+    case 'pending':
+      return <span className="phase-icon pending">○</span>;
+    case 'in_progress':
+      return <span className="phase-icon in-progress">◎</span>;
+    case 'completed':
+      return <span className="phase-icon completed">●</span>;
+    case 'failed':
+      return <span className="phase-icon failed">✕</span>;
+    default:
+      return <span className="phase-icon">○</span>;
+  }
+}
+
+/** 단계 큐 항목 */
+function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
+  const { t } = useTranslation();
+  const key = PHASE_KEYS[phase.name];
+  const label = key ? t(key) : phase.name;
+  const statusClass = `phase-item ${phase.status}`;
+
+  return (
+    <div className={statusClass}>
+      <PhaseIcon status={phase.status} />
+      <span className="phase-label">{label}</span>
+    </div>
+  );
+}
+
+/** 단계 큐 */
+function PhaseQueue() {
+  const { t } = useTranslation();
+  const phases = useAgentStore(selectPhases);
+
+  return (
+    <div className="phase-queue">
+      <div className="queue-label">{t('agent.console.queue')}</div>
+      <div className="queue-items">
+        {phases.map((phase) => (
+          <PhaseQueueItem key={phase.name} phase={phase} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 배지 아이템 */
+function BadgeItem({ badge }: { badge: ValidationBadge }) {
+  const { t } = useTranslation();
+  const info = BADGE_INFO[badge];
+  if (!info) return null;
+
+  const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
+  const statusText = info.isOk ? t('agent.console.badge.ok') : t('agent.console.badge.fail');
+  const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
+  const fallbackIcon = info.isOk ? '✓' : '✗';
+
+  return (
+    <div className={`badge-item ${statusClass}`}>
+      <span className="badge-label">{t(info.labelKey)}</span>
+      <span className="badge-status">
+        <span className="icon-wrapper">
+          <img
+            src={`/ui/icons/${iconName}`}
+            alt=""
+            aria-hidden="true"
+            className="badge-icon-img"
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback" style={{ fontSize: '0.625rem' }}>
+            {fallbackIcon}
+          </span>
+        </span>
+        {statusText}
+      </span>
+    </div>
+  );
+}
+
+/** 배지 패널 */
+function BadgesPanel() {
+  const { t } = useTranslation();
+  const badges = useAgentStore(selectBadges);
+
+  if (badges.length === 0) {
+    return (
+      <div className="badges-panel">
+        <div className="badges-label">{t('agent.console.badges')}</div>
+        <div className="badges-empty">{t('agent.console.badges_empty')}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="badges-panel">
+      <div className="badges-label">{t('agent.console.badges')}</div>
+      <div className="badges-grid">
+        {badges.map((badge, index) => (
+          <BadgeItem key={`${badge}-${index}`} badge={badge} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Auto-repair 트레이스 */
+function RepairTrace() {
+  const { t } = useTranslation();
+  const repairCount = useAgentStore(selectRepairCount);
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  if (repairCount === 0 && !isStreaming) {
+    return null;
+  }
+
+  return (
+    <div className="repair-trace">
+      <span className="repair-label">{t('agent.console.repair')}</span>
+      <span className="repair-count">#{repairCount}</span>
+      {repairCount > 0 && (
+        <span className="repair-status text-warning"> {t('agent.console.repaired')}</span>
+      )}
+    </div>
+  );
+}
+
+/** 에러 표시 */
+function ErrorDisplay() {
+  const error = useAgentStore(selectError);
+
+  if (!error) return null;
+
+  return (
+    <div className="agent-error">
+      <span className="error-icon">⚠</span>
+      <span className="error-message">{error.message}</span>
+      {error.code && <span className="error-code">[{error.code}]</span>}
+    </div>
+  );
+}
+
+/** 스트리밍 상태 표시 */
+function StreamingStatus() {
+  const { t } = useTranslation();
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  return (
+    <div className="streaming-status">
+      <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
+      <span className="status-text">
+        {isStreaming ? t('agent.console.status.processing') : t('agent.console.status.idle')}
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Agent Console 컴포넌트.
+ *
+ * Plan/Queue/Badges/Auto-repair를 실시간으로 표시합니다.
+ * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
+ *
+ * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
+ */
+export function AgentConsole() {
+  return (
+    <div className="agent-console-content" data-ui-importance="critical">
+      <StreamingStatus />
+      <PhaseQueue />
+      <BadgesPanel />
+      <RepairTrace />
+      <ErrorDisplay />
+    </div>
+  );
+}
+
+export default AgentConsole;
+</file>
+
+<file path="frontend/src/i18n.ts">
+/**
+ * Unknown World - i18n 초기화 모듈
+ *
+ * 언어 리소스를 JSON 파일 구조로 관리합니다.
+ * RULE-006 준수: ko/en 혼합 출력 금지, i18n 키 기반 SSOT
+ *
+ * 언어 코드: BCP-47 형식 (ko-KR, en-US)
+ * - TurnInput/SaveGame의 language 필드와 동일한 축
+ *
+ * @see vibe/prd.md 3.1(지원 언어), 8.7(TurnInput.language)
+ * @see frontend/src/locales/README.md
+ */
+
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+// JSON 언어 리소스 import (SSOT: locales/{lang}/translation.json)
+import koKR from './locales/ko-KR/translation.json';
+import enUS from './locales/en-US/translation.json';
+
+/** 지원 언어 타입 (TurnInput.language와 동기화) */
+export type SupportedLanguage = 'ko-KR' | 'en-US';
+
+/** 기본 언어 (데모 일관성을 위해 ko-KR 고정) */
+export const DEFAULT_LANGUAGE: SupportedLanguage = 'ko-KR';
+
+/** 폴백 언어 */
+export const FALLBACK_LANGUAGE: SupportedLanguage = 'en-US';
+
+/** 지원 언어 목록 */
+export const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['ko-KR', 'en-US'];
+
+// i18n 리소스 정의 (BCP-47 형식 언어 코드)
+const resources = {
+  'ko-KR': {
+    translation: koKR,
+  },
+  'en-US': {
+    translation: enUS,
+  },
+};
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: DEFAULT_LANGUAGE,
+  fallbackLng: FALLBACK_LANGUAGE,
+  supportedLngs: SUPPORTED_LANGUAGES,
+  interpolation: {
+    escapeValue: false, // React에서 이미 XSS 방지
+  },
+  // 누락 키 처리 (개발 모드에서 경고)
+  saveMissing: false,
+  missingKeyHandler: (_lngs, _ns, key) => {
+    if (import.meta.env.DEV) {
+      console.warn(`[i18n] Missing translation key: "${key}"`);
+    }
+  },
+});
+
+/**
+ * 현재 해결된 언어 코드를 반환합니다.
+ * TurnInput.language와 동기화할 때 사용합니다.
+ */
+export function getResolvedLanguage(): SupportedLanguage {
+  return (i18n.resolvedLanguage as SupportedLanguage) || DEFAULT_LANGUAGE;
+}
+
+/**
+ * 언어를 변경합니다.
+ * 향후 U-036 완료 후 사용자에게 노출할 토글에서 사용합니다.
+ */
+export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
+  await i18n.changeLanguage(lang);
+}
+
+export default i18n;
 </file>
 
 <file path="frontend/src/main.tsx">
@@ -8394,6 +8765,40 @@ def test_agent_console_badges_max_length():
         AgentConsole(badges=[ValidationBadge.SCHEMA_OK] * 5)
 </file>
 
+<file path="backend/tests/unit/test_u068_reference_image.py">
+"""U-068: 이전 턴 이미지를 참조이미지로 사용하는 기능 테스트."""
+
+import pytest
+
+from unknown_world.models.turn import ImageJob, ModelLabel
+from unknown_world.services.image_generation import ImageGenerationRequest, MockImageGenerator
+
+
+def test_image_job_reference_image_url_field():
+    """ImageJob 모델에 reference_image_url 필드가 있는지 확인합니다."""
+    job = ImageJob(
+        should_generate=True,
+        prompt="A mysterious forest",
+        model_label=ModelLabel.QUALITY,
+        reference_image_url="http://example.com/prev.png",  # 이 부분이 실패해야 함
+    )
+    assert job.reference_image_url == "http://example.com/prev.png"
+
+
+@pytest.mark.asyncio
+async def test_mock_generator_handles_reference_image_url():
+    """MockImageGenerator가 reference_image_url이 포함된 요청을 처리하는지 확인합니다."""
+    generator = MockImageGenerator()
+    request = ImageGenerationRequest(
+        prompt="A mysterious forest", reference_image_url="http://example.com/prev.png"
+    )
+
+    # MockImageGenerator.generate는 현재 reference_image_url을 무시하지만 에러는 나지 않아야 함
+    response = await generator.generate(request)
+    assert response.status.value == "completed"
+    assert response.image_url is not None
+</file>
+
 <file path="frontend/package.json">
 {
   "name": "unknown-world-frontend",
@@ -8452,253 +8857,6 @@ def test_agent_console_badges_max_length():
       "esbuild"
     ]
   }
-}
-</file>
-
-<file path="frontend/src/api/image.ts">
-/**
- * Unknown World - 이미지 생성 API 클라이언트 (U-066)
- *
- * 이미지 생성을 턴과 분리하여 비동기적으로 호출합니다.
- * 텍스트 턴의 TTFB를 블로킹하지 않습니다 (RULE-008).
- *
- * 설계 원칙:
- *   - RULE-004: 실패 시 안전한 폴백 (텍스트-only 진행)
- *   - RULE-007: 프롬프트 원문 노출 금지 (로그에 해시만 기록)
- *   - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
- *
- * @module api/image
- */
-
-import type { Language } from '../schemas/turn';
-
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/** API 베이스 URL */
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8011';
-
-/** 이미지 생성 API 엔드포인트 */
-const IMAGE_GENERATE_ENDPOINT = `${API_BASE_URL}/api/image/generate`;
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/** 이미지 생성 상태 */
-export type ImageGenerationStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'skipped';
-
-/** 모델 티어링 라벨 (U-066) */
-export type ImageModelLabel = 'FAST' | 'QUALITY';
-
-/** 이미지 생성 요청 파라미터 */
-export interface ImageGenerationRequest {
-  /** 이미지 생성 프롬프트 (필수) */
-  prompt: string;
-  /** 언어 (에러 메시지용) */
-  language?: Language;
-  /** 가로세로 비율 */
-  aspectRatio?: string;
-  /** 이미지 크기 */
-  imageSize?: string;
-  /** 참조 이미지 ID 목록 */
-  referenceImageIds?: string[];
-  /** 세션 ID */
-  sessionId?: string;
-  /** 실패 시 건너뛰기 (기본값: true) */
-  skipOnFailure?: boolean;
-  /** 모델 티어링 라벨 (U-066: FAST/QUALITY) */
-  modelLabel?: ImageModelLabel;
-  /** 턴 ID (late-binding 가드용, U-066) */
-  turnId?: number;
-}
-
-/** 이미지 생성 응답 */
-export interface ImageGenerationResponse {
-  /** 성공 여부 */
-  success: boolean;
-  /** 생성 상태 */
-  status: ImageGenerationStatus;
-  /** 생성된 이미지 ID */
-  imageId?: string;
-  /** 생성된 이미지 URL */
-  imageUrl?: string;
-  /** 상태 메시지 */
-  message?: string;
-  /** 생성 소요 시간 (ms) */
-  generationTimeMs: number;
-  /** 사용된 모델 라벨 (U-066) */
-  modelLabel: ImageModelLabel;
-  /** 요청 턴 ID (U-066, late-binding 가드용) */
-  turnId?: number;
-}
-
-/** 이미지 생성 옵션 */
-export interface GenerateImageOptions {
-  /** AbortSignal (요청 취소용) */
-  signal?: AbortSignal;
-  /** 타임아웃 (ms, 기본값: 60000) */
-  timeout?: number;
-}
-
-// =============================================================================
-// API 클라이언트 함수
-// =============================================================================
-
-/**
- * 이미지를 생성합니다.
- *
- * 턴과 분리된 비동기 호출로, 텍스트 스트리밍을 블로킹하지 않습니다.
- * AbortController로 요청을 취소할 수 있습니다.
- *
- * @param request - 이미지 생성 요청 파라미터
- * @param options - 생성 옵션 (signal, timeout)
- * @returns 이미지 생성 응답
- *
- * @example
- * ```ts
- * const controller = new AbortController();
- * const response = await generateImage(
- *   { prompt: 'A dark fantasy scene...', turnId: 5, modelLabel: 'FAST' },
- *   { signal: controller.signal }
- * );
- * if (response.success) {
- *   console.log('Image URL:', response.imageUrl);
- * }
- * // 취소 시: controller.abort();
- * ```
- */
-export async function generateImage(
-  request: ImageGenerationRequest,
-  options: GenerateImageOptions = {},
-): Promise<ImageGenerationResponse> {
-  const { signal, timeout = 60000 } = options;
-
-  // 타임아웃 AbortController (signal이 없을 때 사용)
-  const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
-
-  // 외부 signal과 타임아웃 signal 중 먼저 abort되는 것을 사용
-  const combinedSignal = signal ?? timeoutController.signal;
-
-  try {
-    const response = await fetch(IMAGE_GENERATE_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: request.prompt,
-        language: request.language ?? 'ko-KR',
-        aspect_ratio: request.aspectRatio ?? '16:9',
-        image_size: request.imageSize ?? '1024x1024',
-        reference_image_ids: request.referenceImageIds ?? [],
-        session_id: request.sessionId ?? null,
-        skip_on_failure: request.skipOnFailure ?? true,
-        model_label: request.modelLabel ?? 'QUALITY',
-        turn_id: request.turnId ?? null,
-      }),
-      signal: combinedSignal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      // HTTP 에러 응답 처리
-      const errorText = await response.text().catch(() => 'Unknown error');
-      return {
-        success: false,
-        status: 'failed',
-        message: `HTTP ${response.status}: ${errorText}`,
-        generationTimeMs: 0,
-        modelLabel: request.modelLabel ?? 'QUALITY',
-        turnId: request.turnId,
-      };
-    }
-
-    const data = await response.json();
-
-    // snake_case → camelCase 변환
-    return {
-      success: data.success,
-      status: data.status,
-      imageId: data.image_id,
-      imageUrl: data.image_url,
-      message: data.message,
-      generationTimeMs: data.generation_time_ms ?? 0,
-      modelLabel: data.model_label ?? request.modelLabel ?? 'QUALITY',
-      turnId: data.turn_id ?? request.turnId,
-    };
-  } catch (error) {
-    clearTimeout(timeoutId);
-
-    // AbortError 처리 (취소됨)
-    if (error instanceof Error && error.name === 'AbortError') {
-      return {
-        success: false,
-        status: 'skipped',
-        message: '이미지 생성이 취소되었습니다.',
-        generationTimeMs: 0,
-        modelLabel: request.modelLabel ?? 'QUALITY',
-        turnId: request.turnId,
-      };
-    }
-
-    // 기타 네트워크 에러
-    return {
-      success: false,
-      status: 'failed',
-      message: error instanceof Error ? error.message : '이미지 생성 중 오류가 발생했습니다.',
-      generationTimeMs: 0,
-      modelLabel: request.modelLabel ?? 'QUALITY',
-      turnId: request.turnId,
-    };
-  }
-}
-
-/**
- * 이미지 생성 요청을 생성하고 AbortController를 반환합니다.
- *
- * 턴 완료 후 이미지 생성을 시작하고, 새 턴 시작 시 취소할 수 있습니다.
- *
- * @param request - 이미지 생성 요청 파라미터
- * @param onComplete - 완료 콜백
- * @param onError - 에러 콜백
- * @returns AbortController (취소용)
- *
- * @example
- * ```ts
- * const controller = startImageGeneration(
- *   { prompt: 'A dark fantasy scene...', turnId: 5 },
- *   (response) => {
- *     if (response.success) {
- *       worldStore.setSceneImage(response.imageUrl, response.turnId);
- *     }
- *   },
- *   (error) => console.error('Image generation failed:', error)
- * );
- *
- * // 새 턴 시작 시 이전 요청 취소
- * controller.abort();
- * ```
- */
-export function startImageGeneration(
-  request: ImageGenerationRequest,
-  onComplete: (response: ImageGenerationResponse) => void,
-  onError?: (error: Error) => void,
-): AbortController {
-  const controller = new AbortController();
-
-  generateImage(request, { signal: controller.signal })
-    .then(onComplete)
-    .catch((error) => {
-      if (error instanceof Error && error.name !== 'AbortError') {
-        onError?.(error);
-      }
-    });
-
-  return controller;
 }
 </file>
 
@@ -8939,297 +9097,6 @@ describe('U-063: Economy Balance Preservation in executeTurnStream', () => {
     expect(finalEvent.data.narrative).toContain('서버 연결에 실패');
   });
 });
-</file>
-
-<file path="frontend/src/components/AgentConsole.test.tsx">
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { AgentConsole } from './AgentConsole';
-
-// Mock i18n
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock dependencies
-type MockSelector<T> = (state: unknown) => T;
-
-vi.mock('../stores/agentStore', () => ({
-  useAgentStore: <T,>(selector: MockSelector<T>) =>
-    selector({
-      phases: [],
-      badges: [],
-      repairCount: 0,
-      error: null,
-      isStreaming: false,
-    }),
-  selectIsStreaming: (state: { isStreaming: boolean }) => state.isStreaming,
-  selectPhases: (state: { phases: unknown[] }) => state.phases,
-  selectBadges: (state: { badges: unknown[] }) => state.badges,
-  selectRepairCount: (state: { repairCount: number }) => state.repairCount,
-  selectError: (state: { error: unknown }) => state.error,
-}));
-
-describe('AgentConsole (U-037)', () => {
-  it('should render with "critical" importance attribute', () => {
-    const { container } = render(<AgentConsole />);
-
-    // The root element of AgentConsole should have data-ui-importance="critical"
-    const consoleElement = container.firstChild as HTMLElement;
-
-    expect(consoleElement).toHaveAttribute('data-ui-importance', 'critical');
-  });
-
-  it('should render streaming status', () => {
-    render(<AgentConsole />);
-    // Verify that the correct i18n key is used
-    expect(screen.getByText('agent.console.status.idle')).toBeInTheDocument();
-  });
-});
-</file>
-
-<file path="frontend/src/components/AgentConsole.tsx">
-/**
- * Unknown World - Agent Console 컴포넌트.
- *
- * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
- * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
- *
- * 설계 원칙:
- *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
- *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
- *
- * @module components/AgentConsole
- */
-
-import { useTranslation } from 'react-i18next';
-import {
-  useAgentStore,
-  selectIsStreaming,
-  selectPhases,
-  selectBadges,
-  selectRepairCount,
-  selectError,
-  type PhaseInfo,
-} from '../stores/agentStore';
-import type { ValidationBadge } from '../schemas/turn';
-
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/** 단계 표시 이름 i18n 키 */
-const PHASE_KEYS: Record<string, string> = {
-  parse: 'agent.console.phase.parse',
-  validate: 'agent.console.phase.validate',
-  plan: 'agent.console.phase.plan',
-  resolve: 'agent.console.phase.resolve',
-  render: 'agent.console.phase.render',
-  verify: 'agent.console.phase.verify',
-  commit: 'agent.console.phase.commit',
-};
-
-/** 배지 표시 정보 (i18n 키 기반) */
-const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> = {
-  schema_ok: { labelKey: 'agent.console.badge.schema', isOk: true },
-  schema_fail: { labelKey: 'agent.console.badge.schema', isOk: false },
-  economy_ok: { labelKey: 'agent.console.badge.economy', isOk: true },
-  economy_fail: { labelKey: 'agent.console.badge.economy', isOk: false },
-  safety_ok: { labelKey: 'agent.console.badge.safety', isOk: true },
-  safety_blocked: { labelKey: 'agent.console.badge.safety', isOk: false },
-  consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
-  consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
-};
-
-// =============================================================================
-// 하위 컴포넌트
-// =============================================================================
-
-/** 단계 상태 아이콘 */
-function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
-  switch (status) {
-    case 'pending':
-      return <span className="phase-icon pending">○</span>;
-    case 'in_progress':
-      return <span className="phase-icon in-progress">◎</span>;
-    case 'completed':
-      return <span className="phase-icon completed">●</span>;
-    case 'failed':
-      return <span className="phase-icon failed">✕</span>;
-    default:
-      return <span className="phase-icon">○</span>;
-  }
-}
-
-/** 단계 큐 항목 */
-function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
-  const { t } = useTranslation();
-  const key = PHASE_KEYS[phase.name];
-  const label = key ? t(key) : phase.name;
-  const statusClass = `phase-item ${phase.status}`;
-
-  return (
-    <div className={statusClass}>
-      <PhaseIcon status={phase.status} />
-      <span className="phase-label">{label}</span>
-    </div>
-  );
-}
-
-/** 단계 큐 */
-function PhaseQueue() {
-  const { t } = useTranslation();
-  const phases = useAgentStore(selectPhases);
-
-  return (
-    <div className="phase-queue">
-      <div className="queue-label">{t('agent.console.queue')}</div>
-      <div className="queue-items">
-        {phases.map((phase) => (
-          <PhaseQueueItem key={phase.name} phase={phase} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** 배지 아이템 */
-function BadgeItem({ badge }: { badge: ValidationBadge }) {
-  const { t } = useTranslation();
-  const info = BADGE_INFO[badge];
-  if (!info) return null;
-
-  const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
-  const statusText = info.isOk ? t('agent.console.badge.ok') : t('agent.console.badge.fail');
-  const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
-  const fallbackIcon = info.isOk ? '✓' : '✗';
-
-  return (
-    <div className={`badge-item ${statusClass}`}>
-      <span className="badge-label">{t(info.labelKey)}</span>
-      <span className="badge-status">
-        <span className="icon-wrapper">
-          <img
-            src={`/ui/icons/${iconName}`}
-            alt=""
-            aria-hidden="true"
-            className="badge-icon-img"
-            onError={(e) => e.currentTarget.classList.add('hidden')}
-          />
-          <span className="icon-fallback" style={{ fontSize: '0.625rem' }}>
-            {fallbackIcon}
-          </span>
-        </span>
-        {statusText}
-      </span>
-    </div>
-  );
-}
-
-/** 배지 패널 */
-function BadgesPanel() {
-  const { t } = useTranslation();
-  const badges = useAgentStore(selectBadges);
-
-  if (badges.length === 0) {
-    return (
-      <div className="badges-panel">
-        <div className="badges-label">{t('agent.console.badges')}</div>
-        <div className="badges-empty">{t('agent.console.badges_empty')}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="badges-panel">
-      <div className="badges-label">{t('agent.console.badges')}</div>
-      <div className="badges-grid">
-        {badges.map((badge, index) => (
-          <BadgeItem key={`${badge}-${index}`} badge={badge} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Auto-repair 트레이스 */
-function RepairTrace() {
-  const { t } = useTranslation();
-  const repairCount = useAgentStore(selectRepairCount);
-  const isStreaming = useAgentStore(selectIsStreaming);
-
-  if (repairCount === 0 && !isStreaming) {
-    return null;
-  }
-
-  return (
-    <div className="repair-trace">
-      <span className="repair-label">{t('agent.console.repair')}</span>
-      <span className="repair-count">#{repairCount}</span>
-      {repairCount > 0 && (
-        <span className="repair-status text-warning"> {t('agent.console.repaired')}</span>
-      )}
-    </div>
-  );
-}
-
-/** 에러 표시 */
-function ErrorDisplay() {
-  const error = useAgentStore(selectError);
-
-  if (!error) return null;
-
-  return (
-    <div className="agent-error">
-      <span className="error-icon">⚠</span>
-      <span className="error-message">{error.message}</span>
-      {error.code && <span className="error-code">[{error.code}]</span>}
-    </div>
-  );
-}
-
-/** 스트리밍 상태 표시 */
-function StreamingStatus() {
-  const { t } = useTranslation();
-  const isStreaming = useAgentStore(selectIsStreaming);
-
-  return (
-    <div className="streaming-status">
-      <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
-      <span className="status-text">
-        {isStreaming ? t('agent.console.status.processing') : t('agent.console.status.idle')}
-      </span>
-    </div>
-  );
-}
-
-// =============================================================================
-// 메인 컴포넌트
-// =============================================================================
-
-/**
- * Agent Console 컴포넌트.
- *
- * Plan/Queue/Badges/Auto-repair를 실시간으로 표시합니다.
- * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
- *
- * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
- */
-export function AgentConsole() {
-  return (
-    <div className="agent-console-content" data-ui-importance="critical">
-      <StreamingStatus />
-      <PhaseQueue />
-      <BadgesPanel />
-      <RepairTrace />
-      <ErrorDisplay />
-    </div>
-  );
-}
-
-export default AgentConsole;
 </file>
 
 <file path="frontend/src/components/Hotspot.test.tsx">
@@ -11381,83 +11248,208 @@ describe('demoProfiles (U-015[Mvp])', () => {
 });
 </file>
 
-<file path="frontend/src/i18n.ts">
-/**
- * Unknown World - i18n 초기화 모듈
- *
- * 언어 리소스를 JSON 파일 구조로 관리합니다.
- * RULE-006 준수: ko/en 혼합 출력 금지, i18n 키 기반 SSOT
- *
- * 언어 코드: BCP-47 형식 (ko-KR, en-US)
- * - TurnInput/SaveGame의 language 필드와 동일한 축
- *
- * @see vibe/prd.md 3.1(지원 언어), 8.7(TurnInput.language)
- * @see frontend/src/locales/README.md
- */
+<file path="frontend/src/i18n-scenario.test.ts">
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getSessionLanguage, startSessionFromProfile } from './save/sessionLifecycle';
+import { buildTurnInput } from './turn/turnRunner';
+import { SAVEGAME_STORAGE_KEY, SAVEGAME_VERSION } from './save/constants';
+import { PROFILE_EXPLORER } from './data/demoProfiles';
+import { useWorldStore } from './stores/worldStore';
+import { useInventoryStore } from './stores/inventoryStore';
+import { useEconomyStore } from './stores/economyStore';
 
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-
-// JSON 언어 리소스 import (SSOT: locales/{lang}/translation.json)
-import koKR from './locales/ko-KR/translation.json';
-import enUS from './locales/en-US/translation.json';
-
-/** 지원 언어 타입 (TurnInput.language와 동기화) */
-export type SupportedLanguage = 'ko-KR' | 'en-US';
-
-/** 기본 언어 (데모 일관성을 위해 ko-KR 고정) */
-export const DEFAULT_LANGUAGE: SupportedLanguage = 'ko-KR';
-
-/** 폴백 언어 */
-export const FALLBACK_LANGUAGE: SupportedLanguage = 'en-US';
-
-/** 지원 언어 목록 */
-export const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['ko-KR', 'en-US'];
-
-// i18n 리소스 정의 (BCP-47 형식 언어 코드)
-const resources = {
-  'ko-KR': {
-    translation: koKR,
-  },
-  'en-US': {
-    translation: enUS,
-  },
-};
-
-i18n.use(initReactI18next).init({
-  resources,
-  lng: DEFAULT_LANGUAGE,
-  fallbackLng: FALLBACK_LANGUAGE,
-  supportedLngs: SUPPORTED_LANGUAGES,
-  interpolation: {
-    escapeValue: false, // React에서 이미 XSS 방지
-  },
-  // 누락 키 처리 (개발 모드에서 경고)
-  saveMissing: false,
-  missingKeyHandler: (_lngs, _ns, key) => {
-    if (import.meta.env.DEV) {
-      console.warn(`[i18n] Missing translation key: "${key}"`);
-    }
-  },
+// i18n 모듈 mock
+vi.mock('./i18n', async () => {
+  const actual = await vi.importActual('./i18n');
+  return {
+    ...actual,
+    changeLanguage: vi.fn().mockResolvedValue(undefined),
+    getResolvedLanguage: vi.fn().mockReturnValue('ko-KR'),
+  };
 });
 
-/**
- * 현재 해결된 언어 코드를 반환합니다.
- * TurnInput.language와 동기화할 때 사용합니다.
- */
-export function getResolvedLanguage(): SupportedLanguage {
-  return (i18n.resolvedLanguage as SupportedLanguage) || DEFAULT_LANGUAGE;
-}
+describe('U-044[Mvp] i18n Session SSOT Scenario', () => {
+  const mockT = (key: string) => `translated-${key}`;
 
-/**
- * 언어를 변경합니다.
- * 향후 U-036 완료 후 사용자에게 노출할 토글에서 사용합니다.
- */
-export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
-  await i18n.changeLanguage(lang);
-}
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
 
-export default i18n;
+    // Store 초기화
+    useWorldStore.getState().reset();
+    useInventoryStore.getState().reset();
+    useEconomyStore.getState().reset();
+  });
+
+  describe('Language SSOT (getSessionLanguage)', () => {
+    it('SaveGame이 없을 때는 기본 언어(ko-KR)를 반환해야 한다', () => {
+      expect(getSessionLanguage()).toBe('ko-KR');
+    });
+
+    it('SaveGame에 저장된 언어가 있으면 해당 언어를 반환해야 한다 (en-US)', () => {
+      const saveGame = {
+        version: SAVEGAME_VERSION,
+        language: 'en-US',
+        profileId: 'explorer',
+        savedAt: new Date().toISOString(),
+        economy: { signal: 100, memory_shard: 5 },
+        economyLedger: [],
+        turnCount: 1,
+        narrativeHistory: [],
+        inventory: [],
+        quests: [],
+        activeRules: [],
+        mutationTimeline: [],
+        sceneObjects: [],
+      };
+      localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(saveGame));
+
+      expect(getSessionLanguage()).toBe('en-US');
+    });
+
+    it('i18n resolvedLanguage가 변경되어도 SaveGame 언어를 우선해야 한다 (드리프트 방지)', () => {
+      const saveGame = {
+        version: SAVEGAME_VERSION,
+        language: 'ko-KR',
+        profileId: 'explorer',
+        savedAt: new Date().toISOString(),
+        economy: { signal: 100, memory_shard: 5 },
+        economyLedger: [],
+        turnCount: 1,
+        narrativeHistory: [],
+        inventory: [],
+        quests: [],
+        activeRules: [],
+        mutationTimeline: [],
+        sceneObjects: [],
+      };
+      localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(saveGame));
+
+      // i18n.getResolvedLanguage()가 'en-US'를 반환하도록 상황 가정 (드리프트)
+      // 실제로는 mock이므로 직접 비교는 어렵지만 logic상 validSaveGame 확인 우선순위 검증
+      expect(getSessionLanguage()).toBe('ko-KR');
+    });
+  });
+
+  describe('TurnInput Language Injection', () => {
+    it('buildTurnInput은 외부에서 주입된 언어를 사용해야 한다', () => {
+      const turnInput = buildTurnInput({
+        text: 'hello',
+        economySnapshot: { signal: 100, memory_shard: 0 },
+        theme: 'dark',
+        language: 'en-US', // 주입된 언어
+      });
+
+      expect(turnInput.language).toBe('en-US');
+    });
+  });
+
+  describe('Session Language Policy (Toggle = Reset)', () => {
+    it('startSessionFromProfile 호출 시 명시적 언어를 SaveGame에 반영해야 한다', () => {
+      startSessionFromProfile({
+        profile: PROFILE_EXPLORER,
+
+        t: mockT,
+
+        language: 'en-US',
+      });
+
+      const saved = JSON.parse(localStorage.getItem(SAVEGAME_STORAGE_KEY)!);
+
+      expect(saved.language).toBe('en-US');
+
+      expect(getSessionLanguage()).toBe('en-US');
+    });
+  });
+
+  describe('turnStream Error Message Language', () => {
+    it('네트워크 에러 시 입력 언어에 맞는 한국어 메시지를 반환해야 한다 (ko-KR)', async () => {
+      const { executeTurnStream } = await import('./api/turnStream');
+
+      const mockInput = {
+        language: 'ko-KR' as const,
+
+        text: 'Hello',
+
+        action_id: null,
+
+        click: null,
+
+        drop: null,
+
+        client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+
+        economy_snapshot: { signal: 100, memory_shard: 0 },
+      };
+
+      const onError = vi.fn();
+
+      const onFinal = vi.fn();
+
+      // fetch 실패 유도
+
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
+
+      await executeTurnStream(mockInput, { onError, onFinal });
+
+      // onError 보다는 onFinal의 narrative를 검증 (createClientFallbackTurnOutput)
+
+      // onError는 error.message를 그대로 쓰므로 'Network Error'가 나옴
+
+      expect(onFinal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            language: 'ko-KR',
+
+            narrative: '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.',
+          }),
+        }),
+      );
+
+      vi.unstubAllGlobals();
+    });
+
+    it('네트워크 에러 시 입력 언어에 맞는 영어 메시지를 반환해야 한다 (en-US)', async () => {
+      const { executeTurnStream } = await import('./api/turnStream');
+
+      const mockInput = {
+        language: 'en-US' as const,
+
+        text: 'Hello',
+
+        action_id: null,
+
+        click: null,
+
+        drop: null,
+
+        client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
+
+        economy_snapshot: { signal: 100, memory_shard: 0 },
+      };
+
+      const onFinal = vi.fn();
+
+      // fetch 실패 유도
+
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
+
+      await executeTurnStream(mockInput, { onFinal });
+
+      expect(onFinal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            language: 'en-US',
+
+            narrative: '[System] Failed to connect to server. Please try again.',
+          }),
+        }),
+      );
+
+      vi.unstubAllGlobals();
+    });
+  });
+});
 </file>
 
 <file path="frontend/src/save/migrations.test.ts">
@@ -13987,423 +13979,6 @@ async def run_pipeline(
         ctx.is_fallback = True
 
     return ctx
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/stages/render_helpers.py">
-"""Unknown World - 이미지 생성 판정 헬퍼.
-
-이 모듈은 TurnOutput의 image_job을 분석하여 이미지 생성 여부를 판정하고,
-Economy 기반으로 잔액 검증을 수행하는 헬퍼 함수들을 제공합니다.
-
-설계 원칙:
-    - RULE-005: 재화 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
-    - RULE-007: 프롬프트 원문 로그 노출 금지 (해시만 사용)
-    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
-    - 순수 함수: 테스트 용이성을 위해 부작용 없는 순수 함수로 구현
-
-페어링 질문 결정:
-    - Q1: Option A (고정 비용 10 Signal) - MVP 단순화
-
-참조:
-    - vibe/unit-plans/U-052[Mvp].md
-    - vibe/prd.md 6.7 - Economy HUD/비용 정책
-    - .cursor/rules/00-core-critical.mdc - RULE-005/007/008
-"""
-
-from __future__ import annotations
-
-import hashlib
-import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from unknown_world.models.turn import (
-        EconomySnapshot,
-        ImageJob,
-        TurnOutput,
-    )
-
-# =============================================================================
-# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 상수 정의
-# =============================================================================
-
-# MVP: 이미지 생성 고정 비용 (Q1 결정: Option A)
-IMAGE_GENERATION_COST_SIGNAL = 10
-"""이미지 생성에 필요한 Signal 비용 (MVP 고정값)."""
-
-IMAGE_GENERATION_COST_MEMORY_SHARD = 0
-"""이미지 생성에 필요한 Memory Shard 비용 (MVP에서는 0)."""
-
-
-# =============================================================================
-# 텍스트-only 폴백 메시지 (i18n)
-# =============================================================================
-
-FALLBACK_MESSAGE_KO = "잔액이 부족하여 이미지를 생성할 수 없습니다. 텍스트로 진행합니다."
-"""잔액 부족 시 폴백 메시지 (한국어)."""
-
-FALLBACK_MESSAGE_EN = "Insufficient balance for image generation. Proceeding with text only."
-"""잔액 부족 시 폴백 메시지 (영어)."""
-
-# =============================================================================
-# 이미지 생성 실패 폴백 메시지 (i18n) - U-054
-# =============================================================================
-
-IMAGE_GENERATION_FAILURE_MESSAGE_KO = "이미지 생성에 실패했습니다. 텍스트로 진행합니다."
-"""이미지 생성 실패 시 폴백 메시지 (한국어)."""
-
-IMAGE_GENERATION_FAILURE_MESSAGE_EN = "Image generation failed. Proceeding with text only."
-"""이미지 생성 실패 시 폴백 메시지 (영어)."""
-
-# =============================================================================
-# 안전 정책 차단 메시지 (i18n) - U-054
-# =============================================================================
-
-SAFETY_BLOCKED_MESSAGE_KO = "안전 정책에 따라 이미지를 생성할 수 없습니다."
-"""안전 정책 차단 시 메시지 (한국어)."""
-
-SAFETY_BLOCKED_MESSAGE_EN = "Image generation blocked due to safety policies."
-"""안전 정책 차단 시 메시지 (영어)."""
-
-
-# =============================================================================
-# 판정 결과 데이터 클래스
-# =============================================================================
-
-
-@dataclass(frozen=True)
-class ImageGenerationDecision:
-    """이미지 생성 판정 결과.
-
-    이미지 생성 여부와 관련 정보를 담은 불변 데이터 클래스입니다.
-
-    Attributes:
-        should_generate: 이미지를 생성해야 하는지
-        reason: 판정 사유 (로깅/디버깅용)
-        prompt_hash: 프롬프트 해시 (원문 노출 금지, 로깅용)
-        aspect_ratio: 가로세로 비율 (생성 시)
-        image_size: 이미지 크기 (생성 시)
-        estimated_cost_signal: 예상 Signal 비용
-        fallback_message: 생성 불가 시 폴백 메시지 (선택)
-    """
-
-    should_generate: bool
-    reason: str
-    prompt_hash: str | None = None
-    aspect_ratio: str | None = None
-    image_size: str | None = None
-    estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL
-    fallback_message: str | None = None
-
-
-# =============================================================================
-# ImageJob 분석 헬퍼 함수
-# =============================================================================
-
-
-def extract_image_job(turn_output: TurnOutput) -> ImageJob | None:
-    """TurnOutput에서 ImageJob을 추출합니다.
-
-    Args:
-        turn_output: 검증할 TurnOutput
-
-    Returns:
-        유효한 ImageJob 또는 None
-    """
-    # TurnOutput.render는 default_factory=RenderOutput이므로 항상 존재
-    # render.image_job은 선택적 (None 가능)
-    return turn_output.render.image_job
-
-
-def should_generate_image(image_job: ImageJob | None) -> bool:
-    """이미지 생성 여부를 판정합니다.
-
-    다음 조건을 모두 만족해야 True를 반환합니다:
-    1. image_job이 None이 아님
-    2. image_job.should_generate가 True
-    3. image_job.prompt가 비어있지 않음 (빈 프롬프트 방어)
-
-    Args:
-        image_job: 검사할 ImageJob (None 가능)
-
-    Returns:
-        이미지를 생성해야 하면 True
-    """
-    if image_job is None:
-        return False
-
-    if not image_job.should_generate:
-        return False
-
-    # 빈 프롬프트 방어: 모델이 should_generate=true지만 프롬프트가 없는 경우
-    return bool(image_job.prompt and image_job.prompt.strip())
-
-
-def get_prompt_hash(prompt: str) -> str:
-    """프롬프트의 SHA-256 해시를 생성합니다.
-
-    RULE-007: 프롬프트 원문은 로그에 노출하지 않고 해시만 사용합니다.
-
-    Args:
-        prompt: 해시할 프롬프트
-
-    Returns:
-        8자리 해시 문자열
-    """
-    return hashlib.sha256(prompt.encode()).hexdigest()[:8]
-
-
-# =============================================================================
-# Economy 기반 판정 함수
-# =============================================================================
-
-
-def can_afford_image_generation(
-    economy_snapshot: EconomySnapshot,
-    estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL,
-) -> bool:
-    """이미지 생성 비용을 감당할 수 있는지 판정합니다.
-
-    RULE-005: 잔액 부족 시 생성을 강행하지 않고, 대안(텍스트-only)을 제안합니다.
-
-    Args:
-        economy_snapshot: 현재 재화 스냅샷
-        estimated_cost_signal: 예상 Signal 비용 (기본값: 10)
-
-    Returns:
-        비용을 감당할 수 있으면 True
-    """
-    return economy_snapshot.signal >= estimated_cost_signal
-
-
-def get_fallback_message(language: str) -> str:
-    """언어에 맞는 폴백 메시지를 반환합니다.
-
-    RULE-006: ko/en 언어 정책 준수
-
-    Args:
-        language: 언어 코드 ("ko-KR" 또는 "en-US")
-
-    Returns:
-        해당 언어의 폴백 메시지
-    """
-    if language == "ko-KR":
-        return FALLBACK_MESSAGE_KO
-    return FALLBACK_MESSAGE_EN
-
-
-# =============================================================================
-# 통합 판정 함수
-# =============================================================================
-
-
-def decide_image_generation(
-    turn_output: TurnOutput,
-    economy_snapshot: EconomySnapshot,
-    language: str = "ko-KR",
-) -> ImageGenerationDecision:
-    """이미지 생성 여부를 종합적으로 판정합니다.
-
-    다음 순서로 검증합니다:
-    1. ImageJob 존재 여부
-    2. should_generate 플래그
-    3. 프롬프트 유효성
-    4. 잔액 충분 여부 (RULE-005)
-
-    Args:
-        turn_output: 검증할 TurnOutput
-        economy_snapshot: 현재 재화 스냅샷
-        language: 폴백 메시지 언어 (기본: ko-KR)
-
-    Returns:
-        ImageGenerationDecision: 판정 결과
-    """
-    # 1. ImageJob 추출
-    image_job = extract_image_job(turn_output)
-
-    if image_job is None:
-        logger.debug("[RenderHelpers] ImageJob 없음, 이미지 생성 건너뜀")
-        return ImageGenerationDecision(
-            should_generate=False,
-            reason="no_image_job",
-        )
-
-    # 2. should_generate 플래그 확인
-    if not image_job.should_generate:
-        logger.debug("[RenderHelpers] should_generate=false, 이미지 생성 건너뜀")
-        return ImageGenerationDecision(
-            should_generate=False,
-            reason="should_generate_false",
-        )
-
-    # 3. 프롬프트 유효성 검사
-    if not image_job.prompt or not image_job.prompt.strip():
-        logger.warning("[RenderHelpers] 프롬프트 비어있음, 이미지 생성 건너뜀 (방어)")
-        return ImageGenerationDecision(
-            should_generate=False,
-            reason="empty_prompt",
-        )
-
-    # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
-    prompt_hash = get_prompt_hash(image_job.prompt)
-
-    # 4. 잔액 확인 (RULE-005)
-    if not can_afford_image_generation(economy_snapshot, IMAGE_GENERATION_COST_SIGNAL):
-        fallback_msg = get_fallback_message(language)
-        logger.info(
-            "[RenderHelpers] 잔액 부족, 이미지 생성 건너뜀",
-            extra={
-                "current_signal": economy_snapshot.signal,
-                "required_signal": IMAGE_GENERATION_COST_SIGNAL,
-                "prompt_hash": prompt_hash,
-            },
-        )
-        return ImageGenerationDecision(
-            should_generate=False,
-            reason="insufficient_balance",
-            prompt_hash=prompt_hash,
-            aspect_ratio=image_job.aspect_ratio,
-            image_size=image_job.image_size,
-            estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
-            fallback_message=fallback_msg,
-        )
-
-    # 모든 조건 통과 - 이미지 생성 진행
-    logger.info(
-        "[RenderHelpers] 이미지 생성 판정 통과",
-        extra={
-            "prompt_hash": prompt_hash,
-            "aspect_ratio": image_job.aspect_ratio,
-            "image_size": image_job.image_size,
-            "estimated_cost": IMAGE_GENERATION_COST_SIGNAL,
-        },
-    )
-
-    return ImageGenerationDecision(
-        should_generate=True,
-        reason="all_conditions_met",
-        prompt_hash=prompt_hash,
-        aspect_ratio=image_job.aspect_ratio,
-        image_size=image_job.image_size,
-        estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
-    )
-
-
-# =============================================================================
-# 이미지 생성 실패/안전 차단 헬퍼 함수 (U-054)
-# =============================================================================
-
-
-def is_safety_blocked(message: str | None) -> bool:
-    """응답 메시지가 안전 정책 차단을 나타내는지 확인합니다.
-
-    RULE-004: 안전 차단 시 적절한 메시지가 TurnOutput.safety에 기록되어야 합니다.
-
-    Args:
-        message: 이미지 생성 응답 메시지 (None 가능)
-
-    Returns:
-        안전 정책 차단이면 True
-    """
-    if not message:
-        return False
-
-    message_lower = message.lower()
-    safety_keywords = ["safety", "blocked", "policy", "violation", "prohibited"]
-    return any(keyword in message_lower for keyword in safety_keywords)
-
-
-def get_image_failure_message(language: str) -> str:
-    """언어에 맞는 이미지 생성 실패 폴백 메시지를 반환합니다.
-
-    RULE-006: ko/en 언어 정책 준수
-
-    Args:
-        language: 언어 코드 ("ko-KR" 또는 "en-US")
-
-    Returns:
-        해당 언어의 이미지 생성 실패 메시지
-    """
-    if language == "ko-KR":
-        return IMAGE_GENERATION_FAILURE_MESSAGE_KO
-    return IMAGE_GENERATION_FAILURE_MESSAGE_EN
-
-
-def get_safety_blocked_message(language: str) -> str:
-    """언어에 맞는 안전 정책 차단 메시지를 반환합니다.
-
-    RULE-006: ko/en 언어 정책 준수
-
-    Args:
-        language: 언어 코드 ("ko-KR" 또는 "en-US")
-
-    Returns:
-        해당 언어의 안전 차단 메시지
-    """
-    if language == "ko-KR":
-        return SAFETY_BLOCKED_MESSAGE_KO
-    return SAFETY_BLOCKED_MESSAGE_EN
-
-
-@dataclass(frozen=True)
-class ImageFallbackResult:
-    """이미지 생성 실패 시 폴백 결과.
-
-    U-054: 이미지 생성 실패 시 안전한 폴백 정보를 담은 데이터 클래스입니다.
-
-    Attributes:
-        is_safety_blocked: 안전 정책에 의해 차단되었는지
-        fallback_message: 사용자에게 표시할 폴백 메시지
-        should_update_safety: TurnOutput.safety를 업데이트해야 하는지
-        reason: 폴백 사유 (로깅용)
-    """
-
-    is_safety_blocked: bool
-    fallback_message: str
-    should_update_safety: bool
-    reason: str
-
-
-def create_image_fallback_result(
-    status_message: str | None,
-    language: str = "ko-KR",
-) -> ImageFallbackResult:
-    """이미지 생성 실패에 대한 폴백 결과를 생성합니다.
-
-    U-054: RULE-004에 따라 이미지 생성 실패 시 안전한 폴백을 제공합니다.
-    재시도 없이 즉시 폴백합니다 (Q1: Option A).
-
-    Args:
-        status_message: 이미지 생성 응답 메시지 (실패 사유)
-        language: 폴백 메시지 언어 (기본: ko-KR)
-
-    Returns:
-        ImageFallbackResult: 폴백 처리에 필요한 정보
-    """
-    is_blocked = is_safety_blocked(status_message)
-
-    if is_blocked:
-        return ImageFallbackResult(
-            is_safety_blocked=True,
-            fallback_message=get_safety_blocked_message(language),
-            should_update_safety=True,
-            reason="safety_blocked",
-        )
-
-    return ImageFallbackResult(
-        is_safety_blocked=False,
-        fallback_message=get_image_failure_message(language),
-        should_update_safety=False,
-        reason="generation_failed",
-    )
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/stages/types.py">
@@ -17511,6 +17086,256 @@ if __name__ == "__main__":
     unittest.main()
 </file>
 
+<file path="frontend/src/api/image.ts">
+/**
+ * Unknown World - 이미지 생성 API 클라이언트 (U-066)
+ *
+ * 이미지 생성을 턴과 분리하여 비동기적으로 호출합니다.
+ * 텍스트 턴의 TTFB를 블로킹하지 않습니다 (RULE-008).
+ *
+ * 설계 원칙:
+ *   - RULE-004: 실패 시 안전한 폴백 (텍스트-only 진행)
+ *   - RULE-007: 프롬프트 원문 노출 금지 (로그에 해시만 기록)
+ *   - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+ *
+ * @module api/image
+ */
+
+import type { Language } from '../schemas/turn';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/** API 베이스 URL */
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8011';
+
+/** 이미지 생성 API 엔드포인트 */
+const IMAGE_GENERATE_ENDPOINT = `${API_BASE_URL}/api/image/generate`;
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/** 이미지 생성 상태 */
+export type ImageGenerationStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'skipped';
+
+/** 모델 티어링 라벨 (U-066) */
+export type ImageModelLabel = 'FAST' | 'QUALITY';
+
+/** 이미지 생성 요청 파라미터 */
+export interface ImageGenerationRequest {
+  /** 이미지 생성 프롬프트 (필수) */
+  prompt: string;
+  /** 언어 (에러 메시지용) */
+  language?: Language;
+  /** 가로세로 비율 */
+  aspectRatio?: string;
+  /** 이미지 크기 */
+  imageSize?: string;
+  /** 참조 이미지 ID 목록 */
+  referenceImageIds?: string[];
+  /** 참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지) */
+  referenceImageUrl?: string;
+  /** 세션 ID */
+  sessionId?: string;
+  /** 실패 시 건너뛰기 (기본값: true) */
+  skipOnFailure?: boolean;
+  /** 모델 티어링 라벨 (U-066: FAST/QUALITY) */
+  modelLabel?: ImageModelLabel;
+  /** 턴 ID (late-binding 가드용, U-066) */
+  turnId?: number;
+}
+
+/** 이미지 생성 응답 */
+export interface ImageGenerationResponse {
+  /** 성공 여부 */
+  success: boolean;
+  /** 생성 상태 */
+  status: ImageGenerationStatus;
+  /** 생성된 이미지 ID */
+  imageId?: string;
+  /** 생성된 이미지 URL */
+  imageUrl?: string;
+  /** 상태 메시지 */
+  message?: string;
+  /** 생성 소요 시간 (ms) */
+  generationTimeMs: number;
+  /** 사용된 모델 라벨 (U-066) */
+  modelLabel: ImageModelLabel;
+  /** 요청 턴 ID (U-066, late-binding 가드용) */
+  turnId?: number;
+}
+
+/** 이미지 생성 옵션 */
+export interface GenerateImageOptions {
+  /** AbortSignal (요청 취소용) */
+  signal?: AbortSignal;
+  /** 타임아웃 (ms, 기본값: 60000) */
+  timeout?: number;
+}
+
+// =============================================================================
+// API 클라이언트 함수
+// =============================================================================
+
+/**
+ * 이미지를 생성합니다.
+ *
+ * 턴과 분리된 비동기 호출로, 텍스트 스트리밍을 블로킹하지 않습니다.
+ * AbortController로 요청을 취소할 수 있습니다.
+ *
+ * @param request - 이미지 생성 요청 파라미터
+ * @param options - 생성 옵션 (signal, timeout)
+ * @returns 이미지 생성 응답
+ *
+ * @example
+ * ```ts
+ * const controller = new AbortController();
+ * const response = await generateImage(
+ *   { prompt: 'A dark fantasy scene...', turnId: 5, modelLabel: 'FAST' },
+ *   { signal: controller.signal }
+ * );
+ * if (response.success) {
+ *   console.log('Image URL:', response.imageUrl);
+ * }
+ * // 취소 시: controller.abort();
+ * ```
+ */
+export async function generateImage(
+  request: ImageGenerationRequest,
+  options: GenerateImageOptions = {},
+): Promise<ImageGenerationResponse> {
+  const { signal, timeout = 60000 } = options;
+
+  // 타임아웃 AbortController (signal이 없을 때 사용)
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
+
+  // 외부 signal과 타임아웃 signal 중 먼저 abort되는 것을 사용
+  const combinedSignal = signal ?? timeoutController.signal;
+
+  try {
+    const response = await fetch(IMAGE_GENERATE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: request.prompt,
+        language: request.language ?? 'ko-KR',
+        aspect_ratio: request.aspectRatio ?? '16:9',
+        image_size: request.imageSize ?? '1024x1024',
+        reference_image_ids: request.referenceImageIds ?? [],
+        reference_image_url: request.referenceImageUrl ?? null,
+        session_id: request.sessionId ?? null,
+        skip_on_failure: request.skipOnFailure ?? true,
+        model_label: request.modelLabel ?? 'QUALITY',
+        turn_id: request.turnId ?? null,
+      }),
+      signal: combinedSignal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      // HTTP 에러 응답 처리
+      const errorText = await response.text().catch(() => 'Unknown error');
+      return {
+        success: false,
+        status: 'failed',
+        message: `HTTP ${response.status}: ${errorText}`,
+        generationTimeMs: 0,
+        modelLabel: request.modelLabel ?? 'QUALITY',
+        turnId: request.turnId,
+      };
+    }
+
+    const data = await response.json();
+
+    // snake_case → camelCase 변환
+    return {
+      success: data.success,
+      status: data.status,
+      imageId: data.image_id,
+      imageUrl: data.image_url,
+      message: data.message,
+      generationTimeMs: data.generation_time_ms ?? 0,
+      modelLabel: data.model_label ?? request.modelLabel ?? 'QUALITY',
+      turnId: data.turn_id ?? request.turnId,
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    // AbortError 처리 (취소됨)
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        status: 'skipped',
+        message: '이미지 생성이 취소되었습니다.',
+        generationTimeMs: 0,
+        modelLabel: request.modelLabel ?? 'QUALITY',
+        turnId: request.turnId,
+      };
+    }
+
+    // 기타 네트워크 에러
+    return {
+      success: false,
+      status: 'failed',
+      message: error instanceof Error ? error.message : '이미지 생성 중 오류가 발생했습니다.',
+      generationTimeMs: 0,
+      modelLabel: request.modelLabel ?? 'QUALITY',
+      turnId: request.turnId,
+    };
+  }
+}
+
+/**
+ * 이미지 생성 요청을 생성하고 AbortController를 반환합니다.
+ *
+ * 턴 완료 후 이미지 생성을 시작하고, 새 턴 시작 시 취소할 수 있습니다.
+ *
+ * @param request - 이미지 생성 요청 파라미터
+ * @param onComplete - 완료 콜백
+ * @param onError - 에러 콜백
+ * @returns AbortController (취소용)
+ *
+ * @example
+ * ```ts
+ * const controller = startImageGeneration(
+ *   { prompt: 'A dark fantasy scene...', turnId: 5 },
+ *   (response) => {
+ *     if (response.success) {
+ *       worldStore.setSceneImage(response.imageUrl, response.turnId);
+ *     }
+ *   },
+ *   (error) => console.error('Image generation failed:', error)
+ * );
+ *
+ * // 새 턴 시작 시 이전 요청 취소
+ * controller.abort();
+ * ```
+ */
+export function startImageGeneration(
+  request: ImageGenerationRequest,
+  onComplete: (response: ImageGenerationResponse) => void,
+  onError?: (error: Error) => void,
+): AbortController {
+  const controller = new AbortController();
+
+  generateImage(request, { signal: controller.signal })
+    .then(onComplete)
+    .catch((error) => {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        onError?.(error);
+      }
+    });
+
+  return controller;
+}
+</file>
+
 <file path="frontend/src/api/scanner.ts">
 /**
  * Unknown World - Scanner(이미지 이해) API 클라이언트.
@@ -18942,210 +18767,6 @@ export function calculateBoxArea(box: Box2D): number {
 export function compareHotspotPriority(a: Box2D, b: Box2D): number {
   return calculateBoxArea(b) - calculateBoxArea(a);
 }
-</file>
-
-<file path="frontend/src/i18n-scenario.test.ts">
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getSessionLanguage, startSessionFromProfile } from './save/sessionLifecycle';
-import { buildTurnInput } from './turn/turnRunner';
-import { SAVEGAME_STORAGE_KEY, SAVEGAME_VERSION } from './save/constants';
-import { PROFILE_EXPLORER } from './data/demoProfiles';
-import { useWorldStore } from './stores/worldStore';
-import { useInventoryStore } from './stores/inventoryStore';
-import { useEconomyStore } from './stores/economyStore';
-
-// i18n 모듈 mock
-vi.mock('./i18n', async () => {
-  const actual = await vi.importActual('./i18n');
-  return {
-    ...actual,
-    changeLanguage: vi.fn().mockResolvedValue(undefined),
-    getResolvedLanguage: vi.fn().mockReturnValue('ko-KR'),
-  };
-});
-
-describe('U-044[Mvp] i18n Session SSOT Scenario', () => {
-  const mockT = (key: string) => `translated-${key}`;
-
-  beforeEach(() => {
-    localStorage.clear();
-    vi.clearAllMocks();
-
-    // Store 초기화
-    useWorldStore.getState().reset();
-    useInventoryStore.getState().reset();
-    useEconomyStore.getState().reset();
-  });
-
-  describe('Language SSOT (getSessionLanguage)', () => {
-    it('SaveGame이 없을 때는 기본 언어(ko-KR)를 반환해야 한다', () => {
-      expect(getSessionLanguage()).toBe('ko-KR');
-    });
-
-    it('SaveGame에 저장된 언어가 있으면 해당 언어를 반환해야 한다 (en-US)', () => {
-      const saveGame = {
-        version: SAVEGAME_VERSION,
-        language: 'en-US',
-        profileId: 'explorer',
-        savedAt: new Date().toISOString(),
-        economy: { signal: 100, memory_shard: 5 },
-        economyLedger: [],
-        turnCount: 1,
-        narrativeHistory: [],
-        inventory: [],
-        quests: [],
-        activeRules: [],
-        mutationTimeline: [],
-        sceneObjects: [],
-      };
-      localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(saveGame));
-
-      expect(getSessionLanguage()).toBe('en-US');
-    });
-
-    it('i18n resolvedLanguage가 변경되어도 SaveGame 언어를 우선해야 한다 (드리프트 방지)', () => {
-      const saveGame = {
-        version: SAVEGAME_VERSION,
-        language: 'ko-KR',
-        profileId: 'explorer',
-        savedAt: new Date().toISOString(),
-        economy: { signal: 100, memory_shard: 5 },
-        economyLedger: [],
-        turnCount: 1,
-        narrativeHistory: [],
-        inventory: [],
-        quests: [],
-        activeRules: [],
-        mutationTimeline: [],
-        sceneObjects: [],
-      };
-      localStorage.setItem(SAVEGAME_STORAGE_KEY, JSON.stringify(saveGame));
-
-      // i18n.getResolvedLanguage()가 'en-US'를 반환하도록 상황 가정 (드리프트)
-      // 실제로는 mock이므로 직접 비교는 어렵지만 logic상 validSaveGame 확인 우선순위 검증
-      expect(getSessionLanguage()).toBe('ko-KR');
-    });
-  });
-
-  describe('TurnInput Language Injection', () => {
-    it('buildTurnInput은 외부에서 주입된 언어를 사용해야 한다', () => {
-      const turnInput = buildTurnInput({
-        text: 'hello',
-        economySnapshot: { signal: 100, memory_shard: 0 },
-        theme: 'dark',
-        language: 'en-US', // 주입된 언어
-      });
-
-      expect(turnInput.language).toBe('en-US');
-    });
-  });
-
-  describe('Session Language Policy (Toggle = Reset)', () => {
-    it('startSessionFromProfile 호출 시 명시적 언어를 SaveGame에 반영해야 한다', () => {
-      startSessionFromProfile({
-        profile: PROFILE_EXPLORER,
-
-        t: mockT,
-
-        language: 'en-US',
-      });
-
-      const saved = JSON.parse(localStorage.getItem(SAVEGAME_STORAGE_KEY)!);
-
-      expect(saved.language).toBe('en-US');
-
-      expect(getSessionLanguage()).toBe('en-US');
-    });
-  });
-
-  describe('turnStream Error Message Language', () => {
-    it('네트워크 에러 시 입력 언어에 맞는 한국어 메시지를 반환해야 한다 (ko-KR)', async () => {
-      const { executeTurnStream } = await import('./api/turnStream');
-
-      const mockInput = {
-        language: 'ko-KR' as const,
-
-        text: 'Hello',
-
-        action_id: null,
-
-        click: null,
-
-        drop: null,
-
-        client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-
-        economy_snapshot: { signal: 100, memory_shard: 0 },
-      };
-
-      const onError = vi.fn();
-
-      const onFinal = vi.fn();
-
-      // fetch 실패 유도
-
-      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
-
-      await executeTurnStream(mockInput, { onError, onFinal });
-
-      // onError 보다는 onFinal의 narrative를 검증 (createClientFallbackTurnOutput)
-
-      // onError는 error.message를 그대로 쓰므로 'Network Error'가 나옴
-
-      expect(onFinal).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            language: 'ko-KR',
-
-            narrative: '[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요.',
-          }),
-        }),
-      );
-
-      vi.unstubAllGlobals();
-    });
-
-    it('네트워크 에러 시 입력 언어에 맞는 영어 메시지를 반환해야 한다 (en-US)', async () => {
-      const { executeTurnStream } = await import('./api/turnStream');
-
-      const mockInput = {
-        language: 'en-US' as const,
-
-        text: 'Hello',
-
-        action_id: null,
-
-        click: null,
-
-        drop: null,
-
-        client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
-
-        economy_snapshot: { signal: 100, memory_shard: 0 },
-      };
-
-      const onFinal = vi.fn();
-
-      // fetch 실패 유도
-
-      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
-
-      await executeTurnStream(mockInput, { onFinal });
-
-      expect(onFinal).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            language: 'en-US',
-
-            narrative: '[System] Failed to connect to server. Please try again.',
-          }),
-        }),
-      );
-
-      vi.unstubAllGlobals();
-    });
-  });
-});
 </file>
 
 <file path="frontend/src/save/saveGame.test.ts">
@@ -21361,6 +20982,447 @@ def is_hot_reload_enabled() -> bool:
         핫리로드 활성화 여부
     """
     return _is_development_mode()
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/stages/render_helpers.py">
+"""Unknown World - 이미지 생성 판정 헬퍼.
+
+이 모듈은 TurnOutput의 image_job을 분석하여 이미지 생성 여부를 판정하고,
+Economy 기반으로 잔액 검증을 수행하는 헬퍼 함수들을 제공합니다.
+
+설계 원칙:
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지, 예상 비용 사전 표시)
+    - RULE-007: 프롬프트 원문 로그 노출 금지 (해시만 사용)
+    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    - 순수 함수: 테스트 용이성을 위해 부작용 없는 순수 함수로 구현
+
+페어링 질문 결정:
+    - Q1: Option A (고정 비용 10 Signal) - MVP 단순화
+
+참조:
+    - vibe/unit-plans/U-052[Mvp].md
+    - vibe/prd.md 6.7 - Economy HUD/비용 정책
+    - .cursor/rules/00-core-critical.mdc - RULE-005/007/008
+"""
+
+from __future__ import annotations
+
+import hashlib
+import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from unknown_world.models.turn import (
+        EconomySnapshot,
+        ImageJob,
+        TurnOutput,
+    )
+
+# =============================================================================
+# 로거 설정 (프롬프트/비밀정보 노출 금지 - RULE-007)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 정책 및 상수 정의
+# =============================================================================
+
+
+class ImagePolicy(BaseModel):
+    """이미지 생성 정책 (U-068).
+
+    Attributes:
+        use_reference: 참조 이미지(이전 턴 이미지) 사용 여부
+        max_reference_images: 최대 참조 이미지 수 (기본 1)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    use_reference: bool = Field(default=True, description="참조 이미지 사용 여부")
+    max_reference_images: int = Field(default=1, description="최대 참조 이미지 수")
+
+
+# 기본 정책 인스턴스
+DEFAULT_IMAGE_POLICY = ImagePolicy()
+
+# MVP: 이미지 생성 고정 비용 (Q1 결정: Option A)
+IMAGE_GENERATION_COST_SIGNAL = 10
+"""이미지 생성에 필요한 Signal 비용 (MVP 고정값)."""
+
+IMAGE_GENERATION_COST_MEMORY_SHARD = 0
+"""이미지 생성에 필요한 Memory Shard 비용 (MVP에서는 0)."""
+
+
+# =============================================================================
+# 텍스트-only 폴백 메시지 (i18n)
+# =============================================================================
+
+FALLBACK_MESSAGE_KO = "잔액이 부족하여 이미지를 생성할 수 없습니다. 텍스트로 진행합니다."
+"""잔액 부족 시 폴백 메시지 (한국어)."""
+
+FALLBACK_MESSAGE_EN = "Insufficient balance for image generation. Proceeding with text only."
+"""잔액 부족 시 폴백 메시지 (영어)."""
+
+# =============================================================================
+# 이미지 생성 실패 폴백 메시지 (i18n) - U-054
+# =============================================================================
+
+IMAGE_GENERATION_FAILURE_MESSAGE_KO = "이미지 생성에 실패했습니다. 텍스트로 진행합니다."
+"""이미지 생성 실패 시 폴백 메시지 (한국어)."""
+
+IMAGE_GENERATION_FAILURE_MESSAGE_EN = "Image generation failed. Proceeding with text only."
+"""이미지 생성 실패 시 폴백 메시지 (영어)."""
+
+# =============================================================================
+# 안전 정책 차단 메시지 (i18n) - U-054
+# =============================================================================
+
+SAFETY_BLOCKED_MESSAGE_KO = "안전 정책에 따라 이미지를 생성할 수 없습니다."
+"""안전 정책 차단 시 메시지 (한국어)."""
+
+SAFETY_BLOCKED_MESSAGE_EN = "Image generation blocked due to safety policies."
+"""안전 정책 차단 시 메시지 (영어)."""
+
+
+# =============================================================================
+# 판정 결과 데이터 클래스
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ImageGenerationDecision:
+    """이미지 생성 판정 결과.
+
+    이미지 생성 여부와 관련 정보를 담은 불변 데이터 클래스입니다.
+
+    Attributes:
+        should_generate: 이미지를 생성해야 하는지
+        reason: 판정 사유 (로깅/디버깅용)
+        prompt_hash: 프롬프트 해시 (원문 노출 금지, 로깅용)
+        aspect_ratio: 가로세로 비율 (생성 시)
+        image_size: 이미지 크기 (생성 시)
+        estimated_cost_signal: 예상 Signal 비용
+        fallback_message: 생성 불가 시 폴백 메시지 (선택)
+    """
+
+    should_generate: bool
+    reason: str
+    prompt_hash: str | None = None
+    aspect_ratio: str | None = None
+    image_size: str | None = None
+    reference_image_url: str | None = None
+    estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL
+    fallback_message: str | None = None
+
+
+# =============================================================================
+# ImageJob 분석 헬퍼 함수
+# =============================================================================
+
+
+def extract_image_job(turn_output: TurnOutput) -> ImageJob | None:
+    """TurnOutput에서 ImageJob을 추출합니다.
+
+    Args:
+        turn_output: 검증할 TurnOutput
+
+    Returns:
+        유효한 ImageJob 또는 None
+    """
+    # TurnOutput.render는 default_factory=RenderOutput이므로 항상 존재
+    # render.image_job은 선택적 (None 가능)
+    return turn_output.render.image_job
+
+
+def should_generate_image(image_job: ImageJob | None) -> bool:
+    """이미지 생성 여부를 판정합니다.
+
+    다음 조건을 모두 만족해야 True를 반환합니다:
+    1. image_job이 None이 아님
+    2. image_job.should_generate가 True
+    3. image_job.prompt가 비어있지 않음 (빈 프롬프트 방어)
+
+    Args:
+        image_job: 검사할 ImageJob (None 가능)
+
+    Returns:
+        이미지를 생성해야 하면 True
+    """
+    if image_job is None:
+        return False
+
+    if not image_job.should_generate:
+        return False
+
+    # 빈 프롬프트 방어: 모델이 should_generate=true지만 프롬프트가 없는 경우
+    return bool(image_job.prompt and image_job.prompt.strip())
+
+
+def get_prompt_hash(prompt: str) -> str:
+    """프롬프트의 SHA-256 해시를 생성합니다.
+
+    RULE-007: 프롬프트 원문은 로그에 노출하지 않고 해시만 사용합니다.
+
+    Args:
+        prompt: 해시할 프롬프트
+
+    Returns:
+        8자리 해시 문자열
+    """
+    return hashlib.sha256(prompt.encode()).hexdigest()[:8]
+
+
+# =============================================================================
+# Economy 기반 판정 함수
+# =============================================================================
+
+
+def can_afford_image_generation(
+    economy_snapshot: EconomySnapshot,
+    estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL,
+) -> bool:
+    """이미지 생성 비용을 감당할 수 있는지 판정합니다.
+
+    RULE-005: 잔액 부족 시 생성을 강행하지 않고, 대안(텍스트-only)을 제안합니다.
+
+    Args:
+        economy_snapshot: 현재 재화 스냅샷
+        estimated_cost_signal: 예상 Signal 비용 (기본값: 10)
+
+    Returns:
+        비용을 감당할 수 있으면 True
+    """
+    return economy_snapshot.signal >= estimated_cost_signal
+
+
+def get_fallback_message(language: str) -> str:
+    """언어에 맞는 폴백 메시지를 반환합니다.
+
+    RULE-006: ko/en 언어 정책 준수
+
+    Args:
+        language: 언어 코드 ("ko-KR" 또는 "en-US")
+
+    Returns:
+        해당 언어의 폴백 메시지
+    """
+    if language == "ko-KR":
+        return FALLBACK_MESSAGE_KO
+    return FALLBACK_MESSAGE_EN
+
+
+# =============================================================================
+# 통합 판정 함수
+# =============================================================================
+
+
+def decide_image_generation(
+    turn_output: TurnOutput,
+    economy_snapshot: EconomySnapshot,
+    language: str = "ko-KR",
+) -> ImageGenerationDecision:
+    """이미지 생성 여부를 종합적으로 판정합니다.
+
+    다음 순서로 검증합니다:
+    1. ImageJob 존재 여부
+    2. should_generate 플래그
+    3. 프롬프트 유효성
+    4. 잔액 충분 여부 (RULE-005)
+
+    Args:
+        turn_output: 검증할 TurnOutput
+        economy_snapshot: 현재 재화 스냅샷
+        language: 폴백 메시지 언어 (기본: ko-KR)
+
+    Returns:
+        ImageGenerationDecision: 판정 결과
+    """
+    # 1. ImageJob 추출
+    image_job = extract_image_job(turn_output)
+
+    if image_job is None:
+        logger.debug("[RenderHelpers] ImageJob 없음, 이미지 생성 건너뜀")
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="no_image_job",
+        )
+
+    # 2. should_generate 플래그 확인
+    if not image_job.should_generate:
+        logger.debug("[RenderHelpers] should_generate=false, 이미지 생성 건너뜀")
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="should_generate_false",
+        )
+
+    # 3. 프롬프트 유효성 검사
+    if not image_job.prompt or not image_job.prompt.strip():
+        logger.warning("[RenderHelpers] 프롬프트 비어있음, 이미지 생성 건너뜀 (방어)")
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="empty_prompt",
+        )
+
+    # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
+    prompt_hash = get_prompt_hash(image_job.prompt)
+
+    # 4. 잔액 확인 (RULE-005)
+    if not can_afford_image_generation(economy_snapshot, IMAGE_GENERATION_COST_SIGNAL):
+        fallback_msg = get_fallback_message(language)
+        logger.info(
+            "[RenderHelpers] 잔액 부족, 이미지 생성 건너뜀",
+            extra={
+                "current_signal": economy_snapshot.signal,
+                "required_signal": IMAGE_GENERATION_COST_SIGNAL,
+                "prompt_hash": prompt_hash,
+            },
+        )
+        return ImageGenerationDecision(
+            should_generate=False,
+            reason="insufficient_balance",
+            prompt_hash=prompt_hash,
+            aspect_ratio=image_job.aspect_ratio,
+            image_size=image_job.image_size,
+            reference_image_url=image_job.reference_image_url,
+            estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
+            fallback_message=fallback_msg,
+        )
+
+    # 모든 조건 통과 - 이미지 생성 진행
+    logger.info(
+        "[RenderHelpers] 이미지 생성 판정 통과",
+        extra={
+            "prompt_hash": prompt_hash,
+            "aspect_ratio": image_job.aspect_ratio,
+            "image_size": image_job.image_size,
+            "reference_image_url": image_job.reference_image_url,
+            "estimated_cost": IMAGE_GENERATION_COST_SIGNAL,
+        },
+    )
+
+    return ImageGenerationDecision(
+        should_generate=True,
+        reason="all_conditions_met",
+        prompt_hash=prompt_hash,
+        aspect_ratio=image_job.aspect_ratio,
+        image_size=image_job.image_size,
+        reference_image_url=image_job.reference_image_url,
+        estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
+    )
+
+
+# =============================================================================
+# 이미지 생성 실패/안전 차단 헬퍼 함수 (U-054)
+# =============================================================================
+
+
+def is_safety_blocked(message: str | None) -> bool:
+    """응답 메시지가 안전 정책 차단을 나타내는지 확인합니다.
+
+    RULE-004: 안전 차단 시 적절한 메시지가 TurnOutput.safety에 기록되어야 합니다.
+
+    Args:
+        message: 이미지 생성 응답 메시지 (None 가능)
+
+    Returns:
+        안전 정책 차단이면 True
+    """
+    if not message:
+        return False
+
+    message_lower = message.lower()
+    safety_keywords = ["safety", "blocked", "policy", "violation", "prohibited"]
+    return any(keyword in message_lower for keyword in safety_keywords)
+
+
+def get_image_failure_message(language: str) -> str:
+    """언어에 맞는 이미지 생성 실패 폴백 메시지를 반환합니다.
+
+    RULE-006: ko/en 언어 정책 준수
+
+    Args:
+        language: 언어 코드 ("ko-KR" 또는 "en-US")
+
+    Returns:
+        해당 언어의 이미지 생성 실패 메시지
+    """
+    if language == "ko-KR":
+        return IMAGE_GENERATION_FAILURE_MESSAGE_KO
+    return IMAGE_GENERATION_FAILURE_MESSAGE_EN
+
+
+def get_safety_blocked_message(language: str) -> str:
+    """언어에 맞는 안전 정책 차단 메시지를 반환합니다.
+
+    RULE-006: ko/en 언어 정책 준수
+
+    Args:
+        language: 언어 코드 ("ko-KR" 또는 "en-US")
+
+    Returns:
+        해당 언어의 안전 차단 메시지
+    """
+    if language == "ko-KR":
+        return SAFETY_BLOCKED_MESSAGE_KO
+    return SAFETY_BLOCKED_MESSAGE_EN
+
+
+@dataclass(frozen=True)
+class ImageFallbackResult:
+    """이미지 생성 실패 시 폴백 결과.
+
+    U-054: 이미지 생성 실패 시 안전한 폴백 정보를 담은 데이터 클래스입니다.
+
+    Attributes:
+        is_safety_blocked: 안전 정책에 의해 차단되었는지
+        fallback_message: 사용자에게 표시할 폴백 메시지
+        should_update_safety: TurnOutput.safety를 업데이트해야 하는지
+        reason: 폴백 사유 (로깅용)
+    """
+
+    is_safety_blocked: bool
+    fallback_message: str
+    should_update_safety: bool
+    reason: str
+
+
+def create_image_fallback_result(
+    status_message: str | None,
+    language: str = "ko-KR",
+) -> ImageFallbackResult:
+    """이미지 생성 실패에 대한 폴백 결과를 생성합니다.
+
+    U-054: RULE-004에 따라 이미지 생성 실패 시 안전한 폴백을 제공합니다.
+    재시도 없이 즉시 폴백합니다 (Q1: Option A).
+
+    Args:
+        status_message: 이미지 생성 응답 메시지 (실패 사유)
+        language: 폴백 메시지 언어 (기본: ko-KR)
+
+    Returns:
+        ImageFallbackResult: 폴백 처리에 필요한 정보
+    """
+    is_blocked = is_safety_blocked(status_message)
+
+    if is_blocked:
+        return ImageFallbackResult(
+            is_safety_blocked=True,
+            fallback_message=get_safety_blocked_message(language),
+            should_update_safety=True,
+            reason="safety_blocked",
+        )
+
+    return ImageFallbackResult(
+        is_safety_blocked=False,
+        fallback_message=get_image_failure_message(language),
+        should_update_safety=False,
+        reason="generation_failed",
+    )
 </file>
 
 <file path="backend/src/unknown_world/services/__init__.py">
@@ -26704,1031 +26766,6 @@ venvPath = "."
 venv = ".venv"
 </file>
 
-<file path="backend/src/unknown_world/api/image.py">
-"""Unknown World - 이미지 생성 API 엔드포인트.
-
-이 모듈은 장면 이미지를 조건부로 생성하는 엔드포인트를 제공합니다.
-텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
-
-설계 원칙:
-    - RULE-004: 실패 시 안전한 폴백 (텍스트-only 진행 가능)
-    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
-    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
-    - RULE-007: 프롬프트 원문/비밀정보 노출 금지
-
-페어링 질문 결정:
-    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
-
-참조:
-    - vibe/unit-plans/U-019[Mvp].md
-    - .cursor/rules/20-backend-orchestrator.mdc
-"""
-
-from __future__ import annotations
-
-import logging
-
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict, Field
-
-from unknown_world.models.turn import Language
-from unknown_world.services.image_generation import (
-    ImageGenerationRequest,
-    ImageGenerationStatus,
-    ImageGeneratorType,
-    MockImageGenerator,
-    create_fallback_response,
-    get_image_generator,
-)
-from unknown_world.storage.paths import (
-    DEFAULT_IMAGE_EXTENSION,
-    build_image_url,
-    get_generated_images_dir,
-)
-from unknown_world.storage.validation import (
-    validate_image_generation_request,
-)
-
-# =============================================================================
-# 로거 설정
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-# =============================================================================
-# 라우터 정의
-# =============================================================================
-
-router = APIRouter(
-    prefix="/api/image",
-    tags=["Image Generation"],
-)
-
-
-# =============================================================================
-# 의존성 주입
-# =============================================================================
-
-
-async def get_generator():
-    """이미지 생성기 의존성."""
-    return get_image_generator()
-
-
-# =============================================================================
-# 요청/응답 스키마 (API 계층용)
-# =============================================================================
-
-
-class GenerateImageRequest(BaseModel):
-    """이미지 생성 API 요청.
-
-    TurnOutput.render.image_job과 정합되도록 설계합니다.
-
-    Attributes:
-        prompt: 이미지 생성 프롬프트 (필수)
-        language: 언어 (에러 메시지용, RULE-006)
-        aspect_ratio: 가로세로 비율
-        image_size: 이미지 크기
-        reference_image_ids: 참조 이미지 ID 목록 (편집용)
-        session_id: 세션 ID (파일 그룹화용)
-        skip_on_failure: 실패 시 건너뛰기 (텍스트-only 진행)
-        model_label: 모델 티어링 라벨 (U-066: FAST/QUALITY)
-        turn_id: 턴 ID (late-binding 가드용, U-066)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    prompt: str = Field(min_length=1, max_length=2000, description="이미지 생성 프롬프트")
-    language: Language = Field(default=Language.KO, description="요청 언어")
-    aspect_ratio: str = Field(default="1:1", description="가로세로 비율")
-    image_size: str = Field(default="1024x1024", description="이미지 크기")
-    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
-    session_id: str | None = Field(default=None, description="세션 ID")
-    skip_on_failure: bool = Field(default=True, description="실패 시 건너뛰기 (텍스트-only 진행)")
-    model_label: str = Field(default="QUALITY", description="모델 티어링 라벨 (FAST/QUALITY)")
-    turn_id: int | None = Field(default=None, description="턴 ID (late-binding 가드용)")
-
-
-class GenerateImageResponse(BaseModel):
-    """이미지 생성 API 응답.
-
-    Attributes:
-        success: 성공 여부
-        status: 생성 상태
-        image_id: 생성된 이미지 ID
-        image_url: 생성된 이미지 URL
-        message: 상태 메시지
-        generation_time_ms: 생성 소요 시간
-        model_label: 사용된 모델 라벨 (U-066)
-        turn_id: 요청 턴 ID (U-066, late-binding 가드용)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    success: bool = Field(description="성공 여부")
-    status: ImageGenerationStatus = Field(description="생성 상태")
-    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
-    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
-    message: str | None = Field(default=None, description="상태 메시지")
-    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
-    model_label: str = Field(default="QUALITY", description="사용된 모델 라벨")
-    turn_id: int | None = Field(default=None, description="요청 턴 ID")
-
-
-class ImageStatusResponse(BaseModel):
-    """이미지 상태 조회 응답.
-
-    Attributes:
-        image_id: 이미지 ID
-        exists: 이미지 존재 여부
-        image_url: 이미지 URL (존재하는 경우)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    image_id: str = Field(description="이미지 ID")
-    exists: bool = Field(description="이미지 존재 여부")
-    image_url: str | None = Field(default=None, description="이미지 URL")
-
-
-# =============================================================================
-# 엔드포인트 정의
-# =============================================================================
-
-
-@router.post(
-    "/generate",
-    response_model=GenerateImageResponse,
-    summary="이미지 생성",
-    description="장면 이미지를 생성합니다. 텍스트 턴과 별개로 비동기적으로 호출됩니다.",
-)
-async def generate_image(
-    request: GenerateImageRequest,
-    generator: ImageGeneratorType = Depends(get_generator),
-) -> GenerateImageResponse:
-    """이미지를 생성합니다.
-
-    이 엔드포인트는 TurnOutput의 render.image_job에서 should_generate=true인 경우
-    프론트엔드에서 별도로 호출합니다.
-
-    텍스트 턴의 TTFB를 블로킹하지 않습니다 (RULE-008).
-
-    Args:
-        request: 이미지 생성 요청
-        generator: 이미지 생성기 (의존성 주입)
-
-    Returns:
-        GenerateImageResponse: 생성 결과
-    """
-    # 요청 검증
-    validation_error = validate_image_generation_request(
-        prompt=request.prompt,
-        image_size=request.image_size,
-        language=request.language,
-    )
-
-    if validation_error:
-        logger.warning(
-            "[ImageAPI] 요청 검증 실패",
-            extra={"error": validation_error},
-        )
-
-        if request.skip_on_failure:
-            # 실패 시에도 텍스트-only로 진행 가능하도록 폴백 (RULE-004)
-            fallback = create_fallback_response(validation_error)
-            return GenerateImageResponse(
-                success=False,
-                status=fallback.status,
-                message=fallback.message,
-            )
-        else:
-            raise HTTPException(status_code=400, detail=validation_error)
-
-    # 이미지 생성 실행
-    try:
-        result = await generator.generate(
-            ImageGenerationRequest(
-                prompt=request.prompt,
-                aspect_ratio=request.aspect_ratio,
-                image_size=request.image_size,
-                reference_image_ids=request.reference_image_ids,
-                session_id=request.session_id,
-                model_label=request.model_label,
-            )
-        )
-
-        success = result.status == ImageGenerationStatus.COMPLETED
-
-        return GenerateImageResponse(
-            success=success,
-            status=result.status,
-            image_id=result.image_id,
-            image_url=result.image_url,
-            message=result.message,
-            generation_time_ms=result.generation_time_ms,
-            model_label=request.model_label,
-            turn_id=request.turn_id,
-        )
-
-    except Exception as e:
-        error_type = type(e).__name__
-        logger.error(
-            "[ImageAPI] 이미지 생성 중 예외 발생",
-            extra={"error_type": error_type},
-        )
-
-        if request.skip_on_failure:
-            # 예외 발생 시에도 안전한 폴백 (RULE-004)
-            return GenerateImageResponse(
-                success=False,
-                status=ImageGenerationStatus.FAILED,
-                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"이미지 생성 실패: {error_type}",
-            ) from e
-
-
-@router.get(
-    "/status/{image_id}",
-    response_model=ImageStatusResponse,
-    summary="이미지 상태 조회",
-    description="생성된 이미지의 존재 여부와 URL을 조회합니다.",
-)
-async def get_image_status(
-    image_id: str,
-) -> ImageStatusResponse:
-    """이미지 상태를 조회합니다.
-
-    Args:
-        image_id: 이미지 ID
-
-    Returns:
-        ImageStatusResponse: 이미지 상태
-    """
-    # 파일 존재 확인 (RU-006-Q5: 중앙화된 경로 함수 사용)
-    output_dir = get_generated_images_dir()
-    filename = f"{image_id}.{DEFAULT_IMAGE_EXTENSION}"
-    file_path = output_dir / filename
-    exists = file_path.exists()
-
-    return ImageStatusResponse(
-        image_id=image_id,
-        exists=exists,
-        image_url=build_image_url(filename, category="generated") if exists else None,
-    )
-
-
-@router.get(
-    "/file/{image_id}",
-    summary="이미지 파일 조회",
-    description="생성된 이미지 파일을 반환합니다.",
-    response_class=FileResponse,
-)
-async def get_image_file(
-    image_id: str,
-) -> FileResponse:
-    """이미지 파일을 반환합니다.
-
-    MVP에서는 로컬 파일을 직접 서빙합니다.
-    MMP에서 GCS URL 리다이렉트로 변경 예정.
-
-    Args:
-        image_id: 이미지 ID
-
-    Returns:
-        FileResponse: 이미지 파일
-    """
-    # RU-006-Q5: 중앙화된 경로 함수 사용
-    output_dir = get_generated_images_dir()
-    filename = f"{image_id}.{DEFAULT_IMAGE_EXTENSION}"
-    file_path = output_dir / filename
-
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
-
-    return FileResponse(
-        path=str(file_path),
-        media_type="image/png",
-        filename=filename,
-    )
-
-
-@router.get(
-    "/health",
-    summary="이미지 서비스 헬스체크",
-    description="이미지 생성 서비스의 상태를 확인합니다.",
-)
-async def image_health(
-    generator: ImageGeneratorType = Depends(get_generator),
-) -> dict[str, str | bool]:
-    """이미지 서비스 헬스체크.
-
-    Args:
-        generator: 이미지 생성기
-
-    Returns:
-        헬스 상태 정보
-    """
-    is_available = generator.is_available()
-    # MockImageGenerator 인스턴스인지 직접 확인 (싱글톤 캐시 오염 방지)
-    mode = "mock" if isinstance(generator, MockImageGenerator) else "real"
-
-    return {
-        "status": "ok" if is_available else "degraded",
-        "available": is_available,
-        "mode": mode,
-        "model": "gemini-3-pro-image-preview",
-    }
-</file>
-
-<file path="backend/src/unknown_world/models/turn.py">
-"""Unknown World - TurnInput/TurnOutput Pydantic 스키마.
-
-이 모듈은 Unknown World의 핵심 데이터 모델을 정의합니다.
-Gemini Structured Outputs에 투입 가능한 JSON Schema(부분집합)를 생성할 수 있습니다.
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
-    - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
-    - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
-    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
-
-사용 예시:
-    # Gemini Structured Outputs용 JSON Schema 생성
-    schema = TurnOutput.model_json_schema()
-
-    # 응답 검증
-    output = TurnOutput.model_validate_json(gemini_response_text)
-
-참조:
-    - vibe/prd.md 8.7 (데이터 모델 설계)
-    - vibe/ref/structured-outputs-guide.md
-    - .cursor/rules/00-core-critical.mdc
-"""
-
-from enum import Enum
-from typing import Annotated
-
-from pydantic import BaseModel, ConfigDict, Field
-
-# =============================================================================
-# 공통 Enum 타입
-# =============================================================================
-
-
-class Language(str, Enum):
-    """지원 언어 (RULE-006).
-
-    ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
-    모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
-    """
-
-    KO = "ko-KR"
-    EN = "en-US"
-
-
-class Theme(str, Enum):
-    """테마 설정."""
-
-    DARK = "dark"
-    LIGHT = "light"
-
-
-class AgentPhase(str, Enum):
-    """에이전트 실행 단계 (RULE-008).
-
-    에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
-    """
-
-    PARSE = "parse"
-    VALIDATE = "validate"
-    PLAN = "plan"
-    RESOLVE = "resolve"
-    RENDER = "render"
-    VERIFY = "verify"
-    COMMIT = "commit"
-
-
-class ValidationBadge(str, Enum):
-    """검증 배지 (RULE-008).
-
-    턴 결과에 대한 검증 상태를 표시합니다.
-    """
-
-    SCHEMA_OK = "schema_ok"
-    SCHEMA_FAIL = "schema_fail"
-    ECONOMY_OK = "economy_ok"
-    ECONOMY_FAIL = "economy_fail"
-    SAFETY_OK = "safety_ok"
-    SAFETY_BLOCKED = "safety_blocked"
-    CONSISTENCY_OK = "consistency_ok"
-    CONSISTENCY_FAIL = "consistency_fail"
-
-
-class ModelLabel(str, Enum):
-    """모델/품질 선택 라벨 (RULE-008).
-
-    프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
-    """
-
-    FAST = "FAST"
-    QUALITY = "QUALITY"
-    CHEAP = "CHEAP"
-    REF = "REF"
-
-
-class RiskLevel(str, Enum):
-    """행동 위험도 수준."""
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
-# =============================================================================
-# 공통 하위 타입
-# =============================================================================
-
-# RULE-009: 좌표는 0~1000 정규화 좌표계 (이미지 이해 bbox 포맷과 호환)
-Coordinate = Annotated[int, Field(ge=0, le=1000, description="정규화 좌표 (0~1000)")]
-
-
-class Box2D(BaseModel):
-    """2D 바운딩 박스 (RULE-009).
-
-    좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
-    이미지 이해 bbox 포맷과 호환됩니다.
-
-    Attributes:
-        ymin: Y 최소값 (상단)
-        xmin: X 최소값 (좌측)
-        ymax: Y 최대값 (하단)
-        xmax: X 최대값 (우측)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    ymin: Coordinate
-    xmin: Coordinate
-    ymax: Coordinate
-    xmax: Coordinate
-
-
-class CurrencyAmount(BaseModel):
-    """재화 수량.
-
-    Attributes:
-        signal: 기본 재화 (텍스트 턴/이미지 생성/고급 기능에 소비)
-        memory_shard: 희귀 재화 (중요 설정 고정, 고해상도 이미지 등에 소비)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    signal: Annotated[int, Field(ge=0, description="시그널 (기본 재화, 0 이상)")]
-    memory_shard: Annotated[int, Field(ge=0, description="기억 파편 (희귀 재화, 0 이상)")]
-
-
-# =============================================================================
-# TurnInput 관련 타입
-# =============================================================================
-
-
-class ClickInput(BaseModel):
-    """클릭 입력 정보.
-
-    화면 오브젝트 클릭 시 전달되는 정보입니다.
-
-    Attributes:
-        object_id: 클릭한 오브젝트 ID
-        box_2d: 클릭 위치의 바운딩 박스 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    object_id: str = Field(description="클릭한 오브젝트 ID")
-    box_2d: Box2D | None = Field(default=None, description="클릭 위치 바운딩 박스 (선택)")
-
-
-class DropInput(BaseModel):
-    """드롭 입력 정보 (U-012).
-
-    인벤토리 아이템을 핫스팟에 드롭할 때 전달되는 정보입니다.
-
-    Attributes:
-        item_id: 드롭한 인벤토리 아이템 ID
-        target_object_id: 드롭 대상 핫스팟 오브젝트 ID
-        target_box_2d: 드롭 대상의 바운딩 박스 (0~1000 정규화)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    item_id: str = Field(description="드롭한 인벤토리 아이템 ID")
-    target_object_id: str = Field(description="드롭 대상 핫스팟 오브젝트 ID")
-    target_box_2d: Box2D = Field(description="드롭 대상의 바운딩 박스 (0~1000 정규화)")
-
-
-class ClientInfo(BaseModel):
-    """클라이언트 정보.
-
-    Attributes:
-        viewport_w: 뷰포트 너비 (픽셀)
-        viewport_h: 뷰포트 높이 (픽셀)
-        theme: 현재 테마 (dark/light)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    viewport_w: Annotated[int, Field(gt=0, description="뷰포트 너비 (픽셀)")]
-    viewport_h: Annotated[int, Field(gt=0, description="뷰포트 높이 (픽셀)")]
-    theme: Theme = Field(default=Theme.DARK, description="현재 테마")
-
-
-class EconomySnapshot(BaseModel):
-    """재화 스냅샷 (클라이언트 → 서버).
-
-    클라이언트가 보유한 현재 재화 상태입니다.
-    서버는 이를 검증하고 비용 계산에 사용합니다.
-
-    Attributes:
-        signal: 현재 시그널 잔액
-        memory_shard: 현재 기억 파편 잔액
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    signal: Annotated[int, Field(ge=0, description="현재 시그널 잔액 (0 이상)")]
-    memory_shard: Annotated[int, Field(ge=0, description="현재 기억 파편 잔액 (0 이상)")]
-
-
-class TurnInput(BaseModel):
-    """턴 입력 (클라이언트 → 서버).
-
-    사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
-
-    Attributes:
-        language: 요청 언어 (응답도 동일 언어로 고정)
-        text: 사용자 자연어 입력
-        action_id: 선택한 액션 카드 ID (선택)
-        click: 오브젝트 클릭 정보 (선택)
-        client: 클라이언트 환경 정보
-        economy_snapshot: 현재 재화 상태
-
-    Example:
-        >>> input_data = TurnInput(
-        ...     language=Language.KO,
-        ...     text="문을 열어본다",
-        ...     economy_snapshot=EconomySnapshot(signal=100, memory_shard=5),
-        ...     client=ClientInfo(viewport_w=1920, viewport_h=1080),
-        ... )
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    language: Language = Field(description="요청 언어 (응답도 동일 언어로 고정)")
-    text: str = Field(default="", description="사용자 자연어 입력")
-    action_id: str | None = Field(default=None, description="선택한 액션 카드 ID (선택)")
-    click: ClickInput | None = Field(default=None, description="오브젝트 클릭 정보 (선택)")
-    drop: DropInput | None = Field(default=None, description="아이템 드롭 정보 (선택, U-012)")
-    client: ClientInfo = Field(description="클라이언트 환경 정보")
-    economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - UI
-# =============================================================================
-
-
-class CostEstimate(BaseModel):
-    """비용 추정치 (최소/최대 범위)."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    min: CurrencyAmount = Field(description="최소 예상 비용")
-    max: CurrencyAmount = Field(description="최대 예상 비용")
-
-
-class ActionCard(BaseModel):
-    """액션 카드 (Action Deck) - U-065 단순화.
-
-    매 턴 AI가 추천하는 행동 카드입니다.
-    Gemini Structured Outputs 제한 대응을 위해 핵심 필드만 유지합니다.
-
-    U-065 단순화:
-        - 제거된 필드: description, cost_estimate, hint, reward_hint, disabled_reason
-        - risk, is_alternative는 유지 (게임 메카닉에 필수)
-        - 제거된 정보는 narrative에서 자연어로 표현
-
-    Attributes:
-        id: 카드 고유 ID
-        label: 카드 라벨 (표시용)
-        cost: 예상 비용 (기본)
-        risk: 위험도
-        enabled: 실행 가능 여부 (서버 판단)
-        is_alternative: 저비용 대안 카드 여부
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="카드 고유 ID")
-    label: str = Field(description="카드 라벨 (표시용)")
-    cost: CurrencyAmount = Field(description="예상 비용 (기본)")
-    risk: RiskLevel = Field(default=RiskLevel.LOW, description="위험도")
-    enabled: bool = Field(default=True, description="실행 가능 여부 (서버 판단)")
-    is_alternative: bool = Field(default=False, description="저비용 대안 카드 여부")
-
-
-class SceneObject(BaseModel):
-    """장면 오브젝트 (클릭 가능한 핫스팟).
-
-    화면에서 클릭 가능한 오브젝트입니다.
-    좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
-
-    Attributes:
-        id: 오브젝트 고유 ID
-        label: 오브젝트 라벨 (표시용)
-        box_2d: 바운딩 박스 [ymin, xmin, ymax, xmax]
-        interaction_hint: 상호작용 힌트 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="오브젝트 고유 ID")
-    label: str = Field(description="오브젝트 라벨 (표시용)")
-    box_2d: Box2D = Field(description="바운딩 박스")
-    interaction_hint: str | None = Field(default=None, description="상호작용 힌트 (선택)")
-
-
-class ActionDeck(BaseModel):
-    """액션 덱 (Q1 결정: ui.action_deck.cards[] 구조) - U-065 단순화.
-
-    매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
-
-    U-065 단순화:
-        - max_length: 10 → 5 (Gemini 스키마 제한 대응, Q2 결정)
-
-    Attributes:
-        cards: 액션 카드 목록 (3~5장 권장)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    cards: list[ActionCard] = Field(
-        default=[],
-        min_length=0,
-        max_length=5,
-        description="액션 카드 목록 (3~5장 권장)",
-    )
-
-
-class UIOutput(BaseModel):
-    """UI 출력 데이터 - U-065 단순화.
-
-    AI가 생성한 UI 요소들입니다.
-    채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
-
-    U-065 단순화:
-        - objects max_length: 5로 제한 (Q2 결정)
-
-    Attributes:
-        action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)
-        objects: 클릭 가능한 장면 오브젝트 목록 (최대 5개)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    action_deck: ActionDeck = Field(default_factory=ActionDeck, description="액션 카드 덱")
-    objects: list[SceneObject] = Field(
-        default=[], max_length=5, description="클릭 가능한 장면 오브젝트 목록 (최대 5개)"
-    )
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - World
-# =============================================================================
-
-
-class MemoryPin(BaseModel):
-    """중요 설정 고정 후보.
-
-    사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
-
-    Attributes:
-        id: 핀 고유 ID
-        content: 고정할 내용
-        cost: 고정에 필요한 비용
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="핀 고유 ID")
-    content: str = Field(description="고정할 내용")
-    cost: CurrencyAmount = Field(description="고정에 필요한 비용")
-
-
-class WorldRule(BaseModel):
-    """세계 규칙 (Rule Board).
-
-    현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
-
-    Attributes:
-        id: 규칙 고유 ID
-        label: 규칙 이름
-        description: 규칙 상세 설명 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="규칙 고유 ID")
-    label: str = Field(description="규칙 이름")
-    description: str | None = Field(default=None, description="규칙 상세 설명 (선택)")
-
-
-class Quest(BaseModel):
-    """퀘스트/목표 (Quest Panel).
-
-    플레이어가 달성해야 하는 현재 목표입니다.
-
-    Attributes:
-        id: 퀘스트 고유 ID
-        label: 퀘스트 이름
-        is_completed: 달성 여부
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="퀘스트 고유 ID")
-    label: str = Field(description="퀘스트 이름")
-    is_completed: bool = Field(default=False, description="달성 여부")
-
-
-class WorldDelta(BaseModel):
-    """세계 상태 변화 (Q2 결정: Option A - delta 중심) - U-065 단순화.
-
-    이번 턴에서 변경된 세계 상태를 나타냅니다.
-    snapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.
-
-    U-065 단순화 (Q3 결정: Option A):
-        - rules_changed, quests_updated → 배열 크기 제한 (최대 3개)
-        - memory_pins → 배열 크기 제한 (최대 2개)
-        - 복잡한 중첩 객체의 배열 크기 축소
-        - 상세 정보는 narrative에서 자연어로 표현
-
-    Attributes:
-        rules_changed: 변경되거나 추가된 규칙 목록 (최대 3개)
-        inventory_added: 추가된 인벤토리 아이템 (최대 5개)
-        inventory_removed: 제거된 인벤토리 아이템 (최대 5개)
-        quests_updated: 업데이트된 퀘스트(목표) 목록 (최대 3개)
-        relationships_changed: 변경된 관계 (최대 3개)
-        memory_pins: 중요 설정 고정 후보 (최대 2개)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    rules_changed: list[WorldRule] = Field(
-        default=[], max_length=3, description="변경된 규칙 목록 (최대 3개)"
-    )
-    inventory_added: list[str] = Field(
-        default=[], max_length=5, description="추가된 인벤토리 아이템 (최대 5개)"
-    )
-    inventory_removed: list[str] = Field(
-        default=[], max_length=5, description="제거된 인벤토리 아이템 (최대 5개)"
-    )
-    quests_updated: list[Quest] = Field(
-        default=[], max_length=3, description="업데이트된 퀘스트/목표 목록 (최대 3개)"
-    )
-    relationships_changed: list[str] = Field(
-        default=[], max_length=3, description="변경된 관계 (최대 3개)"
-    )
-    memory_pins: list[MemoryPin] = Field(
-        default=[], max_length=2, description="중요 설정 고정 후보 (최대 2개)"
-    )
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Render
-# =============================================================================
-
-
-class ImageJob(BaseModel):
-    """이미지 생성 작업 - U-065 단순화.
-
-    조건부 이미지 생성/편집 요청입니다.
-    이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.
-
-    U-065 단순화:
-        - reference_image_ids: 배열 크기 제한 (최대 2개)
-        - 기타 필드는 유지 (이미지 파이프라인 필수)
-
-    Attributes:
-        should_generate: 이미지를 생성해야 하는지
-        prompt: 이미지 생성 프롬프트
-        model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)
-        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
-        image_size: 이미지 크기 (예: "1024x1024")
-        reference_image_ids: 참조 이미지 ID 목록 (최대 2개)
-        remove_background: 배경 제거 여부 (U-035, rembg 사용)
-        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    should_generate: bool = Field(description="이미지를 생성해야 하는지")
-    prompt: str = Field(default="", description="이미지 생성 프롬프트")
-    model_label: ModelLabel = Field(default=ModelLabel.FAST, description="모델 선택 라벨")
-    aspect_ratio: str = Field(default="16:9", description="가로세로 비율")
-    image_size: str = Field(default="1024x1024", description="이미지 크기")
-    reference_image_ids: list[str] = Field(
-        default=[], max_length=2, description="참조 이미지 ID 목록 (최대 2개)"
-    )
-    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
-    image_type_hint: str | None = Field(
-        default=None,
-        description="이미지 유형 힌트 (object/character/icon/portrait 등, rembg 모델 자동 선택용)",
-    )
-
-
-class RenderOutput(BaseModel):
-    """렌더링 출력 데이터.
-
-    이미지 생성/편집 관련 정보입니다.
-    image_job은 AI 모델이 생성하고, image_url/image_id는 후처리에서 채워집니다.
-
-    Attributes:
-        image_job: 이미지 생성 작업 (선택, AI 모델 생성)
-        image_url: 생성된 이미지 URL (선택, 후처리에서 채움, U-053)
-        image_id: 생성된 이미지 ID (선택, 후처리에서 채움, U-053)
-        generation_time_ms: 이미지 생성 소요 시간 (밀리초, 선택, U-053)
-        background_removed: 배경 제거 수행 여부 (U-035, 선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    image_job: ImageJob | None = Field(default=None, description="이미지 생성 작업 (선택)")
-    image_url: str | None = Field(
-        default=None, description="생성된 이미지 URL (후처리에서 채움, U-053)"
-    )
-    image_id: str | None = Field(
-        default=None, description="생성된 이미지 ID (후처리에서 채움, U-053)"
-    )
-    generation_time_ms: int | None = Field(
-        default=None, description="이미지 생성 소요 시간 (ms, U-053)"
-    )
-    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Economy
-# =============================================================================
-
-
-class EconomyOutput(BaseModel):
-    """경제 출력 데이터 (RULE-005).
-
-    이번 턴의 비용과 잔액 정보입니다.
-    잔액 음수는 절대 불가 (서버 Hard gate).
-
-    Attributes:
-        cost: 이번 턴에 소비된 비용
-        balance_after: 소비 후 잔액
-
-    Important:
-        - cost와 balance_after는 항상 포함되어야 합니다.
-        - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    cost: CurrencyAmount = Field(description="이번 턴에 소비된 비용")
-    balance_after: CurrencyAmount = Field(description="소비 후 잔액")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Safety
-# =============================================================================
-
-
-class SafetyOutput(BaseModel):
-    """안전 출력 데이터.
-
-    안전 정책 관련 정보입니다.
-    차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
-
-    Attributes:
-        blocked: 안전 정책에 의해 차단되었는지
-        message: 차단 시 사용자에게 표시할 메시지 (선택)
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    blocked: bool = Field(default=False, description="안전 정책에 의해 차단되었는지")
-    message: str | None = Field(default=None, description="차단 시 사용자에게 표시할 메시지 (선택)")
-
-
-# =============================================================================
-# TurnOutput 관련 타입 - Agent Console
-# =============================================================================
-
-
-class AgentConsole(BaseModel):
-    """에이전트 콘솔 데이터 (RULE-008) - U-065 단순화.
-
-    에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
-    계획/실행/검증/복구의 흔적을 표시합니다.
-
-    U-065 단순화:
-        - badges: 배열 크기 제한 (최대 4개)
-
-    Attributes:
-        current_phase: 현재 실행 단계
-        badges: 검증 배지 목록 (최대 4개)
-        repair_count: 자동 복구 시도 횟수
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    current_phase: AgentPhase = Field(default=AgentPhase.COMMIT, description="현재 실행 단계")
-    badges: list[ValidationBadge] = Field(
-        default=[], max_length=4, description="검증 배지 목록 (최대 4개)"
-    )
-    repair_count: Annotated[int, Field(ge=0, description="자동 복구 시도 횟수")] = 0
-
-
-# =============================================================================
-# TurnOutput (메인 응답 스키마)
-# =============================================================================
-
-
-class TurnOutput(BaseModel):
-    """턴 출력 (서버 → 클라이언트).
-
-    서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
-    Gemini Structured Outputs(JSON Schema)로 강제됩니다.
-
-    Hard Gate 필드 (RULE-003/004/005):
-        - economy: cost와 balance_after 필수, 잔액 음수 금지
-        - safety: blocked 시 안전한 대체 결과 제공
-        - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
-
-    Attributes:
-        language: 응답 언어 (요청과 동일)
-        narrative: 내러티브 텍스트 (표시용)
-        ui: UI 요소 (액션 덱, 오브젝트)
-        world: 세계 상태 변화 (delta 중심)
-        render: 렌더링 정보 (이미지 생성 작업)
-        economy: 경제 정보 (비용, 잔액)
-        safety: 안전 정책 정보
-        agent_console: 에이전트 실행 정보 (단계, 배지, 복구 횟수)
-
-    Example:
-        >>> output = TurnOutput(
-        ...     language=Language.KO,
-        ...     narrative="문이 삐걱거리며 열립니다...",
-        ...     economy=EconomyOutput(
-        ...         cost=CurrencyAmount(signal=5, memory_shard=0),
-        ...         balance_after=CurrencyAmount(signal=95, memory_shard=5),
-        ...     ),
-        ...     safety=SafetyOutput(blocked=False),
-        ... )
-        >>> schema = TurnOutput.model_json_schema()
-
-    Schema Generation:
-        >>> # Gemini Structured Outputs용 JSON Schema 생성
-        >>> json_schema = TurnOutput.model_json_schema()
-        >>> # response_json_schema 파라미터에 전달
-        >>> config = {
-        ...     "response_mime_type": "application/json",
-        ...     "response_json_schema": json_schema,
-        ... }
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    # 필수 필드 (Hard Gate)
-    language: Language = Field(description="응답 언어 (요청과 동일)")
-    narrative: str = Field(description="내러티브 텍스트 (표시용)")
-    economy: EconomyOutput = Field(description="경제 정보 (비용, 잔액)")
-    safety: SafetyOutput = Field(description="안전 정책 정보")
-
-    # UI 관련 필드
-    ui: UIOutput = Field(default_factory=UIOutput, description="UI 요소")
-
-    # 세계 상태 필드
-    world: WorldDelta = Field(default_factory=WorldDelta, description="세계 상태 변화 (delta)")
-
-    # 렌더링 필드
-    render: RenderOutput = Field(default_factory=RenderOutput, description="렌더링 정보")
-
-    # 에이전트 콘솔 필드
-    agent_console: AgentConsole = Field(
-        default_factory=AgentConsole, description="에이전트 실행 정보"
-    )
-</file>
-
 <file path="backend/src/unknown_world/orchestrator/generate_turn_output.py">
 """Unknown World - TurnOutput 생성 모듈 (Structured Outputs).
 
@@ -30013,6 +29050,354 @@ describe('DnD Interaction - Logic Test', () => {
 });
 </file>
 
+<file path="backend/src/unknown_world/api/image.py">
+"""Unknown World - 이미지 생성 API 엔드포인트.
+
+이 모듈은 장면 이미지를 조건부로 생성하는 엔드포인트를 제공합니다.
+텍스트 턴의 TTFB를 블로킹하지 않도록 분리된 경로로 동작합니다.
+
+설계 원칙:
+    - RULE-004: 실패 시 안전한 폴백 (텍스트-only 진행 가능)
+    - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    - RULE-010: 이미지 모델 ID 고정 (gemini-3-pro-image-preview)
+    - RULE-007: 프롬프트 원문/비밀정보 노출 금지
+
+페어링 질문 결정:
+    - Q1: Option A (로컬 파일로 저장 후 image_url로 서빙)
+
+참조:
+    - vibe/unit-plans/U-019[Mvp].md
+    - .cursor/rules/20-backend-orchestrator.mdc
+"""
+
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict, Field
+
+from unknown_world.models.turn import Language
+from unknown_world.services.image_generation import (
+    ImageGenerationRequest,
+    ImageGenerationStatus,
+    ImageGeneratorType,
+    MockImageGenerator,
+    create_fallback_response,
+    get_image_generator,
+)
+from unknown_world.storage.paths import (
+    DEFAULT_IMAGE_EXTENSION,
+    build_image_url,
+    get_generated_images_dir,
+)
+from unknown_world.storage.validation import (
+    validate_image_generation_request,
+)
+
+# =============================================================================
+# 로거 설정
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# 라우터 정의
+# =============================================================================
+
+router = APIRouter(
+    prefix="/api/image",
+    tags=["Image Generation"],
+)
+
+
+# =============================================================================
+# 의존성 주입
+# =============================================================================
+
+
+async def get_generator():
+    """이미지 생성기 의존성."""
+    return get_image_generator()
+
+
+# =============================================================================
+# 요청/응답 스키마 (API 계층용)
+# =============================================================================
+
+
+class GenerateImageRequest(BaseModel):
+    """이미지 생성 API 요청.
+
+    TurnOutput.render.image_job과 정합되도록 설계합니다.
+
+    Attributes:
+        prompt: 이미지 생성 프롬프트 (필수)
+        language: 언어 (에러 메시지용, RULE-006)
+        aspect_ratio: 가로세로 비율
+        image_size: 이미지 크기
+        reference_image_ids: 참조 이미지 ID 목록 (편집용)
+        reference_image_url: 참조 이미지 URL (U-068: 이전 턴 이미지 연결성)
+        session_id: 세션 ID (파일 그룹화용)
+        skip_on_failure: 실패 시 건너뛰기 (텍스트-only 진행)
+        model_label: 모델 티어링 라벨 (U-066: FAST/QUALITY)
+        turn_id: 턴 ID (late-binding 가드용, U-066)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=1, max_length=2000, description="이미지 생성 프롬프트")
+    language: Language = Field(default=Language.KO, description="요청 언어")
+    aspect_ratio: str = Field(default="1:1", description="가로세로 비율")
+    image_size: str = Field(default="1024x1024", description="이미지 크기")
+    reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    reference_image_url: str | None = Field(
+        default=None,
+        description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
+    )
+    session_id: str | None = Field(default=None, description="세션 ID")
+    skip_on_failure: bool = Field(default=True, description="실패 시 건너뛰기 (텍스트-only 진행)")
+    model_label: str = Field(default="QUALITY", description="모델 티어링 라벨 (FAST/QUALITY)")
+    turn_id: int | None = Field(default=None, description="턴 ID (late-binding 가드용)")
+
+
+class GenerateImageResponse(BaseModel):
+    """이미지 생성 API 응답.
+
+    Attributes:
+        success: 성공 여부
+        status: 생성 상태
+        image_id: 생성된 이미지 ID
+        image_url: 생성된 이미지 URL
+        message: 상태 메시지
+        generation_time_ms: 생성 소요 시간
+        model_label: 사용된 모델 라벨 (U-066)
+        turn_id: 요청 턴 ID (U-066, late-binding 가드용)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool = Field(description="성공 여부")
+    status: ImageGenerationStatus = Field(description="생성 상태")
+    image_id: str | None = Field(default=None, description="생성된 이미지 ID")
+    image_url: str | None = Field(default=None, description="생성된 이미지 URL")
+    message: str | None = Field(default=None, description="상태 메시지")
+    generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
+    model_label: str = Field(default="QUALITY", description="사용된 모델 라벨")
+    turn_id: int | None = Field(default=None, description="요청 턴 ID")
+
+
+class ImageStatusResponse(BaseModel):
+    """이미지 상태 조회 응답.
+
+    Attributes:
+        image_id: 이미지 ID
+        exists: 이미지 존재 여부
+        image_url: 이미지 URL (존재하는 경우)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_id: str = Field(description="이미지 ID")
+    exists: bool = Field(description="이미지 존재 여부")
+    image_url: str | None = Field(default=None, description="이미지 URL")
+
+
+# =============================================================================
+# 엔드포인트 정의
+# =============================================================================
+
+
+@router.post(
+    "/generate",
+    response_model=GenerateImageResponse,
+    summary="이미지 생성",
+    description="장면 이미지를 생성합니다. 텍스트 턴과 별개로 비동기적으로 호출됩니다.",
+)
+async def generate_image(
+    request: GenerateImageRequest,
+    generator: ImageGeneratorType = Depends(get_generator),
+) -> GenerateImageResponse:
+    """이미지를 생성합니다.
+
+    이 엔드포인트는 TurnOutput의 render.image_job에서 should_generate=true인 경우
+    프론트엔드에서 별도로 호출합니다.
+
+    텍스트 턴의 TTFB를 블로킹하지 않습니다 (RULE-008).
+
+    Args:
+        request: 이미지 생성 요청
+        generator: 이미지 생성기 (의존성 주입)
+
+    Returns:
+        GenerateImageResponse: 생성 결과
+    """
+    # 요청 검증
+    validation_error = validate_image_generation_request(
+        prompt=request.prompt,
+        image_size=request.image_size,
+        language=request.language,
+    )
+
+    if validation_error:
+        logger.warning(
+            "[ImageAPI] 요청 검증 실패",
+            extra={"error": validation_error},
+        )
+
+        if request.skip_on_failure:
+            # 실패 시에도 텍스트-only로 진행 가능하도록 폴백 (RULE-004)
+            fallback = create_fallback_response(validation_error)
+            return GenerateImageResponse(
+                success=False,
+                status=fallback.status,
+                message=fallback.message,
+            )
+        else:
+            raise HTTPException(status_code=400, detail=validation_error)
+
+    # 이미지 생성 실행
+    try:
+        result = await generator.generate(
+            ImageGenerationRequest(
+                prompt=request.prompt,
+                aspect_ratio=request.aspect_ratio,
+                image_size=request.image_size,
+                reference_image_ids=request.reference_image_ids,
+                reference_image_url=request.reference_image_url,
+                session_id=request.session_id,
+                model_label=request.model_label,
+            )
+        )
+
+        success = result.status == ImageGenerationStatus.COMPLETED
+
+        return GenerateImageResponse(
+            success=success,
+            status=result.status,
+            image_id=result.image_id,
+            image_url=result.image_url,
+            message=result.message,
+            generation_time_ms=result.generation_time_ms,
+            model_label=request.model_label,
+            turn_id=request.turn_id,
+        )
+
+    except Exception as e:
+        error_type = type(e).__name__
+        logger.error(
+            "[ImageAPI] 이미지 생성 중 예외 발생",
+            extra={"error_type": error_type},
+        )
+
+        if request.skip_on_failure:
+            # 예외 발생 시에도 안전한 폴백 (RULE-004)
+            return GenerateImageResponse(
+                success=False,
+                status=ImageGenerationStatus.FAILED,
+                message=f"이미지 생성 중 오류가 발생했습니다: {error_type}",
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"이미지 생성 실패: {error_type}",
+            ) from e
+
+
+@router.get(
+    "/status/{image_id}",
+    response_model=ImageStatusResponse,
+    summary="이미지 상태 조회",
+    description="생성된 이미지의 존재 여부와 URL을 조회합니다.",
+)
+async def get_image_status(
+    image_id: str,
+) -> ImageStatusResponse:
+    """이미지 상태를 조회합니다.
+
+    Args:
+        image_id: 이미지 ID
+
+    Returns:
+        ImageStatusResponse: 이미지 상태
+    """
+    # 파일 존재 확인 (RU-006-Q5: 중앙화된 경로 함수 사용)
+    output_dir = get_generated_images_dir()
+    filename = f"{image_id}.{DEFAULT_IMAGE_EXTENSION}"
+    file_path = output_dir / filename
+    exists = file_path.exists()
+
+    return ImageStatusResponse(
+        image_id=image_id,
+        exists=exists,
+        image_url=build_image_url(filename, category="generated") if exists else None,
+    )
+
+
+@router.get(
+    "/file/{image_id}",
+    summary="이미지 파일 조회",
+    description="생성된 이미지 파일을 반환합니다.",
+    response_class=FileResponse,
+)
+async def get_image_file(
+    image_id: str,
+) -> FileResponse:
+    """이미지 파일을 반환합니다.
+
+    MVP에서는 로컬 파일을 직접 서빙합니다.
+    MMP에서 GCS URL 리다이렉트로 변경 예정.
+
+    Args:
+        image_id: 이미지 ID
+
+    Returns:
+        FileResponse: 이미지 파일
+    """
+    # RU-006-Q5: 중앙화된 경로 함수 사용
+    output_dir = get_generated_images_dir()
+    filename = f"{image_id}.{DEFAULT_IMAGE_EXTENSION}"
+    file_path = output_dir / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="image/png",
+        filename=filename,
+    )
+
+
+@router.get(
+    "/health",
+    summary="이미지 서비스 헬스체크",
+    description="이미지 생성 서비스의 상태를 확인합니다.",
+)
+async def image_health(
+    generator: ImageGeneratorType = Depends(get_generator),
+) -> dict[str, str | bool]:
+    """이미지 서비스 헬스체크.
+
+    Args:
+        generator: 이미지 생성기
+
+    Returns:
+        헬스 상태 정보
+    """
+    is_available = generator.is_available()
+    # MockImageGenerator 인스턴스인지 직접 확인 (싱글톤 캐시 오염 방지)
+    mode = "mock" if isinstance(generator, MockImageGenerator) else "real"
+
+    return {
+        "status": "ok" if is_available else "degraded",
+        "available": is_available,
+        "mode": mode,
+        "model": "gemini-3-pro-image-preview",
+    }
+</file>
+
 <file path="backend/src/unknown_world/main.py">
 """Unknown World - FastAPI 애플리케이션 엔트리포인트
 
@@ -30353,487 +29738,691 @@ async def root() -> dict[str, str]:
     }
 </file>
 
-<file path="backend/src/unknown_world/orchestrator/stages/render.py">
-"""Unknown World - Render Stage.
+<file path="backend/src/unknown_world/models/turn.py">
+"""Unknown World - TurnInput/TurnOutput Pydantic 스키마.
 
-렌더링 단계입니다.
-U-051에서 이미지 생성 서비스 브릿지가 구축되었으며,
-U-052에서 이미지 생성 여부 판정 로직이 추가되었습니다.
-U-053에서 실제 이미지 생성 호출 및 결과 동기화가 구현되었습니다.
+이 모듈은 Unknown World의 핵심 데이터 모델을 정의합니다.
+Gemini Structured Outputs에 투입 가능한 JSON Schema(부분집합)를 생성할 수 있습니다.
 
 설계 원칙:
-    - RULE-005: 재화 인바리언트 (잔액 부족 시 텍스트-only 폴백)
-    - RULE-007: 프롬프트 원문 로그 노출 금지
-    - RULE-008: 단계 이벤트 일관성, 텍스트 우선 + Lazy 이미지
-    - 동작 보존: image_generator가 None이거나 should_generate가 false면 pass-through
-    - U-051: 이미지 생성 서비스 의존성 주입 및 연결 가능 상태 확보
-    - U-052: 조건부 이미지 생성 판정 로직
-    - U-053: 비동기 이미지 생성 호출 및 TurnOutput.render 동기화
+    - RULE-003: 구조화 출력(JSON Schema) 우선 + 이중 검증
+    - RULE-005: 재화 인바리언트 (cost, balance_after 필수, 잔액 음수 금지)
+    - RULE-006: ko/en 언어 정책 (Language enum으로 고정)
+    - RULE-009: 좌표 규약 (0~1000, bbox [ymin,xmin,ymax,xmax])
+
+사용 예시:
+    # Gemini Structured Outputs용 JSON Schema 생성
+    schema = TurnOutput.model_json_schema()
+
+    # 응답 검증
+    output = TurnOutput.model_validate_json(gemini_response_text)
 
 참조:
-    - vibe/refactors/RU-005-Q4.md
-    - vibe/unit-results/U-019[Mvp].md
-    - vibe/unit-results/U-051[Mvp].md
-    - vibe/unit-results/U-052[Mvp].md
-    - vibe/unit-plans/U-053[Mvp].md
+    - vibe/prd.md 8.7 (데이터 모델 설계)
+    - vibe/ref/structured-outputs-guide.md
+    - .cursor/rules/00-core-critical.mdc
 """
 
-from __future__ import annotations
+from enum import Enum
+from typing import Annotated
 
-import asyncio
-import logging
-from datetime import UTC, datetime
-
-from unknown_world.models.turn import (
-    AgentPhase,
-    EconomySnapshot,
-    RenderOutput,
-    SafetyOutput,
-    ValidationBadge,
-)
-from unknown_world.orchestrator.stages.render_helpers import (
-    IMAGE_GENERATION_COST_SIGNAL,
-    ImageFallbackResult,
-    ImageGenerationDecision,
-    create_image_fallback_result,
-    decide_image_generation,
-    extract_image_job,
-)
-from unknown_world.orchestrator.stages.types import (
-    EmitFn,
-    PipelineContext,
-    PipelineEvent,
-    PipelineEventType,
-)
-from unknown_world.services.image_generation import (
-    ImageGenerationRequest,
-    ImageGenerationStatus,
-)
-
-# 모의 처리 지연 시간 (ms)
-RENDER_DELAY_MS = 80
-
-# 로거 (프롬프트/비밀정보 노출 금지 - RULE-007)
-logger = logging.getLogger(__name__)
-
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
-# 이미지 생성 헬퍼 함수 (U-053)
+# 공통 Enum 타입
 # =============================================================================
 
 
-async def _execute_image_generation(
-    ctx: PipelineContext,
-    image_decision: ImageGenerationDecision,
-    emit: EmitFn,
-) -> PipelineContext:
-    """이미지 생성을 실행하고 결과를 TurnOutput에 반영합니다.
+class Language(str, Enum):
+    """지원 언어 (RULE-006).
 
-    Args:
-        ctx: 파이프라인 컨텍스트
-        image_decision: 이미지 생성 판정 결과 (U-052)
-        emit: 이벤트 emit 콜백
-
-    Returns:
-        업데이트된 컨텍스트 (TurnOutput.render에 image_url 반영)
-
-    설계:
-        - 페어링 질문 Q1: Option A (ctx.output 갱신) 채택
-        - RULE-004: 실패 시 즉시 폴백 (재시도 0회, U-054 Q1: Option A)
-        - RULE-007: 프롬프트 원문 로그 노출 금지 (해시만 사용)
-        - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    ko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아
+    모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.
     """
-    if ctx.image_generator is None or ctx.output is None:
-        logger.debug("[Render] 이미지 생성 조건 불충족, 건너뜀")
-        return ctx
 
-    # ImageJob에서 프롬프트 추출 (판정에서 이미 유효성 검증됨)
-    image_job = extract_image_job(ctx.output)
-    if image_job is None or not image_job.prompt:
-        logger.warning("[Render] ImageJob 또는 프롬프트 없음, 생성 건너뜀")
-        return ctx
-
-    # 언어 정보 추출 (폴백 메시지용)
-    language = ctx.turn_input.language.value
-
-    # 생성 시작 시간 기록
-    start_time = datetime.now(UTC)
-
-    logger.info(
-        "[Render] 이미지 생성 시작",
-        extra={
-            "prompt_hash": image_decision.prompt_hash,
-            "aspect_ratio": image_decision.aspect_ratio,
-            "image_size": image_decision.image_size,
-        },
-    )
-
-    # ImageGenerationRequest 생성
-    request = ImageGenerationRequest(
-        prompt=image_job.prompt,
-        aspect_ratio=image_decision.aspect_ratio or image_job.aspect_ratio,
-        image_size=image_decision.image_size or image_job.image_size,
-        reference_image_ids=image_job.reference_image_ids,
-        session_id=None,  # 세션 ID는 필요 시 TurnInput에서 추출
-        remove_background=image_job.remove_background,
-        seed=ctx.seed,
-        image_type_hint=image_job.image_type_hint,
-    )
-
-    try:
-        # 비동기 이미지 생성 호출
-        response = await ctx.image_generator.generate(request)
-
-        # 생성 소요 시간 계산
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-        # 결과 처리
-        if response.status == ImageGenerationStatus.COMPLETED:
-            logger.info(
-                "[Render] 이미지 생성 성공",
-                extra={
-                    "image_id": response.image_id,
-                    "image_url": response.image_url,
-                    "generation_time_ms": response.generation_time_ms,
-                    "total_elapsed_ms": elapsed_ms,
-                    "background_removed": response.background_removed,
-                },
-            )
-
-            # TurnOutput.render에 결과 반영 (Option A: ctx.output 갱신)
-            ctx = _update_render_output(
-                ctx=ctx,
-                image_url=response.image_url,
-                image_id=response.image_id,
-                generation_time_ms=response.generation_time_ms,
-                background_removed=response.background_removed,
-            )
-
-        else:
-            # U-054: 이미지 생성 실패 - 즉시 폴백 (재시도 0회, Q1: Option A)
-            logger.warning(
-                "[Render] 이미지 생성 실패, 텍스트-only 폴백",
-                extra={
-                    "status": response.status.value,
-                    "status_message": response.message,
-                    "elapsed_ms": elapsed_ms,
-                    "prompt_hash": image_decision.prompt_hash,
-                },
-            )
-
-            # 폴백 결과 생성 및 TurnOutput 업데이트
-            fallback_result = create_image_fallback_result(
-                status_message=response.message,
-                language=language,
-            )
-            ctx = _apply_image_fallback(ctx, fallback_result)
-
-    except TimeoutError:
-        # 타임아웃 예외 - 안전하게 폴백 (RULE-004)
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-        logger.warning(
-            "[Render] 이미지 생성 타임아웃, 텍스트-only 폴백",
-            extra={
-                "elapsed_ms": elapsed_ms,
-                "prompt_hash": image_decision.prompt_hash,
-            },
-        )
-
-        fallback_result = create_image_fallback_result(
-            status_message="timeout",
-            language=language,
-        )
-        ctx = _apply_image_fallback(ctx, fallback_result)
-
-    except (ValueError, TypeError) as e:
-        # 잘못된 요청/검증 오류 - 안전하게 폴백 (RULE-004)
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-        error_type = type(e).__name__
-
-        logger.warning(
-            "[Render] 이미지 생성 요청 오류, 텍스트-only 폴백",
-            extra={
-                "error_type": error_type,
-                "error_message": str(e),
-                "elapsed_ms": elapsed_ms,
-                "prompt_hash": image_decision.prompt_hash,
-            },
-        )
-
-        fallback_result = create_image_fallback_result(
-            status_message=str(e),
-            language=language,
-        )
-        ctx = _apply_image_fallback(ctx, fallback_result)
-
-    except Exception as e:
-        # 기타 예외 발생 시 안전하게 처리 (RULE-004)
-        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-        error_type = type(e).__name__
-
-        logger.error(
-            "[Render] 이미지 생성 중 예외 발생, 텍스트-only 폴백",
-            extra={
-                "error_type": error_type,
-                "error_message": str(e),
-                "elapsed_ms": elapsed_ms,
-                "prompt_hash": image_decision.prompt_hash,
-            },
-        )
-
-        fallback_result = create_image_fallback_result(
-            status_message=None,
-            language=language,
-        )
-        ctx = _apply_image_fallback(ctx, fallback_result)
-
-    return ctx
+    KO = "ko-KR"
+    EN = "en-US"
 
 
-def _apply_image_fallback(
-    ctx: PipelineContext,
-    fallback_result: ImageFallbackResult,
-) -> PipelineContext:
-    """이미지 생성 실패 시 폴백을 적용합니다.
+class Theme(str, Enum):
+    """테마 설정."""
 
-    U-054: RULE-004에 따라 이미지 생성 실패 시 안전한 폴백을 제공합니다.
-    - 안전 차단 시 TurnOutput.safety 업데이트
-    - 배지에 실패 상태 반영
+    DARK = "dark"
+    LIGHT = "light"
 
-    Args:
-        ctx: 파이프라인 컨텍스트
-        fallback_result: 폴백 처리 결과
 
-    Returns:
-        업데이트된 컨텍스트
+class AgentPhase(str, Enum):
+    """에이전트 실행 단계 (RULE-008).
+
+    에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.
     """
-    if ctx.output is None:
-        return ctx
 
-    logger.info(
-        "[Render] 이미지 폴백 적용",
-        extra={
-            "is_safety_blocked": fallback_result.is_safety_blocked,
-            "reason": fallback_result.reason,
-        },
-    )
-
-    # 안전 차단 시 TurnOutput.safety 업데이트
-    if fallback_result.should_update_safety:
-        new_safety = SafetyOutput(
-            blocked=True,
-            message=fallback_result.fallback_message,
-        )
-        ctx.output = ctx.output.model_copy(update={"safety": new_safety})
-
-        # 배지에 SAFETY_BLOCKED 추가
-        ctx = _add_badge(ctx, ValidationBadge.SAFETY_BLOCKED)
-    else:
-        # 일반 실패 시에도 기존 배지는 유지하고 로그만 기록
-        # (SAFETY_OK는 이미 설정되어 있을 수 있음)
-        pass
-
-    return ctx
+    PARSE = "parse"
+    VALIDATE = "validate"
+    PLAN = "plan"
+    RESOLVE = "resolve"
+    RENDER = "render"
+    VERIFY = "verify"
+    COMMIT = "commit"
 
 
-def _add_badge(ctx: PipelineContext, badge: ValidationBadge) -> PipelineContext:
-    """TurnOutput.agent_console.badges에 배지를 추가합니다.
+class ValidationBadge(str, Enum):
+    """검증 배지 (RULE-008).
 
-    U-054: 이미지 생성 상태를 배지로 반영합니다.
-    중복 배지는 추가하지 않습니다.
-
-    Args:
-        ctx: 파이프라인 컨텍스트
-        badge: 추가할 배지
-
-    Returns:
-        업데이트된 컨텍스트
+    턴 결과에 대한 검증 상태를 표시합니다.
     """
-    if ctx.output is None:
-        return ctx
 
-    current_badges = list(ctx.output.agent_console.badges)
-
-    # 관련 배지 교체 (예: SAFETY_OK -> SAFETY_BLOCKED)
-    if badge == ValidationBadge.SAFETY_BLOCKED:
-        current_badges = [b for b in current_badges if b != ValidationBadge.SAFETY_OK]
-
-    # 중복 방지
-    if badge not in current_badges:
-        current_badges.append(badge)
-
-    # agent_console 업데이트
-    new_console = ctx.output.agent_console.model_copy(update={"badges": current_badges})
-    ctx.output = ctx.output.model_copy(update={"agent_console": new_console})
-
-    logger.debug(
-        "[Render] 배지 추가됨",
-        extra={"badge": badge.value, "total_badges": len(current_badges)},
-    )
-
-    return ctx
+    SCHEMA_OK = "schema_ok"
+    SCHEMA_FAIL = "schema_fail"
+    ECONOMY_OK = "economy_ok"
+    ECONOMY_FAIL = "economy_fail"
+    SAFETY_OK = "safety_ok"
+    SAFETY_BLOCKED = "safety_blocked"
+    CONSISTENCY_OK = "consistency_ok"
+    CONSISTENCY_FAIL = "consistency_fail"
 
 
-def _update_render_output(
-    ctx: PipelineContext,
-    *,
-    image_url: str | None,
-    image_id: str | None,
-    generation_time_ms: int,
-    background_removed: bool,
-) -> PipelineContext:
-    """TurnOutput.render에 이미지 생성 결과를 반영합니다.
+class ModelLabel(str, Enum):
+    """모델/품질 선택 라벨 (RULE-008).
 
-    페어링 질문 Q1: Option A (ctx.output 갱신) 채택
-    - Pydantic 모델은 frozen이 아니므로 직접 수정 가능
-    - model_copy()를 사용하여 새 RenderOutput 생성 후 교체
-
-    Args:
-        ctx: 파이프라인 컨텍스트
-        image_url: 생성된 이미지 URL
-        image_id: 생성된 이미지 ID
-        generation_time_ms: 생성 소요 시간 (ms)
-        background_removed: 배경 제거 수행 여부
-
-    Returns:
-        업데이트된 컨텍스트
+    프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
     """
-    if ctx.output is None:
-        return ctx
 
-    # 기존 RenderOutput을 복사하고 새 필드 추가
-    old_render = ctx.output.render
-    new_render = RenderOutput(
-        image_job=old_render.image_job,
-        image_url=image_url,
-        image_id=image_id,
-        generation_time_ms=generation_time_ms,
-        background_removed=background_removed,
-    )
-
-    # TurnOutput 전체를 model_copy로 갱신
-    ctx.output = ctx.output.model_copy(update={"render": new_render})
-
-    logger.debug(
-        "[Render] TurnOutput.render 업데이트 완료",
-        extra={
-            "image_id": image_id,
-            "image_url": image_url,
-        },
-    )
-
-    return ctx
+    FAST = "FAST"
+    QUALITY = "QUALITY"
+    CHEAP = "CHEAP"
+    REF = "REF"
 
 
-async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
-    """Render 단계를 실행합니다.
+class RiskLevel(str, Enum):
+    """행동 위험도 수준."""
 
-    이미지 생성 서비스가 주입되었으면 이미지 생성 파이프라인을 실행합니다.
-    주입되지 않았거나 이미지 생성이 필요 없는 경우 pass-through로 동작합니다.
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
-    U-051에서 브릿지가 구축되었으며, 실제 이미지 생성 로직은 U-052/U-053에서 추가됩니다:
-    - U-052: should_generate 판정 및 프롬프트/해상도 추출
-    - U-053: 비동기 이미지 생성 호출 및 결과 동기화
 
-    Args:
-        ctx: 파이프라인 컨텍스트 (image_generator 포함 가능)
-        emit: 이벤트 emit 콜백
+# =============================================================================
+# 공통 하위 타입
+# =============================================================================
 
-    Returns:
-        업데이트된 컨텍스트
+# RULE-009: 좌표는 0~1000 정규화 좌표계 (이미지 이해 bbox 포맷과 호환)
+Coordinate = Annotated[int, Field(ge=0, le=1000, description="정규화 좌표 (0~1000)")]
+
+
+class Box2D(BaseModel):
+    """2D 바운딩 박스 (RULE-009).
+
+    좌표는 0~1000 정규화 좌표계이며, bbox는 [ymin, xmin, ymax, xmax] 순서입니다.
+    이미지 이해 bbox 포맷과 호환됩니다.
+
+    Attributes:
+        ymin: Y 최소값 (상단)
+        xmin: X 최소값 (좌측)
+        ymax: Y 최대값 (하단)
+        xmax: X 최대값 (우측)
     """
-    ctx.current_phase = AgentPhase.RENDER
 
-    # Stage 시작 이벤트
-    await emit(
-        PipelineEvent(
-            event_type=PipelineEventType.STAGE_START,
-            phase=AgentPhase.RENDER,
-        )
+    model_config = ConfigDict(extra="forbid")
+
+    ymin: Coordinate
+    xmin: Coordinate
+    ymax: Coordinate
+    xmax: Coordinate
+
+
+class CurrencyAmount(BaseModel):
+    """재화 수량.
+
+    Attributes:
+        signal: 기본 재화 (텍스트 턴/이미지 생성/고급 기능에 소비)
+        memory_shard: 희귀 재화 (중요 설정 고정, 고해상도 이미지 등에 소비)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    signal: Annotated[int, Field(ge=0, description="시그널 (기본 재화, 0 이상)")]
+    memory_shard: Annotated[int, Field(ge=0, description="기억 파편 (희귀 재화, 0 이상)")]
+
+
+# =============================================================================
+# TurnInput 관련 타입
+# =============================================================================
+
+
+class ClickInput(BaseModel):
+    """클릭 입력 정보.
+
+    화면 오브젝트 클릭 시 전달되는 정보입니다.
+
+    Attributes:
+        object_id: 클릭한 오브젝트 ID
+        box_2d: 클릭 위치의 바운딩 박스 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    object_id: str = Field(description="클릭한 오브젝트 ID")
+    box_2d: Box2D | None = Field(default=None, description="클릭 위치 바운딩 박스 (선택)")
+
+
+class DropInput(BaseModel):
+    """드롭 입력 정보 (U-012).
+
+    인벤토리 아이템을 핫스팟에 드롭할 때 전달되는 정보입니다.
+
+    Attributes:
+        item_id: 드롭한 인벤토리 아이템 ID
+        target_object_id: 드롭 대상 핫스팟 오브젝트 ID
+        target_box_2d: 드롭 대상의 바운딩 박스 (0~1000 정규화)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: str = Field(description="드롭한 인벤토리 아이템 ID")
+    target_object_id: str = Field(description="드롭 대상 핫스팟 오브젝트 ID")
+    target_box_2d: Box2D = Field(description="드롭 대상의 바운딩 박스 (0~1000 정규화)")
+
+
+class ClientInfo(BaseModel):
+    """클라이언트 정보.
+
+    Attributes:
+        viewport_w: 뷰포트 너비 (픽셀)
+        viewport_h: 뷰포트 높이 (픽셀)
+        theme: 현재 테마 (dark/light)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    viewport_w: Annotated[int, Field(gt=0, description="뷰포트 너비 (픽셀)")]
+    viewport_h: Annotated[int, Field(gt=0, description="뷰포트 높이 (픽셀)")]
+    theme: Theme = Field(default=Theme.DARK, description="현재 테마")
+
+
+class EconomySnapshot(BaseModel):
+    """재화 스냅샷 (클라이언트 → 서버).
+
+    클라이언트가 보유한 현재 재화 상태입니다.
+    서버는 이를 검증하고 비용 계산에 사용합니다.
+
+    Attributes:
+        signal: 현재 시그널 잔액
+        memory_shard: 현재 기억 파편 잔액
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    signal: Annotated[int, Field(ge=0, description="현재 시그널 잔액 (0 이상)")]
+    memory_shard: Annotated[int, Field(ge=0, description="현재 기억 파편 잔액 (0 이상)")]
+
+
+class TurnInput(BaseModel):
+    """턴 입력 (클라이언트 → 서버).
+
+    사용자가 턴을 진행할 때 서버로 전송하는 입력 데이터입니다.
+
+    Attributes:
+        language: 요청 언어 (응답도 동일 언어로 고정)
+        text: 사용자 자연어 입력
+        action_id: 선택한 액션 카드 ID (선택)
+        click: 오브젝트 클릭 정보 (선택)
+        client: 클라이언트 환경 정보
+        economy_snapshot: 현재 재화 상태
+
+    Example:
+        >>> input_data = TurnInput(
+        ...     language=Language.KO,
+        ...     text="문을 열어본다",
+        ...     economy_snapshot=EconomySnapshot(signal=100, memory_shard=5),
+        ...     client=ClientInfo(viewport_w=1920, viewport_h=1080),
+        ... )
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    language: Language = Field(description="요청 언어 (응답도 동일 언어로 고정)")
+    text: str = Field(default="", description="사용자 자연어 입력")
+    action_id: str | None = Field(default=None, description="선택한 액션 카드 ID (선택)")
+    click: ClickInput | None = Field(default=None, description="오브젝트 클릭 정보 (선택)")
+    drop: DropInput | None = Field(default=None, description="아이템 드롭 정보 (선택, U-012)")
+    client: ClientInfo = Field(description="클라이언트 환경 정보")
+    economy_snapshot: EconomySnapshot = Field(description="현재 재화 상태")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - UI
+# =============================================================================
+
+
+class CostEstimate(BaseModel):
+    """비용 추정치 (최소/최대 범위)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    min: CurrencyAmount = Field(description="최소 예상 비용")
+    max: CurrencyAmount = Field(description="최대 예상 비용")
+
+
+class ActionCard(BaseModel):
+    """액션 카드 (Action Deck) - U-065 단순화.
+
+    매 턴 AI가 추천하는 행동 카드입니다.
+    Gemini Structured Outputs 제한 대응을 위해 핵심 필드만 유지합니다.
+
+    U-065 단순화:
+        - 제거된 필드: description, cost_estimate, hint, reward_hint, disabled_reason
+        - risk, is_alternative는 유지 (게임 메카닉에 필수)
+        - 제거된 정보는 narrative에서 자연어로 표현
+
+    Attributes:
+        id: 카드 고유 ID
+        label: 카드 라벨 (표시용)
+        cost: 예상 비용 (기본)
+        risk: 위험도
+        enabled: 실행 가능 여부 (서버 판단)
+        is_alternative: 저비용 대안 카드 여부
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="카드 고유 ID")
+    label: str = Field(description="카드 라벨 (표시용)")
+    cost: CurrencyAmount = Field(description="예상 비용 (기본)")
+    risk: RiskLevel = Field(default=RiskLevel.LOW, description="위험도")
+    enabled: bool = Field(default=True, description="실행 가능 여부 (서버 판단)")
+    is_alternative: bool = Field(default=False, description="저비용 대안 카드 여부")
+
+
+class SceneObject(BaseModel):
+    """장면 오브젝트 (클릭 가능한 핫스팟).
+
+    화면에서 클릭 가능한 오브젝트입니다.
+    좌표는 0~1000 정규화 좌표계를 사용합니다 (RULE-009).
+
+    Attributes:
+        id: 오브젝트 고유 ID
+        label: 오브젝트 라벨 (표시용)
+        box_2d: 바운딩 박스 [ymin, xmin, ymax, xmax]
+        interaction_hint: 상호작용 힌트 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="오브젝트 고유 ID")
+    label: str = Field(description="오브젝트 라벨 (표시용)")
+    box_2d: Box2D = Field(description="바운딩 박스")
+    interaction_hint: str | None = Field(default=None, description="상호작용 힌트 (선택)")
+
+
+class ActionDeck(BaseModel):
+    """액션 덱 (Q1 결정: ui.action_deck.cards[] 구조) - U-065 단순화.
+
+    매 턴 AI가 제시하는 추천 행동 카드 덱입니다.
+
+    U-065 단순화:
+        - max_length: 10 → 5 (Gemini 스키마 제한 대응, Q2 결정)
+
+    Attributes:
+        cards: 액션 카드 목록 (3~5장 권장)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    cards: list[ActionCard] = Field(
+        default=[],
+        min_length=0,
+        max_length=5,
+        description="액션 카드 목록 (3~5장 권장)",
     )
 
-    # U-051/U-052: 이미지 생성 서비스 및 판정 로직
-    image_decision: ImageGenerationDecision | None = None
 
-    if ctx.image_generator is not None:
-        # 이미지 생성 서비스가 주입됨 - 연결 준비 완료
-        logger.debug(
-            "[Render] 이미지 생성 서비스 연결됨",
-            extra={
-                "generator_type": type(ctx.image_generator).__name__,
-                "is_available": ctx.image_generator.is_available(),
-            },
-        )
+class UIOutput(BaseModel):
+    """UI 출력 데이터 - U-065 단순화.
 
-        # U-052: 이미지 생성 여부 판정
-        if ctx.output is not None:
-            # Economy 스냅샷을 EconomySnapshot으로 변환
-            economy_snapshot = EconomySnapshot(
-                signal=ctx.economy_snapshot.signal,
-                memory_shard=ctx.economy_snapshot.memory_shard,
-            )
+    AI가 생성한 UI 요소들입니다.
+    채팅 버블이 아닌 게임 UI로 표현됩니다 (RULE-002).
 
-            # 판정 수행
-            image_decision = decide_image_generation(
-                turn_output=ctx.output,
-                economy_snapshot=economy_snapshot,
-                language=ctx.turn_input.language.value,
-            )
+    U-065 단순화:
+        - objects max_length: 5로 제한 (Q2 결정)
 
-            # 판정 결과 로깅 (프롬프트 원문 제외 - RULE-007)
-            logger.info(
-                "[Render] 이미지 생성 판정 완료",
-                extra={
-                    "should_generate": image_decision.should_generate,
-                    "reason": image_decision.reason,
-                    "prompt_hash": image_decision.prompt_hash,
-                    "estimated_cost": image_decision.estimated_cost_signal,
-                },
-            )
+    Attributes:
+        action_deck: 액션 카드 덱 (Q1 결정: Option A 채택)
+        objects: 클릭 가능한 장면 오브젝트 목록 (최대 5개)
+    """
 
-            # 잔액 부족으로 생성 불가 시 폴백 메시지 처리
-            if (
-                not image_decision.should_generate
-                and image_decision.reason == "insufficient_balance"
-                and image_decision.fallback_message
-            ):
-                logger.info(
-                    "[Render] 잔액 부족, 텍스트-only 폴백 적용",
-                    extra={
-                        "current_signal": economy_snapshot.signal,
-                        "required_signal": IMAGE_GENERATION_COST_SIGNAL,
-                    },
-                )
-                # U-054: 폴백 메시지를 TurnOutput.narrative에 추가 (RULE-004/005)
-                new_narrative = ctx.output.narrative + "\n\n" + image_decision.fallback_message
-                ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
+    model_config = ConfigDict(extra="forbid")
 
-            # U-053: 이미지 생성이 필요한 경우 비동기 호출
-            if image_decision.should_generate:
-                ctx = await _execute_image_generation(
-                    ctx=ctx,
-                    image_decision=image_decision,
-                    emit=emit,
-                )
-        else:
-            logger.debug("[Render] TurnOutput 없음, 이미지 판정 건너뜀")
-    else:
-        # 이미지 생성 서비스 미주입 - pass-through 동작
-        logger.debug("[Render] 이미지 생성 서비스 미주입, pass-through 동작")
-
-    # 모의 처리 지연 (기존 동작 보존)
-    await asyncio.sleep(RENDER_DELAY_MS / 1000.0)
-
-    # Stage 완료 이벤트
-    await emit(
-        PipelineEvent(
-            event_type=PipelineEventType.STAGE_COMPLETE,
-            phase=AgentPhase.RENDER,
-        )
+    action_deck: ActionDeck = Field(default_factory=ActionDeck, description="액션 카드 덱")
+    objects: list[SceneObject] = Field(
+        default=[], max_length=5, description="클릭 가능한 장면 오브젝트 목록 (최대 5개)"
     )
 
-    return ctx
+
+# =============================================================================
+# TurnOutput 관련 타입 - World
+# =============================================================================
+
+
+class MemoryPin(BaseModel):
+    """중요 설정 고정 후보.
+
+    사용자가 Memory Shard를 소비해 고정할 수 있는 중요 설정입니다.
+
+    Attributes:
+        id: 핀 고유 ID
+        content: 고정할 내용
+        cost: 고정에 필요한 비용
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="핀 고유 ID")
+    content: str = Field(description="고정할 내용")
+    cost: CurrencyAmount = Field(description="고정에 필요한 비용")
+
+
+class WorldRule(BaseModel):
+    """세계 규칙 (Rule Board).
+
+    현재 세계에 적용 중인 물리 법칙이나 메타 규칙입니다.
+
+    Attributes:
+        id: 규칙 고유 ID
+        label: 규칙 이름
+        description: 규칙 상세 설명 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="규칙 고유 ID")
+    label: str = Field(description="규칙 이름")
+    description: str | None = Field(default=None, description="규칙 상세 설명 (선택)")
+
+
+class Quest(BaseModel):
+    """퀘스트/목표 (Quest Panel).
+
+    플레이어가 달성해야 하는 현재 목표입니다.
+
+    Attributes:
+        id: 퀘스트 고유 ID
+        label: 퀘스트 이름
+        is_completed: 달성 여부
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="퀘스트 고유 ID")
+    label: str = Field(description="퀘스트 이름")
+    is_completed: bool = Field(default=False, description="달성 여부")
+
+
+class WorldDelta(BaseModel):
+    """세계 상태 변화 (Q2 결정: Option A - delta 중심) - U-065 단순화.
+
+    이번 턴에서 변경된 세계 상태를 나타냅니다.
+    snapshot은 SaveGame에만 저장하고, 매 턴은 delta만 전송합니다.
+
+    U-065 단순화 (Q3 결정: Option A):
+        - rules_changed, quests_updated → 배열 크기 제한 (최대 3개)
+        - memory_pins → 배열 크기 제한 (최대 2개)
+        - 복잡한 중첩 객체의 배열 크기 축소
+        - 상세 정보는 narrative에서 자연어로 표현
+
+    Attributes:
+        rules_changed: 변경되거나 추가된 규칙 목록 (최대 3개)
+        inventory_added: 추가된 인벤토리 아이템 (최대 5개)
+        inventory_removed: 제거된 인벤토리 아이템 (최대 5개)
+        quests_updated: 업데이트된 퀘스트(목표) 목록 (최대 3개)
+        relationships_changed: 변경된 관계 (최대 3개)
+        memory_pins: 중요 설정 고정 후보 (최대 2개)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rules_changed: list[WorldRule] = Field(
+        default=[], max_length=3, description="변경된 규칙 목록 (최대 3개)"
+    )
+    inventory_added: list[str] = Field(
+        default=[], max_length=5, description="추가된 인벤토리 아이템 (최대 5개)"
+    )
+    inventory_removed: list[str] = Field(
+        default=[], max_length=5, description="제거된 인벤토리 아이템 (최대 5개)"
+    )
+    quests_updated: list[Quest] = Field(
+        default=[], max_length=3, description="업데이트된 퀘스트/목표 목록 (최대 3개)"
+    )
+    relationships_changed: list[str] = Field(
+        default=[], max_length=3, description="변경된 관계 (최대 3개)"
+    )
+    memory_pins: list[MemoryPin] = Field(
+        default=[], max_length=2, description="중요 설정 고정 후보 (최대 2개)"
+    )
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Render
+# =============================================================================
+
+
+class ImageJob(BaseModel):
+    """이미지 생성 작업 - U-065 단순화.
+
+    조건부 이미지 생성/편집 요청입니다.
+    이미지 생성이 느릴 경우 텍스트 우선 출력 + Lazy Loading을 사용합니다.
+
+    U-065 단순화:
+        - reference_image_ids: 배열 크기 제한 (최대 2개)
+        - 기타 필드는 유지 (이미지 파이프라인 필수)
+
+    Attributes:
+        should_generate: 이미지를 생성해야 하는지
+        prompt: 이미지 생성 프롬프트
+        model_label: 모델 선택 라벨 (FAST/QUALITY/CHEAP/REF)
+        aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
+        image_size: 이미지 크기 (예: "1024x1024")
+        reference_image_ids: 참조 이미지 ID 목록 (최대 2개)
+        remove_background: 배경 제거 여부 (U-035, rembg 사용)
+        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    should_generate: bool = Field(description="이미지를 생성해야 하는지")
+    prompt: str = Field(default="", description="이미지 생성 프롬프트")
+    model_label: ModelLabel = Field(default=ModelLabel.FAST, description="모델 선택 라벨")
+    aspect_ratio: str = Field(default="16:9", description="가로세로 비율")
+    image_size: str = Field(default="1024x1024", description="이미지 크기")
+    reference_image_ids: list[str] = Field(
+        default=[], max_length=2, description="참조 이미지 ID 목록 (최대 2개)"
+    )
+    reference_image_url: str | None = Field(
+        default=None,
+        description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
+    )
+    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
+    image_type_hint: str | None = Field(
+        default=None,
+        description="이미지 유형 힌트 (object/character/icon/portrait 등, rembg 모델 자동 선택용)",
+    )
+
+
+class RenderOutput(BaseModel):
+    """렌더링 출력 데이터.
+
+    이미지 생성/편집 관련 정보입니다.
+    image_job은 AI 모델이 생성하고, image_url/image_id는 후처리에서 채워집니다.
+
+    Attributes:
+        image_job: 이미지 생성 작업 (선택, AI 모델 생성)
+        image_url: 생성된 이미지 URL (선택, 후처리에서 채움, U-053)
+        image_id: 생성된 이미지 ID (선택, 후처리에서 채움, U-053)
+        generation_time_ms: 이미지 생성 소요 시간 (밀리초, 선택, U-053)
+        background_removed: 배경 제거 수행 여부 (U-035, 선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_job: ImageJob | None = Field(default=None, description="이미지 생성 작업 (선택)")
+    image_url: str | None = Field(
+        default=None, description="생성된 이미지 URL (후처리에서 채움, U-053)"
+    )
+    image_id: str | None = Field(
+        default=None, description="생성된 이미지 ID (후처리에서 채움, U-053)"
+    )
+    generation_time_ms: int | None = Field(
+        default=None, description="이미지 생성 소요 시간 (ms, U-053)"
+    )
+    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Economy
+# =============================================================================
+
+
+class EconomyOutput(BaseModel):
+    """경제 출력 데이터 (RULE-005).
+
+    이번 턴의 비용과 잔액 정보입니다.
+    잔액 음수는 절대 불가 (서버 Hard gate).
+
+    Attributes:
+        cost: 이번 턴에 소비된 비용
+        balance_after: 소비 후 잔액
+
+    Important:
+        - cost와 balance_after는 항상 포함되어야 합니다.
+        - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    cost: CurrencyAmount = Field(description="이번 턴에 소비된 비용")
+    balance_after: CurrencyAmount = Field(description="소비 후 잔액")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Safety
+# =============================================================================
+
+
+class SafetyOutput(BaseModel):
+    """안전 출력 데이터.
+
+    안전 정책 관련 정보입니다.
+    차단 시 명시적 메시지와 함께 안전한 대체 결과를 제공합니다.
+
+    Attributes:
+        blocked: 안전 정책에 의해 차단되었는지
+        message: 차단 시 사용자에게 표시할 메시지 (선택)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    blocked: bool = Field(default=False, description="안전 정책에 의해 차단되었는지")
+    message: str | None = Field(default=None, description="차단 시 사용자에게 표시할 메시지 (선택)")
+
+
+# =============================================================================
+# TurnOutput 관련 타입 - Agent Console
+# =============================================================================
+
+
+class AgentConsole(BaseModel):
+    """에이전트 콘솔 데이터 (RULE-008) - U-065 단순화.
+
+    에이전트형 시스템임을 UI로 증명하기 위한 정보입니다.
+    계획/실행/검증/복구의 흔적을 표시합니다.
+
+    U-065 단순화:
+        - badges: 배열 크기 제한 (최대 4개)
+
+    Attributes:
+        current_phase: 현재 실행 단계
+        badges: 검증 배지 목록 (최대 4개)
+        repair_count: 자동 복구 시도 횟수
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    current_phase: AgentPhase = Field(default=AgentPhase.COMMIT, description="현재 실행 단계")
+    badges: list[ValidationBadge] = Field(
+        default=[], max_length=4, description="검증 배지 목록 (최대 4개)"
+    )
+    repair_count: Annotated[int, Field(ge=0, description="자동 복구 시도 횟수")] = 0
+
+
+# =============================================================================
+# TurnOutput (메인 응답 스키마)
+# =============================================================================
+
+
+class TurnOutput(BaseModel):
+    """턴 출력 (서버 → 클라이언트).
+
+    서버가 턴 처리 후 클라이언트로 반환하는 구조화된 응답입니다.
+    Gemini Structured Outputs(JSON Schema)로 강제됩니다.
+
+    Hard Gate 필드 (RULE-003/004/005):
+        - economy: cost와 balance_after 필수, 잔액 음수 금지
+        - safety: blocked 시 안전한 대체 결과 제공
+        - language: 요청 언어와 동일하게 고정 (혼합 출력 금지)
+
+    Attributes:
+        language: 응답 언어 (요청과 동일)
+        narrative: 내러티브 텍스트 (표시용)
+        ui: UI 요소 (액션 덱, 오브젝트)
+        world: 세계 상태 변화 (delta 중심)
+        render: 렌더링 정보 (이미지 생성 작업)
+        economy: 경제 정보 (비용, 잔액)
+        safety: 안전 정책 정보
+        agent_console: 에이전트 실행 정보 (단계, 배지, 복구 횟수)
+
+    Example:
+        >>> output = TurnOutput(
+        ...     language=Language.KO,
+        ...     narrative="문이 삐걱거리며 열립니다...",
+        ...     economy=EconomyOutput(
+        ...         cost=CurrencyAmount(signal=5, memory_shard=0),
+        ...         balance_after=CurrencyAmount(signal=95, memory_shard=5),
+        ...     ),
+        ...     safety=SafetyOutput(blocked=False),
+        ... )
+        >>> schema = TurnOutput.model_json_schema()
+
+    Schema Generation:
+        >>> # Gemini Structured Outputs용 JSON Schema 생성
+        >>> json_schema = TurnOutput.model_json_schema()
+        >>> # response_json_schema 파라미터에 전달
+        >>> config = {
+        ...     "response_mime_type": "application/json",
+        ...     "response_json_schema": json_schema,
+        ... }
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # 필수 필드 (Hard Gate)
+    language: Language = Field(description="응답 언어 (요청과 동일)")
+    narrative: str = Field(description="내러티브 텍스트 (표시용)")
+    economy: EconomyOutput = Field(description="경제 정보 (비용, 잔액)")
+    safety: SafetyOutput = Field(description="안전 정책 정보")
+
+    # UI 관련 필드
+    ui: UIOutput = Field(default_factory=UIOutput, description="UI 요소")
+
+    # 세계 상태 필드
+    world: WorldDelta = Field(default_factory=WorldDelta, description="세계 상태 변화 (delta)")
+
+    # 렌더링 필드
+    render: RenderOutput = Field(default_factory=RenderOutput, description="렌더링 정보")
+
+    # 에이전트 콘솔 필드
+    agent_console: AgentConsole = Field(
+        default_factory=AgentConsole, description="에이전트 실행 정보"
+    )
 </file>
 
 <file path="frontend/src/save/saveGame.ts">
@@ -31724,6 +31313,491 @@ export function canAffordEstimate(
 }
 </file>
 
+<file path="backend/src/unknown_world/orchestrator/stages/render.py">
+"""Unknown World - Render Stage.
+
+렌더링 단계입니다.
+U-051에서 이미지 생성 서비스 브릿지가 구축되었으며,
+U-052에서 이미지 생성 여부 판정 로직이 추가되었습니다.
+U-053에서 실제 이미지 생성 호출 및 결과 동기화가 구현되었습니다.
+
+설계 원칙:
+    - RULE-005: 재화 인바리언트 (잔액 부족 시 텍스트-only 폴백)
+    - RULE-007: 프롬프트 원문 로그 노출 금지
+    - RULE-008: 단계 이벤트 일관성, 텍스트 우선 + Lazy 이미지
+    - 동작 보존: image_generator가 None이거나 should_generate가 false면 pass-through
+    - U-051: 이미지 생성 서비스 의존성 주입 및 연결 가능 상태 확보
+    - U-052: 조건부 이미지 생성 판정 로직
+    - U-053: 비동기 이미지 생성 호출 및 TurnOutput.render 동기화
+
+참조:
+    - vibe/refactors/RU-005-Q4.md
+    - vibe/unit-results/U-019[Mvp].md
+    - vibe/unit-results/U-051[Mvp].md
+    - vibe/unit-results/U-052[Mvp].md
+    - vibe/unit-plans/U-053[Mvp].md
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import UTC, datetime
+
+from unknown_world.models.turn import (
+    AgentPhase,
+    EconomySnapshot,
+    RenderOutput,
+    SafetyOutput,
+    ValidationBadge,
+)
+from unknown_world.orchestrator.stages.render_helpers import (
+    IMAGE_GENERATION_COST_SIGNAL,
+    ImageFallbackResult,
+    ImageGenerationDecision,
+    create_image_fallback_result,
+    decide_image_generation,
+    extract_image_job,
+)
+from unknown_world.orchestrator.stages.types import (
+    EmitFn,
+    PipelineContext,
+    PipelineEvent,
+    PipelineEventType,
+)
+from unknown_world.services.image_generation import (
+    ImageGenerationRequest,
+    ImageGenerationStatus,
+)
+
+# 모의 처리 지연 시간 (ms)
+RENDER_DELAY_MS = 80
+
+# 로거 (프롬프트/비밀정보 노출 금지 - RULE-007)
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 이미지 생성 헬퍼 함수 (U-053)
+# =============================================================================
+
+
+async def _execute_image_generation(
+    ctx: PipelineContext,
+    image_decision: ImageGenerationDecision,
+    emit: EmitFn,
+) -> PipelineContext:
+    """이미지 생성을 실행하고 결과를 TurnOutput에 반영합니다.
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        image_decision: 이미지 생성 판정 결과 (U-052)
+        emit: 이벤트 emit 콜백
+
+    Returns:
+        업데이트된 컨텍스트 (TurnOutput.render에 image_url 반영)
+
+    설계:
+        - 페어링 질문 Q1: Option A (ctx.output 갱신) 채택
+        - RULE-004: 실패 시 즉시 폴백 (재시도 0회, U-054 Q1: Option A)
+        - RULE-007: 프롬프트 원문 로그 노출 금지 (해시만 사용)
+        - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
+    """
+    if ctx.image_generator is None or ctx.output is None:
+        logger.debug("[Render] 이미지 생성 조건 불충족, 건너뜀")
+        return ctx
+
+    # ImageJob에서 프롬프트 추출 (판정에서 이미 유효성 검증됨)
+    image_job = extract_image_job(ctx.output)
+    if image_job is None or not image_job.prompt:
+        logger.warning("[Render] ImageJob 또는 프롬프트 없음, 생성 건너뜀")
+        return ctx
+
+    # 언어 정보 추출 (폴백 메시지용)
+    language = ctx.turn_input.language.value
+
+    # 생성 시작 시간 기록
+    start_time = datetime.now(UTC)
+
+    logger.info(
+        "[Render] 이미지 생성 시작",
+        extra={
+            "prompt_hash": image_decision.prompt_hash,
+            "aspect_ratio": image_decision.aspect_ratio,
+            "image_size": image_decision.image_size,
+            "reference_image_url": image_decision.reference_image_url,
+        },
+    )
+
+    # ImageGenerationRequest 생성
+    request = ImageGenerationRequest(
+        prompt=image_job.prompt,
+        aspect_ratio=image_decision.aspect_ratio or image_job.aspect_ratio,
+        image_size=image_decision.image_size or image_job.image_size,
+        reference_image_ids=image_job.reference_image_ids,
+        reference_image_url=image_decision.reference_image_url,
+        session_id=None,  # 세션 ID는 필요 시 TurnInput에서 추출
+        remove_background=image_job.remove_background,
+        seed=ctx.seed,
+        image_type_hint=image_job.image_type_hint,
+    )
+
+    try:
+        # 비동기 이미지 생성 호출
+        response = await ctx.image_generator.generate(request)
+
+        # 생성 소요 시간 계산
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+        # 결과 처리
+        if response.status == ImageGenerationStatus.COMPLETED:
+            logger.info(
+                "[Render] 이미지 생성 성공",
+                extra={
+                    "image_id": response.image_id,
+                    "image_url": response.image_url,
+                    "generation_time_ms": response.generation_time_ms,
+                    "total_elapsed_ms": elapsed_ms,
+                    "background_removed": response.background_removed,
+                },
+            )
+
+            # TurnOutput.render에 결과 반영 (Option A: ctx.output 갱신)
+            ctx = _update_render_output(
+                ctx=ctx,
+                image_url=response.image_url,
+                image_id=response.image_id,
+                generation_time_ms=response.generation_time_ms,
+                background_removed=response.background_removed,
+            )
+
+        else:
+            # U-054: 이미지 생성 실패 - 즉시 폴백 (재시도 0회, Q1: Option A)
+            logger.warning(
+                "[Render] 이미지 생성 실패, 텍스트-only 폴백",
+                extra={
+                    "status": response.status.value,
+                    "status_message": response.message,
+                    "elapsed_ms": elapsed_ms,
+                    "prompt_hash": image_decision.prompt_hash,
+                },
+            )
+
+            # 폴백 결과 생성 및 TurnOutput 업데이트
+            fallback_result = create_image_fallback_result(
+                status_message=response.message,
+                language=language,
+            )
+            ctx = _apply_image_fallback(ctx, fallback_result)
+
+    except TimeoutError:
+        # 타임아웃 예외 - 안전하게 폴백 (RULE-004)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+
+        logger.warning(
+            "[Render] 이미지 생성 타임아웃, 텍스트-only 폴백",
+            extra={
+                "elapsed_ms": elapsed_ms,
+                "prompt_hash": image_decision.prompt_hash,
+            },
+        )
+
+        fallback_result = create_image_fallback_result(
+            status_message="timeout",
+            language=language,
+        )
+        ctx = _apply_image_fallback(ctx, fallback_result)
+
+    except (ValueError, TypeError) as e:
+        # 잘못된 요청/검증 오류 - 안전하게 폴백 (RULE-004)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+        error_type = type(e).__name__
+
+        logger.warning(
+            "[Render] 이미지 생성 요청 오류, 텍스트-only 폴백",
+            extra={
+                "error_type": error_type,
+                "error_message": str(e),
+                "elapsed_ms": elapsed_ms,
+                "prompt_hash": image_decision.prompt_hash,
+            },
+        )
+
+        fallback_result = create_image_fallback_result(
+            status_message=str(e),
+            language=language,
+        )
+        ctx = _apply_image_fallback(ctx, fallback_result)
+
+    except Exception as e:
+        # 기타 예외 발생 시 안전하게 처리 (RULE-004)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+        error_type = type(e).__name__
+
+        logger.error(
+            "[Render] 이미지 생성 중 예외 발생, 텍스트-only 폴백",
+            extra={
+                "error_type": error_type,
+                "error_message": str(e),
+                "elapsed_ms": elapsed_ms,
+                "prompt_hash": image_decision.prompt_hash,
+            },
+        )
+
+        fallback_result = create_image_fallback_result(
+            status_message=None,
+            language=language,
+        )
+        ctx = _apply_image_fallback(ctx, fallback_result)
+
+    return ctx
+
+
+def _apply_image_fallback(
+    ctx: PipelineContext,
+    fallback_result: ImageFallbackResult,
+) -> PipelineContext:
+    """이미지 생성 실패 시 폴백을 적용합니다.
+
+    U-054: RULE-004에 따라 이미지 생성 실패 시 안전한 폴백을 제공합니다.
+    - 안전 차단 시 TurnOutput.safety 업데이트
+    - 배지에 실패 상태 반영
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        fallback_result: 폴백 처리 결과
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    if ctx.output is None:
+        return ctx
+
+    logger.info(
+        "[Render] 이미지 폴백 적용",
+        extra={
+            "is_safety_blocked": fallback_result.is_safety_blocked,
+            "reason": fallback_result.reason,
+        },
+    )
+
+    # 안전 차단 시 TurnOutput.safety 업데이트
+    if fallback_result.should_update_safety:
+        new_safety = SafetyOutput(
+            blocked=True,
+            message=fallback_result.fallback_message,
+        )
+        ctx.output = ctx.output.model_copy(update={"safety": new_safety})
+
+        # 배지에 SAFETY_BLOCKED 추가
+        ctx = _add_badge(ctx, ValidationBadge.SAFETY_BLOCKED)
+    else:
+        # 일반 실패 시에도 기존 배지는 유지하고 로그만 기록
+        # (SAFETY_OK는 이미 설정되어 있을 수 있음)
+        pass
+
+    return ctx
+
+
+def _add_badge(ctx: PipelineContext, badge: ValidationBadge) -> PipelineContext:
+    """TurnOutput.agent_console.badges에 배지를 추가합니다.
+
+    U-054: 이미지 생성 상태를 배지로 반영합니다.
+    중복 배지는 추가하지 않습니다.
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        badge: 추가할 배지
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    if ctx.output is None:
+        return ctx
+
+    current_badges = list(ctx.output.agent_console.badges)
+
+    # 관련 배지 교체 (예: SAFETY_OK -> SAFETY_BLOCKED)
+    if badge == ValidationBadge.SAFETY_BLOCKED:
+        current_badges = [b for b in current_badges if b != ValidationBadge.SAFETY_OK]
+
+    # 중복 방지
+    if badge not in current_badges:
+        current_badges.append(badge)
+
+    # agent_console 업데이트
+    new_console = ctx.output.agent_console.model_copy(update={"badges": current_badges})
+    ctx.output = ctx.output.model_copy(update={"agent_console": new_console})
+
+    logger.debug(
+        "[Render] 배지 추가됨",
+        extra={"badge": badge.value, "total_badges": len(current_badges)},
+    )
+
+    return ctx
+
+
+def _update_render_output(
+    ctx: PipelineContext,
+    *,
+    image_url: str | None,
+    image_id: str | None,
+    generation_time_ms: int,
+    background_removed: bool,
+) -> PipelineContext:
+    """TurnOutput.render에 이미지 생성 결과를 반영합니다.
+
+    페어링 질문 Q1: Option A (ctx.output 갱신) 채택
+    - Pydantic 모델은 frozen이 아니므로 직접 수정 가능
+    - model_copy()를 사용하여 새 RenderOutput 생성 후 교체
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        image_url: 생성된 이미지 URL
+        image_id: 생성된 이미지 ID
+        generation_time_ms: 생성 소요 시간 (ms)
+        background_removed: 배경 제거 수행 여부
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    if ctx.output is None:
+        return ctx
+
+    # 기존 RenderOutput을 복사하고 새 필드 추가
+    old_render = ctx.output.render
+    new_render = RenderOutput(
+        image_job=old_render.image_job,
+        image_url=image_url,
+        image_id=image_id,
+        generation_time_ms=generation_time_ms,
+        background_removed=background_removed,
+    )
+
+    # TurnOutput 전체를 model_copy로 갱신
+    ctx.output = ctx.output.model_copy(update={"render": new_render})
+
+    logger.debug(
+        "[Render] TurnOutput.render 업데이트 완료",
+        extra={
+            "image_id": image_id,
+            "image_url": image_url,
+        },
+    )
+
+    return ctx
+
+
+async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
+    """Render 단계를 실행합니다.
+
+    이미지 생성 서비스가 주입되었으면 이미지 생성 파이프라인을 실행합니다.
+    주입되지 않았거나 이미지 생성이 필요 없는 경우 pass-through로 동작합니다.
+
+    U-051에서 브릿지가 구축되었으며, 실제 이미지 생성 로직은 U-052/U-053에서 추가됩니다:
+    - U-052: should_generate 판정 및 프롬프트/해상도 추출
+    - U-053: 비동기 이미지 생성 호출 및 결과 동기화
+
+    Args:
+        ctx: 파이프라인 컨텍스트 (image_generator 포함 가능)
+        emit: 이벤트 emit 콜백
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    ctx.current_phase = AgentPhase.RENDER
+
+    # Stage 시작 이벤트
+    await emit(
+        PipelineEvent(
+            event_type=PipelineEventType.STAGE_START,
+            phase=AgentPhase.RENDER,
+        )
+    )
+
+    # U-051/U-052: 이미지 생성 서비스 및 판정 로직
+    image_decision: ImageGenerationDecision | None = None
+
+    if ctx.image_generator is not None:
+        # 이미지 생성 서비스가 주입됨 - 연결 준비 완료
+        logger.debug(
+            "[Render] 이미지 생성 서비스 연결됨",
+            extra={
+                "generator_type": type(ctx.image_generator).__name__,
+                "is_available": ctx.image_generator.is_available(),
+            },
+        )
+
+        # U-052: 이미지 생성 여부 판정
+        if ctx.output is not None:
+            # Economy 스냅샷을 EconomySnapshot으로 변환
+            economy_snapshot = EconomySnapshot(
+                signal=ctx.economy_snapshot.signal,
+                memory_shard=ctx.economy_snapshot.memory_shard,
+            )
+
+            # 판정 수행
+            image_decision = decide_image_generation(
+                turn_output=ctx.output,
+                economy_snapshot=economy_snapshot,
+                language=ctx.turn_input.language.value,
+            )
+
+            # 판정 결과 로깅 (프롬프트 원문 제외 - RULE-007)
+            logger.info(
+                "[Render] 이미지 생성 판정 완료",
+                extra={
+                    "should_generate": image_decision.should_generate,
+                    "reason": image_decision.reason,
+                    "prompt_hash": image_decision.prompt_hash,
+                    "estimated_cost": image_decision.estimated_cost_signal,
+                },
+            )
+
+            # 잔액 부족으로 생성 불가 시 폴백 메시지 처리
+            if (
+                not image_decision.should_generate
+                and image_decision.reason == "insufficient_balance"
+                and image_decision.fallback_message
+            ):
+                logger.info(
+                    "[Render] 잔액 부족, 텍스트-only 폴백 적용",
+                    extra={
+                        "current_signal": economy_snapshot.signal,
+                        "required_signal": IMAGE_GENERATION_COST_SIGNAL,
+                    },
+                )
+                # U-054: 폴백 메시지를 TurnOutput.narrative에 추가 (RULE-004/005)
+                new_narrative = ctx.output.narrative + "\n\n" + image_decision.fallback_message
+                ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
+
+            # U-053: 이미지 생성이 필요한 경우 비동기 호출
+            if image_decision.should_generate:
+                ctx = await _execute_image_generation(
+                    ctx=ctx,
+                    image_decision=image_decision,
+                    emit=emit,
+                )
+        else:
+            logger.debug("[Render] TurnOutput 없음, 이미지 판정 건너뜀")
+    else:
+        # 이미지 생성 서비스 미주입 - pass-through 동작
+        logger.debug("[Render] 이미지 생성 서비스 미주입, pass-through 동작")
+
+    # 모의 처리 지연 (기존 동작 보존)
+    await asyncio.sleep(RENDER_DELAY_MS / 1000.0)
+
+    # Stage 완료 이벤트
+    await emit(
+        PipelineEvent(
+            event_type=PipelineEventType.STAGE_COMPLETE,
+            phase=AgentPhase.RENDER,
+        )
+    )
+
+    return ctx
+</file>
+
 <file path="frontend/src/components/ActionDeck.tsx">
 /**
  * Unknown World - Action Deck 컴포넌트 (U-009[Mvp]).
@@ -32129,6 +32203,186 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
 export default ActionDeck;
 </file>
 
+<file path="frontend/src/components/SceneCanvas.tsx">
+/**
+ * Unknown World - Scene Canvas 컴포넌트
+ *
+ * RULE-002 준수: 채팅 버블이 아닌 게임 UI
+ * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
+ *
+ * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * - TurnOutput의 objects[]/hotspots[]를 기반으로 오버레이 렌더
+ * - hover 시 하이라이트/툴팁 표시
+ * - click 시 object_id + box_2d를 TurnInput에 포함해 전송
+ *
+ * U-012[Mvp]: DnD 드롭 타겟 확장
+ * - 핫스팟을 droppable 영역으로 만들어 인벤토리 아이템 드롭 처리
+ * - 드래그 오버 시 하이라이트 강화
+ * - 드롭 성공/실패 즉시 시각화
+ *
+ * U-020[Mvp]: 이미지 Lazy Render (placeholder/폴백)
+ * - RULE-004/008 준수: 텍스트 우선 + Lazy 이미지 정책
+ * - Q1 Option A: 이전 이미지 유지 + 로딩 인디케이터 표시
+ * - 이미지 실패 시에도 핫스팟/패널/로그는 계속 동작 (텍스트-only 진행)
+ *
+ * U-058[Mvp]: 핫스팟 디자인 개선
+ * - Q1 Option C: Magenta/Purple 계열 강조
+ * - Q2 Option A: L자 브라켓 코너 마커
+ * - Hotspot 컴포넌트 분리로 시각적 품질 향상
+ *
+ * @module components/SceneCanvas
+ */
+
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { type CanvasSize } from '../utils/box2d';
+import { isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
+import { useWorldStore } from '../stores/worldStore';
+import { useAgentStore } from '../stores/agentStore';
+import { SceneImage } from './SceneImage';
+import { Hotspot, type HotspotClickData } from './Hotspot';
+
+// =============================================================================
+// 타입 정의 (Re-export for backward compatibility)
+// =============================================================================
+
+export type { HotspotClickData };
+
+interface SceneCanvasProps {
+  /** 핫스팟 클릭 콜백 */
+  onHotspotClick?: (data: HotspotClickData) => void;
+  /** 스트리밍 중 여부 (비활성화용, 생략 시 agentStore.isStreaming 사용) */
+  disabled?: boolean;
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Scene Canvas 컴포넌트
+ *
+ * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
+ * U-020[Mvp]: Lazy Render (placeholder/폴백)
+ * U-031[Mvp]: Placeholder Pack
+ *
+ * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
+ * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
+ * - U-020: Q1 Option A - 이전 이미지 유지 + 로딩 인디케이터 표시
+ * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
+ */
+export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCanvasProps) {
+  const { t } = useTranslation();
+
+  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
+  const state = useWorldStore((state) => state.sceneState);
+  const objects = useWorldStore((state) => state.sceneObjects);
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+
+  const disabled = propsDisabled ?? isStreaming;
+
+  const { status, imageUrl, message } = state;
+
+  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
+  // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
+  useEffect(() => {
+    const element = canvasRef.current;
+    if (!element) return;
+
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    const RESIZE_DEBOUNCE_MS = 100; // 디바운스 간격
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      // 디바운스: 마지막 리사이즈 이벤트 후 일정 시간 후에만 업데이트
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = setTimeout(() => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          // 의미 있는 크기 변화만 적용 (5px 이상 차이)
+          setCanvasSize((prev) => {
+            if (Math.abs(prev.width - width) > 5 || Math.abs(prev.height - height) > 5) {
+              return { width, height };
+            }
+            return prev;
+          });
+        }
+      }, RESIZE_DEBOUNCE_MS);
+    });
+
+    resizeObserver.observe(element);
+
+    // 초기 크기 설정
+    const rect = element.getBoundingClientRect();
+    setCanvasSize({ width: rect.width, height: rect.height });
+
+    return () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // 핫스팟 클릭 핸들러
+  const handleHotspotClick = useCallback(
+    (data: HotspotClickData) => {
+      if (onHotspotClick) {
+        onHotspotClick(data);
+      }
+    },
+    [onHotspotClick],
+  );
+
+  // RU-003-S2 Step 1: 핫스팟 렌더링 조건을 SSOT로 고정
+  // - isHotspotInteractionAllowed()로 허용 상태 검사 (scene, default)
+  // - objects 존재 + 캔버스 크기 확보
+  // U-020: 이미지 유무와 무관하게 핫스팟은 동작 (RULE-004)
+  const isInteractionAllowed = isHotspotInteractionAllowed(status);
+  const shouldRenderHotspots = isInteractionAllowed && objects.length > 0 && canvasSize.width > 0;
+
+  // RU-003-S2: 데모 상태 여부 (시각적 힌트 필요)
+  const isDemoState = status === 'default';
+
+  // RU-003-S2 Step 2: 핫스팟을 면적 기준으로 정렬 (작은 것이 뒤에 = 높은 z-index)
+  const sortedObjects = useMemo(() => {
+    if (objects.length <= 1) return objects;
+    return [...objects].sort((a, b) => compareHotspotPriority(a.box_2d, b.box_2d));
+  }, [objects]);
+
+  return (
+    <div ref={canvasRef} className="scene-canvas">
+      {/* U-020: 장면 이미지 (Lazy loading + placeholder/폴백 포함) */}
+      <SceneImage status={status} imageUrl={imageUrl} message={message} />
+
+      {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
+      {/* U-020: 이미지 유무와 무관하게 핫스팟은 항상 렌더 (RULE-004) */}
+      {/* U-058: Hotspot 컴포넌트 분리 (Magenta 테마 + L자 코너) */}
+      {shouldRenderHotspots && (
+        <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
+          {sortedObjects.map((obj, index) => (
+            <Hotspot
+              key={obj.id}
+              object={obj}
+              canvasSize={canvasSize}
+              onClick={handleHotspotClick}
+              disabled={disabled}
+              isDemoState={isDemoState}
+              // RU-003-S2 Step 2: 인덱스 기반 z-index로 작은 것이 위에 표시
+              style={{ zIndex: index + 1 }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
 <file path="frontend/src/stores/worldStore.ts">
 /**
  * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
@@ -32372,10 +32626,13 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // - 없으면 'default' 상태 유지
     // - safety.blocked인 경우 'blocked' 상태로 전환
     let newSceneState: SceneCanvasState;
+    const currentImageUrl = state.sceneState.imageUrl ?? state.sceneState.previousImageUrl;
+
     if (output.safety.blocked) {
       newSceneState = {
         status: 'blocked',
         message: output.safety.message ?? undefined,
+        previousImageUrl: currentImageUrl,
       };
     } else if (output.ui.scene?.image_url || output.render?.image_url) {
       // U-053: render.image_url 또는 ui.scene.image_url 중 하나라도 있으면 scene 상태로 전환
@@ -32384,11 +32641,14 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
         status: 'scene',
         imageUrl: imageUrl!,
         message: output.ui.scene?.alt_text ?? undefined,
+        // 새로운 이미지가 왔으므로 이전 이미지는 보존 (로딩 중이 아님)
+        previousImageUrl: currentImageUrl,
       };
     } else {
       newSceneState = {
         status: 'default',
         message: '',
+        previousImageUrl: currentImageUrl,
       };
     }
 
@@ -32842,6 +33102,11 @@ export function createTurnRunner(deps: {
           const worldStore = useWorldStore.getState();
           const currentTurnId = worldStore.turnCount;
 
+          // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
+          // Q1 결정: 항상 이전 이미지를 참조로 사용 (연속성 최대화)
+          const previousImageUrl =
+            worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
           // 이전 이미지 잡 취소
           imageJobController?.abort();
 
@@ -32853,6 +33118,7 @@ export function createTurnRunner(deps: {
           const modelLabel: ImageModelLabel = imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
 
           // 이미지 생성 시작
+          // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
           imageJobController = startImageGeneration(
             {
               prompt: imageJob.prompt,
@@ -32860,6 +33126,7 @@ export function createTurnRunner(deps: {
               aspectRatio: imageJob.aspect_ratio ?? '16:9',
               modelLabel,
               turnId: currentTurnId,
+              referenceImageUrl: previousImageUrl,
             },
             (response) => {
               imageJobPending = false; // 완료 시 플래그 해제
@@ -33032,6 +33299,11 @@ export function useTurnRunner(deps: {
             const worldStore = useWorldStore.getState();
             const currentTurnId = worldStore.turnCount;
 
+            // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
+            // Q1 결정: 항상 이전 이미지를 참조로 사용 (연속성 최대화)
+            const previousImageUrl =
+              worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
             // 이전 이미지 잡 취소
             imageJobControllerRef.current?.abort();
 
@@ -33043,6 +33315,7 @@ export function useTurnRunner(deps: {
               imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
 
             // 이미지 생성 시작
+            // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
             imageJobControllerRef.current = startImageGeneration(
               {
                 prompt: imageJob.prompt,
@@ -33050,6 +33323,7 @@ export function useTurnRunner(deps: {
                 aspectRatio: imageJob.aspect_ratio ?? '16:9',
                 modelLabel,
                 turnId: currentTurnId,
+                referenceImageUrl: previousImageUrl,
               },
               (response) => {
                 imageJobPendingRef.current = false; // 완료 시 플래그 해제
@@ -33115,186 +33389,6 @@ export function useTurnRunner(deps: {
   }, []);
 
   return { runTurn, cancel };
-}
-</file>
-
-<file path="frontend/src/components/SceneCanvas.tsx">
-/**
- * Unknown World - Scene Canvas 컴포넌트
- *
- * RULE-002 준수: 채팅 버블이 아닌 게임 UI
- * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
- *
- * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
- * - TurnOutput의 objects[]/hotspots[]를 기반으로 오버레이 렌더
- * - hover 시 하이라이트/툴팁 표시
- * - click 시 object_id + box_2d를 TurnInput에 포함해 전송
- *
- * U-012[Mvp]: DnD 드롭 타겟 확장
- * - 핫스팟을 droppable 영역으로 만들어 인벤토리 아이템 드롭 처리
- * - 드래그 오버 시 하이라이트 강화
- * - 드롭 성공/실패 즉시 시각화
- *
- * U-020[Mvp]: 이미지 Lazy Render (placeholder/폴백)
- * - RULE-004/008 준수: 텍스트 우선 + Lazy 이미지 정책
- * - Q1 Option A: 이전 이미지 유지 + 로딩 인디케이터 표시
- * - 이미지 실패 시에도 핫스팟/패널/로그는 계속 동작 (텍스트-only 진행)
- *
- * U-058[Mvp]: 핫스팟 디자인 개선
- * - Q1 Option C: Magenta/Purple 계열 강조
- * - Q2 Option A: L자 브라켓 코너 마커
- * - Hotspot 컴포넌트 분리로 시각적 품질 향상
- *
- * @module components/SceneCanvas
- */
-
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { type CanvasSize } from '../utils/box2d';
-import { isHotspotInteractionAllowed, compareHotspotPriority } from '../dnd/types';
-import { useWorldStore } from '../stores/worldStore';
-import { useAgentStore } from '../stores/agentStore';
-import { SceneImage } from './SceneImage';
-import { Hotspot, type HotspotClickData } from './Hotspot';
-
-// =============================================================================
-// 타입 정의 (Re-export for backward compatibility)
-// =============================================================================
-
-export type { HotspotClickData };
-
-interface SceneCanvasProps {
-  /** 핫스팟 클릭 콜백 */
-  onHotspotClick?: (data: HotspotClickData) => void;
-  /** 스트리밍 중 여부 (비활성화용, 생략 시 agentStore.isStreaming 사용) */
-  disabled?: boolean;
-}
-
-// =============================================================================
-// 메인 컴포넌트
-// =============================================================================
-
-/**
- * Scene Canvas 컴포넌트
- *
- * U-010[Mvp]: 핫스팟 오버레이 + 클릭 처리
- * U-020[Mvp]: Lazy Render (placeholder/폴백)
- * U-031[Mvp]: Placeholder Pack
- *
- * - 상태에 따라 placeholder 이미지와 라벨을 표시합니다.
- * - 'scene' 상태에서는 실제 이미지를 렌더링하며, 로드 실패 시 폴백을 제공합니다.
- * - U-020: Q1 Option A - 이전 이미지 유지 + 로딩 인디케이터 표시
- * - objects 배열이 있으면 핫스팟 오버레이를 렌더링합니다.
- */
-export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCanvasProps) {
-  const { t } = useTranslation();
-
-  // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
-  const state = useWorldStore((state) => state.sceneState);
-  const objects = useWorldStore((state) => state.sceneObjects);
-  const isStreaming = useAgentStore((state) => state.isStreaming);
-
-  const disabled = propsDisabled ?? isStreaming;
-
-  const { status, imageUrl, message } = state;
-
-  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
-  const canvasRef = useRef<HTMLDivElement>(null);
-
-  // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
-  // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
-  useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
-
-    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-    const RESIZE_DEBOUNCE_MS = 100; // 디바운스 간격
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      // 디바운스: 마지막 리사이즈 이벤트 후 일정 시간 후에만 업데이트
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-      resizeTimeout = setTimeout(() => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          // 의미 있는 크기 변화만 적용 (5px 이상 차이)
-          setCanvasSize((prev) => {
-            if (Math.abs(prev.width - width) > 5 || Math.abs(prev.height - height) > 5) {
-              return { width, height };
-            }
-            return prev;
-          });
-        }
-      }, RESIZE_DEBOUNCE_MS);
-    });
-
-    resizeObserver.observe(element);
-
-    // 초기 크기 설정
-    const rect = element.getBoundingClientRect();
-    setCanvasSize({ width: rect.width, height: rect.height });
-
-    return () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  // 핫스팟 클릭 핸들러
-  const handleHotspotClick = useCallback(
-    (data: HotspotClickData) => {
-      if (onHotspotClick) {
-        onHotspotClick(data);
-      }
-    },
-    [onHotspotClick],
-  );
-
-  // RU-003-S2 Step 1: 핫스팟 렌더링 조건을 SSOT로 고정
-  // - isHotspotInteractionAllowed()로 허용 상태 검사 (scene, default)
-  // - objects 존재 + 캔버스 크기 확보
-  // U-020: 이미지 유무와 무관하게 핫스팟은 동작 (RULE-004)
-  const isInteractionAllowed = isHotspotInteractionAllowed(status);
-  const shouldRenderHotspots = isInteractionAllowed && objects.length > 0 && canvasSize.width > 0;
-
-  // RU-003-S2: 데모 상태 여부 (시각적 힌트 필요)
-  const isDemoState = status === 'default';
-
-  // RU-003-S2 Step 2: 핫스팟을 면적 기준으로 정렬 (작은 것이 뒤에 = 높은 z-index)
-  const sortedObjects = useMemo(() => {
-    if (objects.length <= 1) return objects;
-    return [...objects].sort((a, b) => compareHotspotPriority(a.box_2d, b.box_2d));
-  }, [objects]);
-
-  return (
-    <div ref={canvasRef} className="scene-canvas">
-      {/* U-020: 장면 이미지 (Lazy loading + placeholder/폴백 포함) */}
-      <SceneImage status={status} imageUrl={imageUrl} message={message} />
-
-      {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}
-      {/* U-020: 이미지 유무와 무관하게 핫스팟은 항상 렌더 (RULE-004) */}
-      {/* U-058: Hotspot 컴포넌트 분리 (Magenta 테마 + L자 코너) */}
-      {shouldRenderHotspots && (
-        <div className="hotspot-layer" aria-label={t('scene.hotspot.layer_label')}>
-          {sortedObjects.map((obj, index) => (
-            <Hotspot
-              key={obj.id}
-              object={obj}
-              canvasSize={canvasSize}
-              onClick={handleHotspotClick}
-              disabled={disabled}
-              isDemoState={isDemoState}
-              // RU-003-S2 Step 2: 인덱스 기반 z-index로 작은 것이 위에 표시
-              style={{ zIndex: index + 1 }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 </file>
 
@@ -34175,6 +34269,7 @@ class ImageGenerationRequest(BaseModel):
         aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
         image_size: 이미지 크기 (예: "1024x1024")
         reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
+        reference_image_url: 참조 이미지 URL (U-068: 이전 턴 이미지 연결성)
         session_id: 세션 ID (파일 그룹화용)
         remove_background: 배경 제거 여부 (U-035, rembg 사용)
         image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
@@ -34187,6 +34282,10 @@ class ImageGenerationRequest(BaseModel):
     aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
     image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    reference_image_url: str | None = Field(
+        default=None,
+        description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
+    )
     session_id: str | None = Field(default=None, description="세션 ID")
     remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
     seed: int | None = Field(default=None, description="결정적 생성을 위한 시드 (선택)")
@@ -34307,6 +34406,7 @@ class MockImageGenerator:
                 "aspect_ratio": request.aspect_ratio,
                 "model_label": request.model_label,
                 "remove_background": request.remove_background,
+                "reference_image_url": request.reference_image_url,
             },
         )
 
@@ -34424,6 +34524,7 @@ class ImageGenerator:
     모델 ID는 RULE-010에 따라 고정됩니다.
 
     U-080 핫픽스: Vertex AI 서비스 계정 인증 완전 제거, API 키 전용
+    U-068: 참조 이미지(이전 턴 이미지)를 사용한 시각적 연속성 지원
     """
 
     def __init__(
@@ -34442,6 +34543,8 @@ class ImageGenerator:
         self._api_key = api_key or os.environ.get("GOOGLE_API_KEY")
         self._client: Client | None = None
         self._available = False
+        # U-068: 참조 이미지 캐시 (URL → bytes)
+        self._reference_image_cache: dict[str, bytes] = {}
 
         self._initialize_client()
 
@@ -34476,12 +34579,86 @@ class ImageGenerator:
             )
             self._available = False
 
+    async def _load_reference_image(self, url: str) -> bytes | None:
+        """참조 이미지를 URL에서 로드합니다 (U-068).
+
+        로컬 파일 또는 HTTP URL에서 이미지를 로드합니다.
+        캐시를 사용하여 동일 URL의 중복 로딩을 방지합니다.
+
+        Args:
+            url: 이미지 URL (로컬 경로 또는 HTTP URL)
+
+        Returns:
+            bytes | None: 이미지 바이트 또는 실패 시 None
+        """
+        # 캐시 확인
+        if url in self._reference_image_cache:
+            logger.debug(
+                "[ImageGen] 참조 이미지 캐시 히트",
+                extra={"url_hash": hashlib.sha256(url.encode()).hexdigest()[:8]},
+            )
+            return self._reference_image_cache[url]
+
+        try:
+            # 로컬 파일 경로 처리 (API URL 형식: /api/image/file/{image_id})
+            if url.startswith("/api/image/file/"):
+                # URL에서 이미지 ID 추출
+                image_id = url.split("/")[-1]
+                file_path = self._output_dir / f"{image_id}.png"
+                if file_path.exists():
+                    image_bytes = file_path.read_bytes()
+                    self._reference_image_cache[url] = image_bytes
+                    logger.debug(
+                        "[ImageGen] 로컬 참조 이미지 로드 성공",
+                        extra={"image_id": image_id, "size_bytes": len(image_bytes)},
+                    )
+                    return image_bytes
+                else:
+                    logger.warning(
+                        "[ImageGen] 로컬 참조 이미지 파일 없음",
+                        extra={"image_id": image_id},
+                    )
+                    return None
+
+            # HTTP/HTTPS URL 처리
+            if url.startswith(("http://", "https://")):
+                import httpx
+
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(url)
+                    response.raise_for_status()
+                    image_bytes = response.content
+                    self._reference_image_cache[url] = image_bytes
+                    logger.debug(
+                        "[ImageGen] HTTP 참조 이미지 로드 성공",
+                        extra={
+                            "url_hash": hashlib.sha256(url.encode()).hexdigest()[:8],
+                            "size_bytes": len(image_bytes),
+                        },
+                    )
+                    return image_bytes
+
+            logger.warning(
+                "[ImageGen] 지원하지 않는 참조 이미지 URL 형식",
+                extra={"url_prefix": url[:20] if len(url) > 20 else url},
+            )
+            return None
+
+        except Exception as e:
+            logger.warning(
+                "[ImageGen] 참조 이미지 로드 실패",
+                extra={"error_type": type(e).__name__},
+            )
+            return None
+
     async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
         """이미지를 생성합니다.
 
         U-064[Mvp] 수정: generate_content() API를 사용하여 이미지 생성.
         gemini-3-pro-image-preview 모델은 generate_images()가 아닌
         generate_content()를 사용해야 함.
+
+        U-068: 참조 이미지가 있으면 멀티모달 입력으로 전달하여 시각적 연속성 유지.
 
         Args:
             request: 이미지 생성 요청
@@ -34508,6 +34685,13 @@ class ImageGenerator:
         )
         selected_model_id = get_model_id(selected_model_label)
 
+        # U-068: 참조 이미지 로드 (있는 경우)
+        reference_image_bytes: bytes | None = None
+        has_reference = False
+        if request.reference_image_url:
+            reference_image_bytes = await self._load_reference_image(request.reference_image_url)
+            has_reference = reference_image_bytes is not None
+
         logger.debug(
             "[ImageGen] 이미지 생성 요청",
             extra={
@@ -34517,11 +34701,24 @@ class ImageGenerator:
                 "model": selected_model_id,
                 "model_label": request.model_label,
                 "remove_background": request.remove_background,
+                "has_reference": has_reference,
             },
         )
 
         try:
-            from google.genai.types import GenerateContentConfig, Modality
+            from google.genai.types import GenerateContentConfig, Modality, Part
+
+            # U-068: 참조 이미지가 있으면 멀티모달 contents 구성
+            # 참조 이미지를 먼저 넣고, 프롬프트를 그 다음에 배치
+            if has_reference and reference_image_bytes is not None:
+                # 멀티모달 contents: [참조 이미지, 프롬프트 텍스트]
+                contents = [
+                    Part.from_bytes(data=reference_image_bytes, mime_type="image/png"),
+                    f"이전 장면의 이미지입니다. 이 이미지의 스타일, 톤, 캐릭터/오브젝트 외형을 참조하여 다음 장면을 생성해주세요:\n\n{request.prompt}",
+                ]
+            else:
+                # 참조 이미지 없이 프롬프트만 전달
+                contents = request.prompt
 
             # U-064: generate_content() API를 사용하여 이미지 생성
             # response_modalities에 TEXT와 IMAGE를 모두 포함
@@ -34530,7 +34727,7 @@ class ImageGenerator:
             response = await asyncio.wait_for(
                 self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
                     model=selected_model_id,
-                    contents=request.prompt,
+                    contents=contents,
                     config=GenerateContentConfig(
                         response_modalities=[Modality.TEXT, Modality.IMAGE],
                     ),

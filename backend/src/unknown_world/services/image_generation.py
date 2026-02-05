@@ -122,6 +122,7 @@ class ImageGenerationRequest(BaseModel):
         aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
         image_size: 이미지 크기 (예: "1024x1024")
         reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
+        reference_image_url: 참조 이미지 URL (U-068: 이전 턴 이미지 연결성)
         session_id: 세션 ID (파일 그룹화용)
         remove_background: 배경 제거 여부 (U-035, rembg 사용)
         image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
@@ -134,6 +135,10 @@ class ImageGenerationRequest(BaseModel):
     aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
     image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    reference_image_url: str | None = Field(
+        default=None,
+        description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
+    )
     session_id: str | None = Field(default=None, description="세션 ID")
     remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
     seed: int | None = Field(default=None, description="결정적 생성을 위한 시드 (선택)")
@@ -254,6 +259,7 @@ class MockImageGenerator:
                 "aspect_ratio": request.aspect_ratio,
                 "model_label": request.model_label,
                 "remove_background": request.remove_background,
+                "reference_image_url": request.reference_image_url,
             },
         )
 
@@ -371,6 +377,7 @@ class ImageGenerator:
     모델 ID는 RULE-010에 따라 고정됩니다.
 
     U-080 핫픽스: Vertex AI 서비스 계정 인증 완전 제거, API 키 전용
+    U-068: 참조 이미지(이전 턴 이미지)를 사용한 시각적 연속성 지원
     """
 
     def __init__(
@@ -389,6 +396,8 @@ class ImageGenerator:
         self._api_key = api_key or os.environ.get("GOOGLE_API_KEY")
         self._client: Client | None = None
         self._available = False
+        # U-068: 참조 이미지 캐시 (URL → bytes)
+        self._reference_image_cache: dict[str, bytes] = {}
 
         self._initialize_client()
 
@@ -423,12 +432,86 @@ class ImageGenerator:
             )
             self._available = False
 
+    async def _load_reference_image(self, url: str) -> bytes | None:
+        """참조 이미지를 URL에서 로드합니다 (U-068).
+
+        로컬 파일 또는 HTTP URL에서 이미지를 로드합니다.
+        캐시를 사용하여 동일 URL의 중복 로딩을 방지합니다.
+
+        Args:
+            url: 이미지 URL (로컬 경로 또는 HTTP URL)
+
+        Returns:
+            bytes | None: 이미지 바이트 또는 실패 시 None
+        """
+        # 캐시 확인
+        if url in self._reference_image_cache:
+            logger.debug(
+                "[ImageGen] 참조 이미지 캐시 히트",
+                extra={"url_hash": hashlib.sha256(url.encode()).hexdigest()[:8]},
+            )
+            return self._reference_image_cache[url]
+
+        try:
+            # 로컬 파일 경로 처리 (API URL 형식: /api/image/file/{image_id})
+            if url.startswith("/api/image/file/"):
+                # URL에서 이미지 ID 추출
+                image_id = url.split("/")[-1]
+                file_path = self._output_dir / f"{image_id}.png"
+                if file_path.exists():
+                    image_bytes = file_path.read_bytes()
+                    self._reference_image_cache[url] = image_bytes
+                    logger.debug(
+                        "[ImageGen] 로컬 참조 이미지 로드 성공",
+                        extra={"image_id": image_id, "size_bytes": len(image_bytes)},
+                    )
+                    return image_bytes
+                else:
+                    logger.warning(
+                        "[ImageGen] 로컬 참조 이미지 파일 없음",
+                        extra={"image_id": image_id},
+                    )
+                    return None
+
+            # HTTP/HTTPS URL 처리
+            if url.startswith(("http://", "https://")):
+                import httpx
+
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(url)
+                    response.raise_for_status()
+                    image_bytes = response.content
+                    self._reference_image_cache[url] = image_bytes
+                    logger.debug(
+                        "[ImageGen] HTTP 참조 이미지 로드 성공",
+                        extra={
+                            "url_hash": hashlib.sha256(url.encode()).hexdigest()[:8],
+                            "size_bytes": len(image_bytes),
+                        },
+                    )
+                    return image_bytes
+
+            logger.warning(
+                "[ImageGen] 지원하지 않는 참조 이미지 URL 형식",
+                extra={"url_prefix": url[:20] if len(url) > 20 else url},
+            )
+            return None
+
+        except Exception as e:
+            logger.warning(
+                "[ImageGen] 참조 이미지 로드 실패",
+                extra={"error_type": type(e).__name__},
+            )
+            return None
+
     async def generate(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
         """이미지를 생성합니다.
 
         U-064[Mvp] 수정: generate_content() API를 사용하여 이미지 생성.
         gemini-3-pro-image-preview 모델은 generate_images()가 아닌
         generate_content()를 사용해야 함.
+
+        U-068: 참조 이미지가 있으면 멀티모달 입력으로 전달하여 시각적 연속성 유지.
 
         Args:
             request: 이미지 생성 요청
@@ -455,6 +538,13 @@ class ImageGenerator:
         )
         selected_model_id = get_model_id(selected_model_label)
 
+        # U-068: 참조 이미지 로드 (있는 경우)
+        reference_image_bytes: bytes | None = None
+        has_reference = False
+        if request.reference_image_url:
+            reference_image_bytes = await self._load_reference_image(request.reference_image_url)
+            has_reference = reference_image_bytes is not None
+
         logger.debug(
             "[ImageGen] 이미지 생성 요청",
             extra={
@@ -464,11 +554,24 @@ class ImageGenerator:
                 "model": selected_model_id,
                 "model_label": request.model_label,
                 "remove_background": request.remove_background,
+                "has_reference": has_reference,
             },
         )
 
         try:
-            from google.genai.types import GenerateContentConfig, Modality
+            from google.genai.types import GenerateContentConfig, Modality, Part
+
+            # U-068: 참조 이미지가 있으면 멀티모달 contents 구성
+            # 참조 이미지를 먼저 넣고, 프롬프트를 그 다음에 배치
+            if has_reference and reference_image_bytes is not None:
+                # 멀티모달 contents: [참조 이미지, 프롬프트 텍스트]
+                contents = [
+                    Part.from_bytes(data=reference_image_bytes, mime_type="image/png"),
+                    f"이전 장면의 이미지입니다. 이 이미지의 스타일, 톤, 캐릭터/오브젝트 외형을 참조하여 다음 장면을 생성해주세요:\n\n{request.prompt}",
+                ]
+            else:
+                # 참조 이미지 없이 프롬프트만 전달
+                contents = request.prompt
 
             # U-064: generate_content() API를 사용하여 이미지 생성
             # response_modalities에 TEXT와 IMAGE를 모두 포함
@@ -477,7 +580,7 @@ class ImageGenerator:
             response = await asyncio.wait_for(
                 self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
                     model=selected_model_id,
-                    contents=request.prompt,
+                    contents=contents,
                     config=GenerateContentConfig(
                         response_modalities=[Modality.TEXT, Modality.IMAGE],
                     ),

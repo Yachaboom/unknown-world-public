@@ -46,6 +46,8 @@ export interface ImageGenerationRequest {
   imageSize?: string;
   /** 참조 이미지 ID 목록 */
   referenceImageIds?: string[];
+  /** 참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지) */
+  referenceImageUrl?: string;
   /** 세션 ID */
   sessionId?: string;
   /** 실패 시 건너뛰기 (기본값: true) */
@@ -136,6 +138,7 @@ export async function generateImage(
         aspect_ratio: request.aspectRatio ?? '16:9',
         image_size: request.imageSize ?? '1024x1024',
         reference_image_ids: request.referenceImageIds ?? [],
+        reference_image_url: request.referenceImageUrl ?? null,
         session_id: request.sessionId ?? null,
         skip_on_failure: request.skipOnFailure ?? true,
         model_label: request.modelLabel ?? 'QUALITY',

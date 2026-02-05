@@ -10,34 +10,53 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 
 ```text
 .
+├── .gemini/
+│   ├── rules/ (backend-orchestrator-rules.md, commit-rules.md, docs-ssot-rules.md, economy-rules.md, frontend-ui-rules.md, i18n-prompt-rules.md, image-rules.md, observability-replay-rules.md, safety-repair-rules.md, structured-output-rules.md 등)
+│   └── commands/ (doc-update.toml, unit-impl.toml 등)
 ├── backend/
+│   ├── .data/
+│   │   ├── artifacts/ (U-050-initial-state.png 등)
+│   │   └── images/ (generated/, uploaded/)
+│   ├── prompts/
+│   │   ├── system/ (game_master.ko.md, game_master.en.md)
+│   │   ├── turn/ (turn_output_instructions.ko.md, turn_output_instructions.en.md)
+│   │   └── image/ (scene_prompt.ko.md, scene_prompt.en.md)
 │   ├── src/unknown_world/
 │   │   ├── api/ (turn.py, scanner.py, image.py 등)
 │   │   ├── config/ (models.py, settings.py 등)
-│   │   ├── models/ (turn.py, scanner.py 등)
+│   │   ├── models/ (turn.py, scanner.py, common.py 등)
 │   │   ├── orchestrator/ (pipeline.py, mock.py, prompt_loader.py, repair_loop.py 등)
-│   │   │   └── stages/ (parse.py, validate.py, render.py, verify.py 등)
+│   │   │   └── stages/ (parse.py, validate.py, plan.py, resolve.py, render.py, verify.py, commit.py)
 │   │   ├── services/ (genai_client.py, image_generation.py, image_postprocess.py, rembg_preflight.py 등)
 │   │   ├── storage/ (local_storage.py, validation.py, paths.py)
 │   │   └── validation/ (language_gate.py, business_rules.py)
-│   ├── prompts/ (system/, turn/, image/ 하위 ko/en.md)
 │   └── tests/ (unit/, integration/, qa/, manual_test_image.py, manual_test_rembg.py 등)
 ├── frontend/
+│   ├── public/ui/ (icons/, chrome/, placeholders/, manifest.json)
 │   ├── src/
-│   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, InventoryPanel.tsx, NarrativeFeed.tsx 등)
-│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts, uiPrefsStore.ts 등)
-│   │   ├── turn/ (turnRunner.ts)
-│   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts, constants.ts)
 │   │   ├── api/ (turnStream.ts, scanner.ts, image.ts)
+│   │   ├── components/ (ActionDeck.tsx, SceneCanvas.tsx, SceneImage.tsx, InventoryPanel.tsx, NarrativeFeed.tsx, EconomyHud.tsx, QuestPanel.tsx, RuleBoard.tsx, AgentConsole.tsx 등)
+│   │   ├── data/ (demoProfiles.ts)
+│   │   ├── dnd/ (types.ts)
+│   │   ├── hooks/ (useTypewriter.ts 등)
 │   │   ├── locales/ (ko-KR/, en-US/ translation.json)
-│   │   └── schemas/ (turn.ts)
-│   └── public/ui/ (icons/, chrome/, placeholders/, manifest.json)
+│   │   ├── save/ (sessionLifecycle.ts, saveGame.ts, migrations.ts, constants.ts)
+│   │   ├── schemas/ (turn.ts)
+│   │   ├── stores/ (worldStore.ts, economyStore.ts, agentStore.ts, actionDeckStore.ts, inventoryStore.ts, uiPrefsStore.ts)
+│   │   ├── turn/ (turnRunner.ts)
+│   │   └── utils/ (box2d.ts)
+│   └── index.html
 ├── shared/
 │   └── schemas/turn/ (turn_output.schema.json 등)
 └── vibe/
-    ├── unit-plans/ (U-001~U-080 등)
-    ├── unit-results/ (U-001~U-080 등)
-    └── unit-runbooks/ (U-001~U-080 등)
+    ├── prd.md
+    ├── roadmap.md
+    ├── progress.md
+    ├── tech-stack.md
+    ├── architecture.md
+    ├── unit-plans/ (U-001~U-084 등)
+    ├── unit-results/ (U-001~U-084 등)
+    └── unit-runbooks/ (U-001~U-084 등)
 ```
 
 ### 주요 디렉토리 설명
@@ -47,6 +66,17 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 - `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 - `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
+
+## 31. 참조 이미지 기반 연결성 강화 (U-068[Mvp])
+
+1. **시각적 일관성 확보 (Reference Image)**:
+    - **Previous Image Mapping**: 이전 턴에서 성공적으로 생성된 이미지 URL을 프론트엔드 `worldStore`에서 `previousImageUrl`로 유지함.
+    - **Contextual Injection**: 다음 턴의 이미지 생성 요청(`ImageJob`) 시, 이 URL을 `reference_image_url` 필드에 포함하여 백엔드로 전달함.
+2. **백엔드 참조 처리 파이프라인**:
+    - **Image Retrieval**: `image_generation.py` 서비스에서 전달받은 URL(로컬 경로 또는 HTTP)을 통해 이미지를 로드하고 Gemini API 호출에 필요한 형식으로 변환함.
+    - **API Integration**: Gemini 3 모델의 `image_reference` 매개변수를 사용하여 이전 장면의 스타일, 캐릭터, 조명을 현재 생성할 이미지의 기초로 활용하도록 지시함.
+3. **연결성 모니터링 및 로깅**:
+    - **has_reference 플래그**: 로그 및 에이전트 콘솔 메타데이터에 참조 이미지 사용 여부(`has_reference=True/False`)를 노출하여 파이프라인 동작을 투명하게 확인 가능하도록 함.
 
 ---
 

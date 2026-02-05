@@ -109,6 +109,7 @@ async def _execute_image_generation(
             "prompt_hash": image_decision.prompt_hash,
             "aspect_ratio": image_decision.aspect_ratio,
             "image_size": image_decision.image_size,
+            "reference_image_url": image_decision.reference_image_url,
         },
     )
 
@@ -118,6 +119,7 @@ async def _execute_image_generation(
         aspect_ratio=image_decision.aspect_ratio or image_job.aspect_ratio,
         image_size=image_decision.image_size or image_job.image_size,
         reference_image_ids=image_job.reference_image_ids,
+        reference_image_url=image_decision.reference_image_url,
         session_id=None,  # 세션 ID는 필요 시 TurnInput에서 추출
         remove_background=image_job.remove_background,
         seed=ctx.seed,

@@ -215,6 +215,11 @@ export function createTurnRunner(deps: {
           const worldStore = useWorldStore.getState();
           const currentTurnId = worldStore.turnCount;
 
+          // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
+          // Q1 결정: 항상 이전 이미지를 참조로 사용 (연속성 최대화)
+          const previousImageUrl =
+            worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
           // 이전 이미지 잡 취소
           imageJobController?.abort();
 
@@ -226,6 +231,7 @@ export function createTurnRunner(deps: {
           const modelLabel: ImageModelLabel = imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
 
           // 이미지 생성 시작
+          // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
           imageJobController = startImageGeneration(
             {
               prompt: imageJob.prompt,
@@ -233,6 +239,7 @@ export function createTurnRunner(deps: {
               aspectRatio: imageJob.aspect_ratio ?? '16:9',
               modelLabel,
               turnId: currentTurnId,
+              referenceImageUrl: previousImageUrl,
             },
             (response) => {
               imageJobPending = false; // 완료 시 플래그 해제
@@ -405,6 +412,11 @@ export function useTurnRunner(deps: {
             const worldStore = useWorldStore.getState();
             const currentTurnId = worldStore.turnCount;
 
+            // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
+            // Q1 결정: 항상 이전 이미지를 참조로 사용 (연속성 최대화)
+            const previousImageUrl =
+              worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
             // 이전 이미지 잡 취소
             imageJobControllerRef.current?.abort();
 
@@ -416,6 +428,7 @@ export function useTurnRunner(deps: {
               imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
 
             // 이미지 생성 시작
+            // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
             imageJobControllerRef.current = startImageGeneration(
               {
                 prompt: imageJob.prompt,
@@ -423,6 +436,7 @@ export function useTurnRunner(deps: {
                 aspectRatio: imageJob.aspect_ratio ?? '16:9',
                 modelLabel,
                 turnId: currentTurnId,
+                referenceImageUrl: previousImageUrl,
               },
               (response) => {
                 imageJobPendingRef.current = false; // 완료 시 플래그 해제

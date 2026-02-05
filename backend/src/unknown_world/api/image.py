@@ -85,6 +85,7 @@ class GenerateImageRequest(BaseModel):
         aspect_ratio: 가로세로 비율
         image_size: 이미지 크기
         reference_image_ids: 참조 이미지 ID 목록 (편집용)
+        reference_image_url: 참조 이미지 URL (U-068: 이전 턴 이미지 연결성)
         session_id: 세션 ID (파일 그룹화용)
         skip_on_failure: 실패 시 건너뛰기 (텍스트-only 진행)
         model_label: 모델 티어링 라벨 (U-066: FAST/QUALITY)
@@ -98,6 +99,10 @@ class GenerateImageRequest(BaseModel):
     aspect_ratio: str = Field(default="1:1", description="가로세로 비율")
     image_size: str = Field(default="1024x1024", description="이미지 크기")
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
+    reference_image_url: str | None = Field(
+        default=None,
+        description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
+    )
     session_id: str | None = Field(default=None, description="세션 ID")
     skip_on_failure: bool = Field(default=True, description="실패 시 건너뛰기 (텍스트-only 진행)")
     model_label: str = Field(default="QUALITY", description="모델 티어링 라벨 (FAST/QUALITY)")
@@ -207,6 +212,7 @@ async def generate_image(
                 aspect_ratio=request.aspect_ratio,
                 image_size=request.image_size,
                 reference_image_ids=request.reference_image_ids,
+                reference_image_url=request.reference_image_url,
                 session_id=request.session_id,
                 model_label=request.model_label,
             )

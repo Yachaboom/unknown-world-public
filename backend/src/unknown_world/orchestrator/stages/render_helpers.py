@@ -25,6 +25,8 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel, ConfigDict, Field
+
 if TYPE_CHECKING:
     from unknown_world.models.turn import (
         EconomySnapshot,
@@ -40,8 +42,26 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# 상수 정의
+# 정책 및 상수 정의
 # =============================================================================
+
+
+class ImagePolicy(BaseModel):
+    """이미지 생성 정책 (U-068).
+
+    Attributes:
+        use_reference: 참조 이미지(이전 턴 이미지) 사용 여부
+        max_reference_images: 최대 참조 이미지 수 (기본 1)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    use_reference: bool = Field(default=True, description="참조 이미지 사용 여부")
+    max_reference_images: int = Field(default=1, description="최대 참조 이미지 수")
+
+
+# 기본 정책 인스턴스
+DEFAULT_IMAGE_POLICY = ImagePolicy()
 
 # MVP: 이미지 생성 고정 비용 (Q1 결정: Option A)
 IMAGE_GENERATION_COST_SIGNAL = 10
@@ -108,6 +128,7 @@ class ImageGenerationDecision:
     prompt_hash: str | None = None
     aspect_ratio: str | None = None
     image_size: str | None = None
+    reference_image_url: str | None = None
     estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL
     fallback_message: str | None = None
 
@@ -280,6 +301,7 @@ def decide_image_generation(
             prompt_hash=prompt_hash,
             aspect_ratio=image_job.aspect_ratio,
             image_size=image_job.image_size,
+            reference_image_url=image_job.reference_image_url,
             estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
             fallback_message=fallback_msg,
         )
@@ -291,6 +313,7 @@ def decide_image_generation(
             "prompt_hash": prompt_hash,
             "aspect_ratio": image_job.aspect_ratio,
             "image_size": image_job.image_size,
+            "reference_image_url": image_job.reference_image_url,
             "estimated_cost": IMAGE_GENERATION_COST_SIGNAL,
         },
     )
@@ -301,6 +324,7 @@ def decide_image_generation(
         prompt_hash=prompt_hash,
         aspect_ratio=image_job.aspect_ratio,
         image_size=image_job.image_size,
+        reference_image_url=image_job.reference_image_url,
         estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
     )
 
