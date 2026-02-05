@@ -611,6 +611,14 @@ export const TurnOutputSchema = z
       repair_count: 0,
       model_label: 'FAST',
     }).describe('에이전트 실행 정보'),
+
+    // U-072: 세션 유도를 위한 힌트 필드 (선택)
+    hints: z
+      .object({
+        scanner: z.boolean().optional().describe('Scanner 사용 유도 힌트 여부'),
+      })
+      .optional()
+      .describe('플레이 유도를 위한 힌트 플래그'),
   })
   .strict();
 export type TurnOutput = z.infer<typeof TurnOutputSchema>;

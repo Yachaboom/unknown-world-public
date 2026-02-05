@@ -1,6 +1,34 @@
 # 프로젝트 진행 상황
 
-## [2026-02-05 17:50] [U-070[Mvp]] 아이템-핫스팟 사용 시 액션 로그 출력 완료
+## [2026-02-05 18:10] [U-072[Mvp]] Scanner 의미론적 사용 유도 UX 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Scanner(이미지 업로드)의 발견성 및 사용성 개선 (온보딩 가이드, 툴팁, 시각적 어포던스)
+- **추가 컴포넌트**: `vibe/unit-results/U-072[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-072-scanner-semantic-ux-runbook.md` (런북)
+- **달성 요구사항**: [PRD 6.7] Scanner 기능 발견성 강화, [RULE-002] 게임 UI 가이드라인 준수, [PRD 9.4] 접근성 지원
+
+### 기술적 구현 세부사항
+
+**Scanner UX 강화**:
+- **Visual Onboarding**: `localStorage` 연동 화살표+말풍선 가이드를 통해 첫 사용자의 학습 곡선 완화.
+- **Semantic Affordance**: idle 상태의 "이미지 → 아이템" 글로우 힌트와 드래그 오버 시 "여기에 놓으세요!" 강조 피드백으로 조작성 극대화.
+- **Contextual Tooltip**: 마우스 호버 시 기능의 내러티브적 정의("현실의 사진을 아이템으로 변환")를 전달하는 CRT 툴팁 제공.
+
+### 코드 구조
+repo-root/
+├── frontend/src/
+│   ├── components/ScannerSlot.tsx (온보딩/툴팁/어포던스 로직 통합)
+│   └── style.css (Scanner 전용 애니메이션 및 CRT 툴팁 스타일)
+└── frontend/src/locales/
+    └── ko-KR/en-US/translation.json (UX 가이드 텍스트)
+
+### 다음 단계
+
+- **U-080**: ⚡핫픽스(최우선) - Vertex AI 제거 → API 키 인증 전용 전환
+- **U-081**: UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정
+
+---
 
 ### 구현 완료 항목
 

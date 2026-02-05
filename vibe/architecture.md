@@ -58,9 +58,12 @@ frontend/src/components/InventoryPanel.tsx
 frontend/src/components/NarrativeFeed.tsx
 frontend/src/components/QuestPanel.tsx
 frontend/src/components/RuleBoard.tsx
+frontend/src/components/ScannerSlot.tsx
 frontend/src/components/SceneCanvas.tsx
 frontend/src/components/SceneImage.tsx
 frontend/src/components/Hotspot.tsx
+frontend/src/locales/ko-KR/translation.json
+frontend/src/locales/en-US/translation.json
 frontend/src/save/sessionLifecycle.ts
 frontend/src/save/saveGame.ts
 frontend/src/save/migrations.ts
@@ -148,6 +151,21 @@ shared/schemas/turn/turn_output.schema.json
 3. **접근성 및 안정성**:
     - **Reduced Motion Support**: `prefers-reduced-motion` 감지 시 모든 애니메이션을 정적 상태로 전환하여 가독성을 보호함.
     - **Fail-safe Cleanup**: 에러 발생이나 턴 종료 시 `idle` 상태로 자동 복구되어 인터랙션 차단을 방지함.
+
+---
+
+## 36. Scanner 의미론적 사용 유도 UX (U-072[Mvp])
+
+1. **발견성 강화 (Affordance & Onboarding)**:
+    - **Visual Onboarding**: 첫 방문 사용자에게 화살표(▼)와 말풍선 형태의 시각적 가이드를 제공하여 "이미지 드래그" 조작을 유도함.
+    - **Persistent State**: `localStorage`(`uw_scanner_onboarding_done`)를 사용하여 온보딩 완료 여부를 영구 저장하고 반복 노출을 방지함.
+    - **Idle Affordance**: Scanner가 대기 상태일 때 "이미지 → 아이템" 힌트 텍스트와 글로우 애니메이션을 통해 기능의 시맨틱을 전달함.
+2. **상호작용 피드백 (Tooltip & Drag)**:
+    - **Contextual Tooltip**: 마우스 호버 시 Scanner의 역할(현실 사진의 아이템 변환)을 구체적으로 설명하는 CRT 테마 툴팁을 표시함.
+    - **Dynamic Affordance**: 이미지 드래그 오버 시 텍스트를 "여기에 놓으세요!"로 전환하고 강조색(Accent)을 적용하여 즉각적인 조작 피드백을 제공함.
+3. **접근성 및 안정성**:
+    - **Layout Stability**: 텍스트 전환 시 `visibility: hidden` 정책을 사용하여 레이아웃 시프트(Layout Shift)를 방지함.
+    - **Accessibility First**: 키보드 포커스(Tab) 및 실행(Enter/Space)을 지원하며, `prefers-reduced-motion` 감지 시 모든 UX 애니메이션을 정적 상태로 완화함.
 
 ---
 

@@ -26,6 +26,7 @@ import type { SceneCanvasState, SceneProcessingPhase } from '../types/scene';
 import { useActionDeckStore } from './actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
 import { useEconomyStore } from './economyStore';
+import i18n from '../i18n';
 
 // =============================================================================
 // 타입 정의
@@ -256,6 +257,17 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       type: 'narrative',
     };
 
+    const newNarrativeEntries = [...state.narrativeEntries, newNarrativeEntry];
+
+    // U-072: Scanner 힌트 유도 (Option A: 백엔드 플래그 기반)
+    if (output.hints?.scanner) {
+      newNarrativeEntries.push({
+        turn: newTurnCount,
+        text: i18n.t('scanner.hint_narrative'),
+        type: 'system',
+      });
+    }
+
     // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
     const newEconomy: EconomyState = {
       signal: output.economy.balance_after.signal,
@@ -374,7 +386,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
     set({
       turnCount: newTurnCount,
-      narrativeEntries: [...state.narrativeEntries, newNarrativeEntry],
+      narrativeEntries: newNarrativeEntries,
       economy: newEconomy,
       sceneObjects: newSceneObjects,
       sceneState: newSceneState,

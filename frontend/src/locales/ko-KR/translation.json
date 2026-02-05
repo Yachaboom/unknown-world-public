@@ -343,6 +343,19 @@
       "consumable": "소모품",
       "document": "문서",
       "artifact": "유물"
+    },
+    "tooltip": {
+      "title": "스캐너",
+      "description": "현실의 사진을 업로드하면 게임 속 아이템이나 단서로 변환됩니다"
+    },
+    "onboarding": {
+      "message": "이미지를 드래그해 보세요!",
+      "detail": "현실의 사진이 게임 속 아이템으로 변환됩니다",
+      "dismiss": "알겠습니다"
+    },
+    "affordance": {
+      "idle_hint": "이미지 → 아이템",
+      "drag_active": "여기에 놓으세요!"
     }
   },
   "action": {

@@ -1,5 +1,5 @@
 /**
- * Unknown World - Scanner 슬롯 컴포넌트 (U-022[Mvp]).
+ * Unknown World - Scanner 슬롯 컴포넌트 (U-022[Mvp], U-072[Mvp]).
  *
  * 이미지 드랍/업로드 → 백엔드 분석 → 아이템 후보 표시 → 인벤토리 추가.
  *
@@ -8,8 +8,12 @@
  *   - RULE-004: 실패 시 안전한 폴백 (에러 표시)
  *   - PRD 6.7: Scanner 슬롯 멀티모달 데모 핵심
  *
- * 페어링 질문 결정:
+ * 페어링 질문 결정 (U-022):
  *   - Q1: Option B - 사용자 확인 후 인벤토리 추가 (의도 통제)
+ *
+ * 페어링 질문 결정 (U-072):
+ *   - Q1: Option A - 백엔드(LLM)에서 scanner_hint 플래그 생성
+ *   - Q2: Option C - 화살표+말풍선 형태의 시각 가이드 (온보딩)
  *
  * @module components/ScannerSlot
  */
@@ -28,6 +32,13 @@ import {
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useAgentStore } from '../stores/agentStore';
 import type { Language } from '../schemas/turn';
+
+// =============================================================================
+// 상수
+// =============================================================================
+
+/** localStorage 키: Scanner 온보딩 완료 여부 */
+const SCANNER_ONBOARDING_KEY = 'uw_scanner_onboarding_done';
 
 // =============================================================================
 // 타입 정의
@@ -72,6 +83,30 @@ export function ScannerSlot({ language, disabled = false }: ScannerSlotProps) {
 
   // 실제 비활성화 상태
   const isDisabled = disabled || isStreaming;
+
+  // 온보딩 상태 (U-072)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      const onboardingDone = localStorage.getItem(SCANNER_ONBOARDING_KEY);
+      return !onboardingDone;
+    } catch {
+      // localStorage 접근 실패 시 무시 (SSR 등)
+      return false;
+    }
+  });
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  /**
+   * 온보딩 닫기 및 완료 기록.
+   */
+  const handleDismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem(SCANNER_ONBOARDING_KEY, 'true');
+    } catch {
+      // localStorage 접근 실패 시 무시
+    }
+  }, []);
 
   // =========================================================================
   // 핸들러
@@ -255,7 +290,39 @@ export function ScannerSlot({ language, disabled = false }: ScannerSlotProps) {
   // =========================================================================
 
   return (
-    <div className="scanner-slot-container">
+    <div
+      className="scanner-slot-container"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* 툴팁 (U-072) */}
+      {showTooltip && state === 'idle' && !showOnboarding && (
+        <div className="scanner-tooltip" role="tooltip">
+          <div className="scanner-tooltip-title">{t('scanner.tooltip.title')}</div>
+          <div className="scanner-tooltip-desc">{t('scanner.tooltip.description')}</div>
+        </div>
+      )}
+
+      {/* 온보딩 가이드 - 화살표+말풍선 (U-072 Q2 Option C) */}
+      {showOnboarding && state === 'idle' && (
+        <div className="scanner-onboarding" role="dialog" aria-labelledby="scanner-onboarding-msg">
+          <div className="scanner-onboarding-arrow">▼</div>
+          <div className="scanner-onboarding-bubble">
+            <div className="scanner-onboarding-message" id="scanner-onboarding-msg">
+              {t('scanner.onboarding.message')}
+            </div>
+            <div className="scanner-onboarding-detail">{t('scanner.onboarding.detail')}</div>
+            <button
+              type="button"
+              className="scanner-onboarding-dismiss"
+              onClick={handleDismissOnboarding}
+            >
+              {t('scanner.onboarding.dismiss')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 숨겨진 파일 입력 */}
       <input
         ref={fileInputRef}
@@ -285,8 +352,19 @@ export function ScannerSlot({ language, disabled = false }: ScannerSlotProps) {
           }}
         >
           <div className="scanner-dropzone-icon">📷</div>
-          <div className="scanner-dropzone-text">{t('scanner.dropzone_text')}</div>
-          <div className="scanner-dropzone-hint">{t('scanner.dropzone_hint')}</div>
+          <div className="scanner-dropzone-text">
+            {isDragOver ? t('scanner.affordance.drag_active') : t('scanner.dropzone_text')}
+          </div>
+          <div className={`scanner-dropzone-hint ${isDragOver ? 'hidden' : ''}`}>
+            {t('scanner.dropzone_hint')}
+          </div>
+          {/* 시각적 어포던스: idle 힌트 (U-072) - 항상 렌더링하여 레이아웃 시프트 방지 */}
+          <div
+            className={`scanner-affordance-hint ${isDragOver || isDisabled ? 'hidden' : ''}`}
+            aria-hidden={isDragOver || isDisabled}
+          >
+            {t('scanner.affordance.idle_hint')}
+          </div>
         </div>
       )}
 

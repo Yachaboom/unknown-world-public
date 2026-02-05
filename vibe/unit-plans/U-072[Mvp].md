@@ -179,15 +179,17 @@ const handleDrop = async (files: File[]) => {
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Scanner 힌트 트리거 방식?
+- [x] **Q1**: Scanner 힌트 트리거 방식?
   - Option A: 백엔드(LLM)가 상황에 맞게 `scanner_hint` 플래그 생성
   - Option B: 프론트엔드에서 특정 조건(인벤토리 비어있음, 막힘 상태 등) 감지
   - Option C: 특정 키워드("단서", "증거", "사진" 등)가 내러티브에 포함될 때
+  **A1**: Option A
 
-- [ ] **Q2**: 온보딩 가이드 형태?
+- [x] **Q2**: 온보딩 가이드 형태?
   - Option A: 토스트 메시지 (간단, 비침입적)
   - Option B: 모달 팝업 (상세 설명, 이미지 포함)
   - Option C: Scanner 슬롯 위에 화살표 + 말풍선
+  **A2**: Option C
 
 ## 참고 자료
 

@@ -343,6 +343,19 @@
       "consumable": "Consumable",
       "document": "Document",
       "artifact": "Artifact"
+    },
+    "tooltip": {
+      "title": "Scanner",
+      "description": "Upload a real-world photo to transform it into in-game items or clues"
+    },
+    "onboarding": {
+      "message": "Try dragging an image here!",
+      "detail": "Real photos become in-game items",
+      "dismiss": "Got it"
+    },
+    "affordance": {
+      "idle_hint": "Image → Item",
+      "drag_active": "Drop here!"
     }
   },
   "action": {

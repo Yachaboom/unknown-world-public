@@ -2,6 +2,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useWorldStore } from './worldStore';
 import type { TurnOutput } from '../schemas/turn';
 
+// i18next 모킹 (U-072)
+vi.mock('../i18n', () => ({
+  default: {
+    t: (key: string) => key,
+  },
+}));
+
 // 하위 스토어 모킹 (순환 import 방지 로직 대응)
 vi.mock('./actionDeckStore', () => ({
   useActionDeckStore: {
@@ -318,6 +325,86 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       // 4. 유휴 상태로 복귀
       store.setProcessingPhase('idle');
       expect(useWorldStore.getState().sceneState.processingPhase).toBe('idle');
+    });
+  });
+
+  describe('Scanner Hints (U-072[Mvp])', () => {
+    it('applyTurnOutput에서 hints.scanner가 true이면 힌트 내러티브가 추가되어야 한다', () => {
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '일반 내러티브',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: '', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [],
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+        hints: {
+          scanner: true,
+        },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      const state = useWorldStore.getState();
+      // 일반 내러티브 + 스캐너 힌트 총 2개여야 함
+      expect(state.narrativeEntries).toHaveLength(2);
+      expect(state.narrativeEntries[0].text).toBe('일반 내러티브');
+      expect(state.narrativeEntries[1].text).toBe('scanner.hint_narrative');
+      expect(state.narrativeEntries[1].type).toBe('system');
+    });
+
+    it('hints.scanner가 없으면 힌트 내러티브가 추가되지 않아야 한다', () => {
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '일반 내러티브',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: '', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [],
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      const state = useWorldStore.getState();
+      expect(state.narrativeEntries).toHaveLength(1);
+      expect(state.narrativeEntries[0].text).toBe('일반 내러티브');
     });
   });
 });

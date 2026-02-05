@@ -360,7 +360,17 @@ def _parse_vision_response(
                 lines = lines[:-1]
             text = "\n".join(lines)
 
-        data: dict[str, Any] = json.loads(text)
+        parsed = json.loads(text)
+
+        # dict가 아닌 경우 처리 (이중 직렬화된 문자열 등)
+        if isinstance(parsed, str):
+            # 한 번 더 파싱 시도
+            parsed = json.loads(parsed)
+
+        if not isinstance(parsed, dict):
+            raise ValueError(f"Expected dict, got {type(parsed).__name__}")
+
+        data: dict[str, Any] = parsed
 
         # caption 추출
         caption: str = str(data.get("caption", "") or "")
@@ -420,10 +430,10 @@ def _parse_vision_response(
             analysis_time_ms=0,  # 호출자에서 설정
         )
 
-    except json.JSONDecodeError as e:
+    except (json.JSONDecodeError, ValueError) as e:
         logger.warning(
             "[ImageUnderstanding] JSON 파싱 실패",
-            extra={"error": str(e)},
+            extra={"error": str(e), "error_type": type(e).__name__},
         )
         # 부분 결과로 캡션만 반환 (RULE-004)
         return ScanResult(
@@ -660,9 +670,10 @@ class ImageUnderstandingService:
             )
         ]
 
-        # JSON 응답 강제
+        # JSON 응답 강제 + 충분한 출력 토큰 확보
         config = GenerateContentConfig(
             response_mime_type="application/json",
+            max_output_tokens=32768,  # JSON 응답 잘림 방지
         )
 
         response = await self._genai_client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
