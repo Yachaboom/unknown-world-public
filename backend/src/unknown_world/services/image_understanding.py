@@ -24,7 +24,7 @@ import logging
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from unknown_world.config.models import ModelLabel, get_model_id
 from unknown_world.models.scanner import (
@@ -370,7 +370,7 @@ def _parse_vision_response(
         if not isinstance(parsed, dict):
             raise ValueError(f"Expected dict, got {type(parsed).__name__}")
 
-        data: dict[str, Any] = parsed
+        data = cast(dict[str, Any], parsed)
 
         # caption 추출
         caption: str = str(data.get("caption", "") or "")

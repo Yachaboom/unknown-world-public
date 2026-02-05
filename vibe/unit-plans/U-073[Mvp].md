@@ -181,20 +181,23 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 레이아웃 max-width?
+- [x] **Q1**: 레이아웃 max-width?
   - Option A: 1600px (중간, 대부분 모니터에서 여백 확보)
   - Option B: 1800px (와이드, 대형 모니터 활용)
   - Option C: 100% (전체 너비, 완전히 펼침)
+  **A1**: Option A
 
-- [ ] **Q2**: 좌우 패널 배치?
+- [x] **Q2**: 좌우 패널 배치?
   - Option A: 좌측(Inventory+Quest), 우측(Rule Board+Agent Console) - 현재 구조 유지
   - Option B: 좌측(Inventory), 우측(Quest+Rule Board+Agent Console) - 인벤토리 강조
   - Option C: 동적 배치 (사용자가 패널 위치 조정 가능) - MMP
+  **A2**: Option A
 
-- [ ] **Q3**: 빈공간 처리?
+- [x] **Q3**: 빈공간 처리?
   - Option A: 순수 배경색 + CRT 효과
   - Option B: 장식용 패턴/텍스처 (게임 테마 강화)
   - Option C: 추가 정보 패널 배치 (미니맵, 시계 등)
+  **A3**: Option B
 
 ## 참고 자료
 

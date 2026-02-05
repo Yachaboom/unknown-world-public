@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 92/130 (70.8%) | **MVP**: 92/112 (82.1%) | **MMP**: 0/18 (0%)
+**전체**: 93/130 (71.5%) | **MVP**: 93/112 (83.0%) | **MMP**: 0/18 (0%)
 
 **예상 완료(가정)**: MVP D-5 | MMP D-11
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) API 키 인증 핫픽스 / **최근 완료**: [U-072[Mvp]](unit-results/U-072[Mvp].md) (2026-02-05)
+**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) API 키 인증 핫픽스 / **최근 완료**: [U-073[Mvp]](unit-results/U-073[Mvp].md) (2026-02-05)
 
 **블로커**: 없음
 
@@ -89,7 +89,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
-- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**, **아이템→핫스팟 사용 시 액션 로그 출력**, **처리중 Scene UI 로딩 인디케이터**, **레이아웃 확장(좌우 빈공간 활용)**, **핫스팟/아이템 인터랙션 안내 UX**, **인벤토리 스크롤(아이템 많아질 때)**, **인벤토리 Row 형태 전환(정보 가독성/DnD 조작성)**, **Quest/Rule 확장 시 Inventory 영역 보호**, **Agent Console 축소 + 재화 현황 확대**, **액션 카드 대안 뱃지 레이아웃 안정화**
+- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**, **아이템→핫스팟 사용 시 액션 로그 출력**, **처리중 Scene UI 로딩 인디케이터**, **레이아웃 확장(좌우 빈공간 활용) ✅**, **핫스팟/아이템 인터랙션 안내 UX**, **인벤토리 스크롤(아이템 많아질 때)**, **인벤토리 Row 형태 전환(정보 가독성/DnD 조작성)**, **Quest/Rule 확장 시 Inventory 영역 보호**, **Agent Console 축소 + 재화 현황 확대**, **액션 카드 대안 뱃지 레이아웃 안정화**
 - **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**, **U-070, U-071, U-073, U-074**, **U-077, U-088**, **U-081, U-082, U-083**, **U-086, U-087**
 - **상태**: 🚧
 
@@ -161,7 +161,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### MVP
 
-ID=[U-073[Mvp]](unit-plans/U-073[Mvp].md) | 레이아웃 확장 - 좌우 빈공간 활용으로 덜 답답한 UI | Depends=U-049 | ⏸️
 ID=[U-074[Mvp]](unit-plans/U-074[Mvp].md) | 핫스팟/아이템 인터랙션 안내 UX | Depends=U-012,U-010 | ⏸️
 ID=[U-075[Mvp]](unit-plans/U-075[Mvp].md) | ⚡인벤토리 아이템 아이콘 동적 생성 및 이름 정합성 | Depends=U-011,U-035 | ⏸️
 ID=[U-076[Mvp]](unit-plans/U-076[Mvp].md) | "정밀분석" 액션으로 기존 Scene 이미지 Agentic Vision 분석 및 핫스팟 추가 | Depends=U-010,U-019,U-069 | ⏸️
@@ -207,6 +206,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-073[Mvp]](unit-results/U-073[Mvp].md): 레이아웃 확장 - 좌우 빈공간 활용으로 덜 답답한 UI (2026-02-05)
 - ✅ [U-072[Mvp]](unit-results/U-072[Mvp].md): Scanner 의미론적 사용 유도 UX (2026-02-05)
 - ✅ [U-071[Mvp]](unit-results/U-071[Mvp].md): Scene 처리중 UI 로딩 인디케이터 강화 (2026-02-05)
 - ✅ [U-070[Mvp]](unit-results/U-070[Mvp].md): 아이템-핫스팟 사용 시 액션 로그 출력 (2026-02-05)

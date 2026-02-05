@@ -46,19 +46,27 @@
   /* UI 스케일 (U-028: 전역 스케일 조절) */
   --ui-scale-factor: 1;
 
-  /* 레이아웃 */
+  /* 레이아웃 - 기본 스페이싱 */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --border-radius: 4px;
-  --max-width: 1400px;
+
+  /* U-073: 레이아웃 확장 - 좌우 빈공간 활용
+   * Q1: 1800px (와이드, 좌우 패널 충분히 넓게)
+   * Q3 Option B: 장식용 패턴/텍스처 (게임 테마 강화)
+   * 사이드 패널은 minmax로 유연하게 조절 */
+  --layout-max-width: 1800px;
+  --layout-side-panel-min: 280px;
+  --layout-side-panel-max: 380px;
+  --layout-center-min: 400px;
+  --layout-gap: var(--spacing-sm);
 
   /* 그리드 레이아웃 */
   --header-height: 60px;
   --footer-height: 140px; /* U-050 v6: 컴팩트 카드에 맞춰 높이 조정 */
-  --sidebar-width: 320px;
 
   /* ===========================================
      U-058: 핫스팟 디자인 토큰 (Magenta 계열)
@@ -131,6 +139,37 @@ body {
     0 0 2px var(--text-dim);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* U-073 Q3 Option B: 장식용 패턴/텍스처 (게임 테마 강화)
+   * - 좌우 빈공간에 CRT 그리드 패턴 표시
+   * - 게임 컨테이너 외부 영역에만 보임 */
+  background-image:
+    /* 수직 스캔라인 */
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(51, 255, 0, 0.015) 2px,
+      rgba(51, 255, 0, 0.015) 4px
+    ),
+    /* 수평 스캔라인 */
+    repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(51, 255, 0, 0.02) 2px,
+        rgba(51, 255, 0, 0.02) 4px
+      ),
+    /* 미세한 그리드 도트 패턴 */
+    radial-gradient(circle at center, rgba(51, 255, 0, 0.03) 1px, transparent 1px);
+  background-size:
+    4px 100%,
+    100% 4px,
+    20px 20px;
+  background-position:
+    0 0,
+    0 0,
+    10px 10px;
 }
 
 #root {
@@ -283,7 +322,14 @@ body {
     'header header header'
     'sidebar-left center sidebar-right'
     'footer footer footer';
-  grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
+  /* U-073: minmax 기반 유연한 사이드 패널 너비
+   * - 사이드 패널: 최소~최대 범위 내에서 자동 조절
+   * - 중앙: 남은 공간 활용 (최소 400px 보장)
+   * Q1 Option A: 1600px max-width */
+  grid-template-columns:
+    minmax(var(--layout-side-panel-min), var(--layout-side-panel-max))
+    minmax(var(--layout-center-min), 1fr)
+    minmax(var(--layout-side-panel-min), var(--layout-side-panel-max));
   grid-template-rows: var(--header-height) 1fr var(--footer-height);
   /* U-049: 스크롤 방지 - dvh 사용 및 overflow 제어 */
   height: 100dvh;
@@ -291,11 +337,14 @@ body {
   max-height: 100dvh;
   max-height: 100vh;
   width: 100%;
-  max-width: var(--max-width);
+  /* U-073: 1600px max-width + 중앙 정렬 */
+  max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: var(--spacing-sm);
-  gap: var(--spacing-sm);
+  padding: var(--layout-gap);
+  gap: var(--layout-gap);
   overflow: hidden; /* U-049: 의도치 않은 스크롤 방지 */
+  /* U-073: 게임 영역 배경 - 좌우 패턴이 게임 내부에 침범하지 않도록 */
+  background-color: var(--bg-color);
 }
 
 /* ============================================
@@ -385,7 +434,7 @@ body {
   grid-area: sidebar-left;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--layout-gap); /* U-073: 레이아웃 갭 통일 */
   min-height: 0; /* U-049: flex 자식 축소 허용 */
   overflow: hidden; /* U-049: 컬럼 전체 스크롤 제거 */
 }
@@ -399,12 +448,17 @@ body {
   grid-area: center;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--layout-gap); /* U-073: 레이아웃 갭 통일 */
   overflow: hidden;
 }
 
 .scene-canvas {
-  flex: 1;
+  /* U-073: 4:3 비율 Scene Canvas - 로그창 공간 확보 */
+  flex: 0 0 auto;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  /* NarrativeFeed 충분한 공간 확보 */
+  max-height: calc(100vh - var(--header-height) - var(--footer-height) - 250px);
   border: 1px solid var(--border-color);
   background-color: var(--panel-bg);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
@@ -1207,7 +1261,9 @@ body {
 
 /* 내러티브 피드 - RULE-002: 채팅 버블 아님, 게임 로그 형태 */
 .narrative-feed {
-  height: 180px;
+  /* U-073: Scene Canvas 1:1 비율에 맞춰 남은 공간 활용 */
+  flex: 1;
+  min-height: 200px; /* 최소 6~7줄 표시 가능 */
   border: 1px solid var(--border-color);
   background-color: var(--panel-bg);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
@@ -1287,7 +1343,7 @@ body {
   grid-area: sidebar-right;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--layout-gap); /* U-073: 레이아웃 갭 통일 */
   min-height: 0; /* U-049: flex 자식 축소 허용 */
   overflow: hidden; /* U-049: 컬럼 전체 스크롤 제거 */
 }
@@ -1785,15 +1841,44 @@ button:disabled,
 
 /* ============================================
    14. 반응형 디자인
+   U-073: 레이아웃 확장 - 와이드스크린 지원 추가
    ============================================ */
 
-@media (max-width: 1200px) {
+/* 와이드스크린 (1920px 이상): 패널 최대 너비 확장, 간격 증가
+ * U-073: 1800px max-width 내에서 패널이 더 넓어짐 */
+@media (min-width: 1920px) {
+  :root {
+    --layout-side-panel-max: 420px;
+    --layout-gap: var(--spacing-md);
+  }
+}
+
+/* 일반 (1366px ~ 1919px): 기본 레이아웃 유지 */
+/* 기본값 사용: --layout-side-panel-min: 260px, --layout-side-panel-max: 340px */
+
+/* 컴팩트 (1024px ~ 1365px): 패널 너비 축소 */
+@media (max-width: 1365px) and (min-width: 1025px) {
+  :root {
+    --layout-side-panel-min: 220px;
+    --layout-side-panel-max: 280px;
+  }
+}
+
+/* 태블릿 (769px ~ 1024px): 좌측 사이드바 숨김 */
+@media (max-width: 1024px) {
+  :root {
+    --layout-side-panel-min: 200px;
+    --layout-side-panel-max: 260px;
+  }
+
   .game-container {
     grid-template-areas:
       'header header'
       'center sidebar-right'
       'footer footer';
-    grid-template-columns: 1fr var(--sidebar-width);
+    grid-template-columns:
+      minmax(var(--layout-center-min), 1fr)
+      minmax(var(--layout-side-panel-min), var(--layout-side-panel-max));
   }
 
   .sidebar-left {
@@ -1801,12 +1886,13 @@ button:disabled,
   }
 }
 
+/* 모바일 (768px 이하): 단일 컬럼 */
 @media (max-width: 768px) {
   :root {
     font-size: 14px;
     --header-height: 50px;
     --footer-height: 100px;
-    --sidebar-width: 100%;
+    --layout-gap: var(--spacing-xs);
   }
 
   .game-container {
@@ -1823,6 +1909,12 @@ button:disabled,
   .sidebar-left,
   .sidebar-right {
     display: none;
+  }
+
+  /* U-073: 모바일에서 Scene Canvas 비율 조정 */
+  .scene-canvas {
+    aspect-ratio: 4 / 3; /* 모바일에서는 4:3 비율 */
+    max-height: calc(100vh - var(--header-height) - var(--footer-height) - 100px);
   }
 
   .game-header {
