@@ -1,0 +1,15 @@
+{
+  "language": "ko-KR",
+  "text": "",
+  "action_id": "deep_analyze",
+  "client": {
+    "viewport_w": 1920,
+    "viewport_h": 1080,
+    "theme": "dark"
+  },
+  "economy_snapshot": {
+    "signal": 100,
+    "memory_shard": 5
+  },
+  "previous_image_url": "/static/images/test_scene.png"
+}

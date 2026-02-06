@@ -228,20 +228,29 @@ export const selectItemCount = (state: InventoryStore) => state.items.length;
 // =============================================================================
 
 /**
- * 서버 응답(inventory_added 문자열 배열)을 InventoryItem 배열로 변환합니다.
- * MVP에서는 문자열 ID를 기본 아이템으로 변환합니다.
+ * 서버 응답(inventory_added InventoryItemData 배열)을 InventoryItem 배열로 변환합니다.
  *
- * @param addedIds - 추가된 아이템 ID 목록 (서버 응답)
+ * @param added - 추가된 아이템 데이터 목록 (서버 응답)
  * @returns InventoryItem 배열
  */
-export function parseInventoryAdded(addedIds: string[]): InventoryItem[] {
-  return addedIds.map((id) => ({
-    id,
-    name: id, // MVP: ID를 이름으로 사용
-    description: id, // U-075: 아이콘 생성용 설명 (MVP: ID 사용)
-    quantity: 1,
-    iconStatus: 'pending' as IconStatus, // U-075: 아이콘 생성 대기
+export function parseInventoryAdded(added: InventoryItemDataInput[]): InventoryItem[] {
+  return added.map((item) => ({
+    id: item.id,
+    name: item.label,
+    description: item.description || item.label,
+    icon: item.icon_url ?? undefined,
+    quantity: item.quantity ?? 1,
+    iconStatus: (item.icon_url ? 'ready' : 'pending') as IconStatus,
   }));
+}
+
+/** 서버에서 오는 InventoryItemData 형태 (Zod 스키마와 동일) */
+export interface InventoryItemDataInput {
+  id: string;
+  label: string;
+  description?: string;
+  icon_url?: string | null;
+  quantity?: number;
 }
 
 /**

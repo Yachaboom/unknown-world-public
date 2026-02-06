@@ -366,6 +366,21 @@ export const QuestSchema = z
 export type Quest = z.infer<typeof QuestSchema>;
 
 /**
+ * 인벤토리 아이템 데이터 (U-075[Mvp]).
+ * TurnOutput에서 추가되는 아이템의 상세 정보입니다.
+ */
+export const InventoryItemDataSchema = z
+  .object({
+    id: z.string().describe('아이템 고유 ID'),
+    label: z.string().describe('아이템 표시 이름 (현재 언어에 맞게)'),
+    description: z.string().default('').describe('아이템 설명 (아이콘 생성용)'),
+    icon_url: z.string().nullable().default(null).describe('아이콘 URL (선택, 캐시된 경우)'),
+    quantity: z.number().int().min(1).default(1).describe('아이템 수량'),
+  })
+  .strict();
+export type InventoryItemData = z.infer<typeof InventoryItemDataSchema>;
+
+/**
  * 세계 상태 변화 (Q2 결정: Option A - delta 중심) - U-065 단순화.
  * 이번 턴에서 변경된 세계 상태를 나타냅니다.
  *
@@ -382,7 +397,7 @@ export const WorldDeltaSchema = z
       .default([])
       .describe('변경된 규칙 목록 (최대 3개)'),
     inventory_added: z
-      .array(z.string())
+      .array(InventoryItemDataSchema)
       .max(5)
       .default([])
       .describe('추가된 인벤토리 아이템 (최대 5개)'),

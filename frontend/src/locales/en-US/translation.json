@@ -391,6 +391,8 @@
     "deck_label": "Action Cards",
     "alternative": "ALT",
     "insufficient_balance": "Insufficient balance",
+    "server_disabled": "Unavailable",
+    "vision_badge": "VISION",
     "all_disabled_notice": "No actions available. Check alternatives.",
     "risk": {
       "low": "Low",

@@ -1602,6 +1602,74 @@ body {
   opacity: 1;
 }
 
+/* U-069: QUALITY 모델 카드 스타일 */
+.action-card.card-quality {
+  border-color: #ffd700;
+}
+
+.action-card.card-quality:hover:not(:disabled) {
+  border-color: #ffd700;
+  box-shadow:
+    0 0 15px rgba(255, 215, 0, 0.4),
+    0 0 30px rgba(255, 215, 0, 0.2);
+}
+
+.action-card .quality-badge {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  padding: 1px 6px;
+  font-size: 0.55rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.action-card-cost .quality-cost {
+  color: #ffd700;
+}
+
+.action-card-cost .cost-multiplier {
+  font-size: 0.55rem;
+  margin-left: 1px;
+  opacity: 0.8;
+}
+
+/* U-076: VISION(정밀분석) 카드 스타일 */
+.action-card.card-vision {
+  border-color: #00e5ff;
+}
+
+.action-card.card-vision:hover:not(:disabled) {
+  border-color: #00e5ff;
+  box-shadow:
+    0 0 15px rgba(0, 229, 255, 0.4),
+    0 0 30px rgba(0, 229, 255, 0.2);
+}
+
+.action-card .vision-badge {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  padding: 1px 6px;
+  font-size: 0.55rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #00e5ff, #00b0ff);
+  color: #000;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.action-card-cost .vision-cost {
+  color: #00e5ff;
+}
+
 /* 비활성화된 카드 */
 .action-card.card-disabled,
 .action-card:disabled {

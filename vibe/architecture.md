@@ -36,6 +36,7 @@ backend/src/unknown_world/orchestrator/stages/resolve.py
 backend/src/unknown_world/orchestrator/stages/types.py
 backend/src/unknown_world/orchestrator/stages/validate.py
 backend/src/unknown_world/orchestrator/stages/verify.py
+backend/src/unknown_world/services/agentic_vision.py
 backend/src/unknown_world/services/genai_client.py
 backend/src/unknown_world/services/image_generation.py
 backend/src/unknown_world/services/image_postprocess.py
@@ -89,11 +90,27 @@ shared/schemas/turn/turn_output.schema.json
 ### 주요 디렉토리 설명
 
 - `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
-- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다. 특히 `SceneImage.tsx`는 `processingPhase`를 통해 장면 생성 전 과정을 시각적으로 관리합니다.
-- `frontend/src/styles/`: 컴포넌트의 시각적 품질과 테마를 담당하는 CSS 모듈들이 관리됩니다.
+- `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석(`agentic_vision.py`), 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
+- `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
-- `vibe/`: 프로젝트의 비전, 로드맵, 설계 가이드 및 작업 이력을 담은 문서 저장소입니다.
+
+---
+
+## 40. "정밀분석" Agentic Vision 분석 및 핫스팟 추가 (U-076[Mvp])
+
+1. **정밀분석 파이프라인 (Agentic Vision)**:
+    - **Trigger**: Scene 이미지가 존재할 때 Action Deck에 표시되는 "정밀분석" 카드 클릭 시 실행됩니다.
+    - **Vision Analysis**: `gemini-3-flash-preview` 모델과 `code_execution` 도구를 사용하여 현재 이미지에서 클릭 가능한 오브젝트(affordances)를 분석합니다.
+    - **Structured Result**: 분석 결과는 `0~1000` 정규화 좌표(`[ymin, xmin, ymax, xmax]`)를 포함한 JSON 형식으로 추출됩니다.
+2. **오케스트레이터 및 UI 통합**:
+    - **Resolve Stage Extension**: `ResolveStage`에서 정밀분석 트리거를 감지하고 `AgenticVisionService`를 호출하여 결과를 `TurnOutput.ui.objects`에 병합합니다.
+    - **Narrative Enhancement**: 분석 성공 시 "장면을 자세히 살펴보니..."와 같이 발견된 오브젝트를 설명하는 내러티브가 동적으로 추가됩니다.
+    - **Vision-specific UI**: Action Deck에서 전용 배지(🔍 VISION), 시안(Cyan) 테두리, 그리고 **1.5x 비용 배수** 표기를 통해 일반 액션과 시각적으로 구분됩니다.
+3. **비용 및 정책 (RULE-005, RULE-009)**:
+    - **Cost Policy**: 고성능 비전 모델 사용에 따라 일반 턴보다 높은 **1.5x Signal 비용**을 부과합니다.
+    - **Fallback Policy**: 분석 실패 또는 이미지 부재 시 안전한 폴백 내러티브를 제공하고 기존 상태를 유지하여 게임 흐름을 보호합니다.
 
 ## 31. 참조 이미지 기반 연결성 강화 (U-068[Mvp])
 

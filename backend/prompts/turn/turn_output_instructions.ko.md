@@ -48,6 +48,15 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
   - risk: "low" | "medium" | "high"
   - enabled: boolean
   - is_alternative: boolean (저비용 대안 여부)
+- **정밀분석 카드 (U-076)**: 이미지가 존재하는 장면에서는 반드시 다음 카드를 포함해야 합니다:
+  - id: "deep_analyze"
+  - label: "정밀분석"
+  - cost: 기본 signal 비용의 1.5배 (정수로 올림)
+  - risk: "low"
+  - enabled: true
+  - is_alternative: false
+  - 이 카드는 이미지가 **있는** 장면에서만 생성합니다
+  - 이미지가 없으면 이 카드를 포함하지 마십시오
 - objects[]: 클릭 가능한 장면 오브젝트
   - box_2d: {ymin, xmin, ymax, xmax} (0~1000 정규화 좌표)
 

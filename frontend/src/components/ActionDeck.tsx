@@ -120,6 +120,22 @@ const QUALITY_TRIGGER_ACTION_IDS: ReadonlySet<string> = new Set([
 /** QUALITY 모델 비용 배수 (U-069: 2x) */
 const QUALITY_COST_MULTIPLIER = 2;
 
+/**
+ * VISION(정밀분석) 트리거 액션 ID 목록 (U-076).
+ * 백엔드 TextModelTiering.VISION_TRIGGER_ACTION_IDS와 동기화 필요.
+ * 이 목록에 포함된 액션은 VISION 배지와 1.5x 비용이 표시됩니다.
+ */
+const VISION_TRIGGER_ACTION_IDS: ReadonlySet<string> = new Set([
+  'deep_analyze',
+  '정밀분석',
+  'analyze_scene',
+  'examine_scene',
+  'look_closely',
+]);
+
+/** VISION 비용 배수 (U-076 Q2: 1.5x) */
+const VISION_COST_MULTIPLIER = 1.5;
+
 // =============================================================================
 // 타입 정의
 // =============================================================================
@@ -140,7 +156,9 @@ interface CardDisplayInfo extends ActionCard {
   finalDisabledReason: string | null;
   /** U-069: QUALITY 모델 사용 여부 */
   isQualityAction: boolean;
-  /** U-069: 배수 적용된 표시 비용 */
+  /** U-076: VISION(정밀분석) 사용 여부 */
+  isVisionAction: boolean;
+  /** U-069/U-076: 배수 적용된 표시 비용 */
   displayCost: { signal: number; memory_shard: number };
 }
 
@@ -220,9 +238,12 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
           />
           <span className="icon-fallback">{'\u26A1'}</span>
         </span>
-        <span className={`cost-value ${card.isQualityAction ? 'quality-cost' : ''}`}>
+        <span
+          className={`cost-value ${card.isQualityAction ? 'quality-cost' : ''} ${card.isVisionAction ? 'vision-cost' : ''}`}
+        >
           {costDisplay}
           {card.isQualityAction && <span className="cost-multiplier">x2</span>}
+          {card.isVisionAction && <span className="cost-multiplier">x1.5</span>}
         </span>
       </span>
 
@@ -241,9 +262,12 @@ function CardCostDisplay({ card }: CardCostDisplayProps) {
             />
             <span className="icon-fallback">{'\u{1F48E}'}</span>
           </span>
-          <span className={`cost-value ${card.isQualityAction ? 'quality-cost' : ''}`}>
+          <span
+            className={`cost-value ${card.isQualityAction ? 'quality-cost' : ''} ${card.isVisionAction ? 'vision-cost' : ''}`}
+          >
             {shardCost}
             {card.isQualityAction && <span className="cost-multiplier">x2</span>}
+            {card.isVisionAction && <span className="cost-multiplier">x1.5</span>}
           </span>
         </span>
       )}
@@ -292,6 +316,7 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
     card.isDisabled ? 'card-disabled' : '',
     card.is_alternative ? 'card-alternative' : '',
     card.isQualityAction ? 'card-quality' : '',
+    card.isVisionAction ? 'card-vision' : '',
     `risk-border-${card.risk}`,
   ]
     .filter(Boolean)
@@ -310,15 +335,22 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
       aria-disabled={disabled || card.isDisabled}
       title={card.finalDisabledReason ?? undefined}
     >
-      {/* U-069: QUALITY 모델 배지 (대안 배지보다 우선 표시) */}
-      {card.isQualityAction && (
+      {/* U-076: VISION(정밀분석) 배지 (최우선 표시) */}
+      {card.isVisionAction && (
+        <span className="vision-badge" title={t('action.vision_badge')}>
+          {'\uD83D\uDD0D'} {t('action.vision_badge')}
+        </span>
+      )}
+
+      {/* U-069: QUALITY 모델 배지 (VISION이 아닐 때) */}
+      {!card.isVisionAction && card.isQualityAction && (
         <span className="quality-badge" title={t('economy.model_label.QUALITY')}>
           {'\u2605'} QUALITY
         </span>
       )}
 
-      {/* 대안 카드 표시 (QUALITY가 아닐 때만) */}
-      {!card.isQualityAction && card.is_alternative && (
+      {/* 대안 카드 표시 (QUALITY/VISION이 아닐 때만) */}
+      {!card.isQualityAction && !card.isVisionAction && card.is_alternative && (
         <span className="alternative-badge">{t('action.alternative')}</span>
       )}
 
@@ -382,16 +414,24 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   // U-069: QUALITY 모델 트리거 및 비용 배수 계산 추가
   const processedCards: CardDisplayInfo[] = useMemo(() => {
     return displayCards.map((card) => {
-      // U-069: QUALITY 모델 트리거 체크
-      const isQualityAction = QUALITY_TRIGGER_ACTION_IDS.has(card.id);
+      // U-076: VISION(정밀분석) 트리거 체크 (QUALITY보다 우선)
+      const isVisionAction = VISION_TRIGGER_ACTION_IDS.has(card.id);
 
-      // U-069: 배수 적용된 표시 비용 계산
-      const displayCost = isQualityAction
+      // U-069: QUALITY 모델 트리거 체크 (VISION이면 QUALITY 아님)
+      const isQualityAction = !isVisionAction && QUALITY_TRIGGER_ACTION_IDS.has(card.id);
+
+      // U-069/U-076: 배수 적용된 표시 비용 계산
+      const displayCost = isVisionAction
         ? {
-            signal: card.cost.signal * QUALITY_COST_MULTIPLIER,
-            memory_shard: card.cost.memory_shard * QUALITY_COST_MULTIPLIER,
+            signal: Math.ceil(card.cost.signal * VISION_COST_MULTIPLIER),
+            memory_shard: Math.ceil(card.cost.memory_shard * VISION_COST_MULTIPLIER),
           }
-        : { ...card.cost };
+        : isQualityAction
+          ? {
+              signal: card.cost.signal * QUALITY_COST_MULTIPLIER,
+              memory_shard: card.cost.memory_shard * QUALITY_COST_MULTIPLIER,
+            }
+          : { ...card.cost };
 
       // 서버에서 enabled를 명시적으로 false로 보냈으면 그대로 사용
       const serverEnabled = card.enabled;
@@ -420,6 +460,7 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
         isDisabled,
         finalDisabledReason,
         isQualityAction,
+        isVisionAction,
         displayCost,
       };
     });

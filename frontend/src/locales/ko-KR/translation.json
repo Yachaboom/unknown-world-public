@@ -391,6 +391,8 @@
     "deck_label": "행동 선택 카드",
     "alternative": "대안",
     "insufficient_balance": "잔액 부족",
+    "server_disabled": "사용 불가",
+    "vision_badge": "정밀분석",
     "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
     "risk": {
       "low": "낮음",

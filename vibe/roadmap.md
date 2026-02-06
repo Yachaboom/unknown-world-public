@@ -4,14 +4,14 @@
 
 ## 진행 현황
 
-**전체**: 95/130 (73.1%) | **MVP**: 95/112 (84.8%) | **MMP**: 0/18 (0%)
+**전체**: 96/130 (73.8%) | **MVP**: 96/112 (85.7%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-5 | MMP D-11
+**예상 완료(가정)**: MVP D-4 | MMP D-10
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) API 키 인증 핫픽스 / **최근 완료**: [U-075[Mvp]](unit-results/U-075[Mvp].md) (2026-02-06)
+**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) API 키 인증 핫픽스 / **최근 완료**: [U-076[Mvp]](unit-results/U-076[Mvp].md) (2026-02-07)
 
 **블로커**: 없음
 
@@ -160,7 +160,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-076[Mvp]](unit-plans/U-076[Mvp].md) | "정밀분석" 액션으로 기존 Scene 이미지 Agentic Vision 분석 및 핫스팟 추가 | Depends=U-010,U-019,U-069 | 🚧
 ID=[U-077[Mvp]](unit-plans/U-077[Mvp].md) | 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 | Depends=U-011,U-049 | ⏸️
 ID=[U-088[Mvp]](unit-plans/U-088[Mvp].md) | 인벤토리 UI Row 형태 전환 - 정보 가독성 및 DnD 조작성 향상 | Depends=U-011,U-077 | ⏸️
 ID=[U-078[Mvp]](unit-plans/U-078[Mvp].md) | 게임 목표 시스템 강화 - 명확한 목표 제시 및 진행 가이드 | Depends=U-013,U-015 | ⏸️
@@ -203,6 +202,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-076[Mvp]](unit-results/U-076[Mvp].md): "정밀분석" 액션으로 기존 이미지 Agentic Vision 분석 및 핫스팟 추가 (2026-02-07)
 - ✅ [U-075[Mvp]](unit-results/U-075[Mvp].md): 인벤토리 아이템 아이콘 동적 생성(rembg/캐싱/i18n) (2026-02-06)
 - ✅ [U-074[Mvp]](unit-results/U-074[Mvp].md): 핫스팟/아이템 인터랙션 안내 UX (2026-02-05)
 - ✅ [U-073[Mvp]](unit-results/U-073[Mvp].md): 레이아웃 확장 - 좌우 빈공간 활용으로 덜 답답한 UI (2026-02-05)

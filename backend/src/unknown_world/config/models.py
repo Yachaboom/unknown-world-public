@@ -96,6 +96,22 @@ class TextModelTiering:
         }
     )
 
+    # U-076: "정밀분석" 트리거 액션 ID 목록 (Agentic Vision)
+    # QUALITY 트리거와 별도 관리 (다른 비용 정책: 1.5x)
+    VISION_TRIGGER_ACTION_IDS: Final[frozenset[str]] = frozenset(
+        {
+            "deep_analyze",
+            "정밀분석",
+            "analyze_scene",
+            "examine_scene",
+            "look_closely",
+        }
+    )
+
+    # U-076: 비전 분석 비용 배수 (Q2 결정: Option B - 1.5x)
+    VISION_COST_MULTIPLIER: Final[float] = 1.5
+    """비전 분석(정밀분석) 비용 배수"""
+
     # QUALITY 트리거 키워드 목록 (소문자)
     # Q1 결정: Option B - 키워드 매칭 포함
     QUALITY_TRIGGER_KEYWORDS: Final[tuple[str, ...]] = (
@@ -111,12 +127,52 @@ class TextModelTiering:
         "scrutinize",
     )
 
+    # U-076: 비전 분석(정밀분석) 트리거 키워드 (소문자)
+    VISION_TRIGGER_KEYWORDS: Final[tuple[str, ...]] = (
+        "정밀분석",
+        "장면 분석",
+        "이미지 분석",
+        "자세히 보기",
+        "analyze scene",
+        "deep analyze",
+        "look closely",
+        "examine scene",
+    )
+
     # 비용 배수 (Q2 결정: Option A - 2x)
     FAST_COST_MULTIPLIER: Final[float] = 1.0
     """FAST 모델 비용 배수 (기본)"""
 
     QUALITY_COST_MULTIPLIER: Final[float] = 2.0
     """QUALITY 모델 비용 배수 (Q2 결정: Option A - 2x)"""
+
+    @classmethod
+    def is_vision_trigger(
+        cls,
+        action_id: str | None,
+        text: str | None,
+    ) -> bool:
+        """비전 분석(정밀분석) 트리거 여부를 판단합니다 (U-076).
+
+        Args:
+            action_id: 선택된 액션 ID (선택)
+            text: 사용자 입력 텍스트 (선택)
+
+        Returns:
+            정밀분석(비전 분석)을 실행해야 하는지 여부
+        """
+        # 액션 ID 검사
+        if action_id and action_id in cls.VISION_TRIGGER_ACTION_IDS:
+            return True
+
+        # 키워드 검사 (대소문자 무시)
+        if text:
+            text_lower = text.lower()
+            for keyword in cls.VISION_TRIGGER_KEYWORDS:
+                if keyword.lower() in text_lower:
+                    return True
+
+        return False
 
     @classmethod
     def is_quality_trigger(

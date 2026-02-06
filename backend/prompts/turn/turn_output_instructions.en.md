@@ -48,6 +48,15 @@ Specify the rules for each field in the TurnOutput JSON schema.
   - risk: "low" | "medium" | "high"
   - enabled: boolean
   - is_alternative: boolean (low-cost alternative flag)
+- **Precise Analysis Card (U-076)**: When a scene image is present, you MUST include this card:
+  - id: "deep_analyze"
+  - label: "Precise Analysis"
+  - cost: 1.5x the base signal cost (rounded up to integer)
+  - risk: "low"
+  - enabled: true
+  - is_alternative: false
+  - Only include this card when the scene has an image
+  - Do NOT include this card when there is no image
 - objects[]: Clickable scene objects
   - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
 
