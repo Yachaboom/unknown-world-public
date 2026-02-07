@@ -1,17 +1,17 @@
 """서버를 직접 시작하고, 요청을 보내고, 종료합니다."""
-import asyncio
+
 import json
-import sys
-import os
 import time
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env", override=False)
 
+from multiprocessing import Process
+
 import httpx
 import uvicorn
-from multiprocessing import Process
 
 
 def run_server():
@@ -30,11 +30,16 @@ def test_api():
 
     print("=== Testing API ===")
     try:
-        r = httpx.post("http://localhost:8011/api/turn", json={
-            "language": "ko-KR", "text": "문을 열어본다",
-            "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
-            "economy_snapshot": {"signal": 100, "memory_shard": 5},
-        }, timeout=60.0)
+        r = httpx.post(
+            "http://localhost:8011/api/turn",
+            json={
+                "language": "ko-KR",
+                "text": "문을 열어본다",
+                "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
+                "economy_snapshot": {"signal": 100, "memory_shard": 5},
+            },
+            timeout=60.0,
+        )
 
         for line in r.text.strip().split("\n"):
             d = json.loads(line)

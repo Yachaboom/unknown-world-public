@@ -1,9 +1,10 @@
 """Debug: 서버와 동일한 코드 경로로 문제를 재현합니다."""
+
 import asyncio
 import json
 import os
-import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # 서버와 동일하게 .env 로드
@@ -16,11 +17,14 @@ print(f"UW_MODE: {os.environ.get('UW_MODE', 'NOT_SET')}")
 print(f"GOOGLE_API_KEY set: {bool(os.environ.get('GOOGLE_API_KEY'))}")
 print()
 
-from unknown_world.models.turn import TurnInput, TurnOutput, Language
-from unknown_world.orchestrator.generate_turn_output import (
-    TurnOutputGenerator, _strip_additional_properties,
-)
 from pydantic import ValidationError
+
+from unknown_world.models.turn import Language, TurnInput, TurnOutput
+from unknown_world.orchestrator.generate_turn_output import (
+    TurnOutputGenerator,
+    _strip_additional_properties,
+)
+
 
 async def main():
     # 1. JSON Schema 검사 - $defs/$ref 확인
@@ -52,8 +56,12 @@ async def main():
     generator = TurnOutputGenerator(force_mock=False)
 
     # 3. 수동으로 Gemini API 직접 호출하여 raw 응답 확인
-    from unknown_world.services.genai_client import get_genai_client, GenerateRequest, reset_genai_client
     from unknown_world.config.models import ModelLabel
+    from unknown_world.services.genai_client import (
+        GenerateRequest,
+        get_genai_client,
+        reset_genai_client,
+    )
 
     reset_genai_client()
     client = get_genai_client(force_mock=False)
@@ -116,14 +124,15 @@ async def main():
             print(f"  loc: {err['loc']}")
             print(f"  type: {err['type']}")
             print(f"  msg: {err['msg']}")
-            if 'input' in err:
-                inp = str(err['input'])[:200]
+            if "input" in err:
+                inp = str(err["input"])[:200]
                 print(f"  input: {inp}")
             print()
 
         # 어떤 필드에 extra properties가 있는지 확인
         print("=== Checking for extra properties ===")
         _check_extra_fields(data)
+
 
 def _check_extra_fields(data, path="root"):
     """모델과 비교하여 추가 필드를 찾습니다."""
@@ -153,8 +162,7 @@ def _check_extra_fields(data, path="root"):
         if missing:
             # Only report missing required fields
             required = {
-                name for name, field in model_cls.model_fields.items()
-                if field.is_required()
+                name for name, field in model_cls.model_fields.items() if field.is_required()
             }
             missing_required = missing & required
             if missing_required:

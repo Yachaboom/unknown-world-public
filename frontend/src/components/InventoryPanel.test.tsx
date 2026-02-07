@@ -117,4 +117,23 @@ describe('InventoryPanel', () => {
     const loadingOverlay = container.querySelector('.inventory-item-icon-loading');
     expect(loadingOverlay).toBeInTheDocument();
   });
+
+  it('displays empty state with hint when there are no items', () => {
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: [],
+          draggingItemId: null,
+          selectedItemId: null,
+          selectItem: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
+    );
+
+    render(<InventoryPanel />);
+
+    expect(screen.getByText('inventory.empty')).toBeInTheDocument();
+    expect(screen.getByText('inventory.empty_hint')).toBeInTheDocument();
+  });
 });

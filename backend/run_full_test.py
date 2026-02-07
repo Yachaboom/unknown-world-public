@@ -1,18 +1,27 @@
 """정확한 재현: uvicorn CLI처럼 서버를 시작하고 테스트합니다."""
+
+import json
+import os
 import subprocess
 import time
-import json
-import sys
+
 import httpx
-import signal
-import os
+
 
 def main():
     # 서버 시작 (사용자와 동일한 명령어)
     env = os.environ.copy()
     proc = subprocess.Popen(
-        ["uv", "run", "uvicorn", "src.unknown_world.main:app",
-         "--host", "0.0.0.0", "--port", "8011"],
+        [
+            "uv",
+            "run",
+            "uvicorn",
+            "src.unknown_world.main:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8011",
+        ],
         cwd=r"D:\Dev\unknown-world\backend",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -26,7 +35,7 @@ def main():
         try:
             r = httpx.get("http://localhost:8011/health", timeout=2.0)
             if r.status_code == 200:
-                print(f"Server ready after {i+1}s")
+                print(f"Server ready after {i + 1}s")
                 break
         except Exception:
             pass
@@ -40,12 +49,16 @@ def main():
     # API 테스트
     print("\n=== API Test ===")
     try:
-        r = httpx.post("http://localhost:8011/api/turn", json={
-            "language": "ko-KR",
-            "text": "문을 열어본다",
-            "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
-            "economy_snapshot": {"signal": 100, "memory_shard": 5},
-        }, timeout=60.0)
+        r = httpx.post(
+            "http://localhost:8011/api/turn",
+            json={
+                "language": "ko-KR",
+                "text": "문을 열어본다",
+                "client": {"viewport_w": 1920, "viewport_h": 1080, "theme": "dark"},
+                "economy_snapshot": {"signal": 100, "memory_shard": 5},
+            },
+            timeout=60.0,
+        )
 
         for line in r.text.strip().split("\n"):
             d = json.loads(line)
@@ -72,7 +85,7 @@ def main():
         proc.kill()
 
     stderr = proc.stderr.read().decode("utf-8", errors="replace")
-    print(f"\n=== Server STDERR (last 3000 chars) ===")
+    print("\n=== Server STDERR (last 3000 chars) ===")
     print(stderr[-3000:])
 
 

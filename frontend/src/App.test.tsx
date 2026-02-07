@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 import * as turnStream from './api/turnStream';
+import { useInventoryStore } from './stores/inventoryStore';
 
 // i18next 모킹 (RU-003-Q5: 데모 i18n 키 지원)
 vi.mock('react-i18next', () => ({
@@ -99,6 +100,49 @@ describe('App Integration - Hotspot Click', () => {
     expect(input.click).toEqual({
       object_id: 'main-terminal',
       box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
+    });
+  });
+});
+
+describe('App Layout - Inventory Count', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    useInventoryStore.getState().reset();
+  });
+
+  it('updates inventory panel title based on items', async () => {
+    render(<App />);
+
+    // 1. 프로필 선택
+    const techProfile = screen.getByLabelText('profile.tech.name');
+    fireEvent.click(techProfile);
+
+    // 2. 초기 제목 확인 (Tech 프로필은 기본 아이템이 있으므로 바로 inventory.count가 보임)
+    await waitFor(() => {
+      expect(screen.getByText(/inventory.count/)).toBeInTheDocument();
+    });
+
+    // 3. 아이템 모두 제거
+    useInventoryStore.getState().reset();
+
+    // 4. 제목이 기본값으로 돌아왔는지 확인
+    await waitFor(() => {
+      expect(screen.getByText('panel.inventory.title')).toBeInTheDocument();
+    });
+
+    // 5. 다시 아이템 추가
+    useInventoryStore.getState().addItems([
+      {
+        id: 'test-item',
+        name: 'Test Item',
+        quantity: 1,
+      },
+    ]);
+
+    // 6. 제목 업데이트 다시 확인
+    await waitFor(() => {
+      expect(screen.getByText(/inventory.count/)).toBeInTheDocument();
     });
   });
 });

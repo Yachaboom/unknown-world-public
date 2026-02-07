@@ -1,7 +1,9 @@
 """Debug: 서버 API 호출 테스트."""
-import httpx
+
 import json
-import sys
+
+import httpx
+
 
 def main():
     url = "http://localhost:8011/api/turn"
@@ -33,15 +35,20 @@ def main():
             elif event_type == "final":
                 final_data = data.get("data", {})
                 print(f"FINAL badges: {final_data.get('agent_console', {}).get('badges')}")
-                print(f"FINAL repair_count: {final_data.get('agent_console', {}).get('repair_count')}")
+                print(
+                    f"FINAL repair_count: {final_data.get('agent_console', {}).get('repair_count')}"
+                )
                 print(f"FINAL narrative: {final_data.get('narrative', '')[:100]}")
-                print(f"FINAL model_label: {final_data.get('agent_console', {}).get('model_label')}")
+                print(
+                    f"FINAL model_label: {final_data.get('agent_console', {}).get('model_label')}"
+                )
             elif event_type == "error":
                 print(f"ERROR: {data.get('message')} code={data.get('code')}")
             elif event_type == "stage":
                 status = data.get("status")
                 if status == "fail":
                     print(f"STAGE FAIL: {data.get('name')}")
+
 
 if __name__ == "__main__":
     main()

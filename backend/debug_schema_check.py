@@ -1,24 +1,25 @@
 """Debug: 서버에 캐시된 제너레이터와 직접 생성한 것을 비교합니다."""
+
 import asyncio
 import json
 import os
-import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
+
 load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 os.environ["UW_MODE"] = "real"
 
-from unknown_world.models.turn import TurnInput, TurnOutput, Language
+from pydantic import ValidationError
+
+from unknown_world.models.turn import Language, TurnInput, TurnOutput
 from unknown_world.orchestrator.generate_turn_output import (
-    TurnOutputGenerator, _strip_additional_properties,
-    get_turn_output_generator, _default_generator,
+    TurnOutputGenerator,
+    _strip_additional_properties,
 )
 from unknown_world.services.genai_client import (
-    get_genai_client, _client_instance, reset_genai_client,
-    GenerateRequest, GenAIMode,
+    reset_genai_client,
 )
-from unknown_world.config.models import ModelLabel
-from pydantic import ValidationError
 
 
 async def main():
@@ -29,7 +30,7 @@ async def main():
     # Check $defs
     if "$defs" in stripped:
         print(f"Schema has $defs with {len(stripped['$defs'])} definitions")
-        for name in stripped['$defs']:
+        for name in stripped["$defs"]:
             print(f"  - {name}")
     else:
         print("Schema has NO $defs")
@@ -52,7 +53,7 @@ async def main():
     success_count = 0
     fail_count = 0
     for i in range(3):
-        print(f"\n--- Attempt {i+1} ---")
+        print(f"\n--- Attempt {i + 1} ---")
         result = await generator.generate(turn_input)
         print(f"Status: {result.status}")
 
@@ -94,8 +95,8 @@ async def main():
                         print(f"Pydantic errors ({len(e.errors())}):")
                         for err in e.errors():
                             print(f"  loc={err['loc']} type={err['type']} msg={err['msg']}")
-                            if 'input' in err:
-                                inp_str = str(err['input'])[:200]
+                            if "input" in err:
+                                inp_str = str(err["input"])[:200]
                                 print(f"  input={inp_str}")
                 except json.JSONDecodeError:
                     print(f"Raw (first 500): {result.raw_response[:500]}")

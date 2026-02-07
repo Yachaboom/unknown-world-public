@@ -56,7 +56,7 @@ import { ResetButton, ChangeProfileButton } from './components/ResetButton';
 // U-074: 온보딩 가이드
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { useAgentStore } from './stores/agentStore';
-import { useInventoryStore } from './stores/inventoryStore';
+import { useInventoryStore, selectItemCount } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
 import { useWorldStore } from './stores/worldStore';
 import { useTurnRunner } from './turn/turnRunner';
@@ -131,6 +131,7 @@ function App() {
   } = worldStore;
 
   const { startDrag, endDrag } = useInventoryStore();
+  const inventoryItemCount = useInventoryStore(selectItemCount);
   const { isStreaming, narrativeBuffer } = useAgentStore();
   const { uiScale, increaseUIScale, decreaseUIScale } = useUIPrefsStore();
 
@@ -442,16 +443,25 @@ function App() {
             <ChangeProfileButton onClick={handleChangeProfile} disabled={isStreaming} />
           </GameHeader>
 
+          {/* U-077: 좌측 사이드바 패널 영역 분배 (U-081 흡수) */}
           <aside className="sidebar-left">
-            <Panel title={t('panel.inventory.title')} className="flex-1">
+            {/* U-077: Inventory - flex-1 + min-height 보장, 아이템 개수 동적 타이틀 */}
+            <Panel
+              title={
+                inventoryItemCount > 0
+                  ? t('inventory.count', { count: inventoryItemCount })
+                  : t('panel.inventory.title')
+              }
+              className="panel-inventory flex-1"
+            >
               <InventoryPanel />
             </Panel>
-            {/* U-013: Quest Panel */}
-            <Panel title={t('panel.quest.title')}>
+            {/* U-013: Quest Panel (U-077: max-height + 내부 스크롤) */}
+            <Panel title={t('panel.quest.title')} className="panel-quest">
               <QuestPanel />
             </Panel>
-            {/* U-013: Rule Board + Mutation Timeline (별도 컴포넌트) */}
-            <Panel title={t('panel.rule_board.title')}>
+            {/* U-013: Rule Board + Mutation Timeline (U-077: max-height + 내부 스크롤) */}
+            <Panel title={t('panel.rule_board.title')} className="panel-rule-board">
               <RuleBoard />
               <MutationTimeline />
             </Panel>

@@ -500,7 +500,7 @@ class AgenticVisionService:
             if image_url.startswith("/static/"):
                 # /static/ prefix 제거 → .data/ 내부 상대경로
                 # 예: /static/images/generated/img_xxx.png → images/generated/img_xxx.png
-                relative_path = image_url[len("/static/"):]
+                relative_path = image_url[len("/static/") :]
 
                 # backend 루트 디렉토리
                 base_dir = Path(__file__).resolve().parent.parent.parent.parent

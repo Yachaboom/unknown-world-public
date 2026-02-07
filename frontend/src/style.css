@@ -1833,6 +1833,62 @@ body {
   overflow: visible; /* U-072: 온보딩 말풍선 잘림 방지 */
 }
 
+/* ===========================================
+   11.2 좌측 사이드바 패널별 높이 전략 (U-077 + U-081 흡수)
+   - Inventory: flex-1 + min-height 보장 (절대 축소 금지)
+   - Quest/Rule Board: max-height + 내부 스크롤
+   - 모든 패널 헤더 항상 보임
+   =========================================== */
+
+/* Inventory 패널: 최소 높이 보장 + 내부 스크롤 위임 */
+.panel-inventory {
+  min-height: 120px; /* U-077: 최소 가시성 보장 */
+}
+
+/* U-077: 인벤토리 패널 내부 스크롤을 inventory-panel-content에 위임 */
+.panel-inventory .panel-content {
+  overflow: hidden;
+}
+
+/* Quest 패널: max-height 제한 + 내부 스크롤 */
+.panel-quest {
+  max-height: 200px; /* U-077(U-081 흡수): 과도한 확장 방지 */
+  flex-shrink: 0;
+}
+
+.panel-quest .panel-content {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-dim) transparent;
+}
+
+/* Rule Board 패널: max-height 제한 + 내부 스크롤 */
+.panel-rule-board {
+  max-height: 200px; /* U-077(U-081 흡수): 과도한 확장 방지 */
+  flex-shrink: 0;
+}
+
+.panel-rule-board .panel-content {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-dim) transparent;
+}
+
+/* U-077: 반응형 - 뷰포트 높이가 작을 때 조정 */
+@media (max-height: 768px) {
+  .panel-inventory {
+    min-height: 100px;
+  }
+
+  .panel-quest {
+    max-height: 150px;
+  }
+
+  .panel-rule-board {
+    max-height: 150px;
+  }
+}
+
 /* ============================================
    12. 버튼 스타일
    ============================================ */
@@ -4094,13 +4150,39 @@ button:disabled,
   gap: var(--spacing-sm);
   height: 100%;
   min-height: 120px;
-  overflow: hidden; /* 드래그 중 스크롤바 생성 방지 */
+  /* U-077: 스크롤 가능 + CRT 테마 커스텀 스크롤바 (Q2: Option B) */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin; /* Firefox: 얇은 스크롤바 */
+  scrollbar-color: rgba(51, 255, 0, 0.5) rgba(0, 20, 0, 0.8); /* Firefox: 녹색 thumb / 어두운 track */
+}
+
+/* U-077: CRT 테마 커스텀 스크롤바 - WebKit (Q2: Option B) */
+.inventory-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inventory-panel-content::-webkit-scrollbar-track {
+  background: rgba(0, 20, 0, 0.8);
+  border-left: 1px solid rgba(51, 255, 0, 0.2);
+}
+
+.inventory-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(51, 255, 0, 0.5);
+  border-radius: 3px;
+  border: 1px solid rgba(51, 255, 0, 0.3);
+  box-shadow: 0 0 4px rgba(51, 255, 0, 0.3);
+}
+
+.inventory-panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(51, 255, 0, 0.7);
+  box-shadow: 0 0 8px rgba(51, 255, 0, 0.5);
 }
 
 /* 인벤토리 그리드 */
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: var(--spacing-xs);
   padding: var(--spacing-xs);
 }
@@ -4128,6 +4210,15 @@ button:disabled,
   letter-spacing: 1px;
 }
 
+/* U-077: 빈 상태 힌트 텍스트 (Q3: Option B) */
+.inventory-empty-hint {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  opacity: 0.7;
+  margin-top: var(--spacing-xs);
+  font-style: italic;
+}
+
 /* 인벤토리 아이템 */
 .inventory-item {
   display: flex;
@@ -4146,6 +4237,8 @@ button:disabled,
     opacity 0.2s;
   user-select: none;
   touch-action: none;
+  /* U-077: 힌트 팝업 z-index 기준점 */
+  position: relative;
 }
 
 /* 아이템 호버 */
@@ -4153,6 +4246,8 @@ button:disabled,
   border-color: var(--text-color);
   box-shadow: 0 0 8px rgba(51, 255, 0, 0.3);
   transform: translateY(-2px);
+  /* U-077: 힌트 팝업이 형제 아이템 위에 표시되도록 */
+  z-index: 2;
 }
 
 /* 아이템 선택 상태 */

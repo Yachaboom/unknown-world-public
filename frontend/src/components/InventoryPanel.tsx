@@ -330,13 +330,14 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
     [selectedItemId, selectItem],
   );
 
-  // 빈 인벤토리
+  // 빈 인벤토리 (U-077: Q3 Option B - 아이템 획득 힌트 포함)
   if (items.length === 0) {
     return (
       <div className="inventory-panel-content">
         <div className="inventory-empty">
           <span className="inventory-empty-icon">📦</span>
           <span className="inventory-empty-text">{t('inventory.empty')}</span>
+          <span className="inventory-empty-hint">{t('inventory.empty_hint')}</span>
         </div>
       </div>
     );

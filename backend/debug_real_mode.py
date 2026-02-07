@@ -3,20 +3,22 @@
 import asyncio
 import json
 import os
-import sys
 
 # .env 로드
 from pathlib import Path
+
 from dotenv import load_dotenv
+
 load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 
 # UW_MODE=real 강제
 os.environ["UW_MODE"] = "real"
 
-from unknown_world.models.turn import TurnInput, TurnOutput, Language
+from pydantic import ValidationError
+
+from unknown_world.models.turn import Language, TurnInput, TurnOutput
 from unknown_world.orchestrator.generate_turn_output import TurnOutputGenerator
 from unknown_world.services.genai_client import get_genai_client, reset_genai_client
-from pydantic import ValidationError
 
 
 async def main():
@@ -77,8 +79,8 @@ async def main():
                     print(f"  Location: {err['loc']}")
                     print(f"  Type: {err['type']}")
                     print(f"  Message: {err['msg']}")
-                    if 'input' in err:
-                        inp = str(err['input'])
+                    if "input" in err:
+                        inp = str(err["input"])
                         print(f"  Input: {inp[:200]}")
                     print()
         except json.JSONDecodeError as e:

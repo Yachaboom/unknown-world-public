@@ -77,7 +77,13 @@ describe('inventoryStore', () => {
   it('parseInventoryAdded: InventoryItemData 배열을 InventoryItem 배열로 변환해야 한다 (U-075)', () => {
     const added = [
       { id: 'item-a', label: '아이템 A', description: '설명 A', icon_url: null, quantity: 1 },
-      { id: 'item-b', label: '아이템 B', description: '설명 B', icon_url: '/static/icon.png', quantity: 2 },
+      {
+        id: 'item-b',
+        label: '아이템 B',
+        description: '설명 B',
+        icon_url: '/static/icon.png',
+        quantity: 2,
+      },
     ];
     const parsed = parseInventoryAdded(added);
 

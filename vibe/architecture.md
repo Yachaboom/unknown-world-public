@@ -85,6 +85,8 @@ frontend/src/stores/inventoryStore.ts
 frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
+vibe/unit-results/U-077[Mvp].md
+vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -111,6 +113,23 @@ shared/schemas/turn/turn_output.schema.json
 3. **비용 및 정책 (RULE-005, RULE-009)**:
     - **Cost Policy**: 고성능 비전 모델 사용에 따라 일반 턴보다 높은 **1.5x Signal 비용**을 부과합니다.
     - **Fallback Policy**: 분석 실패 또는 이미지 부재 시 안전한 폴백 내러티브를 제공하고 기존 상태를 유지하여 게임 흐름을 보호합니다.
+
+---
+
+## 41. 인벤토리 스크롤 및 사이드바 영역 분배 (U-077[Mvp])
+
+1. **사이드바 레이아웃 전략 (U-081 흡수)**:
+    - **Panel Isolation**: 사이드바의 각 패널(Inventory, Quest, Rule Board)을 독립된 flex 자식으로 구성하고, 패널 간의 간섭을 최소화함.
+    - **Inventory Protection**: `min-height: 120px`와 `flex-shrink: 0`을 적용하여 대량의 퀘스트나 규칙이 추가되어도 인벤토리 가시성을 절대적으로 보장함.
+    - **Quest/Rule Constraint**: `max-height: 200px` 및 내부 스크롤을 적용하여 사이드바가 무한히 확장되는 것을 방지함.
+2. **인벤토리 UX 및 스크롤 (U-077)**:
+    - **Internal Scroll**: `.inventory-panel-content` 영역에 `overflow-y: auto`를 적용하여 수백 개의 아이템이 있어도 패널 내부에서만 스크롤이 발생하도록 설계함.
+    - **Scrollbar Aesthetics (Option C)**: 게임의 몰입감을 위해 스크롤바를 시각적으로 숨기고(scrollbar-width: none), 마우스 휠 및 터치 조작만 허용함.
+    - **Dynamic Header**: `inventoryStore`의 `selectItemCount`를 구독하여 헤더 타이틀에 `(n)` 형식의 아이템 개수를 동적으로 표시함.
+3. **빈 상태(Empty State) 디자인**:
+    - **Semantic Hint**: 아이템이 0개일 때 단순 텍스트가 아닌, 게임 진행을 유도하는 힌트("장면을 탐색하여 아이템을 찾으세요")를 제공하여 UX 연속성을 확보함.
+
+---
 
 ## 31. 참조 이미지 기반 연결성 강화 (U-068[Mvp])
 
