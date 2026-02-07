@@ -1,8 +1,44 @@
 # 프로젝트 진행 상황
 
-## [2026-02-07 18:50] U-094[Mvp]: ImageUnderstanding 응답 파싱 예외 시 자동 재시도 완료
+## [2026-02-07 22:35] U-096[Mvp]: 아이템 사용 시 소비(삭제) 로직 완료
 
 ### 구현 완료 항목
+
+- **핵심 기능**: 아이템 드래그 앤 드롭 사용 시 소모품 자동 삭제 및 시각적 피드백(Magenta fade-out) 구현
+- **추가 컴포넌트**: `vibe/unit-results/U-096[Mvp].md` (보고서), `vibe/unit-runbooks/U-096-item-consumption-runbook.md` (런북), `frontend/src/stores/inventory_consumption.test.ts` (테스트)
+- **달성 요구사항**: [PRD 6.7] 인벤토리 조작성 개선, [RULE-005] 경제/자원 인바리언트 준수, [U-096] 소모품/도구 판정 로직 반영
+
+### 기술적 구현 세부사항
+
+**아이템 소비 파이프라인**:
+- **GM Instruction**: `turn_output_instructions`에 소모품(1회용)과 도구(재사용) 구분 규칙을 명시하여 GM의 일관된 소비 판정 유도.
+- **Two-stage Removal**: 프론트엔드에서 `markConsuming`으로 애니메이션을 먼저 트리거하고, 500ms 후 `clearConsuming`으로 실제 데이터를 삭제하는 지연 처리 아키텍처 적용.
+- **Visual Feedback**: Magenta 강조색과 축소 효과를 결합한 `item-consume-fadeout` 애니메이션을 통해 아이템 소실을 직관적으로 전달.
+- **Quantity Support**: 스택형 아이템의 경우 전체 삭제가 아닌 수량(-1) 감소를 지원하며, 0이 될 때만 인벤토리에서 제거.
+
+**코드 구조**:
+repo-root/
+├── backend/prompts/turn/
+│   └── turn_output_instructions.{ko,en}.md (소비 규칙 추가)
+├── frontend/src/
+│   ├── stores/inventoryStore.ts (소비 상태 및 수량 삭제 로직)
+│   ├── stores/worldStore.ts (애니메이션-삭제 동기화)
+│   ├── components/InventoryPanel.tsx (소비 중 상태 UI)
+│   └── style.css (fade-out 애니메이션)
+└── backend/tests/unit/test_u096_consumption.py (백엔드 스키마 테스트)
+
+### 성능 및 품질 지표
+
+- **UI 일관성**: CSS Transition 기반 애니메이션으로 낮은 CPU 부하 및 매끄러운 UX 확보.
+- **데이터 무결성**: 턴 결과 수신 시점에 상태를 동기화하여 서버-클라이언트 간 아이템 목록 일치 보장.
+
+### 다음 단계
+
+- **U-088**: 인벤토리 UI Row 형태 전환
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 
 - **핵심 기능**: Scanner(`POST /api/scan`)의 응답 파싱 실패 시 최대 2회 자동 재시도 및 지수 백오프 구현
 - **추가 컴포넌트**: `vibe/unit-results/U-094[Mvp].md` (보고서), `vibe/unit-runbooks/U-094-scan-retry-runbook.md` (런북)

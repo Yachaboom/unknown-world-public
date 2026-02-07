@@ -4470,6 +4470,35 @@ button:disabled,
   box-shadow: none;
 }
 
+/* U-096: 아이템 소비(삭제) fade-out 애니메이션 */
+.inventory-item.item-consumed {
+  animation: item-consume-fadeout 0.5s ease-out forwards;
+  pointer-events: none;
+  cursor: default;
+}
+
+@keyframes item-consume-fadeout {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+  }
+  40% {
+    opacity: 0.7;
+    transform: scale(0.95);
+    filter: brightness(1.5) saturate(0.5);
+    border-color: var(--warning-color);
+    box-shadow: 0 0 12px var(--warning-color);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+    filter: brightness(2) saturate(0);
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
 /* 드래그 오버레이 (커서 따라다니는 아이템) */
 .inventory-item.overlay {
   border-color: var(--accent-color);

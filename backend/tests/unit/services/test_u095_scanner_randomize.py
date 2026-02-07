@@ -104,12 +104,15 @@ async def test_service_analyze_uses_correct_item_count():
     mock_response.text = '{"caption": "test", "objects": [], "item_candidates": [{"id": "i1", "label": "L1", "description": "D1", "item_type": "tool"}]}'
     service._genai_client.aio.models.generate_content.return_value = mock_response
 
-    with patch(
-        "unknown_world.services.image_understanding.determine_item_count", return_value=3
-    ) as mock_count, patch(
-        "unknown_world.services.image_understanding.load_prompt",
-        return_value="Test prompt {count}",
-    ) as mock_load:
+    with (
+        patch(
+            "unknown_world.services.image_understanding.determine_item_count", return_value=3
+        ) as mock_count,
+        patch(
+            "unknown_world.services.image_understanding.load_prompt",
+            return_value="Test prompt {count}",
+        ) as mock_load,
+    ):
         await service.analyze(b"fake_image" * 100, "image/png", Language.KO)
 
         # determine_item_count가 호출되었는지 확인

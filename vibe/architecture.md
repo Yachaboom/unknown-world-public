@@ -86,12 +86,16 @@ frontend/src/stores/economyStore.ts
 frontend/src/stores/agentStore.ts
 frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/inventoryStore.ts
+frontend/src/stores/inventory_consumption.test.ts
 frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
 backend/tests/unit/services/test_u093_timeout_retry.py
+backend/tests/unit/test_u096_consumption.py
 vibe/unit-results/U-094[Mvp].md
+vibe/unit-results/U-095[Mvp].md
+vibe/unit-results/U-096[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
@@ -99,6 +103,8 @@ vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
 vibe/unit-runbooks/U-092-item-icon-preset-runbook.md
 vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md
 vibe/unit-runbooks/U-094-scan-retry-runbook.md
+vibe/unit-runbooks/U-095-scanner-randomize-runbook.md
+vibe/unit-runbooks/U-096-item-consumption-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -139,6 +145,19 @@ vibe/unit-runbooks/U-094-scan-retry-runbook.md
     - **Adjust Item Count**: 모델이 지시보다 많은 아이템을 반환할 경우 앞에서부터 슬라이싱하며, 중복된 이름(`label`)을 가진 아이템은 자동 제거하여 결과 품질을 유지함.
 4. **발견 개수별 피드백 UX**:
     - **Dynamic Discovery Message**: 발견된 아이템 수에 따라 프론트엔드에서 "아이템을 발견했습니다!", "두 가지를 발견했습니다!", "세 가지를 발견했습니다! 대단한 발견이네요!" 등 차별화된 피드백을 제공하여 게임플레이 재미를 강화함.
+
+---
+
+## 48. 아이템 사용 시 소비(삭제) 로직 (U-096[Mvp])
+
+1. **GM 아이템 소비 판정 규칙**:
+    - **소모품 vs 도구**: GM은 아이템의 성격에 따라 `inventory_removed` 포함 여부를 결정함. 열쇠, 포션, 폭탄 등 1회성 아이템은 소모품으로 분류하여 사용 후 삭제함.
+    - **수량 기반 소비**: 스택형 아이템의 경우 ID가 포함될 때마다 수량이 1씩 감소하며, 수량이 0이 될 때만 인벤토리에서 완전히 제거됨.
+2. **프론트엔드 애니메이션 파이프라인**:
+    - **Two-stage Removal**: 시각적 인지 품질을 위해 `markConsuming` 액션으로 Magenta 테마의 fade-out 애니메이션을 먼저 트리거함.
+    - **Delayed State Update**: 500ms(CSS Transition) 대기 후 `clearConsuming`을 통해 실제 데이터를 상태에서 제거하여 조작의 연속성과 시각적 피드백을 일치시킴.
+3. **턴 결과 동기화 (worldStore)**:
+    - **Atomic Application**: `applyTurnOutput` 단계에서 인벤토리 추가(`inventory_added`)와 삭제(`inventory_removed`)를 원자적으로 처리하여 서버와 클라이언트 간의 상태 정합성을 100% 유지함.
 1. **프리셋 아이콘 레지스트리 (Static Assets)**:
     - **Asset Library**: 데모 프로필 초기 아이템 및 자주 등장하는 공통 아이템 30종에 대해 사전 제작된 64x64 픽셀 아트 아이콘을 `frontend/public/ui/items/`에 배치함.
     - **Registry Mapping**: 아이템 ID와 에셋 경로를 1:1로 매핑하는 `itemIconPresets.ts`를 통해 클라이언트 사이드에서 즉시 조회 가능하도록 함.

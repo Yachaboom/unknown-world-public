@@ -9,6 +9,9 @@
 | 예상 소요 | 45분                                            |
 | 의존성    | U-012[Mvp], U-011[Mvp]                          |
 | 우선순위  | High (게임 경제/인벤토리 일관성)                |
+| **상태**  | **✅ 완료** (2026-02-07)                        |
+| 결과물    | [U-096[Mvp] 결과](../unit-results/U-096[Mvp].md) |
+| 런북      | [U-096 런북](../unit-runbooks/U-096-item-consumption-runbook.md) |
 
 ## 작업 목표
 
@@ -101,13 +104,13 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 소비 판단 주체?
+- [x] **Q1**: 소비 판단 주체?
   - Option A: GM(모델)이 아이템 성격에 따라 자유 판단
   - Option B: 아이템 데이터에 `consumable: boolean` 속성 추가 (확정적)
-  - Option C: Option A + 서버에서 기본 정책(드래그 사용 시 기본 소비) 적용
+  - ✅ Option C: Option A + 서버에서 기본 정책(드래그 사용 시 기본 소비) 적용
 
-- [ ] **Q2**: 소비 방식?
-  - Option A: TurnOutput에 `removed_items: list[str]` 추가
+- [x] **Q2**: 소비 방식?
+  - ✅ Option A: TurnOutput에 `removed_items: list[str]` 추가
   - Option B: 기존 `world.delta.inventory_changes`에 `{action: "remove", item_id: "xxx"}` 포함
   - Option C: TurnOutput의 `inventory[]`를 전체 교체 (서버가 최종 인벤토리 반환)
 

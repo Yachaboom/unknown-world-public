@@ -30,6 +30,7 @@ import {
   selectItems,
   selectDraggingItem,
   selectSelectedItemId,
+  selectConsumingItemIds,
   requestItemIcon,
   pollIconStatus,
 } from '../stores/inventoryStore';
@@ -46,6 +47,8 @@ interface DraggableItemProps {
   isSelected: boolean;
   onSelect: (itemId: string) => void;
   disabled?: boolean;
+  /** U-096: 소비 중(fade-out 진행 중) 여부 */
+  isConsuming?: boolean;
 }
 
 /**
@@ -54,7 +57,13 @@ interface DraggableItemProps {
  * U-056: 잘린 아이템 이름에 대한 툴팁 지원
  * U-074: 첫 N번만 hover 힌트 표시
  */
-function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
+function DraggableItem({
+  item,
+  isSelected,
+  onSelect,
+  disabled = false,
+  isConsuming = false,
+}: DraggableItemProps) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -142,7 +151,7 @@ function DraggableItem({ item, isSelected, onSelect, disabled = false }: Draggab
     <div
       ref={setNodeRef}
       style={style}
-      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''}`}
+      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''} ${isConsuming ? 'item-consumed' : ''}`}
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -236,6 +245,7 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
   const items = useInventoryStore(selectItems);
   const draggingItem = useInventoryStore(selectDraggingItem);
   const selectedItemId = useInventoryStore(selectSelectedItemId);
+  const consumingItemIds = useInventoryStore(selectConsumingItemIds);
   const selectItem = useInventoryStore((state) => state.selectItem);
   const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
   const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
@@ -357,7 +367,8 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
             item={item}
             isSelected={selectedItemId === item.id}
             onSelect={handleSelect}
-            disabled={disabled}
+            disabled={disabled || consumingItemIds.includes(item.id)}
+            isConsuming={consumingItemIds.includes(item.id)}
           />
         ))}
       </div>

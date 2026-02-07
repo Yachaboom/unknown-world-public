@@ -72,9 +72,20 @@ Specify the rules for each field in the TurnOutput JSON schema.
   - label: Display label (English)
   - description: Item description (for icon generation)
   - quantity: Quantity (default 1)
-- inventory_removed[]: Removed item IDs
+- inventory_removed[]: Consumed/removed item ID array
 - quests_updated[]: Updated quests
 - memory_pins[]: Pin candidates
+
+#### Item Consumption (inventory_removed) Rules (U-096)
+
+When a player **drags and drops an inventory item onto a hotspot (drop event)**, follow these rules to determine whether to include the item ID in `inventory_removed`:
+
+1. **Single-use items** (keys, potions, bombs, talismans, data chips, keycards, etc.) MUST be **consumed** after use. Include the item ID in `inventory_removed`.
+2. **Tools/reusable items** (hammers, torches, telescopes, lockpicks, etc.) should **remain** in inventory after use. Do NOT include them in `inventory_removed`.
+3. The GM determines consumability based on the item's nature and usage context.
+4. When an item is consumed, reflect the result naturally in the narrative. (e.g., "You use the key to unlock the door. The key snaps and crumbles away.")
+5. When a `drop` input triggers an item effect, the **default behavior is to consume (remove)** the item. Only keep the item if it is clearly reusable.
+6. **Quantity-based Consumption**: For stackable items with a quantity, including the item ID once in `inventory_removed` reduces the quantity by 1. The item is only fully removed from the inventory if its quantity becomes 0.
 
 ### render
 - image_job: Image generation job (optional)

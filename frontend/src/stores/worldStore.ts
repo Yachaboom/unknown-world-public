@@ -365,8 +365,18 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     if (output.world.inventory_added.length > 0) {
       useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
     }
+    // U-096: 아이템 소비 시 fade-out 애니메이션 후 제거
     if (output.world.inventory_removed.length > 0) {
-      useInventoryStore.getState().removeItems(output.world.inventory_removed);
+      const removedIds = output.world.inventory_removed;
+      const invStore = useInventoryStore.getState();
+
+      // 1단계: 소비 애니메이션 시작 (fade-out CSS 클래스 적용)
+      invStore.markConsuming(removedIds);
+
+      // 2단계: 애니메이션 완료 후 실제 제거 (500ms = CSS transition 시간)
+      setTimeout(() => {
+        useInventoryStore.getState().clearConsuming(removedIds);
+      }, 500);
     }
 
     // Economy Store 업데이트 (U-014: Ledger 기록)

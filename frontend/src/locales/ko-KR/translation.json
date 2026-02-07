@@ -293,7 +293,8 @@
     "count": "Inventory ({{count}})",
     "grid_label": "인벤토리 아이템 목록",
     "item_label": "{{name}} (수량: {{quantity}})",
-    "drag_hint": "드래그하여 사용"
+    "drag_hint": "드래그하여 사용",
+    "item_consumed": "{{name}} 사용됨"
   },
   "interaction": {
     "hotspot_click": "클릭하여 조사",

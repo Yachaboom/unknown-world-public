@@ -293,7 +293,8 @@
     "count": "Inventory ({{count}})",
     "grid_label": "Inventory Items",
     "item_label": "{{name}} (Qty: {{quantity}})",
-    "drag_hint": "Drag to use"
+    "drag_hint": "Drag to use",
+    "item_consumed": "{{name}} consumed"
   },
   "interaction": {
     "hotspot_click": "Click to investigate",

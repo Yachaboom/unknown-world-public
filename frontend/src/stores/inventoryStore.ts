@@ -57,6 +57,8 @@ export interface InventoryState {
   draggingItemId: string | null;
   /** 선택된 아이템 ID (클릭 선택, 드래그와 별개) */
   selectedItemId: string | null;
+  /** U-096: 소비(삭제) 애니메이션 진행 중인 아이템 ID 집합 */
+  consumingItemIds: string[];
 }
 
 /** Inventory 액션 */
@@ -79,6 +81,16 @@ export interface InventoryActions {
   updateItemIcon: (itemId: string, icon: string, status: IconStatus) => void;
   /** U-075: 아이템 아이콘 상태만 업데이트 */
   setItemIconStatus: (itemId: string, status: IconStatus) => void;
+  /**
+   * U-096: 아이템을 소비(삭제) 애니메이션 상태로 전환합니다.
+   * fade-out 애니메이션 시작 시 호출합니다.
+   */
+  markConsuming: (itemIds: string[]) => void;
+  /**
+   * U-096: 소비 애니메이션 완료 후 아이템을 실제로 제거합니다.
+   * markConsuming → (애니메이션 대기) → clearConsuming 순서로 호출합니다.
+   */
+  clearConsuming: (itemIds: string[]) => void;
 }
 
 export type InventoryStore = InventoryState & InventoryActions;
@@ -92,6 +104,7 @@ function createInitialState(): InventoryState {
     items: [],
     draggingItemId: null,
     selectedItemId: null,
+    consumingItemIds: [],
   };
 }
 
@@ -156,12 +169,36 @@ export const useInventoryStore = create<InventoryStore>((set) => ({
 
   removeItems: (itemIds) => {
     set((state) => {
-      const removeSet = new Set(itemIds);
+      const countsToRemove = itemIds.reduce(
+        (acc, id) => {
+          acc[id] = (acc[id] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      const nextItems = state.items
+        .map((item) => {
+          const toRemove = countsToRemove[item.id];
+          if (!toRemove) return item;
+
+          const nextQuantity = item.quantity - toRemove;
+          if (nextQuantity <= 0) return null; // 수량이 0 이하면 제거
+          return { ...item, quantity: nextQuantity };
+        })
+        .filter((item): item is InventoryItem => item !== null);
+
+      const removedIds = new Set(
+        state.items
+          .filter((item) => !nextItems.find((ni) => ni.id === item.id))
+          .map((item) => item.id),
+      );
+
       return {
-        items: state.items.filter((item) => !removeSet.has(item.id)),
-        // 제거된 아이템이 선택/드래그 중이었다면 초기화
-        selectedItemId: removeSet.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
-        draggingItemId: removeSet.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
+        items: nextItems,
+        // 완전히 제거된 아이템이 선택/드래그 중이었다면 초기화
+        selectedItemId: removedIds.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
+        draggingItemId: removedIds.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
       };
     });
   },
@@ -199,6 +236,52 @@ export const useInventoryStore = create<InventoryStore>((set) => ({
       ),
     }));
   },
+
+  // U-096: 아이템 소비 애니메이션 시작
+  markConsuming: (itemIds) => {
+    set((state) => ({
+      consumingItemIds: [...new Set([...state.consumingItemIds, ...itemIds])],
+    }));
+  },
+
+  // U-096: 소비 애니메이션 완료 후 실제 제거
+  clearConsuming: (itemIds) => {
+    set((state) => {
+      const countsToRemove = itemIds.reduce(
+        (acc, id) => {
+          acc[id] = (acc[id] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      const nextItems = state.items
+        .map((item) => {
+          const toRemove = countsToRemove[item.id];
+          if (!toRemove) return item;
+
+          const nextQuantity = item.quantity - toRemove;
+          if (nextQuantity <= 0) return null;
+          return { ...item, quantity: nextQuantity };
+        })
+        .filter((item): item is InventoryItem => item !== null);
+
+      const removedIds = new Set(
+        state.items
+          .filter((item) => !nextItems.find((ni) => ni.id === item.id))
+          .map((item) => item.id),
+      );
+
+      const removeSet = new Set(itemIds);
+      return {
+        items: nextItems,
+        consumingItemIds: state.consumingItemIds.filter((id) => !removeSet.has(id)),
+        // 완전히 제거된 아이템이 선택/드래그 중이었다면 초기화
+        selectedItemId: removedIds.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
+        draggingItemId: removedIds.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
+      };
+    });
+  },
 }));
 
 // =============================================================================
@@ -224,6 +307,9 @@ export const selectSelectedItem = (state: InventoryStore) =>
 
 /** 아이템 개수 셀렉터 */
 export const selectItemCount = (state: InventoryStore) => state.items.length;
+
+/** U-096: 소비 중인 아이템 ID 목록 셀렉터 */
+export const selectConsumingItemIds = (state: InventoryStore) => state.consumingItemIds;
 
 // =============================================================================
 // 유틸리티 함수

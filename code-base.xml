@@ -33,7 +33,7 @@ The content is organized as follows:
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
 - Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, backend/.venv/**, frontend/dist/**
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .clude/**, .gemini/**, .vscode/**, vibe/**, frontend/dist/**, frontend/node_modules/**, backend/.venv/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -140,6 +140,7 @@ backend/tests/unit/test_u034_verification.py
 backend/tests/unit/test_u043_language_gate.py
 backend/tests/unit/test_u065_schema_simplification.py
 backend/tests/unit/test_u068_reference_image.py
+backend/tests/unit/test_u096_consumption.py
 frontend/coverage/block-navigation.js
 frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
@@ -220,6 +221,7 @@ frontend/src/stores/agentStore.test.ts
 frontend/src/stores/agentStore.ts
 frontend/src/stores/economyStore.test.ts
 frontend/src/stores/economyStore.ts
+frontend/src/stores/inventory_consumption.test.ts
 frontend/src/stores/inventoryStore.test.ts
 frontend/src/stores/inventoryStore.ts
 frontend/src/stores/onboardingStore.test.ts
@@ -8004,133 +8006,6 @@ async def test_retry_on_retryable_exception(icon_generator, mock_image_generator
         assert mock_sleep.call_count == 1
 </file>
 
-<file path="backend/tests/unit/services/test_u095_scanner_randomize.py">
-"""U-095 Scanner 아이템 생성 개수 랜덤화 단위 테스트."""
-
-from collections import Counter
-from unittest.mock import MagicMock, patch
-
-import pytest
-
-from unknown_world.models.scanner import ItemCandidate, ScanStatus
-from unknown_world.models.turn import Language
-from unknown_world.services.image_understanding import (
-    ImageUnderstandingService,
-    ScanResult,
-    _adjust_item_count,
-    determine_item_count,
-)
-
-
-def test_determine_item_count_distribution():
-    """아이템 생성 개수 분포 테스트 (가중치 랜덤 검증)."""
-    iterations = 1000
-    counts = [determine_item_count() for _ in range(iterations)]
-    distribution = Counter(counts)
-
-    # 가중치: 1개=60%, 2개=30%, 3개=10%
-    # 1000회 실행 시 대략적인 범위 확인 (여유 있게 5% 오차 허용)
-    assert 500 <= distribution[1] <= 700
-    assert 200 <= distribution[2] <= 400
-    assert 50 <= distribution[3] <= 150
-    assert len(distribution) == 3
-    assert all(c in [1, 2, 3] for c in distribution)
-
-
-def test_adjust_item_count_excess():
-    """아이템 수가 목표보다 많을 때 조정 테스트."""
-    items = [
-        ItemCandidate(id="1", label="Item 1", description="Desc 1", item_type="tool"),
-        ItemCandidate(id="2", label="Item 2", description="Desc 2", item_type="tool"),
-        ItemCandidate(id="3", label="Item 3", description="Desc 3", item_type="tool"),
-    ]
-    result = ScanResult(
-        status=ScanStatus.COMPLETED,
-        caption="Test",
-        objects=[],
-        item_candidates=items,
-        analysis_time_ms=100,
-    )
-
-    adjusted = _adjust_item_count(result, target_count=2)
-    assert len(adjusted.item_candidates) == 2
-    assert adjusted.item_candidates[0].id == "1"
-    assert adjusted.item_candidates[1].id == "2"
-
-
-def test_adjust_item_count_fewer():
-    """아이템 수가 목표보다 적을 때 조정 테스트 (그대로 유지)."""
-    items = [
-        ItemCandidate(id="1", label="Item 1", description="Desc 1", item_type="tool"),
-    ]
-    result = ScanResult(
-        status=ScanStatus.COMPLETED,
-        caption="Test",
-        objects=[],
-        item_candidates=items,
-        analysis_time_ms=100,
-    )
-
-    adjusted = _adjust_item_count(result, target_count=3)
-    assert len(adjusted.item_candidates) == 1
-    assert adjusted.item_candidates[0].id == "1"
-
-
-def test_adjust_item_count_duplicate_labels():
-    """중복된 이름의 아이템 제거 테스트."""
-    items = [
-        ItemCandidate(id="1", label="Key", description="Desc 1", item_type="key"),
-        ItemCandidate(id="2", label="Key", description="Desc 2", item_type="key"),
-        ItemCandidate(id="3", label="Lock", description="Desc 3", item_type="tool"),
-    ]
-    result = ScanResult(
-        status=ScanStatus.COMPLETED,
-        caption="Test",
-        objects=[],
-        item_candidates=items,
-        analysis_time_ms=100,
-    )
-
-    adjusted = _adjust_item_count(result, target_count=3)
-    assert len(adjusted.item_candidates) == 2
-    assert adjusted.item_candidates[0].label == "Key"
-    assert adjusted.item_candidates[1].label == "Lock"
-
-
-@pytest.mark.asyncio
-async def test_service_analyze_uses_correct_item_count():
-    """analyze 메서드가 결정된 item_count를 비전 호출에 전달하는지 테스트."""
-    service = ImageUnderstandingService(force_mock=False)
-    service._is_mock = False
-    # Mocking genai client
-    service._genai_client = MagicMock()
-    service._genai_client.aio.models.generate_content = MagicMock()
-
-    # Mock response
-    mock_response = MagicMock()
-    mock_response.text = '{"caption": "test", "objects": [], "item_candidates": [{"id": "i1", "label": "L1", "description": "D1", "item_type": "tool"}]}'
-    service._genai_client.aio.models.generate_content.return_value = mock_response
-
-    with patch(
-        "unknown_world.services.image_understanding.determine_item_count", return_value=3
-    ) as mock_count, patch(
-        "unknown_world.services.image_understanding.load_prompt",
-        return_value="Test prompt {count}",
-    ) as mock_load:
-        await service.analyze(b"fake_image" * 100, "image/png", Language.KO)
-
-        # determine_item_count가 호출되었는지 확인
-        mock_count.assert_called_once()
-
-        # load_prompt가 "scan", "scan_instructions"로 호출되었는지 확인
-        mock_load.assert_any_call("scan", "scan_instructions", Language.KO)
-
-        # 비전 호출 시 프롬프트에 {count}가 3으로 치환되었는지 확인
-        call_args = service._genai_client.aio.models.generate_content.call_args
-        prompt_part = call_args[1]["contents"][1]
-        assert "Test prompt 3" in prompt_part.text
-</file>
-
 <file path="backend/tests/unit/test_dotenv_autoload.py">
 """U-047: Backend .env 자동 로딩 테스트
 
@@ -9016,6 +8891,62 @@ async def test_mock_generator_handles_reference_image_url():
     response = await generator.generate(request)
     assert response.status.value == "completed"
     assert response.image_url is not None
+</file>
+
+<file path="backend/tests/unit/test_u096_consumption.py">
+from unknown_world.models.turn import TurnOutput, WorldDelta
+
+
+def test_world_delta_inventory_removed_serialization():
+    """WorldDelta의 inventory_removed 필드 직렬화/역직렬화 테스트 (U-096)."""
+    delta_data = {
+        "inventory_added": [],
+        "inventory_removed": ["key_01", "potion_02"],
+        "rules_changed": [],
+        "quests_updated": [],
+        "relationships_changed": [],
+        "memory_pins": [],
+    }
+    delta = WorldDelta(**delta_data)
+
+    assert delta.inventory_removed == ["key_01", "potion_02"]
+
+    # JSON 직렬화 확인
+    json_data = delta.model_dump()
+    assert json_data["inventory_removed"] == ["key_01", "potion_02"]
+
+
+def test_turn_output_with_consumption():
+    """아이템 소비가 포함된 전체 TurnOutput 스키마 검증."""
+    output_data = {
+        "language": "ko-KR",
+        "narrative": "열쇠를 사용했습니다. 열쇠가 사라졌습니다.",
+        "economy": {
+            "cost": {"signal": 5, "memory_shard": 0},
+            "balance_after": {"signal": 95, "memory_shard": 5},
+        },
+        "safety": {"blocked": False, "message": None},
+        "ui": {"action_deck": {"cards": []}, "objects": []},
+        "world": {
+            "inventory_added": [],
+            "inventory_removed": ["iron_key_01"],
+            "rules_changed": [],
+            "quests_updated": [],
+            "relationships_changed": [],
+            "memory_pins": [],
+        },
+        "render": {"image_job": None},
+        "agent_console": {
+            "current_phase": "commit",
+            "badges": ["schema_ok"],
+            "repair_count": 0,
+            "model_label": "FAST",
+        },
+    }
+
+    output = TurnOutput(**output_data)
+    assert "iron_key_01" in output.world.inventory_removed
+    assert output.narrative == "열쇠를 사용했습니다. 열쇠가 사라졌습니다."
 </file>
 
 <file path="frontend/public/ui/manifest.json">
@@ -12956,6 +12887,128 @@ describe('economyStore', () => {
       const result = canAffordEstimate(balance, estimate);
       expect(result.affordable).toBe(false);
       expect(result.shortfall.signal).toBe(5);
+    });
+  });
+});
+</file>
+
+<file path="frontend/src/stores/inventory_consumption.test.ts">
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { useInventoryStore } from './inventoryStore';
+import { useWorldStore } from './worldStore';
+import type { TurnOutput } from '../schemas/turn';
+
+// 하위 스토어 모킹 방지 (실제 로직 테스트를 위해)
+vi.unmock('./inventoryStore');
+vi.unmock('./economyStore');
+vi.unmock('./actionDeckStore');
+
+describe('Item Consumption (U-096)', () => {
+  beforeEach(() => {
+    useInventoryStore.getState().reset();
+    useWorldStore.getState().reset();
+    vi.useFakeTimers();
+  });
+
+  describe('InventoryStore Consumption Logic', () => {
+    it('markConsuming: 아이템을 소비 중인 상태로 표시해야 한다', () => {
+      const { markConsuming } = useInventoryStore.getState();
+      markConsuming(['item1', 'item2']);
+
+      const state = useInventoryStore.getState();
+      expect(state.consumingItemIds).toContain('item1');
+      expect(state.consumingItemIds).toContain('item2');
+    });
+
+    it('clearConsuming: 소비 애니메이션 완료 후 아이템을 실제로 제거해야 한다 (수량 1)', () => {
+      const { addItems, markConsuming, clearConsuming } = useInventoryStore.getState();
+      addItems([{ id: 'item1', name: 'Key', quantity: 1 }]);
+      markConsuming(['item1']);
+
+      clearConsuming(['item1']);
+
+      const state = useInventoryStore.getState();
+      expect(state.items).toHaveLength(0);
+      expect(state.consumingItemIds).not.toContain('item1');
+    });
+
+    it('clearConsuming: 수량이 여러 개인 경우 수량만 감소시켜야 한다', () => {
+      const { addItems, markConsuming, clearConsuming } = useInventoryStore.getState();
+      addItems([{ id: 'potion', name: 'Potion', quantity: 3 }]);
+      markConsuming(['potion']);
+
+      clearConsuming(['potion']);
+
+      const state = useInventoryStore.getState();
+      expect(state.items).toHaveLength(1);
+      expect(state.items[0].quantity).toBe(2);
+      expect(state.consumingItemIds).not.toContain('potion');
+    });
+
+    it('clearConsuming: 중복 ID 제거 시 수량이 그만큼 감소해야 한다', () => {
+      const { addItems, markConsuming, clearConsuming } = useInventoryStore.getState();
+      addItems([{ id: 'potion', name: 'Potion', quantity: 3 }]);
+      markConsuming(['potion']);
+
+      clearConsuming(['potion', 'potion']);
+
+      const state = useInventoryStore.getState();
+      expect(state.items).toHaveLength(1);
+      expect(state.items[0].quantity).toBe(1);
+    });
+  });
+
+  describe('WorldStore Integration', () => {
+    it('applyTurnOutput: inventory_removed가 포함되면 소비 애니메이션을 트리거해야 한다', () => {
+      const { addItems } = useInventoryStore.getState();
+      addItems([{ id: 'key_01', name: 'Iron Key', quantity: 1 }]);
+
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '열쇠를 사용했습니다.',
+        language: 'ko-KR' as 'ko-KR' | 'en-US',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          action_deck: { cards: [] },
+          objects: [],
+          scene: { image_url: '', alt_text: '' },
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: ['key_01'],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit' as
+            | 'parse'
+            | 'validate'
+            | 'plan'
+            | 'resolve'
+            | 'render'
+            | 'verify'
+            | 'commit',
+          badges: [],
+          repair_count: 0,
+          model_label: 'FAST' as 'FAST' | 'QUALITY' | 'CHEAP' | 'REF',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      // 1단계: markConsuming 호출 확인
+      expect(useInventoryStore.getState().consumingItemIds).toContain('key_01');
+      expect(useInventoryStore.getState().items).toHaveLength(1); // 아직 제거 전
+
+      // 2단계: 500ms 경과 후 제거 확인
+      vi.advanceTimersByTime(500);
+      expect(useInventoryStore.getState().items).toHaveLength(0); // 제거됨
+      expect(useInventoryStore.getState().consumingItemIds).not.toContain('key_01');
     });
   });
 });
@@ -18651,6 +18704,136 @@ async def test_prompt_reinforcement_on_retry(service):
         second_call_contents = calls[1].kwargs["contents"]
         second_prompt = second_call_contents[1].text
         assert SCAN_RETRY_REINFORCEMENT[Language.KO] in second_prompt
+</file>
+
+<file path="backend/tests/unit/services/test_u095_scanner_randomize.py">
+"""U-095 Scanner 아이템 생성 개수 랜덤화 단위 테스트."""
+
+from collections import Counter
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from unknown_world.models.scanner import ItemCandidate, ScanStatus
+from unknown_world.models.turn import Language
+from unknown_world.services.image_understanding import (
+    ImageUnderstandingService,
+    ScanResult,
+    _adjust_item_count,
+    determine_item_count,
+)
+
+
+def test_determine_item_count_distribution():
+    """아이템 생성 개수 분포 테스트 (가중치 랜덤 검증)."""
+    iterations = 1000
+    counts = [determine_item_count() for _ in range(iterations)]
+    distribution = Counter(counts)
+
+    # 가중치: 1개=60%, 2개=30%, 3개=10%
+    # 1000회 실행 시 대략적인 범위 확인 (여유 있게 5% 오차 허용)
+    assert 500 <= distribution[1] <= 700
+    assert 200 <= distribution[2] <= 400
+    assert 50 <= distribution[3] <= 150
+    assert len(distribution) == 3
+    assert all(c in [1, 2, 3] for c in distribution)
+
+
+def test_adjust_item_count_excess():
+    """아이템 수가 목표보다 많을 때 조정 테스트."""
+    items = [
+        ItemCandidate(id="1", label="Item 1", description="Desc 1", item_type="tool"),
+        ItemCandidate(id="2", label="Item 2", description="Desc 2", item_type="tool"),
+        ItemCandidate(id="3", label="Item 3", description="Desc 3", item_type="tool"),
+    ]
+    result = ScanResult(
+        status=ScanStatus.COMPLETED,
+        caption="Test",
+        objects=[],
+        item_candidates=items,
+        analysis_time_ms=100,
+    )
+
+    adjusted = _adjust_item_count(result, target_count=2)
+    assert len(adjusted.item_candidates) == 2
+    assert adjusted.item_candidates[0].id == "1"
+    assert adjusted.item_candidates[1].id == "2"
+
+
+def test_adjust_item_count_fewer():
+    """아이템 수가 목표보다 적을 때 조정 테스트 (그대로 유지)."""
+    items = [
+        ItemCandidate(id="1", label="Item 1", description="Desc 1", item_type="tool"),
+    ]
+    result = ScanResult(
+        status=ScanStatus.COMPLETED,
+        caption="Test",
+        objects=[],
+        item_candidates=items,
+        analysis_time_ms=100,
+    )
+
+    adjusted = _adjust_item_count(result, target_count=3)
+    assert len(adjusted.item_candidates) == 1
+    assert adjusted.item_candidates[0].id == "1"
+
+
+def test_adjust_item_count_duplicate_labels():
+    """중복된 이름의 아이템 제거 테스트."""
+    items = [
+        ItemCandidate(id="1", label="Key", description="Desc 1", item_type="key"),
+        ItemCandidate(id="2", label="Key", description="Desc 2", item_type="key"),
+        ItemCandidate(id="3", label="Lock", description="Desc 3", item_type="tool"),
+    ]
+    result = ScanResult(
+        status=ScanStatus.COMPLETED,
+        caption="Test",
+        objects=[],
+        item_candidates=items,
+        analysis_time_ms=100,
+    )
+
+    adjusted = _adjust_item_count(result, target_count=3)
+    assert len(adjusted.item_candidates) == 2
+    assert adjusted.item_candidates[0].label == "Key"
+    assert adjusted.item_candidates[1].label == "Lock"
+
+
+@pytest.mark.asyncio
+async def test_service_analyze_uses_correct_item_count():
+    """analyze 메서드가 결정된 item_count를 비전 호출에 전달하는지 테스트."""
+    service = ImageUnderstandingService(force_mock=False)
+    service._is_mock = False
+    # Mocking genai client
+    service._genai_client = MagicMock()
+    service._genai_client.aio.models.generate_content = MagicMock()
+
+    # Mock response
+    mock_response = MagicMock()
+    mock_response.text = '{"caption": "test", "objects": [], "item_candidates": [{"id": "i1", "label": "L1", "description": "D1", "item_type": "tool"}]}'
+    service._genai_client.aio.models.generate_content.return_value = mock_response
+
+    with (
+        patch(
+            "unknown_world.services.image_understanding.determine_item_count", return_value=3
+        ) as mock_count,
+        patch(
+            "unknown_world.services.image_understanding.load_prompt",
+            return_value="Test prompt {count}",
+        ) as mock_load,
+    ):
+        await service.analyze(b"fake_image" * 100, "image/png", Language.KO)
+
+        # determine_item_count가 호출되었는지 확인
+        mock_count.assert_called_once()
+
+        # load_prompt가 "scan", "scan_instructions"로 호출되었는지 확인
+        mock_load.assert_any_call("scan", "scan_instructions", Language.KO)
+
+        # 비전 호출 시 프롬프트에 {count}가 3으로 치환되었는지 확인
+        call_args = service._genai_client.aio.models.generate_content.call_args
+        prompt_part = call_args[1]["contents"][1]
+        assert "Test prompt 3" in prompt_part.text
 </file>
 
 <file path="backend/tests/unit/test_u065_schema_simplification.py">
@@ -25855,367 +26038,6 @@ describe('inventoryStore', () => {
 });
 </file>
 
-<file path="frontend/src/stores/inventoryStore.ts">
-/**
- * Unknown World - Inventory 상태 관리 (Zustand) (U-011[Mvp]).
- *
- * Inventory의 아이템 목록, 드래그 상태, 선택 상태를 관리합니다.
- *
- * 설계 원칙:
- *   - RULE-002: Inventory는 게임 UI로 상시 노출
- *   - U-006 의존: WorldDelta.inventory_added / inventory_removed 필드 연동
- *   - U-012 연결: 드래그 데이터에 item_id를 실어 드롭 타겟(핫스팟)에 전달
- *
- * U-075[Mvp]: 아이템 아이콘 동적 생성
- *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
- *   - 아이콘 생성 상태 추적 및 URL 업데이트
- *
- * @module stores/inventoryStore
- */
-
-import { create } from 'zustand';
-// U-092: 프리셋 아이콘 레지스트리
-import { getPresetIconUrl } from '../data/itemIconPresets';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/**
- * 아이콘 생성 상태.
- */
-export type IconStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'cached';
-
-/**
- * 인벤토리 아이템.
- * MVP에서는 최소 필드만 정의합니다.
- *
- * U-075: icon 필드는 URL 또는 이모지, iconStatus로 생성 상태 추적
- */
-export interface InventoryItem {
-  /** 아이템 고유 ID */
-  id: string;
-  /** 아이템 이름 (표시용) */
-  name: string;
-  /** 아이템 설명 (선택) */
-  description?: string;
-  /** 아이템 아이콘 URL 또는 이모지 (선택) */
-  icon?: string;
-  /** 아이템 수량 (기본값: 1) */
-  quantity: number;
-  /** U-075: 아이콘 생성 상태 (선택) */
-  iconStatus?: IconStatus;
-}
-
-/** Inventory 상태 */
-export interface InventoryState {
-  /** 현재 아이템 목록 */
-  items: InventoryItem[];
-  /** 현재 드래그 중인 아이템 ID (null이면 드래그 중 아님) */
-  draggingItemId: string | null;
-  /** 선택된 아이템 ID (클릭 선택, 드래그와 별개) */
-  selectedItemId: string | null;
-}
-
-/** Inventory 액션 */
-export interface InventoryActions {
-  /** 아이템 목록 설정 (전체 교체) */
-  setItems: (items: InventoryItem[]) => void;
-  /** 아이템 추가 (중복 ID면 수량 증가) */
-  addItems: (items: InventoryItem[]) => void;
-  /** 아이템 제거 (ID 목록) */
-  removeItems: (itemIds: string[]) => void;
-  /** 드래그 시작 */
-  startDrag: (itemId: string) => void;
-  /** 드래그 종료 */
-  endDrag: () => void;
-  /** 아이템 선택 */
-  selectItem: (itemId: string | null) => void;
-  /** 상태 초기화 */
-  reset: () => void;
-  /** U-075: 아이템 아이콘 업데이트 */
-  updateItemIcon: (itemId: string, icon: string, status: IconStatus) => void;
-  /** U-075: 아이템 아이콘 상태만 업데이트 */
-  setItemIconStatus: (itemId: string, status: IconStatus) => void;
-}
-
-export type InventoryStore = InventoryState & InventoryActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-function createInitialState(): InventoryState {
-  return {
-    items: [],
-    draggingItemId: null,
-    selectedItemId: null,
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * Inventory 상태 스토어.
- *
- * @example
- * ```tsx
- * const { items, addItems, removeItems, startDrag, endDrag } = useInventoryStore();
- *
- * // TurnOutput.world.inventory_added 수신 시
- * addItems(inventoryAddedItems);
- *
- * // TurnOutput.world.inventory_removed 수신 시
- * removeItems(inventoryRemovedIds);
- *
- * // dnd-kit onDragStart
- * startDrag(itemId);
- *
- * // dnd-kit onDragEnd
- * endDrag();
- * ```
- */
-export const useInventoryStore = create<InventoryStore>((set) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-  setItems: (items) => {
-    set({
-      items,
-      draggingItemId: null,
-      selectedItemId: null,
-    });
-  },
-
-  addItems: (newItems) => {
-    set((state) => {
-      const itemsMap = new Map(state.items.map((item) => [item.id, item]));
-
-      for (const newItem of newItems) {
-        const existing = itemsMap.get(newItem.id);
-        if (existing) {
-          // 기존 아이템이면 수량 증가
-          itemsMap.set(newItem.id, {
-            ...existing,
-            quantity: existing.quantity + newItem.quantity,
-          });
-        } else {
-          // 새 아이템 추가
-          itemsMap.set(newItem.id, newItem);
-        }
-      }
-
-      return { items: Array.from(itemsMap.values()) };
-    });
-  },
-
-  removeItems: (itemIds) => {
-    set((state) => {
-      const removeSet = new Set(itemIds);
-      return {
-        items: state.items.filter((item) => !removeSet.has(item.id)),
-        // 제거된 아이템이 선택/드래그 중이었다면 초기화
-        selectedItemId: removeSet.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
-        draggingItemId: removeSet.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
-      };
-    });
-  },
-
-  startDrag: (itemId) => {
-    set({ draggingItemId: itemId });
-  },
-
-  endDrag: () => {
-    set({ draggingItemId: null });
-  },
-
-  selectItem: (itemId) => {
-    set({ selectedItemId: itemId });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-
-  // U-075: 아이템 아이콘 업데이트
-  updateItemIcon: (itemId, icon, status) => {
-    set((state) => ({
-      items: state.items.map((item) =>
-        item.id === itemId ? { ...item, icon, iconStatus: status } : item,
-      ),
-    }));
-  },
-
-  // U-075: 아이템 아이콘 상태만 업데이트
-  setItemIconStatus: (itemId, status) => {
-    set((state) => ({
-      items: state.items.map((item) =>
-        item.id === itemId ? { ...item, iconStatus: status } : item,
-      ),
-    }));
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 아이템 목록 셀렉터 */
-export const selectItems = (state: InventoryStore) => state.items;
-
-/** 드래그 중인 아이템 ID 셀렉터 */
-export const selectDraggingItemId = (state: InventoryStore) => state.draggingItemId;
-
-/** 드래그 중인 아이템 객체 셀렉터 */
-export const selectDraggingItem = (state: InventoryStore) =>
-  state.items.find((item) => item.id === state.draggingItemId) ?? null;
-
-/** 선택된 아이템 ID 셀렉터 */
-export const selectSelectedItemId = (state: InventoryStore) => state.selectedItemId;
-
-/** 선택된 아이템 객체 셀렉터 */
-export const selectSelectedItem = (state: InventoryStore) =>
-  state.items.find((item) => item.id === state.selectedItemId) ?? null;
-
-/** 아이템 개수 셀렉터 */
-export const selectItemCount = (state: InventoryStore) => state.items.length;
-
-// =============================================================================
-// 유틸리티 함수
-// =============================================================================
-
-/**
- * 서버 응답(inventory_added InventoryItemData 배열)을 InventoryItem 배열로 변환합니다.
- *
- * @param added - 추가된 아이템 데이터 목록 (서버 응답)
- * @returns InventoryItem 배열
- */
-export function parseInventoryAdded(added: InventoryItemDataInput[]): InventoryItem[] {
-  return added.map((item) => {
-    // U-092: 프리셋 아이콘 우선 (Q2: icon_url이 있으면 항상 프리셋 우선, 동적 생성 건너뛰기)
-    const presetUrl = getPresetIconUrl(item.id);
-    const iconUrl = presetUrl ?? item.icon_url ?? undefined;
-    const status: IconStatus = iconUrl ? 'completed' : 'pending';
-
-    return {
-      id: item.id,
-      name: item.label,
-      description: item.description || item.label,
-      icon: iconUrl,
-      quantity: item.quantity ?? 1,
-      iconStatus: status,
-    };
-  });
-}
-
-/** 서버에서 오는 InventoryItemData 형태 (Zod 스키마와 동일) */
-export interface InventoryItemDataInput {
-  id: string;
-  label: string;
-  description?: string;
-  icon_url?: string | null;
-  quantity?: number;
-}
-
-/**
- * 아이템 ID로 아이템을 찾습니다.
- *
- * @param items - 아이템 목록
- * @param itemId - 찾을 아이템 ID
- * @returns 아이템 또는 undefined
- */
-export function findItemById(items: InventoryItem[], itemId: string): InventoryItem | undefined {
-  return items.find((item) => item.id === itemId);
-}
-
-// =============================================================================
-// U-075: 아이콘 생성 API
-// =============================================================================
-
-/** 아이콘 생성 API 응답 */
-interface IconApiResponse {
-  status: string;
-  icon_url: string;
-  item_id: string;
-  is_placeholder: boolean;
-  message?: string;
-}
-
-/**
- * 아이템 아이콘 생성을 요청합니다 (U-075[Mvp]).
- *
- * Q1 결정: Option B - placeholder 먼저 반환, 백그라운드 생성
- *
- * @param itemId - 아이템 ID
- * @param description - 아이템 설명
- * @param language - 세션 언어
- * @returns 아이콘 URL 및 상태
- */
-export async function requestItemIcon(
-  itemId: string,
-  description: string,
-  language: string = 'ko-KR',
-): Promise<{ iconUrl: string; status: IconStatus; isPlaceholder: boolean }> {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
-
-  try {
-    const response = await fetch(`${apiUrl}/api/item/icon`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        item_id: itemId,
-        description: description,
-        language: language,
-        wait: false, // Q1: placeholder 즉시 반환
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn(`[ItemIcon] API 요청 실패: ${response.status}`);
-      return { iconUrl: '', status: 'failed', isPlaceholder: true };
-    }
-
-    const data: IconApiResponse = await response.json();
-    return {
-      iconUrl: data.icon_url,
-      status: data.status as IconStatus,
-      isPlaceholder: data.is_placeholder,
-    };
-  } catch (error) {
-    console.warn('[ItemIcon] 아이콘 생성 요청 실패:', error);
-    return { iconUrl: '', status: 'failed', isPlaceholder: true };
-  }
-}
-
-/**
- * 아이콘 생성 상태를 폴링합니다 (U-075[Mvp]).
- *
- * @param itemId - 아이템 ID
- * @returns 현재 상태
- */
-export async function pollIconStatus(itemId: string): Promise<IconStatus> {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
-
-  try {
-    const response = await fetch(`${apiUrl}/api/item/icon/${itemId}/status`);
-
-    if (!response.ok) {
-      return 'failed';
-    }
-
-    const data = await response.json();
-    return data.status as IconStatus;
-  } catch {
-    return 'failed';
-  }
-}
-</file>
-
 <file path="frontend/src/types/scene.ts">
 /**
  * Scene Canvas 관련 타입 정의 (U-031: Placeholder Pack, U-020: Lazy Render)
@@ -29601,382 +29423,6 @@ describe('InventoryPanel', () => {
 });
 </file>
 
-<file path="frontend/src/components/InventoryPanel.tsx">
-/**
- * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp]).
- *
- * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 제공합니다.
- *
- * 설계 원칙:
- *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
- *   - tech-stack: dnd-kit 기반 draggable 구현
- *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
- *
- * U-074[Mvp]: 아이템 인터랙션 안내 UX
- *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
- *   - hover 시 "드래그하여 사용" 힌트 표시
- *
- * U-075[Mvp]: 아이템 아이콘 동적 생성
- *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
- *   - Q2: Option A (64x64 픽셀)
- *   - Q3: Option A (픽셀 아트 스타일)
- *
- * @module components/InventoryPanel
- */
-
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useDraggable, DragOverlay } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
-import { useTranslation } from 'react-i18next';
-import {
-  useInventoryStore,
-  type InventoryItem,
-  selectItems,
-  selectDraggingItem,
-  selectSelectedItemId,
-  requestItemIcon,
-  pollIconStatus,
-} from '../stores/inventoryStore';
-import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
-import { InteractionHint } from './InteractionHint';
-import { DND_TYPE, type InventoryDragData } from '../dnd/types';
-
-// =============================================================================
-// 드래그 가능한 아이템 컴포넌트
-// =============================================================================
-
-interface DraggableItemProps {
-  item: InventoryItem;
-  isSelected: boolean;
-  onSelect: (itemId: string) => void;
-  disabled?: boolean;
-}
-
-/**
- * 드래그 가능한 인벤토리 아이템.
- * dnd-kit의 useDraggable 훅을 사용합니다.
- * U-056: 잘린 아이템 이름에 대한 툴팁 지원
- * U-074: 첫 N번만 hover 힌트 표시
- */
-function DraggableItem({ item, isSelected, onSelect, disabled = false }: DraggableItemProps) {
-  const { t } = useTranslation();
-  const [isHovered, setIsHovered] = useState(false);
-
-  // U-074: 아이템 힌트 상태 (첫 N번만 표시)
-  const shouldShowHint = useOnboardingStore(selectShouldShowItemHint);
-  const incrementItemHint = useOnboardingStore((state) => state.incrementItemHint);
-
-  // U-074: hover 시작 시 힌트 카운트 증가
-  useEffect(() => {
-    if (isHovered && !disabled) {
-      incrementItemHint();
-    }
-  }, [isHovered, disabled, incrementItemHint]);
-
-  // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
-  const dragData: InventoryDragData = {
-    type: DND_TYPE.INVENTORY_ITEM,
-    item_id: item.id,
-    item,
-  };
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: item.id,
-    data: dragData,
-    disabled,
-  });
-
-  // 변환 스타일 계산
-  // 드래그 중일 때는 원본 아이템이 제자리에 있도록 transform 적용하지 않음
-  // DragOverlay가 별도로 렌더링되므로 원본은 위치 고정
-  const style = useMemo(
-    () => ({
-      transform: isDragging ? undefined : CSS.Translate.toString(transform),
-      opacity: isDragging ? 0.3 : 1,
-    }),
-    [transform, isDragging],
-  );
-
-  // 클릭 핸들러 (선택)
-  const handleClick = useCallback(() => {
-    if (!disabled) {
-      onSelect(item.id);
-    }
-  }, [disabled, item.id, onSelect]);
-
-  // U-075: 아이콘 렌더링 (이모지 또는 이미지, 로딩 상태 포함)
-  const renderIcon = () => {
-    const isLoading = item.iconStatus === 'generating' || item.iconStatus === 'pending';
-
-    if (item.icon) {
-      // URL 형태면 이미지
-      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
-        return (
-          <div className="inventory-item-icon-wrapper">
-            <img
-              src={item.icon}
-              alt={item.name}
-              className={`inventory-item-icon-img ${isLoading ? 'loading' : ''}`}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            {isLoading && <div className="inventory-item-icon-loading" />}
-          </div>
-        );
-      }
-      // 이모지 + 로딩 상태 (U-075: 이모지여도 생성 중이면 스피너 표시)
-      return (
-        <div className="inventory-item-icon-wrapper">
-          <span className="inventory-item-icon-emoji">{item.icon}</span>
-          {isLoading && <div className="inventory-item-icon-loading" />}
-        </div>
-      );
-    }
-
-    // 기본 아이콘 (📦) + 로딩 상태
-    return (
-      <div className="inventory-item-icon-wrapper">
-        <span className="inventory-item-icon-emoji">📦</span>
-        {isLoading && <div className="inventory-item-icon-loading" />}
-      </div>
-    );
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''}`}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
-      aria-selected={isSelected}
-      // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
-      title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
-      {...attributes}
-      {...listeners}
-    >
-      <div className="inventory-item-icon">{renderIcon()}</div>
-      <div className="inventory-item-info">
-        <span className="inventory-item-name">{item.name}</span>
-        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
-      </div>
-
-      {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
-      {isHovered && !disabled && !isDragging && shouldShowHint && (
-        <InteractionHint
-          text={t('interaction.item_drag')}
-          icon="drag"
-          position="top"
-          className="interaction-hint--inventory"
-        />
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// 드래그 오버레이 (드래그 중 표시되는 아이템)
-// =============================================================================
-
-interface ItemOverlayProps {
-  item: InventoryItem;
-}
-
-/**
- * 드래그 오버레이 아이템.
- * 드래그 중일 때 커서를 따라다니는 아이템 표시입니다.
- */
-function ItemOverlay({ item }: ItemOverlayProps) {
-  // 아이콘 렌더링
-  const renderIcon = () => {
-    if (item.icon) {
-      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
-        return <img src={item.icon} alt={item.name} className="inventory-item-icon-img" />;
-      }
-      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
-    }
-    return <span className="inventory-item-icon-emoji">📦</span>;
-  };
-
-  return (
-    <div className="inventory-item overlay">
-      <div className="inventory-item-icon">{renderIcon()}</div>
-      <div className="inventory-item-info">
-        <span className="inventory-item-name">{item.name}</span>
-        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// 메인 Inventory Panel 컴포넌트
-// =============================================================================
-
-interface InventoryPanelProps {
-  /** 상호작용 비활성화 (스트리밍 중 등) */
-  disabled?: boolean;
-}
-
-/**
- * Inventory Panel 컴포넌트.
- *
- * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
- * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
- *
- * U-075: 아이템 추가 시 아이콘 동적 생성 요청
- *
- * @example
- * ```tsx
- * <InventoryPanel disabled={isStreaming} />
- * ```
- */
-export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
-  const { t, i18n } = useTranslation();
-
-  // Store 상태
-  const items = useInventoryStore(selectItems);
-  const draggingItem = useInventoryStore(selectDraggingItem);
-  const selectedItemId = useInventoryStore(selectSelectedItemId);
-  const selectItem = useInventoryStore((state) => state.selectItem);
-  const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
-  const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
-
-  // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
-  const iconRequestedRef = useRef<Set<string>>(new Set());
-
-  // U-075: 아이템 추가 시 아이콘 생성 요청
-  useEffect(() => {
-    const requestIconsForNewItems = async () => {
-      for (const item of items) {
-        // 이미 요청한 경우 스킵
-        if (iconRequestedRef.current.has(item.id)) continue;
-
-        // 이미 완료된 아이콘이 있는 경우 스킵
-        if (item.iconStatus === 'completed' || item.iconStatus === 'cached') continue;
-
-        // URL 형태의 실제 아이콘이 있으면 스킵 (이모지는 무시)
-        const hasRealIcon =
-          item.icon &&
-          (item.icon.startsWith('http') || item.icon.startsWith('/')) &&
-          !item.icon.includes('placeholder');
-        if (hasRealIcon) continue;
-
-        // iconStatus가 없거나 pending/generating/failed인 경우 아이콘 생성 시도
-        // (failed인 경우도 재시도 허용)
-
-        // 요청 추적
-        iconRequestedRef.current.add(item.id);
-
-        // 아이콘 생성 요청 (비동기)
-        const description = item.description || item.name;
-        const language = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
-
-        setItemIconStatus(item.id, 'generating');
-
-        try {
-          const result = await requestItemIcon(item.id, description, language);
-
-          if (result.isPlaceholder) {
-            // Placeholder 반환됨 - 폴링 시작
-            setItemIconStatus(item.id, 'generating');
-
-            // 백그라운드에서 폴링 (최대 30초)
-            let attempts = 0;
-            const maxAttempts = 15;
-            const pollInterval = 2000; // 2초
-
-            const poll = async () => {
-              if (attempts >= maxAttempts) {
-                setItemIconStatus(item.id, 'failed');
-                return;
-              }
-              attempts++;
-
-              const status = await pollIconStatus(item.id);
-              if (status === 'completed' || status === 'cached') {
-                // 완료됨 - 아이콘 URL 다시 요청
-                const finalResult = await requestItemIcon(item.id, description, language);
-                if (!finalResult.isPlaceholder && finalResult.iconUrl) {
-                  updateItemIcon(item.id, finalResult.iconUrl, 'completed');
-                }
-              } else if (status === 'failed') {
-                setItemIconStatus(item.id, 'failed');
-              } else {
-                // 계속 생성 중 - 다시 폴링
-                setTimeout(poll, pollInterval);
-              }
-            };
-
-            setTimeout(poll, pollInterval);
-          } else if (result.iconUrl) {
-            // 즉시 완료 (캐시)
-            updateItemIcon(item.id, result.iconUrl, result.status);
-          }
-        } catch (error) {
-          console.warn(`[InventoryPanel] 아이콘 생성 실패: ${item.id}`, error);
-          setItemIconStatus(item.id, 'failed');
-        }
-      }
-    };
-
-    requestIconsForNewItems();
-  }, [items, i18n.language, updateItemIcon, setItemIconStatus]);
-
-  // 아이템 선택 핸들러
-  const handleSelect = useCallback(
-    (itemId: string) => {
-      // 이미 선택된 아이템 클릭 시 선택 해제
-      selectItem(selectedItemId === itemId ? null : itemId);
-    },
-    [selectedItemId, selectItem],
-  );
-
-  // 빈 인벤토리 (U-077: Q3 Option B - 아이템 획득 힌트 포함)
-  if (items.length === 0) {
-    return (
-      <div className="inventory-panel-content">
-        <div className="inventory-empty">
-          <span className="inventory-empty-icon">📦</span>
-          <span className="inventory-empty-text">{t('inventory.empty')}</span>
-          <span className="inventory-empty-hint">{t('inventory.empty_hint')}</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="inventory-panel-content" data-ui-importance="critical">
-      <div
-        className="inventory-grid"
-        role="listbox"
-        aria-label={t('inventory.grid_label')}
-        aria-multiselectable={false}
-      >
-        {items.map((item) => (
-          <DraggableItem
-            key={item.id}
-            item={item}
-            isSelected={selectedItemId === item.id}
-            onSelect={handleSelect}
-            disabled={disabled}
-          />
-        ))}
-      </div>
-
-      {/* 드래그 오버레이 */}
-      <DragOverlay dropAnimation={null}>
-        {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
-      </DragOverlay>
-    </div>
-  );
-}
-
-export default InventoryPanel;
-</file>
-
 <file path="frontend/src/components/SceneCanvas.tsx">
 /**
  * Unknown World - Scene Canvas 컴포넌트
@@ -30165,6 +29611,453 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
       )}
     </div>
   );
+}
+</file>
+
+<file path="frontend/src/stores/inventoryStore.ts">
+/**
+ * Unknown World - Inventory 상태 관리 (Zustand) (U-011[Mvp]).
+ *
+ * Inventory의 아이템 목록, 드래그 상태, 선택 상태를 관리합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: Inventory는 게임 UI로 상시 노출
+ *   - U-006 의존: WorldDelta.inventory_added / inventory_removed 필드 연동
+ *   - U-012 연결: 드래그 데이터에 item_id를 실어 드롭 타겟(핫스팟)에 전달
+ *
+ * U-075[Mvp]: 아이템 아이콘 동적 생성
+ *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
+ *   - 아이콘 생성 상태 추적 및 URL 업데이트
+ *
+ * @module stores/inventoryStore
+ */
+
+import { create } from 'zustand';
+// U-092: 프리셋 아이콘 레지스트리
+import { getPresetIconUrl } from '../data/itemIconPresets';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/**
+ * 아이콘 생성 상태.
+ */
+export type IconStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'cached';
+
+/**
+ * 인벤토리 아이템.
+ * MVP에서는 최소 필드만 정의합니다.
+ *
+ * U-075: icon 필드는 URL 또는 이모지, iconStatus로 생성 상태 추적
+ */
+export interface InventoryItem {
+  /** 아이템 고유 ID */
+  id: string;
+  /** 아이템 이름 (표시용) */
+  name: string;
+  /** 아이템 설명 (선택) */
+  description?: string;
+  /** 아이템 아이콘 URL 또는 이모지 (선택) */
+  icon?: string;
+  /** 아이템 수량 (기본값: 1) */
+  quantity: number;
+  /** U-075: 아이콘 생성 상태 (선택) */
+  iconStatus?: IconStatus;
+}
+
+/** Inventory 상태 */
+export interface InventoryState {
+  /** 현재 아이템 목록 */
+  items: InventoryItem[];
+  /** 현재 드래그 중인 아이템 ID (null이면 드래그 중 아님) */
+  draggingItemId: string | null;
+  /** 선택된 아이템 ID (클릭 선택, 드래그와 별개) */
+  selectedItemId: string | null;
+  /** U-096: 소비(삭제) 애니메이션 진행 중인 아이템 ID 집합 */
+  consumingItemIds: string[];
+}
+
+/** Inventory 액션 */
+export interface InventoryActions {
+  /** 아이템 목록 설정 (전체 교체) */
+  setItems: (items: InventoryItem[]) => void;
+  /** 아이템 추가 (중복 ID면 수량 증가) */
+  addItems: (items: InventoryItem[]) => void;
+  /** 아이템 제거 (ID 목록) */
+  removeItems: (itemIds: string[]) => void;
+  /** 드래그 시작 */
+  startDrag: (itemId: string) => void;
+  /** 드래그 종료 */
+  endDrag: () => void;
+  /** 아이템 선택 */
+  selectItem: (itemId: string | null) => void;
+  /** 상태 초기화 */
+  reset: () => void;
+  /** U-075: 아이템 아이콘 업데이트 */
+  updateItemIcon: (itemId: string, icon: string, status: IconStatus) => void;
+  /** U-075: 아이템 아이콘 상태만 업데이트 */
+  setItemIconStatus: (itemId: string, status: IconStatus) => void;
+  /**
+   * U-096: 아이템을 소비(삭제) 애니메이션 상태로 전환합니다.
+   * fade-out 애니메이션 시작 시 호출합니다.
+   */
+  markConsuming: (itemIds: string[]) => void;
+  /**
+   * U-096: 소비 애니메이션 완료 후 아이템을 실제로 제거합니다.
+   * markConsuming → (애니메이션 대기) → clearConsuming 순서로 호출합니다.
+   */
+  clearConsuming: (itemIds: string[]) => void;
+}
+
+export type InventoryStore = InventoryState & InventoryActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+function createInitialState(): InventoryState {
+  return {
+    items: [],
+    draggingItemId: null,
+    selectedItemId: null,
+    consumingItemIds: [],
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * Inventory 상태 스토어.
+ *
+ * @example
+ * ```tsx
+ * const { items, addItems, removeItems, startDrag, endDrag } = useInventoryStore();
+ *
+ * // TurnOutput.world.inventory_added 수신 시
+ * addItems(inventoryAddedItems);
+ *
+ * // TurnOutput.world.inventory_removed 수신 시
+ * removeItems(inventoryRemovedIds);
+ *
+ * // dnd-kit onDragStart
+ * startDrag(itemId);
+ *
+ * // dnd-kit onDragEnd
+ * endDrag();
+ * ```
+ */
+export const useInventoryStore = create<InventoryStore>((set) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+  setItems: (items) => {
+    set({
+      items,
+      draggingItemId: null,
+      selectedItemId: null,
+    });
+  },
+
+  addItems: (newItems) => {
+    set((state) => {
+      const itemsMap = new Map(state.items.map((item) => [item.id, item]));
+
+      for (const newItem of newItems) {
+        const existing = itemsMap.get(newItem.id);
+        if (existing) {
+          // 기존 아이템이면 수량 증가
+          itemsMap.set(newItem.id, {
+            ...existing,
+            quantity: existing.quantity + newItem.quantity,
+          });
+        } else {
+          // 새 아이템 추가
+          itemsMap.set(newItem.id, newItem);
+        }
+      }
+
+      return { items: Array.from(itemsMap.values()) };
+    });
+  },
+
+  removeItems: (itemIds) => {
+    set((state) => {
+      const countsToRemove = itemIds.reduce(
+        (acc, id) => {
+          acc[id] = (acc[id] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      const nextItems = state.items
+        .map((item) => {
+          const toRemove = countsToRemove[item.id];
+          if (!toRemove) return item;
+
+          const nextQuantity = item.quantity - toRemove;
+          if (nextQuantity <= 0) return null; // 수량이 0 이하면 제거
+          return { ...item, quantity: nextQuantity };
+        })
+        .filter((item): item is InventoryItem => item !== null);
+
+      const removedIds = new Set(
+        state.items
+          .filter((item) => !nextItems.find((ni) => ni.id === item.id))
+          .map((item) => item.id),
+      );
+
+      return {
+        items: nextItems,
+        // 완전히 제거된 아이템이 선택/드래그 중이었다면 초기화
+        selectedItemId: removedIds.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
+        draggingItemId: removedIds.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
+      };
+    });
+  },
+
+  startDrag: (itemId) => {
+    set({ draggingItemId: itemId });
+  },
+
+  endDrag: () => {
+    set({ draggingItemId: null });
+  },
+
+  selectItem: (itemId) => {
+    set({ selectedItemId: itemId });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+
+  // U-075: 아이템 아이콘 업데이트
+  updateItemIcon: (itemId, icon, status) => {
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.id === itemId ? { ...item, icon, iconStatus: status } : item,
+      ),
+    }));
+  },
+
+  // U-075: 아이템 아이콘 상태만 업데이트
+  setItemIconStatus: (itemId, status) => {
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.id === itemId ? { ...item, iconStatus: status } : item,
+      ),
+    }));
+  },
+
+  // U-096: 아이템 소비 애니메이션 시작
+  markConsuming: (itemIds) => {
+    set((state) => ({
+      consumingItemIds: [...new Set([...state.consumingItemIds, ...itemIds])],
+    }));
+  },
+
+  // U-096: 소비 애니메이션 완료 후 실제 제거
+  clearConsuming: (itemIds) => {
+    set((state) => {
+      const countsToRemove = itemIds.reduce(
+        (acc, id) => {
+          acc[id] = (acc[id] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      const nextItems = state.items
+        .map((item) => {
+          const toRemove = countsToRemove[item.id];
+          if (!toRemove) return item;
+
+          const nextQuantity = item.quantity - toRemove;
+          if (nextQuantity <= 0) return null;
+          return { ...item, quantity: nextQuantity };
+        })
+        .filter((item): item is InventoryItem => item !== null);
+
+      const removedIds = new Set(
+        state.items
+          .filter((item) => !nextItems.find((ni) => ni.id === item.id))
+          .map((item) => item.id),
+      );
+
+      const removeSet = new Set(itemIds);
+      return {
+        items: nextItems,
+        consumingItemIds: state.consumingItemIds.filter((id) => !removeSet.has(id)),
+        // 완전히 제거된 아이템이 선택/드래그 중이었다면 초기화
+        selectedItemId: removedIds.has(state.selectedItemId ?? '') ? null : state.selectedItemId,
+        draggingItemId: removedIds.has(state.draggingItemId ?? '') ? null : state.draggingItemId,
+      };
+    });
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 아이템 목록 셀렉터 */
+export const selectItems = (state: InventoryStore) => state.items;
+
+/** 드래그 중인 아이템 ID 셀렉터 */
+export const selectDraggingItemId = (state: InventoryStore) => state.draggingItemId;
+
+/** 드래그 중인 아이템 객체 셀렉터 */
+export const selectDraggingItem = (state: InventoryStore) =>
+  state.items.find((item) => item.id === state.draggingItemId) ?? null;
+
+/** 선택된 아이템 ID 셀렉터 */
+export const selectSelectedItemId = (state: InventoryStore) => state.selectedItemId;
+
+/** 선택된 아이템 객체 셀렉터 */
+export const selectSelectedItem = (state: InventoryStore) =>
+  state.items.find((item) => item.id === state.selectedItemId) ?? null;
+
+/** 아이템 개수 셀렉터 */
+export const selectItemCount = (state: InventoryStore) => state.items.length;
+
+/** U-096: 소비 중인 아이템 ID 목록 셀렉터 */
+export const selectConsumingItemIds = (state: InventoryStore) => state.consumingItemIds;
+
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
+
+/**
+ * 서버 응답(inventory_added InventoryItemData 배열)을 InventoryItem 배열로 변환합니다.
+ *
+ * @param added - 추가된 아이템 데이터 목록 (서버 응답)
+ * @returns InventoryItem 배열
+ */
+export function parseInventoryAdded(added: InventoryItemDataInput[]): InventoryItem[] {
+  return added.map((item) => {
+    // U-092: 프리셋 아이콘 우선 (Q2: icon_url이 있으면 항상 프리셋 우선, 동적 생성 건너뛰기)
+    const presetUrl = getPresetIconUrl(item.id);
+    const iconUrl = presetUrl ?? item.icon_url ?? undefined;
+    const status: IconStatus = iconUrl ? 'completed' : 'pending';
+
+    return {
+      id: item.id,
+      name: item.label,
+      description: item.description || item.label,
+      icon: iconUrl,
+      quantity: item.quantity ?? 1,
+      iconStatus: status,
+    };
+  });
+}
+
+/** 서버에서 오는 InventoryItemData 형태 (Zod 스키마와 동일) */
+export interface InventoryItemDataInput {
+  id: string;
+  label: string;
+  description?: string;
+  icon_url?: string | null;
+  quantity?: number;
+}
+
+/**
+ * 아이템 ID로 아이템을 찾습니다.
+ *
+ * @param items - 아이템 목록
+ * @param itemId - 찾을 아이템 ID
+ * @returns 아이템 또는 undefined
+ */
+export function findItemById(items: InventoryItem[], itemId: string): InventoryItem | undefined {
+  return items.find((item) => item.id === itemId);
+}
+
+// =============================================================================
+// U-075: 아이콘 생성 API
+// =============================================================================
+
+/** 아이콘 생성 API 응답 */
+interface IconApiResponse {
+  status: string;
+  icon_url: string;
+  item_id: string;
+  is_placeholder: boolean;
+  message?: string;
+}
+
+/**
+ * 아이템 아이콘 생성을 요청합니다 (U-075[Mvp]).
+ *
+ * Q1 결정: Option B - placeholder 먼저 반환, 백그라운드 생성
+ *
+ * @param itemId - 아이템 ID
+ * @param description - 아이템 설명
+ * @param language - 세션 언어
+ * @returns 아이콘 URL 및 상태
+ */
+export async function requestItemIcon(
+  itemId: string,
+  description: string,
+  language: string = 'ko-KR',
+): Promise<{ iconUrl: string; status: IconStatus; isPlaceholder: boolean }> {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
+
+  try {
+    const response = await fetch(`${apiUrl}/api/item/icon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        item_id: itemId,
+        description: description,
+        language: language,
+        wait: false, // Q1: placeholder 즉시 반환
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`[ItemIcon] API 요청 실패: ${response.status}`);
+      return { iconUrl: '', status: 'failed', isPlaceholder: true };
+    }
+
+    const data: IconApiResponse = await response.json();
+    return {
+      iconUrl: data.icon_url,
+      status: data.status as IconStatus,
+      isPlaceholder: data.is_placeholder,
+    };
+  } catch (error) {
+    console.warn('[ItemIcon] 아이콘 생성 요청 실패:', error);
+    return { iconUrl: '', status: 'failed', isPlaceholder: true };
+  }
+}
+
+/**
+ * 아이콘 생성 상태를 폴링합니다 (U-075[Mvp]).
+ *
+ * @param itemId - 아이템 ID
+ * @returns 현재 상태
+ */
+export async function pollIconStatus(itemId: string): Promise<IconStatus> {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
+
+  try {
+    const response = await fetch(`${apiUrl}/api/item/icon/${itemId}/status`);
+
+    if (!response.ok) {
+      return 'failed';
+    }
+
+    const data = await response.json();
+    return data.status as IconStatus;
+  } catch {
+    return 'failed';
+  }
 }
 </file>
 
@@ -32276,6 +32169,393 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
 }
 
 export default ActionDeck;
+</file>
+
+<file path="frontend/src/components/InventoryPanel.tsx">
+/**
+ * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp]).
+ *
+ * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
+ *   - tech-stack: dnd-kit 기반 draggable 구현
+ *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
+ *
+ * U-074[Mvp]: 아이템 인터랙션 안내 UX
+ *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
+ *   - hover 시 "드래그하여 사용" 힌트 표시
+ *
+ * U-075[Mvp]: 아이템 아이콘 동적 생성
+ *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
+ *   - Q2: Option A (64x64 픽셀)
+ *   - Q3: Option A (픽셀 아트 스타일)
+ *
+ * @module components/InventoryPanel
+ */
+
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useDraggable, DragOverlay } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from 'react-i18next';
+import {
+  useInventoryStore,
+  type InventoryItem,
+  selectItems,
+  selectDraggingItem,
+  selectSelectedItemId,
+  selectConsumingItemIds,
+  requestItemIcon,
+  pollIconStatus,
+} from '../stores/inventoryStore';
+import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
+import { InteractionHint } from './InteractionHint';
+import { DND_TYPE, type InventoryDragData } from '../dnd/types';
+
+// =============================================================================
+// 드래그 가능한 아이템 컴포넌트
+// =============================================================================
+
+interface DraggableItemProps {
+  item: InventoryItem;
+  isSelected: boolean;
+  onSelect: (itemId: string) => void;
+  disabled?: boolean;
+  /** U-096: 소비 중(fade-out 진행 중) 여부 */
+  isConsuming?: boolean;
+}
+
+/**
+ * 드래그 가능한 인벤토리 아이템.
+ * dnd-kit의 useDraggable 훅을 사용합니다.
+ * U-056: 잘린 아이템 이름에 대한 툴팁 지원
+ * U-074: 첫 N번만 hover 힌트 표시
+ */
+function DraggableItem({
+  item,
+  isSelected,
+  onSelect,
+  disabled = false,
+  isConsuming = false,
+}: DraggableItemProps) {
+  const { t } = useTranslation();
+  const [isHovered, setIsHovered] = useState(false);
+
+  // U-074: 아이템 힌트 상태 (첫 N번만 표시)
+  const shouldShowHint = useOnboardingStore(selectShouldShowItemHint);
+  const incrementItemHint = useOnboardingStore((state) => state.incrementItemHint);
+
+  // U-074: hover 시작 시 힌트 카운트 증가
+  useEffect(() => {
+    if (isHovered && !disabled) {
+      incrementItemHint();
+    }
+  }, [isHovered, disabled, incrementItemHint]);
+
+  // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
+  const dragData: InventoryDragData = {
+    type: DND_TYPE.INVENTORY_ITEM,
+    item_id: item.id,
+    item,
+  };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+    data: dragData,
+    disabled,
+  });
+
+  // 변환 스타일 계산
+  // 드래그 중일 때는 원본 아이템이 제자리에 있도록 transform 적용하지 않음
+  // DragOverlay가 별도로 렌더링되므로 원본은 위치 고정
+  const style = useMemo(
+    () => ({
+      transform: isDragging ? undefined : CSS.Translate.toString(transform),
+      opacity: isDragging ? 0.3 : 1,
+    }),
+    [transform, isDragging],
+  );
+
+  // 클릭 핸들러 (선택)
+  const handleClick = useCallback(() => {
+    if (!disabled) {
+      onSelect(item.id);
+    }
+  }, [disabled, item.id, onSelect]);
+
+  // U-075: 아이콘 렌더링 (이모지 또는 이미지, 로딩 상태 포함)
+  const renderIcon = () => {
+    const isLoading = item.iconStatus === 'generating' || item.iconStatus === 'pending';
+
+    if (item.icon) {
+      // URL 형태면 이미지
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return (
+          <div className="inventory-item-icon-wrapper">
+            <img
+              src={item.icon}
+              alt={item.name}
+              className={`inventory-item-icon-img ${isLoading ? 'loading' : ''}`}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            {isLoading && <div className="inventory-item-icon-loading" />}
+          </div>
+        );
+      }
+      // 이모지 + 로딩 상태 (U-075: 이모지여도 생성 중이면 스피너 표시)
+      return (
+        <div className="inventory-item-icon-wrapper">
+          <span className="inventory-item-icon-emoji">{item.icon}</span>
+          {isLoading && <div className="inventory-item-icon-loading" />}
+        </div>
+      );
+    }
+
+    // 기본 아이콘 (📦) + 로딩 상태
+    return (
+      <div className="inventory-item-icon-wrapper">
+        <span className="inventory-item-icon-emoji">📦</span>
+        {isLoading && <div className="inventory-item-icon-loading" />}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''} ${isConsuming ? 'item-consumed' : ''}`}
+      onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
+      aria-selected={isSelected}
+      // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
+      title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="inventory-item-icon">{renderIcon()}</div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+
+      {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
+      {isHovered && !disabled && !isDragging && shouldShowHint && (
+        <InteractionHint
+          text={t('interaction.item_drag')}
+          icon="drag"
+          position="top"
+          className="interaction-hint--inventory"
+        />
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 드래그 오버레이 (드래그 중 표시되는 아이템)
+// =============================================================================
+
+interface ItemOverlayProps {
+  item: InventoryItem;
+}
+
+/**
+ * 드래그 오버레이 아이템.
+ * 드래그 중일 때 커서를 따라다니는 아이템 표시입니다.
+ */
+function ItemOverlay({ item }: ItemOverlayProps) {
+  // 아이콘 렌더링
+  const renderIcon = () => {
+    if (item.icon) {
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return <img src={item.icon} alt={item.name} className="inventory-item-icon-img" />;
+      }
+      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+    }
+    return <span className="inventory-item-icon-emoji">📦</span>;
+  };
+
+  return (
+    <div className="inventory-item overlay">
+      <div className="inventory-item-icon">{renderIcon()}</div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 Inventory Panel 컴포넌트
+// =============================================================================
+
+interface InventoryPanelProps {
+  /** 상호작용 비활성화 (스트리밍 중 등) */
+  disabled?: boolean;
+}
+
+/**
+ * Inventory Panel 컴포넌트.
+ *
+ * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
+ * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
+ *
+ * U-075: 아이템 추가 시 아이콘 동적 생성 요청
+ *
+ * @example
+ * ```tsx
+ * <InventoryPanel disabled={isStreaming} />
+ * ```
+ */
+export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
+  const { t, i18n } = useTranslation();
+
+  // Store 상태
+  const items = useInventoryStore(selectItems);
+  const draggingItem = useInventoryStore(selectDraggingItem);
+  const selectedItemId = useInventoryStore(selectSelectedItemId);
+  const consumingItemIds = useInventoryStore(selectConsumingItemIds);
+  const selectItem = useInventoryStore((state) => state.selectItem);
+  const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
+  const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
+
+  // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
+  const iconRequestedRef = useRef<Set<string>>(new Set());
+
+  // U-075: 아이템 추가 시 아이콘 생성 요청
+  useEffect(() => {
+    const requestIconsForNewItems = async () => {
+      for (const item of items) {
+        // 이미 요청한 경우 스킵
+        if (iconRequestedRef.current.has(item.id)) continue;
+
+        // 이미 완료된 아이콘이 있는 경우 스킵
+        if (item.iconStatus === 'completed' || item.iconStatus === 'cached') continue;
+
+        // URL 형태의 실제 아이콘이 있으면 스킵 (이모지는 무시)
+        const hasRealIcon =
+          item.icon &&
+          (item.icon.startsWith('http') || item.icon.startsWith('/')) &&
+          !item.icon.includes('placeholder');
+        if (hasRealIcon) continue;
+
+        // iconStatus가 없거나 pending/generating/failed인 경우 아이콘 생성 시도
+        // (failed인 경우도 재시도 허용)
+
+        // 요청 추적
+        iconRequestedRef.current.add(item.id);
+
+        // 아이콘 생성 요청 (비동기)
+        const description = item.description || item.name;
+        const language = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
+
+        setItemIconStatus(item.id, 'generating');
+
+        try {
+          const result = await requestItemIcon(item.id, description, language);
+
+          if (result.isPlaceholder) {
+            // Placeholder 반환됨 - 폴링 시작
+            setItemIconStatus(item.id, 'generating');
+
+            // 백그라운드에서 폴링 (최대 30초)
+            let attempts = 0;
+            const maxAttempts = 15;
+            const pollInterval = 2000; // 2초
+
+            const poll = async () => {
+              if (attempts >= maxAttempts) {
+                setItemIconStatus(item.id, 'failed');
+                return;
+              }
+              attempts++;
+
+              const status = await pollIconStatus(item.id);
+              if (status === 'completed' || status === 'cached') {
+                // 완료됨 - 아이콘 URL 다시 요청
+                const finalResult = await requestItemIcon(item.id, description, language);
+                if (!finalResult.isPlaceholder && finalResult.iconUrl) {
+                  updateItemIcon(item.id, finalResult.iconUrl, 'completed');
+                }
+              } else if (status === 'failed') {
+                setItemIconStatus(item.id, 'failed');
+              } else {
+                // 계속 생성 중 - 다시 폴링
+                setTimeout(poll, pollInterval);
+              }
+            };
+
+            setTimeout(poll, pollInterval);
+          } else if (result.iconUrl) {
+            // 즉시 완료 (캐시)
+            updateItemIcon(item.id, result.iconUrl, result.status);
+          }
+        } catch (error) {
+          console.warn(`[InventoryPanel] 아이콘 생성 실패: ${item.id}`, error);
+          setItemIconStatus(item.id, 'failed');
+        }
+      }
+    };
+
+    requestIconsForNewItems();
+  }, [items, i18n.language, updateItemIcon, setItemIconStatus]);
+
+  // 아이템 선택 핸들러
+  const handleSelect = useCallback(
+    (itemId: string) => {
+      // 이미 선택된 아이템 클릭 시 선택 해제
+      selectItem(selectedItemId === itemId ? null : itemId);
+    },
+    [selectedItemId, selectItem],
+  );
+
+  // 빈 인벤토리 (U-077: Q3 Option B - 아이템 획득 힌트 포함)
+  if (items.length === 0) {
+    return (
+      <div className="inventory-panel-content">
+        <div className="inventory-empty">
+          <span className="inventory-empty-icon">📦</span>
+          <span className="inventory-empty-text">{t('inventory.empty')}</span>
+          <span className="inventory-empty-hint">{t('inventory.empty_hint')}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inventory-panel-content" data-ui-importance="critical">
+      <div
+        className="inventory-grid"
+        role="listbox"
+        aria-label={t('inventory.grid_label')}
+        aria-multiselectable={false}
+      >
+        {items.map((item) => (
+          <DraggableItem
+            key={item.id}
+            item={item}
+            isSelected={selectedItemId === item.id}
+            onSelect={handleSelect}
+            disabled={disabled || consumingItemIds.includes(item.id)}
+            isConsuming={consumingItemIds.includes(item.id)}
+          />
+        ))}
+      </div>
+
+      {/* 드래그 오버레이 */}
+      <DragOverlay dropAnimation={null}>
+        {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
+      </DragOverlay>
+    </div>
+  );
+}
+
+export default InventoryPanel;
 </file>
 
 <file path="frontend/src/components/SceneImage.tsx">
@@ -39177,641 +39457,6 @@ def reset_image_understanding_service() -> None:
     _service_instance = None
 </file>
 
-<file path="frontend/src/stores/worldStore.ts">
-/**
- * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
- *
- * TurnOutput 반영으로 갱신되는 세션 월드/UI 상태를 SSOT로 관리합니다.
- * App.tsx의 로컬 상태를 이 스토어로 이동하여 책임 경계를 명확히 합니다.
- *
- * 설계 원칙:
- *   - RU-003 Q1 결정: 도메인별 store 분리 (Option A)
- *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
- *   - RULE-006: ko/en i18n 정책 준수
- *
- * 확장 (U-013):
- *   - Quest/Rules/MutationEvent 상태 추가
- *   - applyTurnOutput에서 quests_updated, rules_changed 반영
- *
- * 순환 import 방지:
- *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
- *   - 역방향 import 금지
- *
- * @module stores/worldStore
- */
-
-import { create } from 'zustand';
-import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
-import type { SceneCanvasState, SceneProcessingPhase } from '../types/scene';
-import { useActionDeckStore } from './actionDeckStore';
-import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
-import { useEconomyStore } from './economyStore';
-import i18n from '../i18n';
-
-// =============================================================================
-// 타입 정의
-// =============================================================================
-
-/** 재화 상태 */
-export interface EconomyState {
-  signal: number;
-  memory_shard: number;
-}
-
-/**
- * 내러티브 엔트리 타입
- *
- * U-070[Mvp]: 액션 로그 지원을 위해 type 필드 추가
- * - "narrative": 일반 게임 내러티브 (서버에서 생성)
- * - "action_log": 플레이어 행동 로그 (클라이언트에서 생성, 즉각적 피드백)
- * - "system": 시스템 메시지 (드롭 실패 등)
- */
-export type NarrativeEntryType = 'narrative' | 'action_log' | 'system';
-
-/** 내러티브 엔트리 */
-export interface NarrativeEntry {
-  turn: number;
-  text: string;
-  /** U-070: 엔트리 타입 (기본값: "narrative") */
-  type?: NarrativeEntryType;
-}
-
-/**
- * 룰 변형 이벤트 (U-013: Mutation Timeline)
- * 규칙이 변경된 시점과 내용을 기록합니다.
- */
-export interface MutationEvent {
-  /** 변형 발생 턴 */
-  turn: number;
-  /** 변형된 규칙 ID */
-  ruleId: string;
-  /** 변형 유형: 추가/수정/제거 */
-  type: 'added' | 'modified' | 'removed';
-  /** 규칙 라벨 (표시용) */
-  label: string;
-  /** 규칙 설명 (선택) */
-  description?: string;
-  /** 타임스탬프 */
-  timestamp: number;
-}
-
-/** World/Session 상태 */
-export interface WorldState {
-  /** 재화 상태 (RULE-005) */
-  economy: EconomyState;
-  /** 연결 상태 */
-  isConnected: boolean;
-  /** Scene Canvas 상태 (U-031) */
-  sceneState: SceneCanvasState;
-  /** Scene Objects (U-010: 핫스팟 오버레이) */
-  sceneObjects: SceneObject[];
-  /** 내러티브 히스토리 */
-  narrativeEntries: NarrativeEntry[];
-  /** 현재 턴 카운트 */
-  turnCount: number;
-
-  // ============ U-013: Quest + Rule Board 확장 ============
-
-  /** 현재 퀘스트/목표 목록 */
-  quests: Quest[];
-  /** 현재 적용 중인 규칙 목록 */
-  activeRules: WorldRule[];
-  /** 룰 변형 이벤트 타임라인 (최신순) */
-  mutationTimeline: MutationEvent[];
-
-  // ============ U-089: 정밀분석 상태 ============
-
-  /**
-   * 정밀분석(Agentic Vision) 실행 중 여부 (U-089).
-   * true일 때 SceneImage는 기존 이미지를 유지하고 분석 전용 오버레이를 표시합니다.
-   */
-  isAnalyzing: boolean;
-}
-
-/** World Store 액션 */
-export interface WorldActions {
-  /**
-   * TurnOutput을 받아 모든 관련 상태를 업데이트합니다.
-   * 이 메서드가 TurnOutput 반영의 SSOT입니다.
-   */
-  applyTurnOutput: (output: TurnOutput) => void;
-
-  /**
-   * 시스템 내러티브를 추가합니다 (턴 미발생 피드백용).
-   * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
-   */
-  appendSystemNarrative: (text: string) => void;
-
-  /**
-   * U-070[Mvp]: 액션 로그를 추가합니다.
-   * 플레이어 행동에 대한 즉각적 피드백으로, TurnInput 전송 전에 호출합니다.
-   * PRD 9.0: "행동 실행: ..." 형식으로 표시됩니다.
-   */
-  appendActionLog: (text: string) => void;
-
-  /** Scene 상태 설정 */
-  setSceneState: (state: SceneCanvasState) => void;
-
-  /** 연결 상태 설정 */
-  setConnected: (connected: boolean) => void;
-
-  /** 경제 상태 설정 (직접 조작용, 일반적으로 applyTurnOutput 사용) */
-  setEconomy: (economy: EconomyState) => void;
-
-  /** Scene Objects 설정 (직접 조작용) */
-  setSceneObjects: (objects: SceneObject[]) => void;
-
-  /** 초기화 (초기 내러티브 메시지 포함) */
-  initialize: (welcomeMessage: string) => void;
-
-  /** 상태 완전 초기화 */
-  reset: () => void;
-
-  // ============ U-066: Late-binding 이미지 관리 ============
-
-  /**
-   * 이미지 로딩 상태를 설정합니다 (U-066).
-   * 이미지 생성 시작 시 호출하여 로딩 인디케이터를 표시합니다.
-   *
-   * @param turnId - 이미지를 요청한 턴 ID
-   */
-  setImageLoading: (turnId: number) => void;
-
-  /**
-   * Late-binding 이미지를 적용합니다 (U-066).
-   * 이미지 생성 완료 시 호출하여, turnId가 일치할 때만 이미지를 반영합니다.
-   *
-   * @param imageUrl - 생성된 이미지 URL
-   * @param turnId - 이미지를 요청한 턴 ID (가드용)
-   * @returns 이미지가 적용되었는지 여부
-   */
-  applyLateBindingImage: (imageUrl: string, turnId: number) => boolean;
-
-  /**
-   * 이미지 로딩을 취소합니다 (U-066).
-   * 새 턴 시작 또는 이미지 생성 실패 시 호출합니다.
-   */
-  cancelImageLoading: () => void;
-
-  // ============ U-071: 처리 단계 UI 관리 ============
-
-  /**
-   * 처리 단계를 설정합니다 (U-071).
-   * Scene Canvas에 현재 처리 상태를 표시하기 위해 사용합니다.
-   *
-   * @param phase - 현재 처리 단계 (idle, processing, image_pending, rendering)
-   */
-  setProcessingPhase: (phase: SceneProcessingPhase) => void;
-
-  // ============ U-089: 정밀분석 상태 관리 ============
-
-  /**
-   * 정밀분석(Agentic Vision) 실행 상태를 설정합니다 (U-089).
-   * true로 설정하면 SceneImage가 기존 이미지를 유지하면서 분석 전용 오버레이를 표시합니다.
-   *
-   * @param analyzing - 분석 실행 중 여부
-   */
-  setIsAnalyzing: (analyzing: boolean) => void;
-}
-
-export type WorldStore = WorldState & WorldActions;
-
-// =============================================================================
-// 초기 상태
-// =============================================================================
-
-/**
- * 초기 상태를 생성합니다.
- *
- * RU-004-Q5: 초기값 정책 SSOT
- *
- * ## 중요: 이 값들은 "플레이 전 placeholder"입니다.
- *
- * 실제 게임 시작 값은 항상 다음 중 하나에서 주입됩니다:
- * 1. 프로필 초기 SaveGame (startSessionFromProfile)
- * 2. 저장된 SaveGame 복원 (continueSession)
- *
- * profile_select 상태에서는 HUD가 노출되지 않으므로
- * 이 placeholder 값이 화면에 표시될 일은 없습니다.
- *
- * @see save/constants.ts#INITIAL_VALUE_POLICY
- * @see save/sessionLifecycle.ts
- */
-function createInitialState(): WorldState {
-  return {
-    // RU-004-Q5: Placeholder - 실제 값은 프로필/세이브에서 주입됨
-    economy: { signal: 100, memory_shard: 5 },
-    isConnected: true,
-    sceneState: { status: 'default', message: '' },
-    sceneObjects: [],
-    narrativeEntries: [],
-    turnCount: 0,
-    // U-013: Quest + Rule Board 초기 상태
-    quests: [],
-    activeRules: [],
-    mutationTimeline: [],
-    // U-089: 정밀분석 상태
-    isAnalyzing: false,
-  };
-}
-
-// =============================================================================
-// Zustand Store
-// =============================================================================
-
-/**
- * World/Session 상태 스토어.
- *
- * TurnOutput 반영의 SSOT로, App.tsx의 로컬 상태를 대체합니다.
- *
- * @example
- * ```tsx
- * // 컴포넌트에서 상태 구독
- * const { economy, narrativeEntries } = useWorldStore();
- *
- * // TurnOutput 반영 (스트림 완료 시)
- * const applyTurnOutput = useWorldStore((state) => state.applyTurnOutput);
- * applyTurnOutput(turnOutput);
- *
- * // 시스템 피드백 추가 (드롭 실패 등)
- * const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
- * appendSystemNarrative('아이템을 사용할 수 없습니다.');
- * ```
- */
-export const useWorldStore = create<WorldStore>((set, get) => ({
-  // 초기 상태
-  ...createInitialState(),
-
-  // 액션
-
-  applyTurnOutput: (output) => {
-    const state = get();
-
-    // 1. 턴 카운트 증가
-    const newTurnCount = state.turnCount + 1;
-
-    // 2. 내러티브 추가 (U-070: type 명시)
-    const newNarrativeEntry: NarrativeEntry = {
-      turn: newTurnCount,
-      text: output.narrative,
-      type: 'narrative',
-    };
-
-    const newNarrativeEntries = [...state.narrativeEntries, newNarrativeEntry];
-
-    // U-072: Scanner 힌트 유도 (Option A: 백엔드 플래그 기반)
-    if (output.hints?.scanner) {
-      newNarrativeEntries.push({
-        turn: newTurnCount,
-        text: i18n.t('scanner.hint_narrative'),
-        type: 'system',
-      });
-    }
-
-    // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
-    const newEconomy: EconomyState = {
-      signal: output.economy.balance_after.signal,
-      memory_shard: output.economy.balance_after.memory_shard,
-    };
-
-    // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
-    // U-090: 핫스팟 상태 관리 정책
-    //   - 새 이미지 생성(장면 전환) → 핫스팟 전체 초기화 (Q1: Option A)
-    //   - 서버에서 objects 비어있음(일반 턴) → 기존 핫스팟 유지
-    //   - 서버에서 objects 있음(정밀분석 턴) → 기존 핫스팟에 병합
-    //
-    // 장면 전환 감지:
-    //   - render.image_url이 존재 → 이번 턴에서 새 이미지가 생성됨 (동기 생성 완료)
-    //   - render.image_job.should_generate === true → 비동기(late-binding) 이미지 생성 예정
-    //   어느 경우든 새 장면이므로 기존 핫스팟을 초기화한다.
-    const isNewImageGeneration =
-      !!output.render?.image_url || output.render?.image_job?.should_generate === true;
-
-    let newSceneObjects: SceneObject[];
-
-    if (isNewImageGeneration) {
-      // Q1 Option A: 장면 전환(새 이미지 생성) → 핫스팟 전체 초기화
-      // 새 장면에서는 정밀분석을 다시 해야 함
-      newSceneObjects = [];
-    } else if (output.ui.objects.length > 0) {
-      // 정밀분석 결과 있음 → 기존 핫스팟에 병합
-      // 동일 ID는 새 결과로 업데이트, 새 ID는 추가
-      const mergedMap = new Map(state.sceneObjects.map((o) => [o.id, o]));
-      for (const obj of output.ui.objects) {
-        mergedMap.set(obj.id, obj);
-      }
-      newSceneObjects = Array.from(mergedMap.values());
-    } else {
-      // 일반 턴(objects 비어있음) → 기존 핫스팟 유지
-      newSceneObjects = state.sceneObjects;
-    }
-
-    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
-    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
-    // - 없으면 'default' 상태 유지
-    // - safety.blocked인 경우 'blocked' 상태로 전환
-    let newSceneState: SceneCanvasState;
-    const currentImageUrl = state.sceneState.imageUrl ?? state.sceneState.previousImageUrl;
-
-    if (output.safety.blocked) {
-      newSceneState = {
-        status: 'blocked',
-        message: output.safety.message ?? undefined,
-        previousImageUrl: currentImageUrl,
-      };
-    } else if (output.ui.scene?.image_url || output.render?.image_url) {
-      // U-053: render.image_url 또는 ui.scene.image_url 중 하나라도 있으면 scene 상태로 전환
-      const imageUrl = output.ui.scene?.image_url || output.render?.image_url;
-      newSceneState = {
-        status: 'scene',
-        imageUrl: imageUrl!,
-        message: output.ui.scene?.alt_text ?? undefined,
-        // 새로운 이미지가 왔으므로 이전 이미지는 보존 (로딩 중이 아님)
-        previousImageUrl: currentImageUrl,
-      };
-    } else {
-      newSceneState = {
-        status: 'default',
-        message: '',
-        previousImageUrl: currentImageUrl,
-      };
-    }
-
-    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
-    // Action Deck 카드 업데이트 (U-009)
-    useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
-
-    // Inventory 업데이트 (U-011)
-    if (output.world.inventory_added.length > 0) {
-      useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
-    }
-    if (output.world.inventory_removed.length > 0) {
-      useInventoryStore.getState().removeItems(output.world.inventory_removed);
-    }
-
-    // Economy Store 업데이트 (U-014: Ledger 기록)
-    // U-069: 서버에서 전달된 model_label 사용 (FAST/QUALITY 티어링)
-    const economyStore = useEconomyStore.getState();
-    economyStore.addLedgerEntry({
-      turnId: newTurnCount,
-      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
-      cost: output.economy.cost,
-      balanceAfter: output.economy.balance_after,
-      modelLabel: output.agent_console.model_label ?? 'FAST',
-    });
-    // 잔액 부족 상태 업데이트
-    economyStore.updateBalanceLowStatus(newEconomy);
-
-    // 6. Quest 상태 업데이트 (U-013)
-    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
-    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
-    const newQuests = [...state.quests];
-    for (const updatedQuest of output.world.quests_updated) {
-      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
-      if (existingIndex >= 0) {
-        // 기존 퀘스트 업데이트
-        newQuests[existingIndex] = updatedQuest;
-      } else {
-        // 새 퀘스트 추가
-        newQuests.push(updatedQuest);
-      }
-    }
-
-    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
-    const newActiveRules = [...state.activeRules];
-    const newMutationEvents: MutationEvent[] = [];
-    const now = Date.now();
-
-    for (const changedRule of output.world.rules_changed) {
-      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
-      if (existingIndex >= 0) {
-        // 기존 규칙 수정
-        newActiveRules[existingIndex] = changedRule;
-        newMutationEvents.push({
-          turn: newTurnCount,
-          ruleId: changedRule.id,
-          type: 'modified',
-          label: changedRule.label,
-          description: changedRule.description ?? undefined,
-          timestamp: now,
-        });
-      } else {
-        // 새 규칙 추가
-        newActiveRules.push(changedRule);
-        newMutationEvents.push({
-          turn: newTurnCount,
-          ruleId: changedRule.id,
-          type: 'added',
-          label: changedRule.label,
-          description: changedRule.description ?? undefined,
-          timestamp: now,
-        });
-      }
-    }
-
-    // 타임라인에 새 이벤트 추가 (최신순 정렬)
-    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
-
-    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
-    set({
-      turnCount: newTurnCount,
-      narrativeEntries: newNarrativeEntries,
-      economy: newEconomy,
-      sceneObjects: newSceneObjects,
-      sceneState: newSceneState,
-      // U-013 확장
-      quests: newQuests,
-      activeRules: newActiveRules,
-      mutationTimeline: updatedTimeline,
-    });
-
-    // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
-    // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
-  },
-
-  appendSystemNarrative: (text) => {
-    set((state) => ({
-      narrativeEntries: [
-        ...state.narrativeEntries,
-        {
-          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
-          text,
-          type: 'system',
-        },
-      ],
-    }));
-  },
-
-  // U-070[Mvp]: 액션 로그 추가
-  appendActionLog: (text) => {
-    set((state) => ({
-      narrativeEntries: [
-        ...state.narrativeEntries,
-        {
-          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
-          text,
-          type: 'action_log',
-        },
-      ],
-    }));
-  },
-
-  setSceneState: (sceneState) => {
-    // U-071 버그 수정: processingPhase를 보존하며 병합
-    set((state) => ({
-      sceneState: {
-        ...state.sceneState,
-        ...sceneState,
-      },
-    }));
-  },
-
-  setConnected: (isConnected) => {
-    set({ isConnected });
-  },
-
-  setEconomy: (economy) => {
-    set({ economy });
-  },
-
-  setSceneObjects: (sceneObjects) => {
-    set({ sceneObjects });
-  },
-
-  initialize: (welcomeMessage) => {
-    set({
-      ...createInitialState(),
-      narrativeEntries: [{ turn: 0, text: welcomeMessage, type: 'narrative' }],
-    });
-  },
-
-  reset: () => {
-    set(createInitialState());
-  },
-
-  // ============ U-066: Late-binding 이미지 관리 ============
-
-  setImageLoading: (turnId) => {
-    set((state) => ({
-      sceneState: {
-        ...state.sceneState,
-        imageLoading: true,
-        pendingImageTurnId: turnId,
-        sceneRevision: turnId,
-        // 이전 이미지 URL 보존 (Option A: 이전 이미지 유지)
-        previousImageUrl: state.sceneState.imageUrl ?? state.sceneState.previousImageUrl,
-      },
-    }));
-  },
-
-  applyLateBindingImage: (imageUrl, turnId) => {
-    const state = get();
-
-    // late-binding 가드: pendingImageTurnId와 일치할 때만 적용
-    if (state.sceneState.pendingImageTurnId !== turnId) {
-      // 이미 새 턴이 시작되어 이전 요청은 무시
-      return false;
-    }
-
-    set({
-      sceneState: {
-        status: 'scene',
-        imageUrl,
-        imageLoading: false,
-        pendingImageTurnId: undefined,
-        sceneRevision: turnId,
-        // 이전 이미지 URL은 성공 시 현재 이미지로 대체
-        previousImageUrl: undefined,
-      },
-    });
-
-    return true;
-  },
-
-  cancelImageLoading: () => {
-    set((state) => ({
-      sceneState: {
-        ...state.sceneState,
-        imageLoading: false,
-        pendingImageTurnId: undefined,
-        // 이전 이미지 유지 (폴백)
-        imageUrl: state.sceneState.previousImageUrl ?? state.sceneState.imageUrl,
-        previousImageUrl: undefined,
-      },
-    }));
-  },
-
-  // ============ U-071: 처리 단계 UI 관리 ============
-
-  setProcessingPhase: (phase) => {
-    set((state) => ({
-      sceneState: {
-        ...state.sceneState,
-        processingPhase: phase,
-      },
-    }));
-  },
-
-  // ============ U-089: 정밀분석 상태 관리 ============
-
-  setIsAnalyzing: (analyzing) => {
-    set({ isAnalyzing: analyzing });
-  },
-}));
-
-// =============================================================================
-// 셀렉터 (성능 최적화용)
-// =============================================================================
-
-/** 경제 상태 셀렉터 */
-export const selectEconomy = (state: WorldStore) => state.economy;
-
-/** Signal 잔액 셀렉터 */
-export const selectSignal = (state: WorldStore) => state.economy.signal;
-
-/** Memory Shard 잔액 셀렉터 */
-export const selectMemoryShard = (state: WorldStore) => state.economy.memory_shard;
-
-/** 연결 상태 셀렉터 */
-export const selectIsConnected = (state: WorldStore) => state.isConnected;
-
-/** Scene 상태 셀렉터 */
-export const selectSceneState = (state: WorldStore) => state.sceneState;
-
-/** Scene Objects 셀렉터 */
-export const selectSceneObjects = (state: WorldStore) => state.sceneObjects;
-
-/** 내러티브 엔트리 셀렉터 */
-export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntries;
-
-/** 턴 카운트 셀렉터 */
-export const selectTurnCount = (state: WorldStore) => state.turnCount;
-
-// ============ U-013: Quest + Rule Board 셀렉터 ============
-
-/** 퀘스트 목록 셀렉터 */
-export const selectQuests = (state: WorldStore) => state.quests;
-
-/** 활성 규칙 목록 셀렉터 */
-export const selectActiveRules = (state: WorldStore) => state.activeRules;
-
-/** 뮤테이션 타임라인 셀렉터 */
-export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
-
-/** 진행 중인 퀘스트 셀렉터 */
-export const selectActiveQuests = (state: WorldStore) =>
-  state.quests.filter((q) => !q.is_completed);
-
-/** 완료된 퀘스트 셀렉터 */
-export const selectCompletedQuests = (state: WorldStore) =>
-  state.quests.filter((q) => q.is_completed);
-
-// ============ U-089: 정밀분석 셀렉터 ============
-
-/** 정밀분석 실행 중 여부 셀렉터 */
-export const selectIsAnalyzing = (state: WorldStore) => state.isAnalyzing;
-</file>
-
 <file path="frontend/src/schemas/turn.ts">
 /**
  * Unknown World - TurnInput/TurnOutput Zod 스키마.
@@ -40589,6 +40234,651 @@ export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
 }
 </file>
 
+<file path="frontend/src/stores/worldStore.ts">
+/**
+ * Unknown World - World/Session 상태 관리 (Zustand) (RU-003-Q4).
+ *
+ * TurnOutput 반영으로 갱신되는 세션 월드/UI 상태를 SSOT로 관리합니다.
+ * App.tsx의 로컬 상태를 이 스토어로 이동하여 책임 경계를 명확히 합니다.
+ *
+ * 설계 원칙:
+ *   - RU-003 Q1 결정: 도메인별 store 분리 (Option A)
+ *   - RULE-005: Economy 인바리언트 (잔액 음수 금지)
+ *   - RULE-006: ko/en i18n 정책 준수
+ *
+ * 확장 (U-013):
+ *   - Quest/Rules/MutationEvent 상태 추가
+ *   - applyTurnOutput에서 quests_updated, rules_changed 반영
+ *
+ * 순환 import 방지:
+ *   - worldStore → (actionDeckStore/inventoryStore) 단방향만 허용
+ *   - 역방향 import 금지
+ *
+ * @module stores/worldStore
+ */
+
+import { create } from 'zustand';
+import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
+import type { SceneCanvasState, SceneProcessingPhase } from '../types/scene';
+import { useActionDeckStore } from './actionDeckStore';
+import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
+import { useEconomyStore } from './economyStore';
+import i18n from '../i18n';
+
+// =============================================================================
+// 타입 정의
+// =============================================================================
+
+/** 재화 상태 */
+export interface EconomyState {
+  signal: number;
+  memory_shard: number;
+}
+
+/**
+ * 내러티브 엔트리 타입
+ *
+ * U-070[Mvp]: 액션 로그 지원을 위해 type 필드 추가
+ * - "narrative": 일반 게임 내러티브 (서버에서 생성)
+ * - "action_log": 플레이어 행동 로그 (클라이언트에서 생성, 즉각적 피드백)
+ * - "system": 시스템 메시지 (드롭 실패 등)
+ */
+export type NarrativeEntryType = 'narrative' | 'action_log' | 'system';
+
+/** 내러티브 엔트리 */
+export interface NarrativeEntry {
+  turn: number;
+  text: string;
+  /** U-070: 엔트리 타입 (기본값: "narrative") */
+  type?: NarrativeEntryType;
+}
+
+/**
+ * 룰 변형 이벤트 (U-013: Mutation Timeline)
+ * 규칙이 변경된 시점과 내용을 기록합니다.
+ */
+export interface MutationEvent {
+  /** 변형 발생 턴 */
+  turn: number;
+  /** 변형된 규칙 ID */
+  ruleId: string;
+  /** 변형 유형: 추가/수정/제거 */
+  type: 'added' | 'modified' | 'removed';
+  /** 규칙 라벨 (표시용) */
+  label: string;
+  /** 규칙 설명 (선택) */
+  description?: string;
+  /** 타임스탬프 */
+  timestamp: number;
+}
+
+/** World/Session 상태 */
+export interface WorldState {
+  /** 재화 상태 (RULE-005) */
+  economy: EconomyState;
+  /** 연결 상태 */
+  isConnected: boolean;
+  /** Scene Canvas 상태 (U-031) */
+  sceneState: SceneCanvasState;
+  /** Scene Objects (U-010: 핫스팟 오버레이) */
+  sceneObjects: SceneObject[];
+  /** 내러티브 히스토리 */
+  narrativeEntries: NarrativeEntry[];
+  /** 현재 턴 카운트 */
+  turnCount: number;
+
+  // ============ U-013: Quest + Rule Board 확장 ============
+
+  /** 현재 퀘스트/목표 목록 */
+  quests: Quest[];
+  /** 현재 적용 중인 규칙 목록 */
+  activeRules: WorldRule[];
+  /** 룰 변형 이벤트 타임라인 (최신순) */
+  mutationTimeline: MutationEvent[];
+
+  // ============ U-089: 정밀분석 상태 ============
+
+  /**
+   * 정밀분석(Agentic Vision) 실행 중 여부 (U-089).
+   * true일 때 SceneImage는 기존 이미지를 유지하고 분석 전용 오버레이를 표시합니다.
+   */
+  isAnalyzing: boolean;
+}
+
+/** World Store 액션 */
+export interface WorldActions {
+  /**
+   * TurnOutput을 받아 모든 관련 상태를 업데이트합니다.
+   * 이 메서드가 TurnOutput 반영의 SSOT입니다.
+   */
+  applyTurnOutput: (output: TurnOutput) => void;
+
+  /**
+   * 시스템 내러티브를 추가합니다 (턴 미발생 피드백용).
+   * 드롭 실패 등 턴을 발생시키지 않는 피드백에 사용합니다.
+   */
+  appendSystemNarrative: (text: string) => void;
+
+  /**
+   * U-070[Mvp]: 액션 로그를 추가합니다.
+   * 플레이어 행동에 대한 즉각적 피드백으로, TurnInput 전송 전에 호출합니다.
+   * PRD 9.0: "행동 실행: ..." 형식으로 표시됩니다.
+   */
+  appendActionLog: (text: string) => void;
+
+  /** Scene 상태 설정 */
+  setSceneState: (state: SceneCanvasState) => void;
+
+  /** 연결 상태 설정 */
+  setConnected: (connected: boolean) => void;
+
+  /** 경제 상태 설정 (직접 조작용, 일반적으로 applyTurnOutput 사용) */
+  setEconomy: (economy: EconomyState) => void;
+
+  /** Scene Objects 설정 (직접 조작용) */
+  setSceneObjects: (objects: SceneObject[]) => void;
+
+  /** 초기화 (초기 내러티브 메시지 포함) */
+  initialize: (welcomeMessage: string) => void;
+
+  /** 상태 완전 초기화 */
+  reset: () => void;
+
+  // ============ U-066: Late-binding 이미지 관리 ============
+
+  /**
+   * 이미지 로딩 상태를 설정합니다 (U-066).
+   * 이미지 생성 시작 시 호출하여 로딩 인디케이터를 표시합니다.
+   *
+   * @param turnId - 이미지를 요청한 턴 ID
+   */
+  setImageLoading: (turnId: number) => void;
+
+  /**
+   * Late-binding 이미지를 적용합니다 (U-066).
+   * 이미지 생성 완료 시 호출하여, turnId가 일치할 때만 이미지를 반영합니다.
+   *
+   * @param imageUrl - 생성된 이미지 URL
+   * @param turnId - 이미지를 요청한 턴 ID (가드용)
+   * @returns 이미지가 적용되었는지 여부
+   */
+  applyLateBindingImage: (imageUrl: string, turnId: number) => boolean;
+
+  /**
+   * 이미지 로딩을 취소합니다 (U-066).
+   * 새 턴 시작 또는 이미지 생성 실패 시 호출합니다.
+   */
+  cancelImageLoading: () => void;
+
+  // ============ U-071: 처리 단계 UI 관리 ============
+
+  /**
+   * 처리 단계를 설정합니다 (U-071).
+   * Scene Canvas에 현재 처리 상태를 표시하기 위해 사용합니다.
+   *
+   * @param phase - 현재 처리 단계 (idle, processing, image_pending, rendering)
+   */
+  setProcessingPhase: (phase: SceneProcessingPhase) => void;
+
+  // ============ U-089: 정밀분석 상태 관리 ============
+
+  /**
+   * 정밀분석(Agentic Vision) 실행 상태를 설정합니다 (U-089).
+   * true로 설정하면 SceneImage가 기존 이미지를 유지하면서 분석 전용 오버레이를 표시합니다.
+   *
+   * @param analyzing - 분석 실행 중 여부
+   */
+  setIsAnalyzing: (analyzing: boolean) => void;
+}
+
+export type WorldStore = WorldState & WorldActions;
+
+// =============================================================================
+// 초기 상태
+// =============================================================================
+
+/**
+ * 초기 상태를 생성합니다.
+ *
+ * RU-004-Q5: 초기값 정책 SSOT
+ *
+ * ## 중요: 이 값들은 "플레이 전 placeholder"입니다.
+ *
+ * 실제 게임 시작 값은 항상 다음 중 하나에서 주입됩니다:
+ * 1. 프로필 초기 SaveGame (startSessionFromProfile)
+ * 2. 저장된 SaveGame 복원 (continueSession)
+ *
+ * profile_select 상태에서는 HUD가 노출되지 않으므로
+ * 이 placeholder 값이 화면에 표시될 일은 없습니다.
+ *
+ * @see save/constants.ts#INITIAL_VALUE_POLICY
+ * @see save/sessionLifecycle.ts
+ */
+function createInitialState(): WorldState {
+  return {
+    // RU-004-Q5: Placeholder - 실제 값은 프로필/세이브에서 주입됨
+    economy: { signal: 100, memory_shard: 5 },
+    isConnected: true,
+    sceneState: { status: 'default', message: '' },
+    sceneObjects: [],
+    narrativeEntries: [],
+    turnCount: 0,
+    // U-013: Quest + Rule Board 초기 상태
+    quests: [],
+    activeRules: [],
+    mutationTimeline: [],
+    // U-089: 정밀분석 상태
+    isAnalyzing: false,
+  };
+}
+
+// =============================================================================
+// Zustand Store
+// =============================================================================
+
+/**
+ * World/Session 상태 스토어.
+ *
+ * TurnOutput 반영의 SSOT로, App.tsx의 로컬 상태를 대체합니다.
+ *
+ * @example
+ * ```tsx
+ * // 컴포넌트에서 상태 구독
+ * const { economy, narrativeEntries } = useWorldStore();
+ *
+ * // TurnOutput 반영 (스트림 완료 시)
+ * const applyTurnOutput = useWorldStore((state) => state.applyTurnOutput);
+ * applyTurnOutput(turnOutput);
+ *
+ * // 시스템 피드백 추가 (드롭 실패 등)
+ * const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
+ * appendSystemNarrative('아이템을 사용할 수 없습니다.');
+ * ```
+ */
+export const useWorldStore = create<WorldStore>((set, get) => ({
+  // 초기 상태
+  ...createInitialState(),
+
+  // 액션
+
+  applyTurnOutput: (output) => {
+    const state = get();
+
+    // 1. 턴 카운트 증가
+    const newTurnCount = state.turnCount + 1;
+
+    // 2. 내러티브 추가 (U-070: type 명시)
+    const newNarrativeEntry: NarrativeEntry = {
+      turn: newTurnCount,
+      text: output.narrative,
+      type: 'narrative',
+    };
+
+    const newNarrativeEntries = [...state.narrativeEntries, newNarrativeEntry];
+
+    // U-072: Scanner 힌트 유도 (Option A: 백엔드 플래그 기반)
+    if (output.hints?.scanner) {
+      newNarrativeEntries.push({
+        turn: newTurnCount,
+        text: i18n.t('scanner.hint_narrative'),
+        type: 'system',
+      });
+    }
+
+    // 3. 경제 상태 업데이트 (RULE-005: balance_after 반영)
+    const newEconomy: EconomyState = {
+      signal: output.economy.balance_after.signal,
+      memory_shard: output.economy.balance_after.memory_shard,
+    };
+
+    // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
+    // U-090: 핫스팟 상태 관리 정책
+    //   - 새 이미지 생성(장면 전환) → 핫스팟 전체 초기화 (Q1: Option A)
+    //   - 서버에서 objects 비어있음(일반 턴) → 기존 핫스팟 유지
+    //   - 서버에서 objects 있음(정밀분석 턴) → 기존 핫스팟에 병합
+    //
+    // 장면 전환 감지:
+    //   - render.image_url이 존재 → 이번 턴에서 새 이미지가 생성됨 (동기 생성 완료)
+    //   - render.image_job.should_generate === true → 비동기(late-binding) 이미지 생성 예정
+    //   어느 경우든 새 장면이므로 기존 핫스팟을 초기화한다.
+    const isNewImageGeneration =
+      !!output.render?.image_url || output.render?.image_job?.should_generate === true;
+
+    let newSceneObjects: SceneObject[];
+
+    if (isNewImageGeneration) {
+      // Q1 Option A: 장면 전환(새 이미지 생성) → 핫스팟 전체 초기화
+      // 새 장면에서는 정밀분석을 다시 해야 함
+      newSceneObjects = [];
+    } else if (output.ui.objects.length > 0) {
+      // 정밀분석 결과 있음 → 기존 핫스팟에 병합
+      // 동일 ID는 새 결과로 업데이트, 새 ID는 추가
+      const mergedMap = new Map(state.sceneObjects.map((o) => [o.id, o]));
+      for (const obj of output.ui.objects) {
+        mergedMap.set(obj.id, obj);
+      }
+      newSceneObjects = Array.from(mergedMap.values());
+    } else {
+      // 일반 턴(objects 비어있음) → 기존 핫스팟 유지
+      newSceneObjects = state.sceneObjects;
+    }
+
+    // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
+    // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환
+    // - 없으면 'default' 상태 유지
+    // - safety.blocked인 경우 'blocked' 상태로 전환
+    let newSceneState: SceneCanvasState;
+    const currentImageUrl = state.sceneState.imageUrl ?? state.sceneState.previousImageUrl;
+
+    if (output.safety.blocked) {
+      newSceneState = {
+        status: 'blocked',
+        message: output.safety.message ?? undefined,
+        previousImageUrl: currentImageUrl,
+      };
+    } else if (output.ui.scene?.image_url || output.render?.image_url) {
+      // U-053: render.image_url 또는 ui.scene.image_url 중 하나라도 있으면 scene 상태로 전환
+      const imageUrl = output.ui.scene?.image_url || output.render?.image_url;
+      newSceneState = {
+        status: 'scene',
+        imageUrl: imageUrl!,
+        message: output.ui.scene?.alt_text ?? undefined,
+        // 새로운 이미지가 왔으므로 이전 이미지는 보존 (로딩 중이 아님)
+        previousImageUrl: currentImageUrl,
+      };
+    } else {
+      newSceneState = {
+        status: 'default',
+        message: '',
+        previousImageUrl: currentImageUrl,
+      };
+    }
+
+    // 7. 하위 스토어 업데이트 (순환 import 방지: worldStore → 하위 store 단방향)
+    // Action Deck 카드 업데이트 (U-009)
+    useActionDeckStore.getState().setCards(output.ui.action_deck.cards);
+
+    // Inventory 업데이트 (U-011)
+    if (output.world.inventory_added.length > 0) {
+      useInventoryStore.getState().addItems(parseInventoryAdded(output.world.inventory_added));
+    }
+    // U-096: 아이템 소비 시 fade-out 애니메이션 후 제거
+    if (output.world.inventory_removed.length > 0) {
+      const removedIds = output.world.inventory_removed;
+      const invStore = useInventoryStore.getState();
+
+      // 1단계: 소비 애니메이션 시작 (fade-out CSS 클래스 적용)
+      invStore.markConsuming(removedIds);
+
+      // 2단계: 애니메이션 완료 후 실제 제거 (500ms = CSS transition 시간)
+      setTimeout(() => {
+        useInventoryStore.getState().clearConsuming(removedIds);
+      }, 500);
+    }
+
+    // Economy Store 업데이트 (U-014: Ledger 기록)
+    // U-069: 서버에서 전달된 model_label 사용 (FAST/QUALITY 티어링)
+    const economyStore = useEconomyStore.getState();
+    economyStore.addLedgerEntry({
+      turnId: newTurnCount,
+      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
+      cost: output.economy.cost,
+      balanceAfter: output.economy.balance_after,
+      modelLabel: output.agent_console.model_label ?? 'FAST',
+    });
+    // 잔액 부족 상태 업데이트
+    economyStore.updateBalanceLowStatus(newEconomy);
+
+    // 6. Quest 상태 업데이트 (U-013)
+    // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
+    // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
+    const newQuests = [...state.quests];
+    for (const updatedQuest of output.world.quests_updated) {
+      const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
+      if (existingIndex >= 0) {
+        // 기존 퀘스트 업데이트
+        newQuests[existingIndex] = updatedQuest;
+      } else {
+        // 새 퀘스트 추가
+        newQuests.push(updatedQuest);
+      }
+    }
+
+    // 7. Rules 상태 업데이트 + Mutation Timeline 기록 (U-013)
+    const newActiveRules = [...state.activeRules];
+    const newMutationEvents: MutationEvent[] = [];
+    const now = Date.now();
+
+    for (const changedRule of output.world.rules_changed) {
+      const existingIndex = newActiveRules.findIndex((r) => r.id === changedRule.id);
+      if (existingIndex >= 0) {
+        // 기존 규칙 수정
+        newActiveRules[existingIndex] = changedRule;
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'modified',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      } else {
+        // 새 규칙 추가
+        newActiveRules.push(changedRule);
+        newMutationEvents.push({
+          turn: newTurnCount,
+          ruleId: changedRule.id,
+          type: 'added',
+          label: changedRule.label,
+          description: changedRule.description ?? undefined,
+          timestamp: now,
+        });
+      }
+    }
+
+    // 타임라인에 새 이벤트 추가 (최신순 정렬)
+    const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
+
+    // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
+    set({
+      turnCount: newTurnCount,
+      narrativeEntries: newNarrativeEntries,
+      economy: newEconomy,
+      sceneObjects: newSceneObjects,
+      sceneState: newSceneState,
+      // U-013 확장
+      quests: newQuests,
+      activeRules: newActiveRules,
+      mutationTimeline: updatedTimeline,
+    });
+
+    // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===
+    // TODO: output.world.memory_pins → Memory Pin 패널 업데이트
+  },
+
+  appendSystemNarrative: (text) => {
+    set((state) => ({
+      narrativeEntries: [
+        ...state.narrativeEntries,
+        {
+          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
+          text,
+          type: 'system',
+        },
+      ],
+    }));
+  },
+
+  // U-070[Mvp]: 액션 로그 추가
+  appendActionLog: (text) => {
+    set((state) => ({
+      narrativeEntries: [
+        ...state.narrativeEntries,
+        {
+          turn: state.turnCount, // 현재 턴으로 기록 (턴 증가 없음)
+          text,
+          type: 'action_log',
+        },
+      ],
+    }));
+  },
+
+  setSceneState: (sceneState) => {
+    // U-071 버그 수정: processingPhase를 보존하며 병합
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        ...sceneState,
+      },
+    }));
+  },
+
+  setConnected: (isConnected) => {
+    set({ isConnected });
+  },
+
+  setEconomy: (economy) => {
+    set({ economy });
+  },
+
+  setSceneObjects: (sceneObjects) => {
+    set({ sceneObjects });
+  },
+
+  initialize: (welcomeMessage) => {
+    set({
+      ...createInitialState(),
+      narrativeEntries: [{ turn: 0, text: welcomeMessage, type: 'narrative' }],
+    });
+  },
+
+  reset: () => {
+    set(createInitialState());
+  },
+
+  // ============ U-066: Late-binding 이미지 관리 ============
+
+  setImageLoading: (turnId) => {
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        imageLoading: true,
+        pendingImageTurnId: turnId,
+        sceneRevision: turnId,
+        // 이전 이미지 URL 보존 (Option A: 이전 이미지 유지)
+        previousImageUrl: state.sceneState.imageUrl ?? state.sceneState.previousImageUrl,
+      },
+    }));
+  },
+
+  applyLateBindingImage: (imageUrl, turnId) => {
+    const state = get();
+
+    // late-binding 가드: pendingImageTurnId와 일치할 때만 적용
+    if (state.sceneState.pendingImageTurnId !== turnId) {
+      // 이미 새 턴이 시작되어 이전 요청은 무시
+      return false;
+    }
+
+    set({
+      sceneState: {
+        status: 'scene',
+        imageUrl,
+        imageLoading: false,
+        pendingImageTurnId: undefined,
+        sceneRevision: turnId,
+        // 이전 이미지 URL은 성공 시 현재 이미지로 대체
+        previousImageUrl: undefined,
+      },
+    });
+
+    return true;
+  },
+
+  cancelImageLoading: () => {
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        imageLoading: false,
+        pendingImageTurnId: undefined,
+        // 이전 이미지 유지 (폴백)
+        imageUrl: state.sceneState.previousImageUrl ?? state.sceneState.imageUrl,
+        previousImageUrl: undefined,
+      },
+    }));
+  },
+
+  // ============ U-071: 처리 단계 UI 관리 ============
+
+  setProcessingPhase: (phase) => {
+    set((state) => ({
+      sceneState: {
+        ...state.sceneState,
+        processingPhase: phase,
+      },
+    }));
+  },
+
+  // ============ U-089: 정밀분석 상태 관리 ============
+
+  setIsAnalyzing: (analyzing) => {
+    set({ isAnalyzing: analyzing });
+  },
+}));
+
+// =============================================================================
+// 셀렉터 (성능 최적화용)
+// =============================================================================
+
+/** 경제 상태 셀렉터 */
+export const selectEconomy = (state: WorldStore) => state.economy;
+
+/** Signal 잔액 셀렉터 */
+export const selectSignal = (state: WorldStore) => state.economy.signal;
+
+/** Memory Shard 잔액 셀렉터 */
+export const selectMemoryShard = (state: WorldStore) => state.economy.memory_shard;
+
+/** 연결 상태 셀렉터 */
+export const selectIsConnected = (state: WorldStore) => state.isConnected;
+
+/** Scene 상태 셀렉터 */
+export const selectSceneState = (state: WorldStore) => state.sceneState;
+
+/** Scene Objects 셀렉터 */
+export const selectSceneObjects = (state: WorldStore) => state.sceneObjects;
+
+/** 내러티브 엔트리 셀렉터 */
+export const selectNarrativeEntries = (state: WorldStore) => state.narrativeEntries;
+
+/** 턴 카운트 셀렉터 */
+export const selectTurnCount = (state: WorldStore) => state.turnCount;
+
+// ============ U-013: Quest + Rule Board 셀렉터 ============
+
+/** 퀘스트 목록 셀렉터 */
+export const selectQuests = (state: WorldStore) => state.quests;
+
+/** 활성 규칙 목록 셀렉터 */
+export const selectActiveRules = (state: WorldStore) => state.activeRules;
+
+/** 뮤테이션 타임라인 셀렉터 */
+export const selectMutationTimeline = (state: WorldStore) => state.mutationTimeline;
+
+/** 진행 중인 퀘스트 셀렉터 */
+export const selectActiveQuests = (state: WorldStore) =>
+  state.quests.filter((q) => !q.is_completed);
+
+/** 완료된 퀘스트 셀렉터 */
+export const selectCompletedQuests = (state: WorldStore) =>
+  state.quests.filter((q) => q.is_completed);
+
+// ============ U-089: 정밀분석 셀렉터 ============
+
+/** 정밀분석 실행 중 여부 셀렉터 */
+export const selectIsAnalyzing = (state: WorldStore) => state.isAnalyzing;
+</file>
+
 <file path="frontend/src/locales/en-US/translation.json">
 {
   "language": {
@@ -40885,7 +41175,8 @@ export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
     "count": "Inventory ({{count}})",
     "grid_label": "Inventory Items",
     "item_label": "{{name}} (Qty: {{quantity}})",
-    "drag_hint": "Drag to use"
+    "drag_hint": "Drag to use",
+    "item_consumed": "{{name}} consumed"
   },
   "interaction": {
     "hotspot_click": "Click to investigate",
@@ -41315,7 +41606,8 @@ export function safeParseTurnInput(data: unknown): TurnInputSafeParseResult {
     "count": "Inventory ({{count}})",
     "grid_label": "인벤토리 아이템 목록",
     "item_label": "{{name}} (수량: {{quantity}})",
-    "drag_hint": "드래그하여 사용"
+    "drag_hint": "드래그하여 사용",
+    "item_consumed": "{{name}} 사용됨"
   },
   "interaction": {
     "hotspot_click": "클릭하여 조사",
