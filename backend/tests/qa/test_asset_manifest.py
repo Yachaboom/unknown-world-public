@@ -70,7 +70,7 @@ def test_asset_files_existence_and_size():
 
         # 3. Individual Budget Check (from QA_CHECKLIST.md)
         asset_type = asset["type"]
-        if asset_type == "icon":
+        if asset_type in ("icon", "item-icon"):
             # 30KB limit
             assert actual_size <= 30 * 1024, (
                 f"Icon {rel_path} exceeds 30KB budget ({actual_size} bytes)"

@@ -44,6 +44,11 @@ extend-exclude = [
     "venv",
     "dist",
     "build",
+    ".claude",
+    ".cursor",
+    ".gemini",
+    "prompts",
+    "vibe",
 ]
 
 [tool.ruff.lint]

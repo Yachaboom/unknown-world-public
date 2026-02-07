@@ -1,8 +1,8 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.4.0",
-  "generatedAt": "2026-01-14T14:55:00Z",
-  "totalBytes": 570867,
+  "version": "1.5.0",
+  "generatedAt": "2026-02-07T21:00:00Z",
+  "totalBytes": 775899,
   "budgetBytes": 1572864,
   "assets": [
     {
@@ -216,6 +216,266 @@
       "usedIn": ["Scanner"],
       "bytes": 100165,
       "notes": "U-032: 스캐너 슬롯 프레임, nanobanana mcp 생성, rembg(birefnet-general) 배경 제거, ImageMagick 최적화(346x200) 완료"
+    },
+    {
+      "id": "item-ancient-tome-64",
+      "path": "items/ancient-tome-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "📕",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7166,
+      "notes": "U-092: Narrator 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-quill-pen-64",
+      "path": "items/quill-pen-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🖋️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6474,
+      "notes": "U-092: Narrator 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-memory-fragment-64",
+      "path": "items/memory-fragment-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💠",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6977,
+      "notes": "U-092: Narrator 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-compass-64",
+      "path": "items/compass-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🧭",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9515,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-rope-64",
+      "path": "items/rope-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🪢",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 10713,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-lantern-64",
+      "path": "items/lantern-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🏮",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8054,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-map-fragment-64",
+      "path": "items/map-fragment-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🗺️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9705,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-data-core-64",
+      "path": "items/data-core-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💿",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 10949,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-circuit-board-64",
+      "path": "items/circuit-board-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔌",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8062,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-energy-cell-64",
+      "path": "items/energy-cell-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔋",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7394,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-scanner-device-64",
+      "path": "items/scanner-device-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "📡",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 4436,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-sword-64",
+      "path": "items/sword-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "⚔️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 5748,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-shield-64",
+      "path": "items/shield-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🛡️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 10313,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-potion-64",
+      "path": "items/potion-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🧪",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6083,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-key-64",
+      "path": "items/key-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔑",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8703,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-gem-64",
+      "path": "items/gem-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💎",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6681,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-scroll-64",
+      "path": "items/scroll-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "📜",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9741,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-torch-64",
+      "path": "items/torch-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔥",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 5029,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-herb-64",
+      "path": "items/herb-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🌿",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7688,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-coin-64",
+      "path": "items/coin-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🪙",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9757,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-ring-64",
+      "path": "items/ring-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💍",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7854,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-amulet-64",
+      "path": "items/amulet-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔮",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8599,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-dagger-64",
+      "path": "items/dagger-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🗡️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6623,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-flask-64",
+      "path": "items/flask-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "⚗️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7141,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-crystal-64",
+      "path": "items/crystal-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔷",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9259,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-lockpick-64",
+      "path": "items/lockpick-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔧",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6368,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
     }
   ]
 }

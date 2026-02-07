@@ -16,6 +16,8 @@
  */
 
 import { create } from 'zustand';
+// U-092: 프리셋 아이콘 레지스트리
+import { getPresetIconUrl } from '../data/itemIconPresets';
 
 // =============================================================================
 // 타입 정의
@@ -234,14 +236,21 @@ export const selectItemCount = (state: InventoryStore) => state.items.length;
  * @returns InventoryItem 배열
  */
 export function parseInventoryAdded(added: InventoryItemDataInput[]): InventoryItem[] {
-  return added.map((item) => ({
-    id: item.id,
-    name: item.label,
-    description: item.description || item.label,
-    icon: item.icon_url ?? undefined,
-    quantity: item.quantity ?? 1,
-    iconStatus: (item.icon_url ? 'ready' : 'pending') as IconStatus,
-  }));
+  return added.map((item) => {
+    // U-092: 프리셋 아이콘 우선 (Q2: icon_url이 있으면 항상 프리셋 우선, 동적 생성 건너뛰기)
+    const presetUrl = getPresetIconUrl(item.id);
+    const iconUrl = presetUrl ?? item.icon_url ?? undefined;
+    const status: IconStatus = iconUrl ? 'completed' : 'pending';
+
+    return {
+      id: item.id,
+      name: item.label,
+      description: item.description || item.label,
+      icon: iconUrl,
+      quantity: item.quantity ?? 1,
+      iconStatus: status,
+    };
+  });
 }
 
 /** 서버에서 오는 InventoryItemData 형태 (Zod 스키마와 동일) */

@@ -56,15 +56,16 @@ ICON_SIZE = 64
 ICON_IMAGE_SIZE = f"{ICON_SIZE}x{ICON_SIZE}"
 """이미지 생성용 사이즈 문자열."""
 
-# Q3 결정: 픽셀 아트 스타일 (아이템 고유 색상)
-# U-075 핫픽스: rembg 제거 대비, 프롬프트에서 배경색 직접 지정
-# U-075 수정: CRT 녹색 테마 제거, 아이템 고유 색상 사용
+# Q3 결정: 픽셀 아트 스타일 (CRT phosphor 아트 디렉션)
+# U-092: nanobanana-mcp 프롬프트 스타일 적용 (퀄리티 향상)
+# 참조: vibe/ref/nanobanana-mcp.md §1 공통 아트 디렉션, §2.1 UI 아이콘 템플릿
 ICON_STYLE_PROMPT = """
-pixel art, 8-bit retro game item icon,
-sharp edges, no anti-aliasing, clear silhouette,
-fantasy RPG item style, single centered object,
-dark background color #0d0d0d (near pure black),
-vibrant natural colors matching the item's material and nature
+minimal retro CRT phosphor style icon,
+high contrast pixel art aesthetic,
+sharp edges, clean silhouette, no anti-aliasing,
+single centered object on solid dark background (#0d0d0d),
+vibrant colors from CRT phosphor palette (#33ff00 green, #ff00ff magenta, #ffaa00 amber, #ff3333 red),
+no text, no decorations, no shadows, no complex gradients
 """
 
 # 아이콘 캐시 디렉토리
@@ -319,6 +320,9 @@ class ItemIconGenerator:
     def _build_icon_prompt(self, item_description: str, language: str) -> str:
         """아이콘 생성 프롬프트를 구성합니다.
 
+        U-092: nanobanana-mcp 프롬프트 스타일 적용.
+        참조: vibe/ref/nanobanana-mcp.md §2.1 UI 아이콘 템플릿
+
         Args:
             item_description: 아이템 설명
             language: 세션 언어
@@ -329,20 +333,16 @@ class ItemIconGenerator:
         # 언어별 지시문
         lang_instruction = "한국어" if language == "ko-KR" else "English"
 
-        return f"""
-Create a game inventory item icon based on this description ({lang_instruction}):
-{item_description}
+        # nanobanana 템플릿 기반: "A minimal [SUBJECT] icon, retro CRT phosphor style..."
+        # 런타임 제약: rembg 없으므로 white 대신 dark background 사용
+        return f"""\
+A minimal icon of "{item_description}" ({lang_instruction}).
 
-Style requirements:
 {ICON_STYLE_PROMPT}
 
-Technical requirements:
-- Size: {ICON_SIZE}x{ICON_SIZE} pixels
-- Background: solid dark color #0d0d0d (near pure black)
-- DO NOT use white or bright backgrounds
-- Single item centered, no text, no decorations
-- Use the item's natural colors (e.g., red potion, golden key, blue crystal, brown rope)
-"""
+Use the item's natural colors accented with CRT phosphor tones.
+Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
+{ICON_SIZE}x{ICON_SIZE} pixels, single centered object."""
 
     def get_placeholder_url(self, item_id: str) -> str:
         """placeholder 아이콘 URL을 반환합니다.

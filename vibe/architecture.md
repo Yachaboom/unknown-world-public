@@ -54,6 +54,8 @@ backend/src/unknown_world/storage/validation.py
 backend/src/unknown_world/validation/business_rules.py
 backend/src/unknown_world/validation/language_gate.py
 backend/tests/unit/orchestrator/test_u090_hotspot_restriction.py
+frontend/public/ui/items/
+frontend/public/ui/manifest.json
 frontend/src/App.tsx
 frontend/src/main.tsx
 frontend/src/api/turnStream.ts
@@ -72,6 +74,8 @@ frontend/src/components/InteractionHint.tsx
 frontend/src/components/OnboardingGuide.tsx
 frontend/src/locales/ko-KR/translation.json
 frontend/src/locales/en-US/translation.json
+frontend/src/data/demoProfiles.ts
+frontend/src/data/itemIconPresets.ts
 frontend/src/save/sessionLifecycle.ts
 frontend/src/save/saveGame.ts
 frontend/src/save/migrations.ts
@@ -85,14 +89,17 @@ frontend/src/stores/inventoryStore.ts
 frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
+scripts/process_item_icons.py
 vibe/unit-results/U-077[Mvp].md
 vibe/unit-results/U-089[Mvp].md
 vibe/unit-results/U-090[Mvp].md
 vibe/unit-results/U-091[Mvp].md
+vibe/unit-results/U-092[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
 vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
+vibe/unit-runbooks/U-092-item-icon-preset-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -102,7 +109,23 @@ vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
+- `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 45. 기본 초기 아이템 아이콘 프리셋 이미지 (U-092[Mvp])
+
+1. **프리셋 아이콘 레지스트리 (Static Assets)**:
+    - **Asset Library**: 데모 프로필 초기 아이템 및 자주 등장하는 공통 아이템 30종에 대해 사전 제작된 64x64 픽셀 아트 아이콘을 `frontend/public/ui/items/`에 배치함.
+    - **Registry Mapping**: 아이템 ID와 에셋 경로를 1:1로 매핑하는 `itemIconPresets.ts`를 통해 클라이언트 사이드에서 즉시 조회 가능하도록 함.
+2. **프리셋 우선순위 및 동적 생성 회피**:
+    - **Bypass Logic**: 아이템이 인벤토리에 추가될 때 프리셋 레지스트리를 먼저 확인하여, 프리셋이 존재하면 동적 생성 API(`requestItemIcon`) 호출을 건너뛰고 정적 에셋을 즉시 사용함.
+    - **Immediate Visuals**: 이를 통해 게임 시작 시점(데모 첫 화면)에서 "아이콘 없음" 또는 "placeholder" 상태 없이 완성된 시각적 품질을 보장함 (지연 시간 0ms).
+3. **데모 프로필 연동 (SSOT)**:
+    - **SaveGame Injection**: `demoProfiles.ts`에서 각 프로필의 초기 아이템 `icon` 필드에 프리셋 경로를 직접 주입하여, 세션 부팅 시점부터 아이콘이 완벽히 정합된 상태로 시작됨.
+4. **에셋 후처리 파이프라인 (Dev-only)**:
+    - **Batch Processing**: nanobanana-mcp로 제작된 원본 이미지를 `process_item_icons.py` 스크립트를 통해 배경 제거 및 규격화(64x64) 처리하여 배포 용량을 최적화함.
 
 ---
 

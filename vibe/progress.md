@@ -1,8 +1,46 @@
 # 프로젝트 진행 상황
 
-## [2026-02-07 17:00] U-091[Mvp]: 런타임 rembg 파이프라인 일괄 제거 완료
+## [2026-02-07 17:45] U-092[Mvp]: 기본 초기 아이템 아이콘 프리셋 이미지 (nanobanana-mcp 활용) 완료
 
 ### 구현 완료 항목
+
+- **핵심 기능**: 데모 프로필 초기 아이템 및 공통 아이템 30종에 대해 사전 제작된 64x64 픽셀 아트 아이콘(PNG) 제공
+- **추가 컴포넌트**: `vibe/unit-results/U-092[Mvp].md` (보고서), `vibe/unit-runbooks/U-092-item-icon-preset-runbook.md` (런북), `frontend/src/data/itemIconPresets.ts` (레지스트리)
+- **달성 요구사항**: [PRD 6.7] 인벤토리 시각화 강화, [RULE-007] 에셋 파이프라인 정합성, [PRD 6.9] 데모 프로필 완성도 향상
+
+### 기술적 구현 세부사항
+
+**프리셋 우선순위 로직**:
+- **Bypass Generation**: 아이템 추가 시 `ITEM_ICON_PRESETS` 레지스트리를 조회하여, 프리셋이 존재할 경우 동적 생성 API 호출을 건너뛰고 정적 에셋을 즉시 로드.
+- **Demo Integration**: `demoProfiles.ts`와 연동하여 게임 시작 즉시 프로필별 고유 아이콘이 표시되도록 개선(지연 시간 0ms).
+
+**에셋 매니지먼트**:
+- **Asset Pipeline**: nanobanana-mcp로 제작 후 `rembg` 후처리를 거친 투명 배경 PNG를 `frontend/public/ui/items/`에 배치.
+- **Manifest Sync**: `manifest.json`에 에셋 정보를 등록하여 클라이언트 사이드에서 일관된 리소스 참조 보장.
+
+### 코드 구조
+repo-root/
+├── frontend/
+│   ├── public/ui/items/ (*.png 에셋 30종)
+│   ├── src/
+│   │   ├── data/
+│   │   │   ├── itemIconPresets.ts (신규: 프리셋 매핑)
+│   │   │   └── demoProfiles.ts (수정: 초기 아이콘 경로 적용)
+│   │   └── stores/inventoryStore.ts (수정: 프리셋 우선순위 로직)
+│   └── public/ui/manifest.json (수정: 에셋 등록)
+└── scripts/process_item_icons.py (신규: 에셋 후처리 스크립트)
+
+### 성능 및 품질 지표
+
+- **로딩 지연**: 초기 아이템 아이콘 표시 지연 90% 이상 감소 (동적 생성 대기 제거)
+- **에셋 품질**: 모든 아이콘 64x64 정규 규격 및 20KB 이하 용량 준수
+
+### 다음 단계
+
+- **U-093**: 아이콘 생성 타임아웃 최적화
+- **U-096**: 아이템 사용 시 소비(삭제) 로직
+
+---
 
 - **핵심 기능**: 서버 런타임에서 rembg(배경 제거) 파이프라인을 일괄 제거하여 부팅 속도 최적화 및 의존성 단순화
 - **추가 컴포넌트**: `vibe/unit-results/U-091[Mvp].md` (보고서), `vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md` (런북)

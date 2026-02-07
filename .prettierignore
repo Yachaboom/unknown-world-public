@@ -1,0 +1,15 @@
+# Root Prettier Ignore
+# 목적: 핵심 문서 및 프롬프트 파일의 수동 관리 스타일 보존을 위해 포맷팅 제외
+
+.claude/
+.cursor/
+.gemini/
+backend/prompts/
+vibe/
+
+# 기타 빌드/캐시
+node_modules/
+backend/.venv/
+backend/__pycache__/
+frontend/dist/
+frontend/coverage/

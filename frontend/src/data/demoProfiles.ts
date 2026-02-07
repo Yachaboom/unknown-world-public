@@ -23,6 +23,8 @@ import type { SaveGame, SaveGameInput } from '../save/saveGame';
 import { createSaveGame } from '../save/saveGame';
 // RU-004-Q5: seed 생성 정책 SSOT
 import { generateDemoSeed } from '../save/constants';
+// U-092: 프리셋 아이콘 레지스트리
+import { getPresetIconUrl } from './itemIconPresets';
 
 // =============================================================================
 // 프로필 타입 정의
@@ -371,10 +373,11 @@ export function profileToSaveGameInput(
         text: t(profile.initialState.welcomeMessageKey),
       },
     ],
+    // U-092: 프리셋 아이콘이 있으면 icon에 URL 경로를 설정 (즉시 표시)
     inventory: profile.initialState.inventoryDefs.map((item) => ({
       id: item.id,
       name: t(item.nameKey),
-      icon: item.icon,
+      icon: getPresetIconUrl(item.id) ?? item.icon,
       quantity: item.quantity,
     })),
     quests: profile.initialState.questDefs.map((quest) => ({

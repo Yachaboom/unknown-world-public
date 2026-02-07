@@ -61,7 +61,7 @@
         },
         "type": {
           "type": "string",
-          "enum": ["icon", "placeholder", "chrome"],
+          "enum": ["icon", "placeholder", "chrome", "item-icon"],
           "description": "에셋 유형"
         },
         "size": {
