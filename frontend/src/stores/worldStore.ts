@@ -295,7 +295,36 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     };
 
     // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
-    const newSceneObjects = output.ui.objects;
+    // U-090: 핫스팟 상태 관리 정책
+    //   - 새 이미지 생성(장면 전환) → 핫스팟 전체 초기화 (Q1: Option A)
+    //   - 서버에서 objects 비어있음(일반 턴) → 기존 핫스팟 유지
+    //   - 서버에서 objects 있음(정밀분석 턴) → 기존 핫스팟에 병합
+    //
+    // 장면 전환 감지:
+    //   - render.image_url이 존재 → 이번 턴에서 새 이미지가 생성됨 (동기 생성 완료)
+    //   - render.image_job.should_generate === true → 비동기(late-binding) 이미지 생성 예정
+    //   어느 경우든 새 장면이므로 기존 핫스팟을 초기화한다.
+    const isNewImageGeneration =
+      !!output.render?.image_url || output.render?.image_job?.should_generate === true;
+
+    let newSceneObjects: SceneObject[];
+
+    if (isNewImageGeneration) {
+      // Q1 Option A: 장면 전환(새 이미지 생성) → 핫스팟 전체 초기화
+      // 새 장면에서는 정밀분석을 다시 해야 함
+      newSceneObjects = [];
+    } else if (output.ui.objects.length > 0) {
+      // 정밀분석 결과 있음 → 기존 핫스팟에 병합
+      // 동일 ID는 새 결과로 업데이트, 새 ID는 추가
+      const mergedMap = new Map(state.sceneObjects.map((o) => [o.id, o]));
+      for (const obj of output.ui.objects) {
+        mergedMap.set(obj.id, obj);
+      }
+      newSceneObjects = Array.from(mergedMap.values());
+    } else {
+      // 일반 턴(objects 비어있음) → 기존 핫스팟 유지
+      newSceneObjects = state.sceneObjects;
+    }
 
     // 5. Scene 상태 전이 (RU-003-T1: Scene 이미지 SSOT)
     // - output.ui.scene.image_url이 존재하면 'scene' 상태로 전환

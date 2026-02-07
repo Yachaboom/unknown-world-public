@@ -59,6 +59,11 @@ Specify the rules for each field in the TurnOutput JSON schema.
   - Do NOT include this card when there is no image
 - objects[]: Clickable scene objects
   - box_2d: {ymin, xmin, ymax, xmax} (0-1000 normalized coordinates)
+- **Hotspot (objects) Generation Policy (U-090)**:
+  - In normal turns, **NEVER add new objects** to the `objects` array. Always set it to an empty array (`[]`).
+  - Hotspots/clickable objects are **ONLY created through the "Precise Analysis" action** on the server side.
+  - The GM must NOT fabricate or imagine hotspot coordinates.
+  - Previously discovered objects (from prior analysis) are automatically preserved on the client until the scene changes.
 
 ### world
 - rules_changed[]: Changed world rules

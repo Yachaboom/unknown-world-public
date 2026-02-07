@@ -407,4 +407,232 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       expect(state.narrativeEntries[0].text).toBe('일반 내러티브');
     });
   });
+
+  describe('Hotspot Policy (U-090[Mvp])', () => {
+    it('새 이미지 생성 시 핫스팟이 초기화되어야 한다 (Q1: Option A)', () => {
+      // 1. 기존 핫스팟 설정
+      useWorldStore.setState({
+        sceneObjects: [
+          {
+            id: 'old',
+            label: '과거',
+            box_2d: { ymin: 0, xmin: 0, ymax: 100, xmax: 100 },
+            interaction_hint: null,
+          },
+        ],
+      });
+
+      // 2. 새 이미지 생성이 포함된 턴 (image_url 존재)
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '새 장면',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: 'new_img.png', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [],
+        },
+        render: {
+          image_url: 'new_img.png',
+          image_job: null,
+          image_id: 'img_1',
+          generation_time_ms: 1000,
+          background_removed: false,
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      const state = useWorldStore.getState();
+      expect(state.sceneObjects).toHaveLength(0); // 초기화됨
+    });
+
+    it('새 이미지 생성이 포함된 턴 (should_generate=true)에서도 핫스팟이 초기화되어야 한다', () => {
+      // 1. 기존 핫스팟 설정
+      useWorldStore.setState({
+        sceneObjects: [
+          {
+            id: 'old',
+            label: '과거',
+            box_2d: { ymin: 0, xmin: 0, ymax: 100, xmax: 100 },
+            interaction_hint: null,
+          },
+        ],
+      });
+
+      // 2. 이미지 생성 예정인 턴
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '장면 전환 중...',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: '', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [],
+        },
+        render: {
+          image_url: null,
+          image_job: {
+            should_generate: true,
+            prompt: 'A new scene',
+            model_label: 'FAST',
+            aspect_ratio: '16:9',
+            image_size: '1024x1024',
+            reference_image_ids: [],
+            reference_image_url: null,
+            remove_background: false,
+            image_type_hint: null,
+          },
+          image_id: null,
+          generation_time_ms: null,
+          background_removed: false,
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      const state = useWorldStore.getState();
+      expect(state.sceneObjects).toHaveLength(0); // 초기화됨
+    });
+
+    it('일반 턴(objects 비어있음)에서는 기존 핫스팟이 유지되어야 한다', () => {
+      // 1. 기존 핫스팟 설정
+      const oldObjects = [
+        {
+          id: 'obj1',
+          label: '물체1',
+          box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
+          interaction_hint: null,
+        },
+      ];
+      useWorldStore.setState({
+        sceneObjects: oldObjects,
+      });
+
+      // 2. 일반 턴 (objects 비어있음, 이미지 생성 없음)
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '아무 일도 일어나지 않습니다.',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: '', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [],
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      const state = useWorldStore.getState();
+      expect(state.sceneObjects).toEqual(oldObjects); // 유지됨
+    });
+
+    it('정밀분석 결과(objects 존재)는 기존 핫스팟에 병합되어야 한다', () => {
+      // 1. 기존 핫스팟 설정
+      const oldObjects = [
+        {
+          id: 'obj1',
+          label: '물체1',
+          box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
+          interaction_hint: null,
+        },
+      ];
+      useWorldStore.setState({
+        sceneObjects: oldObjects,
+      });
+
+      // 2. 정밀분석 결과 턴
+      const newObject = {
+        id: 'obj2',
+        label: '물체2',
+        box_2d: { ymin: 300, xmin: 300, ymax: 400, xmax: 400 },
+        interaction_hint: null,
+      };
+      const mockOutput: Partial<TurnOutput> = {
+        narrative: '자세히 보니 새로운 것이 보입니다.',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 100, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: '', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [newObject],
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(mockOutput as TurnOutput);
+
+      const state = useWorldStore.getState();
+      expect(state.sceneObjects).toHaveLength(2);
+      expect(state.sceneObjects).toContainEqual(oldObjects[0]);
+      expect(state.sceneObjects).toContainEqual(newObject);
+    });
+  });
 });

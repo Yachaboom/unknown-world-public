@@ -9,8 +9,14 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ### 디렉토리 구조
 
 ```text
-backend/pyproject.toml
-backend/src/unknown_world/__init__.py
+backend/prompts/image/scene_prompt.en.md
+backend/prompts/image/scene_prompt.ko.md
+backend/prompts/system/game_master.en.md
+backend/prompts/system/game_master.ko.md
+backend/prompts/turn/turn_output_instructions.en.md
+backend/prompts/turn/turn_output_instructions.ko.md
+backend/prompts/vision/scene_affordances.en.md
+backend/prompts/vision/scene_affordances.ko.md
 backend/src/unknown_world/api/image.py
 backend/src/unknown_world/api/item_icon.py
 backend/src/unknown_world/api/scanner.py
@@ -49,13 +55,9 @@ backend/src/unknown_world/storage/storage.py
 backend/src/unknown_world/storage/validation.py
 backend/src/unknown_world/validation/business_rules.py
 backend/src/unknown_world/validation/language_gate.py
-backend/tests/integration/test_item_icon_api.py
-backend/tests/unit/services/test_item_icon_generator.py
-backend/tests/unit/services/test_u075_verification.py
-frontend/package.json
+backend/tests/unit/orchestrator/test_u090_hotspot_restriction.py
 frontend/src/App.tsx
 frontend/src/main.tsx
-frontend/src/i18n.ts
 frontend/src/api/turnStream.ts
 frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.tsx
@@ -87,8 +89,10 @@ frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 vibe/unit-results/U-077[Mvp].md
 vibe/unit-results/U-089[Mvp].md
+vibe/unit-results/U-090[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
+vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -447,12 +451,50 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ## 42. 정밀분석 UX 핫픽스 및 이미지 유지 (U-089[Mvp])
 
+
+
 1. **분석 중 이미지 보존 정책 (Persistent Scene)**:
+
     - **isAnalyzing 상태**: `worldStore`에 도입된 `isAnalyzing` 플래그를 통해 정밀분석 실행 중임을 전역적으로 식별함.
+
     - **UI 분기 (SceneImage)**: 일반 턴 처리(`processingPhase`)와 달리, `isAnalyzing`이 `true`일 때는 기존 이미지를 숨기지 않고 `0.5 opacity`와 **시안(Cyan) 틴트**를 적용하여 배경으로 유지함.
+
 2. **정밀분석 전용 오버레이 UX**:
+
     - **Visual Distinction**: 기존의 원형 스피너 로딩(U-071) 대신, 화면 전체를 위에서 아래로 훑는 **스캔라인 스윕(Scanline Sweep)** 애니메이션과 시안색 글로우 라벨을 적용하여 "분석 작업"임을 시각화함.
+
     - **깜빡임 방지 (Minimum Display)**: 분석이 매우 빠르게 완료되더라도 최소 500ms 동안 오버레이를 유지하여 UX 안정성을 확보함.
+
 3. **트리거 감지 및 수명 주기**:
+
     - **Trigger Mirroring**: 백엔드의 정밀분석 트리거 로직(Action ID/Keywords)을 프론트엔드 `turnRunner.ts`에 미러링하여 클라이언트 사이드에서 즉시 분석 상태로 진입함.
+
     - **Auto-Reset**: 턴 완료(`Complete`) 또는 에러(`Error`) 발생 시 `isAnalyzing` 상태를 자동으로 해제하여 인터랙션 잠금을 방지함.
+
+
+
+---
+
+
+
+## 43. 핫스팟 생성 정밀분석 전용 제한 (U-090[Mvp])
+
+
+
+1. **서버 측 생성 제한 및 필터링 (Hard Gate)**:
+
+    - **Resolve Stage Filter**: 정밀분석(`Agentic Vision`) 액션이 아닌 일반 턴에서 GM이 생성한 `ui.objects`를 서버 파이프라인(`resolve.py`)에서 강제로 비움(`[]`).
+
+    - **Verify Stage Guard**: 비즈니스 룰 검증 단계(`verify.py`)에서 핫스팟 누출을 최종 감지하여 제거하는 이중 안전장치를 구축함.
+
+2. **프론트엔드 지능형 상태 관리**:
+
+    - **Auto-Initialization**: 새 이미지가 생성되는 턴(장면 전환)에서 기존 핫스팟을 자동으로 초기화하여 이미지-핫스팟 불일치를 원천 차단함.
+
+    - **Incremental Merge**: 정밀분석 결과 수신 시 기존 핫스팟과 새 결과를 ID 기준으로 병합하여 플레이어의 다단계 탐색을 지원함.
+
+    - **Persistence Policy**: 일반 턴에서는 이전 정밀분석 결과를 그대로 유지하여 연속적인 게임 경험을 제공함.
+
+3. **GM 프롬프트 정책 (RULE-009)**:
+
+    - **Explicit Instruction**: `turn_output_instructions`를 통해 GM에게 "핫스팟은 정밀분석 전용"임을 명시적으로 지시하여 모델 레벨에서의 오동작을 최소화함.

@@ -2,6 +2,7 @@
 
 해결 단계입니다.
 U-076에서 "정밀분석" 트리거 분기가 추가되었습니다.
+U-090에서 비정밀분석 턴의 핫스팟 생성을 강제 필터링합니다.
 
 설계 원칙:
     - RULE-008: 단계 이벤트 일관성
@@ -9,10 +10,12 @@ U-076에서 "정밀분석" 트리거 분기가 추가되었습니다.
     - RULE-004: 실패 시 안전한 폴백 (빈 핫스팟 + 폴백 내러티브)
     - 동작 보존: 기존 시뮬레이션 지연 유지
     - U-076: "정밀분석" 트리거 시 Agentic Vision 실행 → 핫스팟 추가
+    - U-090: 비정밀분석 턴에서 GM 생성 핫스팟 조용히 제거 (서버 안전장치)
 
 참조:
     - vibe/refactors/RU-005-Q4.md
     - vibe/unit-plans/U-076[Mvp].md
+    - vibe/unit-plans/U-090[Mvp].md
 """
 
 from __future__ import annotations
@@ -238,6 +241,22 @@ async def resolve_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContex
     else:
         # 기존 동작: pass-through + 모의 지연
         await asyncio.sleep(RESOLVE_DELAY_MS / 1000.0)
+
+        # U-090: 비정밀분석 턴에서 GM이 생성한 핫스팟 조용히 제거
+        # GM이 프롬프트 지시를 무시하고 objects[]에 핫스팟을 추가할 수 있으므로
+        # 서버에서 강제로 빈 배열로 설정합니다 (Q2 결정: Option A - 조용히 제거)
+        if ctx.output is not None and ctx.output.ui.objects:
+            stripped_count = len(ctx.output.ui.objects)
+            logger.warning(
+                "[Resolve] U-090: 비정밀분석 턴에서 GM 생성 핫스팟 %d개 제거됨",
+                stripped_count,
+                extra={
+                    "stripped_object_count": stripped_count,
+                    "action_id": ctx.turn_input.action_id,
+                },
+            )
+            new_ui = ctx.output.ui.model_copy(update={"objects": []})
+            ctx.output = ctx.output.model_copy(update={"ui": new_ui})
 
     # Stage 완료 이벤트
     await emit(

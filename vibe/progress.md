@@ -1,6 +1,43 @@
 # 프로젝트 진행 상황
 
-## [2026-02-07 10:15] U-089[Mvp]: 핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX 완료
+## [2026-02-07 16:50] U-090[Mvp]: 핫스팟 생성을 정밀분석 전용으로 제한 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 핫스팟(objects) 생성을 정밀분석 액션 전용으로 제한하고 일반 턴의 임의 생성을 서버에서 차단
+- **상태 정책**: 장면 전환(새 이미지 생성) 시 핫스팟 초기화, 일반 턴 유지, 정밀분석 시 병합 정책 구현
+- **달성 요구사항**: [Consistency OK] 이미지-핫스팟 정합성 보장, [PRD 6.2] 핫스팟 생성 제한 정책 준수
+
+### 기술적 구현 세부사항
+
+**서버 필터링 및 안전장치**:
+- **Resolve Stage Filter**: 정밀분석이 아닌 턴에서 GM이 생성한 `ui.objects`를 강제 필터링(`[]`)하여 조용히 제거
+- **Verify Stage Guard**: 비정밀분석 턴에서 핫스팟 누출을 감지하여 제거하는 이중 비즈니스 룰 검증 추가
+
+**프론트엔드 지능형 상태 관리**:
+- **Auto-Initialization**: `render.image_url` 또는 `should_generate` 감지 시 장면 전환으로 판단하여 핫스팟 초기화
+- **Incremental Merge**: 정밀분석 수신 시 기존 핫스팟과 새 결과를 ID 기준으로 병합하여 다단계 분석 지원
+
+**코드 구조**:
+repo-root/
+├── backend/src/unknown_world/orchestrator/stages/
+│   ├── resolve.py (수정: 핫스팟 강제 필터링)
+│   └── verify.py (수정: 핫스팟 누출 검증)
+├── frontend/src/stores/worldStore.ts (수정: 핫스팟 상태 관리 정책)
+├── backend/prompts/turn/turn_output_instructions.{ko,en}.md (수정: 정책 지침 추가)
+└── backend/tests/unit/orchestrator/test_u090_hotspot_restriction.py (신규: 정책 검증 테스트)
+
+### 성능 및 품질 지표
+
+- **검증 통과**: 백엔드/프론트엔드 단위 테스트 100% 통과
+- **정합성**: 런북 기반 시나리오(필터링/유지/초기화) 수동 검증 완료
+
+### 다음 단계
+
+- **U-091**: 런타임 rembg 파이프라인 일괄 제거
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
 
 ### 구현 완료 항목
 
