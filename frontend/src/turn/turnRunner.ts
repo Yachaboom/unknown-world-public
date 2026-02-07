@@ -24,6 +24,7 @@ import { startTurnStream, type StreamCallbacks } from '../api/turnStream';
 import { startImageGeneration, type ImageModelLabel } from '../api/image';
 import { useAgentStore } from '../stores/agentStore';
 import { useWorldStore } from '../stores/worldStore';
+import { selectImageSizing } from '../utils/imageSizing';
 
 // =============================================================================
 // U-089: 정밀분석(Agentic Vision) 트리거 감지 상수
@@ -321,13 +322,20 @@ export function createTurnRunner(deps: {
           // TODO: Key scene 판별 로직 추가 (현재는 기본 QUALITY)
           const modelLabel: ImageModelLabel = imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
 
+          // U-085: Scene Canvas 크기 기반 aspect_ratio/image_size 선택
+          // Q1 결정: UI 레이아웃 우선 (image_job.aspect_ratio보다 우선)
+          // Q2 결정: image_size는 SDK 값 (1K/2K/4K) 사용
+          const { width: cw, height: ch } = worldStore.sceneCanvasSize;
+          const sizing = selectImageSizing(cw, ch);
+
           // 이미지 생성 시작
           // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
           imageJobController = startImageGeneration(
             {
               prompt: imageJob.prompt,
               language,
-              aspectRatio: imageJob.aspect_ratio ?? '16:9',
+              aspectRatio: sizing.aspectRatio,
+              imageSize: sizing.imageSize,
               modelLabel,
               turnId: currentTurnId,
               referenceImageUrl: previousImageUrl,
@@ -582,13 +590,20 @@ export function useTurnRunner(deps: {
             const modelLabel: ImageModelLabel =
               imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
 
+            // U-085: Scene Canvas 크기 기반 aspect_ratio/image_size 선택
+            // Q1 결정: UI 레이아웃 우선 (image_job.aspect_ratio보다 우선)
+            // Q2 결정: image_size는 SDK 값 (1K/2K/4K) 사용
+            const { width: cw, height: ch } = worldStore.sceneCanvasSize;
+            const sizing = selectImageSizing(cw, ch);
+
             // 이미지 생성 시작
             // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
             imageJobControllerRef.current = startImageGeneration(
               {
                 prompt: imageJob.prompt,
                 language,
-                aspectRatio: imageJob.aspect_ratio ?? '16:9',
+                aspectRatio: sizing.aspectRatio,
+                imageSize: sizing.imageSize,
                 modelLabel,
                 turnId: currentTurnId,
                 referenceImageUrl: previousImageUrl,

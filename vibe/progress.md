@@ -1,6 +1,44 @@
 # 프로젝트 진행 상황
 
-## [2026-02-08 21:30] U-083[Mvp]: UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 완료
+## [2026-02-08 22:45] U-085[Mvp]: ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Scene Canvas 표시 크기(px) 기반 `aspect_ratio` 및 `image_size` 자동 선택, Gemini `image_config` 연동, 이미지 크기 규격 마이그레이션(1K/2K/4K).
+- **추가 컴포넌트**: `vibe/unit-results/U-085[Mvp].md` (보고서), `vibe/unit-runbooks/U-085-image-size-layout-fit-runbook.md` (런북), `frontend/src/utils/imageSizing.ts` (유틸리티).
+- **달성 요구사항**: [PRD 6.3] 멀티모달 게이트, [RULE-002] 게임 UI 고정 레이아웃 강화, [RULE-011] UI 오버레이 정합성 확보.
+
+### 기술적 구현 세부사항
+
+**이미지-레이아웃 정합 전략**:
+- **Dynamic Sizing SSOT**: `worldStore`에 `sceneCanvasSize` 상태를 도입하고 `ResizeObserver`를 통해 실시간 UI 크기 변화를 스토어에 동기화.
+- **Aspect Ratio Snapping**: 21:9부터 9:16까지 10종의 지원 비율 맵을 구성하여, 측정된 캔버스 비율과 가장 근접한 생성 옵션을 자동 선택하도록 설계.
+- **SDK Protocol Alignment**: 이미지 크기 단위를 픽셀 문자열에서 SDK 규격(1K)으로 전환하고, 백엔드에서 `GenerateContentConfig`를 통해 모델 출력 비율을 강제함으로써 레터박싱 최소화.
+- **Graceful Normalization**: 프론트/백엔드 양측에 정규화 로직을 배치하여 레거시 요청과의 호환성을 유지하면서 점진적 마이그레이션 수행.
+
+**코드 구조**:
+repo-root/
+├── frontend/src/
+│   ├── utils/imageSizing.ts (비율/크기 선택 알고리즘)
+│   ├── stores/worldStore.ts (Canvas 크기 상태 관리)
+│   ├── components/SceneCanvas.tsx (크기 측정 및 동기화)
+│   └── turn/turnRunner.ts (이미지 잡 실행 시 최적화 값 주입)
+└── backend/src/unknown_world/
+    ├── services/image_generation.py (Gemini Config 연동)
+    └── storage/validation.py (SDK 규격 정규화 헬퍼)
+
+### 성능 및 품질 지표
+
+- **UI 정합성**: 장면 전환 시 Scene Canvas 영역에 여백 없이 꽉 찬 이미지가 생성되어 시각적 일관성 향상.
+- **안정성**: 0x0 크기 측정 등 예외 상황 시 16:9 기본값 폴백으로 크래시 방지.
+
+### 다음 단계
+
+- **U-086[Mvp]**: 턴 진행 피드백 보강 - 타이핑 효과와 이미지 생성 지연 동기화
+- **U-087[Mvp]**: 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
 
 ### 구현 완료 항목
 

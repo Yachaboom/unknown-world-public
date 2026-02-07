@@ -23,6 +23,7 @@
 import { create } from 'zustand';
 import type { TurnOutput, SceneObject, Quest, WorldRule } from '../schemas/turn';
 import type { SceneCanvasState, SceneProcessingPhase } from '../types/scene';
+import type { CanvasSize } from '../utils/box2d';
 import { useActionDeckStore } from './actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
 import { useEconomyStore } from './economyStore';
@@ -117,6 +118,15 @@ export interface WorldState {
   /** 룰 변형 이벤트 타임라인 (최신순) */
   mutationTimeline: MutationEvent[];
 
+  // ============ U-085: Scene Canvas 표시 크기 (SSOT) ============
+
+  /**
+   * Scene Canvas의 실제 렌더링 크기(px) (U-085).
+   * ResizeObserver로 측정된 값이 디바운스(100ms) + 5px 이상 변화 시 갱신됩니다.
+   * 이미지 생성 요청 시 aspect_ratio/image_size 선택의 SSOT로 사용됩니다.
+   */
+  sceneCanvasSize: CanvasSize;
+
   // ============ U-089: 정밀분석 상태 ============
 
   /**
@@ -199,6 +209,16 @@ export interface WorldActions {
    */
   cancelImageLoading: () => void;
 
+  // ============ U-085: Scene Canvas 크기 SSOT ============
+
+  /**
+   * Scene Canvas 표시 크기를 설정합니다 (U-085).
+   * SceneCanvas 컴포넌트의 ResizeObserver에서 호출합니다.
+   *
+   * @param size - Scene Canvas 크기 (width, height px)
+   */
+  setSceneCanvasSize: (size: CanvasSize) => void;
+
   // ============ U-071: 처리 단계 UI 관리 ============
 
   /**
@@ -278,6 +298,8 @@ function createInitialState(): WorldState {
     quests: [],
     activeRules: [],
     mutationTimeline: [],
+    // U-085: Scene Canvas 크기 (초기값 0x0, 측정 후 갱신)
+    sceneCanvasSize: { width: 0, height: 0 },
     // U-089: 정밀분석 상태
     isAnalyzing: false,
     // U-079: 재화 획득 토스트
@@ -637,6 +659,12 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     }));
   },
 
+  // ============ U-085: Scene Canvas 크기 SSOT ============
+
+  setSceneCanvasSize: (size) => {
+    set({ sceneCanvasSize: size });
+  },
+
   // ============ U-071: 처리 단계 UI 관리 ============
 
   setProcessingPhase: (phase) => {
@@ -791,6 +819,11 @@ export const selectMainObjective = (state: WorldStore) =>
 
 /** 서브 목표(Sub-objectives) 셀렉터 - is_main=false인 퀘스트 */
 export const selectSubObjectives = (state: WorldStore) => state.quests.filter((q) => !q.is_main);
+
+// ============ U-085: Scene Canvas 크기 셀렉터 ============
+
+/** Scene Canvas 크기 셀렉터 */
+export const selectSceneCanvasSize = (state: WorldStore) => state.sceneCanvasSize;
 
 // ============ U-089: 정밀분석 셀렉터 ============
 

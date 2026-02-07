@@ -54,6 +54,7 @@ from unknown_world.storage.validation import (
     DEFAULT_ASPECT_RATIO,
     DEFAULT_IMAGE_SIZE,
     SUPPORTED_IMAGE_SIZES,
+    normalize_image_size,
 )
 
 if TYPE_CHECKING:
@@ -131,7 +132,10 @@ class ImageGenerationRequest(BaseModel):
 
     prompt: str = Field(min_length=1, description="이미지 생성 프롬프트")
     aspect_ratio: str = Field(default=DEFAULT_ASPECT_RATIO, description="가로세로 비율")
-    image_size: str = Field(default=DEFAULT_SIZE, description="이미지 크기")
+    image_size: str = Field(
+        default=DEFAULT_SIZE,
+        description="이미지 크기 - SDK 값: 1K/2K/4K (U-085 Q2 마이그레이션)",
+    )
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
     reference_image_url: str | None = Field(
         default=None,
@@ -508,7 +512,12 @@ class ImageGenerator:
         )
 
         try:
-            from google.genai.types import GenerateContentConfig, Modality, Part
+            from google.genai.types import (
+                GenerateContentConfig,
+                ImageConfig,
+                Modality,
+                Part,
+            )
 
             # U-068: 참조 이미지가 있으면 멀티모달 contents 구성
             # 참조 이미지를 먼저 넣고, 프롬프트를 그 다음에 배치
@@ -525,9 +534,27 @@ class ImageGenerator:
                 # 참조 이미지 없이 프롬프트만 전달
                 contents = request.prompt
 
+            # U-085: image_config 구성 (aspect_ratio + image_size)
+            # image_size를 SDK 값으로 정규화 (레거시 픽셀 값 호환)
+            sdk_image_size = normalize_image_size(request.image_size)
+            image_config = ImageConfig(
+                aspect_ratio=request.aspect_ratio,
+                image_size=sdk_image_size,
+            )
+
+            logger.debug(
+                "[ImageGen] image_config 적용",
+                extra={
+                    "aspect_ratio": request.aspect_ratio,
+                    "image_size": sdk_image_size,
+                    "model": selected_model_id,
+                },
+            )
+
             # U-064: generate_content() API를 사용하여 이미지 생성
+            # U-085: image_config를 추가하여 비율/크기 제어
             # response_modalities에 TEXT와 IMAGE를 모두 포함
-            # 참고: https://ai.google.dev/gemini-api/docs/image-generation
+            # 참고: vibe/ref/image-generate-guide.md
             # Q1 결정: 타임아웃 60초 적용
             response = await asyncio.wait_for(
                 self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
@@ -535,6 +562,7 @@ class ImageGenerator:
                     contents=contents,  # type: ignore[reportArgumentType]
                     config=GenerateContentConfig(
                         response_modalities=[Modality.TEXT, Modality.IMAGE],
+                        image_config=image_config,
                     ),
                 ),
                 timeout=IMAGE_GENERATION_TIMEOUT_SECONDS,
@@ -767,6 +795,8 @@ def create_fallback_response(message: str | None = None) -> ImageGenerationRespo
 def validate_image_request(request: ImageGenerationRequest) -> str | None:
     """이미지 생성 요청을 검증합니다.
 
+    U-085: image_size는 SDK 값(1K/2K/4K) 또는 레거시 픽셀 값 모두 허용.
+
     Args:
         request: 이미지 생성 요청 객체
 
@@ -776,7 +806,9 @@ def validate_image_request(request: ImageGenerationRequest) -> str | None:
     if not request.prompt or len(request.prompt.strip()) < 2:
         return "프롬프트가 너무 짧습니다."
 
-    if request.image_size not in SUPPORTED_IMAGE_SIZES:
+    # SDK 값 또는 레거시 값 → 정규화 후 검증
+    normalized = normalize_image_size(request.image_size)
+    if normalized not in SUPPORTED_IMAGE_SIZES:
         return f"지원하지 않는 이미지 크기: {request.image_size}"
 
     return None

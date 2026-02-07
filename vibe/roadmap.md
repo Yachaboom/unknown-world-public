@@ -4,15 +4,15 @@
 
 ## 진행 현황
 
-**전체**: 111/137 (81.0%) | **MVP**: 111/119 (93.3%) | **MMP**: 0/18 (0%)
+**전체**: 112/137 (81.8%) | **MVP**: 112/119 (94.1%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-2 | MMP D-8
+**예상 완료(가정)**: MVP D-1 | MMP D-7
 _U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가)_
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-085[Mvp]](unit-plans/U-085[Mvp].md) ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 / **최근 완료**: [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-086[Mvp]](unit-plans/U-086[Mvp].md) 턴 진행 피드백 보강 - 타이핑 효과와 이미지 생성 지연 동기화 / **최근 완료**: [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md) (2026-02-08)
 
 **블로커**: 없음
 
@@ -168,7 +168,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-085[Mvp]](unit-plans/U-085[Mvp].md) | ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 | Depends=U-066,U-049 | ⏸️
 ID=[U-086[Mvp]](unit-plans/U-086[Mvp].md) | 턴 진행 피드백 보강 - 타이핑 효과와 이미지 생성 지연 동기화 | Depends=U-066,U-071 | ⏸️
 ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
 ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 생성 최적화 - 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
@@ -203,6 +202,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md): ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 (2026-02-08)
 - ✅ [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md): UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 (2026-02-08)
 - ✅ [U-082[Mvp]](vibe/unit-results/U-082.md): UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 (2026-02-08)
 - ✅ [U-079[Mvp]](unit-results/U-079[Mvp].md): 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 (2026-02-08)
@@ -354,6 +354,16 @@ pnpm kill
 
 - [ ] 브라우저에서 고정 게임 UI 레이아웃이 렌더된다(채팅 버블 없음)
 - [ ] HTTP Streaming 연결이 되고 Agent Console에 단계/배지가 보인다(프롬프트 원문 노출 없음)
+
+---
+
+## 일일 스탠드업 (2026-02-08)
+
+**완료**: [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md) - ⚡핫픽스 - 이미지 크기 UI 레이아웃 정합 (2026-02-08)
+
+**진행중**: [U-086[Mvp]](unit-plans/U-086[Mvp].md) - 턴 진행 피드백 보강 (타이핑↔이미지 지연)
+
+**블로커**: 없음
 
 ---
 

@@ -40,6 +40,7 @@ from unknown_world.storage.paths import (
     get_generated_images_dir,
 )
 from unknown_world.storage.validation import (
+    normalize_image_size,
     validate_image_generation_request,
 )
 
@@ -96,8 +97,14 @@ class GenerateImageRequest(BaseModel):
 
     prompt: str = Field(min_length=1, max_length=2000, description="이미지 생성 프롬프트")
     language: Language = Field(default=Language.KO, description="요청 언어")
-    aspect_ratio: str = Field(default="1:1", description="가로세로 비율")
-    image_size: str = Field(default="1024x1024", description="이미지 크기")
+    aspect_ratio: str = Field(
+        default="16:9",
+        description="가로세로 비율 (U-085: 게임 UI 기본 16:9)",
+    )
+    image_size: str = Field(
+        default="1K",
+        description="이미지 크기 - SDK 값: 1K/2K/4K (U-085: Q2 마이그레이션)",
+    )
     reference_image_ids: list[str] = Field(default_factory=list, description="참조 이미지 ID 목록")
     reference_image_url: str | None = Field(
         default=None,
@@ -180,10 +187,13 @@ async def generate_image(
     Returns:
         GenerateImageResponse: 생성 결과
     """
-    # 요청 검증
+    # U-085: image_size를 SDK 값으로 정규화 (레거시 호환)
+    normalized_image_size = normalize_image_size(request.image_size)
+
+    # 요청 검증 (정규화된 image_size로 검증)
     validation_error = validate_image_generation_request(
         prompt=request.prompt,
-        image_size=request.image_size,
+        image_size=normalized_image_size,
         language=request.language,
     )
 
@@ -210,7 +220,7 @@ async def generate_image(
             ImageGenerationRequest(
                 prompt=request.prompt,
                 aspect_ratio=request.aspect_ratio,
-                image_size=request.image_size,
+                image_size=normalized_image_size,
                 reference_image_ids=request.reference_image_ids,
                 reference_image_url=request.reference_image_url,
                 session_id=request.session_id,

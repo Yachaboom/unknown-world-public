@@ -90,6 +90,8 @@ frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/inventoryStore.ts
 frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
+frontend/src/utils/imageSizing.ts
+frontend/src/utils/imageSizing.test.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
 vibe/unit-results/U-082.md
@@ -646,3 +648,20 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Contextual Hints**: 잔액이 매우 낮을 때 GM이 내러티브를 통해 아이템 판매나 탐색 등 재화 획득 경로를 자연스럽게 힌트로 제공하도록 프롬프트 지침을 강화함.
 4. **상태 관리 및 영속성**:
     - **isLowBalance 플래그**: `economyStore`에서 실시간 잔액을 감시하여 UI 경고 상태를 관리하며, 세이브 데이터(`SaveGame`)에 판매 기록 및 잔액 변화를 영속화함.
+
+---
+
+## 53. UI 레이아웃 기반 이미지 비율/크기 정합 (U-085[Mvp])
+
+1. **Scene Canvas 표시 크기 SSOT 확립**:
+    - **Dynamic Measurement**: `SceneCanvas` 컴포넌트 내에 `ResizeObserver`를 탑재하여 실제 렌더링되는 DOM의 너비와 높이를 실시간으로 추적함.
+    - **Store Synchronization**: 측정된 크기는 `worldStore`의 `sceneCanvasSize` 상태로 동기화되어, 이미지 생성 요청 시의 유일한 권위자(SSOT)로 작동함.
+    - **Debounce Policy**: 100ms 디바운스 및 5px 이상의 유의미한 변화가 있을 때만 상태를 갱신하여 불필요한 리렌더링과 요청 계산을 방지함.
+2. **비율 스냅 및 알고리즘 (Aspect Ratio Snapping)**:
+    - **Supported Map**: 21:9(울트라와이드)부터 9:16(세로)까지 Gemini SDK가 지원하는 10종의 주요 화면 비율 맵을 구성함.
+    - **Best-fit Selection**: `imageSizing.ts` 유틸리티를 통해 실제 캔버스 비율(w/h)과 가장 가까운 유클리드 거리를 가진 지원 비율을 자동 선택함.
+    - **Fallback Logic**: 초기 렌더링 시점이나 모바일 전환 등 크기 측정이 불확실한 경우 기본 게임 레이아웃인 16:9 비율로 안전하게 수렴하도록 설계함.
+3. **이미지 생성 파이프라인 최적화 (End-to-End Alignment)**:
+    - **Request Injection**: `turnRunner.ts`에서 비동기 이미지 잡 실행 시점에 스토어의 현재 캔버스 크기를 읽어 최적화된 `aspectRatio`와 `imageSize`를 주입함.
+    - **Gemini Config Integration**: 백엔드 `image_generation.py`에서 전달받은 옵션을 `GenerateContentConfig`의 `image_config`로 매핑하여 호출함으로써 모델의 출력이 UI 레이아웃에 밀착되도록 강제함.
+    - **SDK Schema Migration**: 이미지 크기 단위를 픽셀 기반 문자열에서 SDK 표준인 `1K/2K/4K` 체계로 마이그레이션하여 모델 호환성과 생성 효율을 극대화함.

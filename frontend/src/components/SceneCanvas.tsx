@@ -79,11 +79,15 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
   // U-071: 처리 단계 및 이미지 로딩 상태 추출
   const { status, imageUrl, message, processingPhase, imageLoading } = state;
 
+  // U-085: Store에서 setSceneCanvasSize 가져오기 (SSOT)
+  const setSceneCanvasSize = useWorldStore((state) => state.setSceneCanvasSize);
+
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
   // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
+  // U-085: 측정된 크기를 Store에도 반영 (이미지 사이징 SSOT)
   useEffect(() => {
     const element = canvasRef.current;
     if (!element) return;
@@ -102,7 +106,10 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
           // 의미 있는 크기 변화만 적용 (5px 이상 차이)
           setCanvasSize((prev) => {
             if (Math.abs(prev.width - width) > 5 || Math.abs(prev.height - height) > 5) {
-              return { width, height };
+              const newSize = { width, height };
+              // U-085: Store에도 반영 (이미지 잡 실행 시 참조)
+              setSceneCanvasSize(newSize);
+              return newSize;
             }
             return prev;
           });
@@ -114,7 +121,10 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 
     // 초기 크기 설정
     const rect = element.getBoundingClientRect();
-    setCanvasSize({ width: rect.width, height: rect.height });
+    const initialSize = { width: rect.width, height: rect.height };
+    setCanvasSize(initialSize);
+    // U-085: 초기 크기도 Store에 반영
+    setSceneCanvasSize(initialSize);
 
     return () => {
       if (resizeTimeout) {
@@ -122,7 +132,7 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
       }
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [setSceneCanvasSize]);
 
   // 핫스팟 클릭 핸들러
   const handleHotspotClick = useCallback(

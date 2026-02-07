@@ -40,9 +40,9 @@ export interface ImageGenerationRequest {
   prompt: string;
   /** 언어 (에러 메시지용) */
   language?: Language;
-  /** 가로세로 비율 */
+  /** 가로세로 비율 (U-085: UI 레이아웃 기반 자동 선택, 예: "16:9") */
   aspectRatio?: string;
-  /** 이미지 크기 */
+  /** 이미지 크기 - SDK 값 (U-085 Q2: "1K" | "2K" | "4K") */
   imageSize?: string;
   /** 참조 이미지 ID 목록 */
   referenceImageIds?: string[];
@@ -135,8 +135,10 @@ export async function generateImage(
       body: JSON.stringify({
         prompt: request.prompt,
         language: request.language ?? 'ko-KR',
+        // U-085: aspect_ratio는 UI 레이아웃 기반 선택값 사용 (기본 16:9)
         aspect_ratio: request.aspectRatio ?? '16:9',
-        image_size: request.imageSize ?? '1024x1024',
+        // U-085 Q2: image_size는 SDK 값 (1K/2K/4K) 사용
+        image_size: request.imageSize ?? '1K',
         reference_image_ids: request.referenceImageIds ?? [],
         reference_image_url: request.referenceImageUrl ?? null,
         session_id: request.sessionId ?? null,

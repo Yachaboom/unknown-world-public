@@ -1,6 +1,7 @@
 """Unknown World - 파일 검증 및 제한 정책.
 
 모든 이미지/아티팩트 관련 검증 로직과 상수를 중앙 관리합니다.
+U-085: image_size를 SDK 값(1K/2K/4K)으로 마이그레이션.
 
 설계 원칙:
     - RULE-007: 에러 메시지에 파일 내용 노출 금지
@@ -41,20 +42,37 @@ MIN_IMAGE_FILE_SIZE_BYTES: Final[int] = 100
 # 이미지 생성 제한
 # =============================================================================
 
-SUPPORTED_IMAGE_SIZES: Final[dict[str, tuple[int, int]]] = {
-    "1024x1024": (1024, 1024),
-    "1280x768": (1280, 768),
-    "768x1280": (768, 1280),
-    "1536x1024": (1536, 1024),
-    "1024x1536": (1024, 1536),
+SUPPORTED_IMAGE_SIZES: Final[frozenset[str]] = frozenset({"1K", "2K", "4K"})
+"""지원하는 이미지 생성 크기 (SDK 값, U-085: Q2 Option B 마이그레이션).
+
+Gemini SDK image_config.image_size 값과 1:1 대응합니다.
+대문자 'K' 필수 (소문자 거부됨).
+참조: vibe/ref/image-generate-guide.md
+"""
+
+# U-085: 레거시 픽셀 기반 크기 → SDK 값 매핑 (하위 호환용)
+LEGACY_IMAGE_SIZE_MAP: Final[dict[str, str]] = {
+    "1024x1024": "1K",
+    "1280x768": "1K",
+    "768x1280": "1K",
+    "1536x1024": "2K",
+    "1024x1536": "2K",
 }
-"""지원하는 이미지 생성 크기."""
+"""레거시 픽셀 기반 image_size → SDK 값 매핑 (하위 호환)."""
 
-DEFAULT_IMAGE_SIZE: Final[str] = "1024x1024"
-"""기본 이미지 생성 크기."""
+DEFAULT_IMAGE_SIZE: Final[str] = "1K"
+"""기본 이미지 생성 크기 (SDK 값, U-085 마이그레이션)."""
 
-DEFAULT_ASPECT_RATIO: Final[str] = "1:1"
-"""기본 가로세로 비율."""
+DEFAULT_ASPECT_RATIO: Final[str] = "16:9"
+"""기본 가로세로 비율 (U-085: 게임 UI 기본 비율)."""
+
+SUPPORTED_ASPECT_RATIOS: Final[frozenset[str]] = frozenset(
+    {"1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"}
+)
+"""SDK가 지원하는 aspect_ratio 값 목록.
+
+참조: vibe/ref/image-generate-guide.md
+"""
 
 MIN_PROMPT_LENGTH: Final[int] = 3
 """최소 프롬프트 길이."""
@@ -124,6 +142,24 @@ def validate_image_upload(
     return None
 
 
+def normalize_image_size(image_size: str) -> str:
+    """이미지 크기를 SDK 값으로 정규화합니다 (U-085).
+
+    레거시 픽셀 기반 값(예: "1024x1024")이 들어오면 SDK 값(예: "1K")으로 매핑합니다.
+    이미 SDK 값이면 그대로 반환합니다.
+
+    Args:
+        image_size: 요청된 이미지 크기 (SDK 값 또는 레거시 픽셀 값)
+
+    Returns:
+        정규화된 SDK 이미지 크기 값
+    """
+    if image_size in SUPPORTED_IMAGE_SIZES:
+        return image_size
+    # 레거시 값이면 매핑, 아니면 입력값 그대로 반환하여 검증에서 걸러지도록 함
+    return LEGACY_IMAGE_SIZE_MAP.get(image_size, image_size)
+
+
 def validate_image_generation_request(
     prompt: str,
     image_size: str,
@@ -132,9 +168,12 @@ def validate_image_generation_request(
 ) -> str | None:
     """이미지 생성 요청을 검증합니다.
 
+    U-085: image_size는 SDK 값(1K/2K/4K) 또는 레거시 픽셀 값을 허용합니다.
+    레거시 값은 normalize_image_size()로 자동 변환됩니다.
+
     Args:
         prompt: 이미지 생성 프롬프트
-        image_size: 요청된 이미지 크기
+        image_size: 요청된 이미지 크기 (SDK 값 또는 레거시 픽셀 값)
         language: 에러 메시지 언어
 
     Returns:
@@ -142,8 +181,9 @@ def validate_image_generation_request(
     """
     is_ko = language == Language.KO
 
-    # 이미지 크기 검증
-    if image_size not in SUPPORTED_IMAGE_SIZES:
+    # 이미지 크기 검증 (SDK 값 또는 레거시 매핑 가능 값)
+    normalized = normalize_image_size(image_size)
+    if normalized not in SUPPORTED_IMAGE_SIZES:
         return (
             f"지원하지 않는 이미지 크기: {image_size}"
             if is_ko
