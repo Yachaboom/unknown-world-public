@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .clude/**, .gemini/**, .vscode/**, vibe/**, frontend/dist/**, frontend/node_modules/**, backend/.venv/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .clude/**, .gemini/**, .vscode/**, vibe/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -29281,148 +29281,6 @@ describe('DnD Interaction - Logic Test', () => {
 });
 </file>
 
-<file path="frontend/src/components/InventoryPanel.test.tsx">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { InventoryPanel } from './InventoryPanel';
-import { useInventoryStore, InventoryStore } from '../stores/inventoryStore';
-
-// Mocking useTranslation
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: 'ko' },
-  }),
-}));
-
-// Mocking store
-vi.mock('../stores/inventoryStore', async () => {
-  return {
-    useInventoryStore: vi.fn(),
-    requestItemIcon: vi.fn().mockResolvedValue({ isPlaceholder: false, iconUrl: '/test.png' }),
-    pollIconStatus: vi.fn().mockResolvedValue('completed'),
-    selectItems: (state: InventoryStore) => state.items,
-    selectDraggingItem: (state: InventoryStore) =>
-      state.items.find((i) => i.id === state.draggingItemId) || null,
-    selectSelectedItemId: (state: InventoryStore) => state.selectedItemId,
-  };
-});
-
-// Mocking onboarding store
-vi.mock('../stores/onboardingStore', () => ({
-  useOnboardingStore: vi.fn(() => false),
-  selectShouldShowItemHint: vi.fn(() => false),
-}));
-
-// Mocking components that might cause issues
-vi.mock('./InteractionHint', () => ({
-  InteractionHint: () => <div data-testid="interaction-hint" />,
-}));
-
-describe('InventoryPanel', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders items with dynamic icons', () => {
-    const mockItems = [
-      {
-        id: 'item1',
-        name: 'Magic Potion',
-        quantity: 1,
-        icon: '/api/image/file/icon123.png',
-        iconStatus: 'completed' as const,
-        description: 'A blue potion',
-      },
-      {
-        id: 'item2',
-        name: 'Sword',
-        quantity: 1,
-        icon: '⚔️',
-        iconStatus: 'completed' as const,
-        description: 'A sharp sword',
-      },
-    ];
-
-    vi.mocked(useInventoryStore).mockImplementation(
-      (selector: (state: InventoryStore) => unknown) => {
-        const state = {
-          items: mockItems,
-          draggingItemId: null,
-          selectedItemId: null,
-          selectItem: vi.fn(),
-          updateItemIcon: vi.fn(),
-          setItemIconStatus: vi.fn(),
-        } as unknown as InventoryStore;
-        return selector(state);
-      },
-    );
-
-    render(<InventoryPanel />);
-
-    // Check for image icon
-    const img = screen.getByAltText('Magic Potion');
-    expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute('src', '/api/image/file/icon123.png');
-
-    // Check for emoji icon
-    expect(screen.getByText('⚔️')).toBeInTheDocument();
-  });
-
-  it('shows loading state when icon is generating', () => {
-    const mockItems = [
-      {
-        id: 'item1',
-        name: 'Loading Item',
-        quantity: 1,
-        icon: undefined,
-        iconStatus: 'generating' as const,
-        description: 'Loading...',
-      },
-    ];
-
-    vi.mocked(useInventoryStore).mockImplementation(
-      (selector: (state: InventoryStore) => unknown) => {
-        const state = {
-          items: mockItems,
-          draggingItemId: null,
-          selectedItemId: null,
-          selectItem: vi.fn(),
-          updateItemIcon: vi.fn(),
-          setItemIconStatus: vi.fn(),
-        } as unknown as InventoryStore;
-        return selector(state);
-      },
-    );
-
-    const { container } = render(<InventoryPanel />);
-
-    // Check for loading class
-    const loadingOverlay = container.querySelector('.inventory-item-icon-loading');
-    expect(loadingOverlay).toBeInTheDocument();
-  });
-
-  it('displays empty state with hint when there are no items', () => {
-    vi.mocked(useInventoryStore).mockImplementation(
-      (selector: (state: InventoryStore) => unknown) => {
-        const state = {
-          items: [],
-          draggingItemId: null,
-          selectedItemId: null,
-          selectItem: vi.fn(),
-        } as unknown as InventoryStore;
-        return selector(state);
-      },
-    );
-
-    render(<InventoryPanel />);
-
-    expect(screen.getByText('inventory.empty')).toBeInTheDocument();
-    expect(screen.getByText('inventory.empty_hint')).toBeInTheDocument();
-  });
-});
-</file>
-
 <file path="frontend/src/components/SceneCanvas.tsx">
 /**
  * Unknown World - Scene Canvas 컴포넌트
@@ -32171,391 +32029,235 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
 export default ActionDeck;
 </file>
 
-<file path="frontend/src/components/InventoryPanel.tsx">
-/**
- * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp]).
- *
- * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 제공합니다.
- *
- * 설계 원칙:
- *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
- *   - tech-stack: dnd-kit 기반 draggable 구현
- *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
- *
- * U-074[Mvp]: 아이템 인터랙션 안내 UX
- *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
- *   - hover 시 "드래그하여 사용" 힌트 표시
- *
- * U-075[Mvp]: 아이템 아이콘 동적 생성
- *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
- *   - Q2: Option A (64x64 픽셀)
- *   - Q3: Option A (픽셀 아트 스타일)
- *
- * @module components/InventoryPanel
- */
+<file path="frontend/src/components/InventoryPanel.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { InventoryPanel } from './InventoryPanel';
+import { useInventoryStore, InventoryStore } from '../stores/inventoryStore';
 
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useDraggable, DragOverlay } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
-import { useTranslation } from 'react-i18next';
-import {
-  useInventoryStore,
-  type InventoryItem,
-  selectItems,
-  selectDraggingItem,
-  selectSelectedItemId,
-  selectConsumingItemIds,
-  requestItemIcon,
-  pollIconStatus,
-} from '../stores/inventoryStore';
-import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
-import { InteractionHint } from './InteractionHint';
-import { DND_TYPE, type InventoryDragData } from '../dnd/types';
+// Mocking useTranslation
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'ko' },
+  }),
+}));
 
-// =============================================================================
-// 드래그 가능한 아이템 컴포넌트
-// =============================================================================
-
-interface DraggableItemProps {
-  item: InventoryItem;
-  isSelected: boolean;
-  onSelect: (itemId: string) => void;
-  disabled?: boolean;
-  /** U-096: 소비 중(fade-out 진행 중) 여부 */
-  isConsuming?: boolean;
-}
-
-/**
- * 드래그 가능한 인벤토리 아이템.
- * dnd-kit의 useDraggable 훅을 사용합니다.
- * U-056: 잘린 아이템 이름에 대한 툴팁 지원
- * U-074: 첫 N번만 hover 힌트 표시
- */
-function DraggableItem({
-  item,
-  isSelected,
-  onSelect,
-  disabled = false,
-  isConsuming = false,
-}: DraggableItemProps) {
-  const { t } = useTranslation();
-  const [isHovered, setIsHovered] = useState(false);
-
-  // U-074: 아이템 힌트 상태 (첫 N번만 표시)
-  const shouldShowHint = useOnboardingStore(selectShouldShowItemHint);
-  const incrementItemHint = useOnboardingStore((state) => state.incrementItemHint);
-
-  // U-074: hover 시작 시 힌트 카운트 증가
-  useEffect(() => {
-    if (isHovered && !disabled) {
-      incrementItemHint();
-    }
-  }, [isHovered, disabled, incrementItemHint]);
-
-  // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
-  const dragData: InventoryDragData = {
-    type: DND_TYPE.INVENTORY_ITEM,
-    item_id: item.id,
-    item,
+// Mocking store
+vi.mock('../stores/inventoryStore', async () => {
+  return {
+    useInventoryStore: vi.fn(),
+    requestItemIcon: vi.fn().mockResolvedValue({ isPlaceholder: false, iconUrl: '/test.png' }),
+    pollIconStatus: vi.fn().mockResolvedValue('completed'),
+    selectItems: (state: InventoryStore) => state.items,
+    selectDraggingItem: (state: InventoryStore) =>
+      state.items.find((i) => i.id === state.draggingItemId) || null,
+    selectConsumingItemIds: (state: InventoryStore) => state.consumingItemIds || [],
+    selectSelectedItemId: (state: InventoryStore) => state.selectedItemId || null,
   };
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: item.id,
-    data: dragData,
-    disabled,
+});
+
+// Mocking onboarding store
+vi.mock('../stores/onboardingStore', () => ({
+  useOnboardingStore: vi.fn(() => false),
+  selectShouldShowItemHint: vi.fn(() => false),
+}));
+
+// Mocking components that might cause issues
+vi.mock('./InteractionHint', () => ({
+  InteractionHint: () => <div data-testid="interaction-hint" />,
+}));
+
+describe('InventoryPanel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  // 변환 스타일 계산
-  // 드래그 중일 때는 원본 아이템이 제자리에 있도록 transform 적용하지 않음
-  // DragOverlay가 별도로 렌더링되므로 원본은 위치 고정
-  const style = useMemo(
-    () => ({
-      transform: isDragging ? undefined : CSS.Translate.toString(transform),
-      opacity: isDragging ? 0.3 : 1,
-    }),
-    [transform, isDragging],
-  );
+  it('renders items with dynamic icons', () => {
+    const mockItems = [
+      {
+        id: 'item1',
+        name: 'Magic Potion',
+        quantity: 1,
+        icon: '/api/image/file/icon123.png',
+        iconStatus: 'completed' as const,
+        description: 'A blue potion',
+      },
+      {
+        id: 'item2',
+        name: 'Sword',
+        quantity: 1,
+        icon: '⚔️',
+        iconStatus: 'completed' as const,
+        description: 'A sharp sword',
+      },
+    ];
 
-  // 클릭 핸들러 (선택)
-  const handleClick = useCallback(() => {
-    if (!disabled) {
-      onSelect(item.id);
-    }
-  }, [disabled, item.id, onSelect]);
-
-  // U-075: 아이콘 렌더링 (이모지 또는 이미지, 로딩 상태 포함)
-  const renderIcon = () => {
-    const isLoading = item.iconStatus === 'generating' || item.iconStatus === 'pending';
-
-    if (item.icon) {
-      // URL 형태면 이미지
-      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
-        return (
-          <div className="inventory-item-icon-wrapper">
-            <img
-              src={item.icon}
-              alt={item.name}
-              className={`inventory-item-icon-img ${isLoading ? 'loading' : ''}`}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            {isLoading && <div className="inventory-item-icon-loading" />}
-          </div>
-        );
-      }
-      // 이모지 + 로딩 상태 (U-075: 이모지여도 생성 중이면 스피너 표시)
-      return (
-        <div className="inventory-item-icon-wrapper">
-          <span className="inventory-item-icon-emoji">{item.icon}</span>
-          {isLoading && <div className="inventory-item-icon-loading" />}
-        </div>
-      );
-    }
-
-    // 기본 아이콘 (📦) + 로딩 상태
-    return (
-      <div className="inventory-item-icon-wrapper">
-        <span className="inventory-item-icon-emoji">📦</span>
-        {isLoading && <div className="inventory-item-icon-loading" />}
-      </div>
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: mockItems,
+          draggingItemId: null,
+          consumingItemIds: [],
+          selectedItemId: null,
+          selectItem: vi.fn(),
+          updateItemIcon: vi.fn(),
+          setItemIconStatus: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
     );
-  };
 
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''} ${isConsuming ? 'item-consumed' : ''}`}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
-      aria-selected={isSelected}
-      // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
-      title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
-      {...attributes}
-      {...listeners}
-    >
-      <div className="inventory-item-icon">{renderIcon()}</div>
-      <div className="inventory-item-info">
-        <span className="inventory-item-name">{item.name}</span>
-        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
-      </div>
+    render(<InventoryPanel />);
 
-      {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
-      {isHovered && !disabled && !isDragging && shouldShowHint && (
-        <InteractionHint
-          text={t('interaction.item_drag')}
-          icon="drag"
-          position="top"
-          className="interaction-hint--inventory"
-        />
-      )}
-    </div>
-  );
-}
+    // Check for image icon
+    const img = screen.getByAltText('Magic Potion');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', '/api/image/file/icon123.png');
 
-// =============================================================================
-// 드래그 오버레이 (드래그 중 표시되는 아이템)
-// =============================================================================
+    // Check for emoji icon
+    expect(screen.getByText('⚔️')).toBeInTheDocument();
+  });
 
-interface ItemOverlayProps {
-  item: InventoryItem;
-}
+  it('shows loading state when icon is generating', () => {
+    const mockItems = [
+      {
+        id: 'item1',
+        name: 'Loading Item',
+        quantity: 1,
+        icon: undefined,
+        iconStatus: 'generating' as const,
+        description: 'Loading...',
+      },
+    ];
 
-/**
- * 드래그 오버레이 아이템.
- * 드래그 중일 때 커서를 따라다니는 아이템 표시입니다.
- */
-function ItemOverlay({ item }: ItemOverlayProps) {
-  // 아이콘 렌더링
-  const renderIcon = () => {
-    if (item.icon) {
-      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
-        return <img src={item.icon} alt={item.name} className="inventory-item-icon-img" />;
-      }
-      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
-    }
-    return <span className="inventory-item-icon-emoji">📦</span>;
-  };
-
-  return (
-    <div className="inventory-item overlay">
-      <div className="inventory-item-icon">{renderIcon()}</div>
-      <div className="inventory-item-info">
-        <span className="inventory-item-name">{item.name}</span>
-        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// 메인 Inventory Panel 컴포넌트
-// =============================================================================
-
-interface InventoryPanelProps {
-  /** 상호작용 비활성화 (스트리밍 중 등) */
-  disabled?: boolean;
-}
-
-/**
- * Inventory Panel 컴포넌트.
- *
- * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
- * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
- *
- * U-075: 아이템 추가 시 아이콘 동적 생성 요청
- *
- * @example
- * ```tsx
- * <InventoryPanel disabled={isStreaming} />
- * ```
- */
-export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
-  const { t, i18n } = useTranslation();
-
-  // Store 상태
-  const items = useInventoryStore(selectItems);
-  const draggingItem = useInventoryStore(selectDraggingItem);
-  const selectedItemId = useInventoryStore(selectSelectedItemId);
-  const consumingItemIds = useInventoryStore(selectConsumingItemIds);
-  const selectItem = useInventoryStore((state) => state.selectItem);
-  const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
-  const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
-
-  // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
-  const iconRequestedRef = useRef<Set<string>>(new Set());
-
-  // U-075: 아이템 추가 시 아이콘 생성 요청
-  useEffect(() => {
-    const requestIconsForNewItems = async () => {
-      for (const item of items) {
-        // 이미 요청한 경우 스킵
-        if (iconRequestedRef.current.has(item.id)) continue;
-
-        // 이미 완료된 아이콘이 있는 경우 스킵
-        if (item.iconStatus === 'completed' || item.iconStatus === 'cached') continue;
-
-        // URL 형태의 실제 아이콘이 있으면 스킵 (이모지는 무시)
-        const hasRealIcon =
-          item.icon &&
-          (item.icon.startsWith('http') || item.icon.startsWith('/')) &&
-          !item.icon.includes('placeholder');
-        if (hasRealIcon) continue;
-
-        // iconStatus가 없거나 pending/generating/failed인 경우 아이콘 생성 시도
-        // (failed인 경우도 재시도 허용)
-
-        // 요청 추적
-        iconRequestedRef.current.add(item.id);
-
-        // 아이콘 생성 요청 (비동기)
-        const description = item.description || item.name;
-        const language = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
-
-        setItemIconStatus(item.id, 'generating');
-
-        try {
-          const result = await requestItemIcon(item.id, description, language);
-
-          if (result.isPlaceholder) {
-            // Placeholder 반환됨 - 폴링 시작
-            setItemIconStatus(item.id, 'generating');
-
-            // 백그라운드에서 폴링 (최대 30초)
-            let attempts = 0;
-            const maxAttempts = 15;
-            const pollInterval = 2000; // 2초
-
-            const poll = async () => {
-              if (attempts >= maxAttempts) {
-                setItemIconStatus(item.id, 'failed');
-                return;
-              }
-              attempts++;
-
-              const status = await pollIconStatus(item.id);
-              if (status === 'completed' || status === 'cached') {
-                // 완료됨 - 아이콘 URL 다시 요청
-                const finalResult = await requestItemIcon(item.id, description, language);
-                if (!finalResult.isPlaceholder && finalResult.iconUrl) {
-                  updateItemIcon(item.id, finalResult.iconUrl, 'completed');
-                }
-              } else if (status === 'failed') {
-                setItemIconStatus(item.id, 'failed');
-              } else {
-                // 계속 생성 중 - 다시 폴링
-                setTimeout(poll, pollInterval);
-              }
-            };
-
-            setTimeout(poll, pollInterval);
-          } else if (result.iconUrl) {
-            // 즉시 완료 (캐시)
-            updateItemIcon(item.id, result.iconUrl, result.status);
-          }
-        } catch (error) {
-          console.warn(`[InventoryPanel] 아이콘 생성 실패: ${item.id}`, error);
-          setItemIconStatus(item.id, 'failed');
-        }
-      }
-    };
-
-    requestIconsForNewItems();
-  }, [items, i18n.language, updateItemIcon, setItemIconStatus]);
-
-  // 아이템 선택 핸들러
-  const handleSelect = useCallback(
-    (itemId: string) => {
-      // 이미 선택된 아이템 클릭 시 선택 해제
-      selectItem(selectedItemId === itemId ? null : itemId);
-    },
-    [selectedItemId, selectItem],
-  );
-
-  // 빈 인벤토리 (U-077: Q3 Option B - 아이템 획득 힌트 포함)
-  if (items.length === 0) {
-    return (
-      <div className="inventory-panel-content">
-        <div className="inventory-empty">
-          <span className="inventory-empty-icon">📦</span>
-          <span className="inventory-empty-text">{t('inventory.empty')}</span>
-          <span className="inventory-empty-hint">{t('inventory.empty_hint')}</span>
-        </div>
-      </div>
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: mockItems,
+          draggingItemId: null,
+          consumingItemIds: [],
+          selectedItemId: null,
+          selectItem: vi.fn(),
+          updateItemIcon: vi.fn(),
+          setItemIconStatus: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
     );
-  }
 
-  return (
-    <div className="inventory-panel-content" data-ui-importance="critical">
-      <div
-        className="inventory-grid"
-        role="listbox"
-        aria-label={t('inventory.grid_label')}
-        aria-multiselectable={false}
-      >
-        {items.map((item) => (
-          <DraggableItem
-            key={item.id}
-            item={item}
-            isSelected={selectedItemId === item.id}
-            onSelect={handleSelect}
-            disabled={disabled || consumingItemIds.includes(item.id)}
-            isConsuming={consumingItemIds.includes(item.id)}
-          />
-        ))}
-      </div>
+    const { container } = render(<InventoryPanel />);
 
-      {/* 드래그 오버레이 */}
-      <DragOverlay dropAnimation={null}>
-        {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
-      </DragOverlay>
-    </div>
-  );
-}
+    // Check for loading class
+    const loadingOverlay = container.querySelector('.inventory-item-icon-loading');
+    expect(loadingOverlay).toBeInTheDocument();
+  });
 
-export default InventoryPanel;
+  it('displays empty state with hint when there are no items', () => {
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: [],
+          draggingItemId: null,
+          consumingItemIds: [],
+          selectedItemId: null,
+          selectItem: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
+    );
+
+    render(<InventoryPanel />);
+
+    expect(screen.getByText('inventory.empty')).toBeInTheDocument();
+    expect(screen.getByText('inventory.empty_hint')).toBeInTheDocument();
+  });
+
+  it('renders items in a row layout (U-088)', () => {
+    const mockItems = [
+      {
+        id: 'item1',
+        name: 'Magic Potion',
+        quantity: 5,
+        icon: '🧪',
+        iconStatus: 'completed' as const,
+      },
+    ];
+
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: mockItems,
+          draggingItemId: null,
+          consumingItemIds: [],
+          selectedItemId: null,
+          selectItem: vi.fn(),
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
+    );
+
+    render(<InventoryPanel />);
+
+    // 1. 아이템 컨테이너 확인
+    const item = screen.getByLabelText('inventory.item_label');
+    expect(item).toHaveClass('inventory-item');
+
+    // 2. 아이콘 영역(드래그 핸들) 확인
+    const iconContainer = item.querySelector('.inventory-item-icon');
+    expect(iconContainer).toBeInTheDocument();
+    expect(iconContainer).toHaveTextContent('🧪');
+
+    // 3. 정보 영역(이름, 수량) 확인
+    const infoContainer = item.querySelector('.inventory-item-info');
+    expect(infoContainer).toBeInTheDocument();
+    expect(infoContainer).toHaveTextContent('Magic Potion');
+    expect(infoContainer).toHaveTextContent('x5');
+
+    // 4. 구조적 순서 확인 (아이콘 -> 정보)
+    const children = Array.from(item.children);
+    expect(children[0]).toHaveClass('inventory-item-icon');
+    expect(children[1]).toHaveClass('inventory-item-info');
+  });
+
+  it('handles item selection (U-088)', async () => {
+    const mockSelectItem = vi.fn();
+    const mockItems = [
+      {
+        id: 'item1',
+        name: 'Magic Potion',
+        quantity: 1,
+        icon: '🧪',
+        iconStatus: 'completed' as const,
+      },
+    ];
+
+    vi.mocked(useInventoryStore).mockImplementation(
+      (selector: (state: InventoryStore) => unknown) => {
+        const state = {
+          items: mockItems,
+          draggingItemId: null,
+          consumingItemIds: [],
+          selectedItemId: 'item1', // item1이 이미 선택된 상태라고 가정
+          selectItem: mockSelectItem,
+        } as unknown as InventoryStore;
+        return selector(state);
+      },
+    );
+
+    render(<InventoryPanel />);
+
+    const item = screen.getByLabelText('inventory.item_label');
+
+    // 1. 선택된 상태 클래스 확인
+    expect(item).toHaveClass('selected');
+    expect(item).toHaveAttribute('aria-selected', 'true');
+
+    // 2. 클릭 시 selectItem 호출 확인 (토글 기능이므로 null로 호출되어야 함)
+    item.click();
+    expect(mockSelectItem).toHaveBeenCalledWith(null);
+  });
+});
 </file>
 
 <file path="frontend/src/components/SceneImage.tsx">
@@ -34656,6 +34358,385 @@ def add_business_badges(
         badges.append(ValidationBadge.CONSISTENCY_FAIL)
     else:
         badges.append(ValidationBadge.CONSISTENCY_OK)
+</file>
+
+<file path="frontend/src/components/InventoryPanel.tsx">
+/**
+ * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp], U-088[Mvp]).
+ *
+ * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 Row(행) 형태로 제공합니다.
+ *
+ * 설계 원칙:
+ *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
+ *   - tech-stack: dnd-kit 기반 draggable 구현
+ *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
+ *
+ * U-088[Mvp]: Row 형태 전환
+ *   - Q1: Row 48px, 아이콘 32px (컴팩트)
+ *   - Q2: 구분선 + 줄무늬 조합
+ *   - Q3: Hover 툴팁만 (U-056 유지)
+ *   - Q4: 아이콘 영역만 드래그 가능, 아이콘만 드래그 이미지
+ *
+ * U-074[Mvp]: 아이템 인터랙션 안내 UX
+ *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
+ *   - hover 시 "드래그하여 사용" 힌트 표시
+ *
+ * U-075[Mvp]: 아이템 아이콘 동적 생성
+ *   - Q1: Option B (placeholder 먼저 표시 후 백그라운드 생성)
+ *   - Q2: Option A (64x64 픽셀)
+ *   - Q3: Option A (픽셀 아트 스타일)
+ *
+ * @module components/InventoryPanel
+ */
+
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { useDraggable, DragOverlay } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from 'react-i18next';
+import {
+  useInventoryStore,
+  type InventoryItem,
+  selectItems,
+  selectDraggingItem,
+  selectConsumingItemIds,
+  requestItemIcon,
+  pollIconStatus,
+} from '../stores/inventoryStore';
+import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
+import { InteractionHint } from './InteractionHint';
+import { DND_TYPE, type InventoryDragData } from '../dnd/types';
+
+// =============================================================================
+// 드래그 가능한 아이템 컴포넌트
+// =============================================================================
+
+interface DraggableItemProps {
+  item: InventoryItem;
+  disabled?: boolean;
+  /** U-096: 소비 중(fade-out 진행 중) 여부 */
+  isConsuming?: boolean;
+  /** U-088: 선택 여부 */
+  isSelected?: boolean;
+  /** U-088: 선택 핸들러 */
+  onSelect?: (itemId: string) => void;
+}
+
+/**
+ * 드래그 가능한 인벤토리 아이템.
+ * dnd-kit의 useDraggable 훅을 사용합니다.
+ * U-056: 잘린 아이템 이름에 대한 툴팁 지원
+ * U-074: 첫 N번만 hover 힌트 표시
+ */
+function DraggableItem({
+  item,
+  disabled = false,
+  isConsuming = false,
+  isSelected = false,
+  onSelect,
+}: DraggableItemProps) {
+  const { t } = useTranslation();
+  const [isHovered, setIsHovered] = useState(false);
+
+  // U-074: 아이템 힌트 상태 (첫 N번만 표시)
+  const shouldShowHint = useOnboardingStore(selectShouldShowItemHint);
+  const incrementItemHint = useOnboardingStore((state) => state.incrementItemHint);
+
+  // U-074: hover 시작 시 힌트 카운트 증가
+  useEffect(() => {
+    if (isHovered && !disabled) {
+      incrementItemHint();
+    }
+  }, [isHovered, disabled, incrementItemHint]);
+
+  // dnd-kit 드래그 설정 (RU-003-Q1: 상수/타입 기반)
+  const dragData: InventoryDragData = {
+    type: DND_TYPE.INVENTORY_ITEM,
+    item_id: item.id,
+    item,
+  };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+    data: dragData,
+    disabled,
+  });
+
+  // 변환 스타일 계산
+  // 드래그 중일 때는 원본 아이템이 제자리에 있도록 transform 적용하지 않음
+  // DragOverlay가 별도로 렌더링되므로 원본은 위치 고정
+  const style = useMemo(
+    () => ({
+      transform: isDragging ? undefined : CSS.Translate.toString(transform),
+      opacity: isDragging ? 0.3 : 1,
+    }),
+    [transform, isDragging],
+  );
+
+  // U-075: 아이콘 렌더링 (이모지 또는 이미지, 로딩 상태 포함)
+  const renderIcon = () => {
+    const isLoading = item.iconStatus === 'generating' || item.iconStatus === 'pending';
+
+    if (item.icon) {
+      // URL 형태면 이미지
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return (
+          <div className="inventory-item-icon-wrapper">
+            <img
+              src={item.icon}
+              alt={item.name}
+              className={`inventory-item-icon-img ${isLoading ? 'loading' : ''}`}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            {isLoading && <div className="inventory-item-icon-loading" />}
+          </div>
+        );
+      }
+      // 이모지 + 로딩 상태 (U-075: 이모지여도 생성 중이면 스피너 표시)
+      return (
+        <div className="inventory-item-icon-wrapper">
+          <span className="inventory-item-icon-emoji">{item.icon}</span>
+          {isLoading && <div className="inventory-item-icon-loading" />}
+        </div>
+      );
+    }
+
+    // 기본 아이콘 (📦) + 로딩 상태
+    return (
+      <div className="inventory-item-icon-wrapper">
+        <span className="inventory-item-icon-emoji">📦</span>
+        {isLoading && <div className="inventory-item-icon-loading" />}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''} ${isConsuming ? 'item-consumed' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => !disabled && onSelect?.(item.id)}
+      aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
+      aria-selected={isSelected}
+      // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
+      title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
+    >
+      {/* U-088 Q4: 아이콘 영역만 드래그 핸들 */}
+      <div className="inventory-item-icon" {...attributes} {...listeners}>
+        {renderIcon()}
+      </div>
+      <div className="inventory-item-info">
+        <span className="inventory-item-name">{item.name}</span>
+        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
+      </div>
+
+      {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
+      {isHovered && !disabled && !isDragging && shouldShowHint && (
+        <InteractionHint
+          text={t('interaction.item_drag')}
+          icon="drag"
+          position="top"
+          className="interaction-hint--inventory"
+        />
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// 드래그 오버레이 (드래그 중 표시되는 아이템)
+// =============================================================================
+
+interface ItemOverlayProps {
+  item: InventoryItem;
+}
+
+/**
+ * 드래그 오버레이 — 아이콘만 표시 (U-088 Q4: Option B).
+ * 드래그 중일 때 커서를 따라다니는 아이콘입니다.
+ */
+function ItemOverlay({ item }: ItemOverlayProps) {
+  const renderIcon = () => {
+    if (item.icon) {
+      if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
+        return <img src={item.icon} alt={item.name} className="inventory-item-icon-img" />;
+      }
+      return <span className="inventory-item-icon-emoji">{item.icon}</span>;
+    }
+    return <span className="inventory-item-icon-emoji">📦</span>;
+  };
+
+  return (
+    <div className="inventory-overlay-icon" title={item.name}>
+      {renderIcon()}
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 Inventory Panel 컴포넌트
+// =============================================================================
+
+interface InventoryPanelProps {
+  /** 상호작용 비활성화 (스트리밍 중 등) */
+  disabled?: boolean;
+}
+
+/**
+ * Inventory Panel 컴포넌트.
+ *
+ * U-088: 인벤토리 아이템을 Row(행) 형태로 표시합니다.
+ * 아이콘 영역만 드래그 핸들(Q4: Option B), DndContext는 App 최상단(Q1: Option A).
+ *
+ * U-075: 아이템 추가 시 아이콘 동적 생성 요청
+ *
+ * @example
+ * ```tsx
+ * <InventoryPanel disabled={isStreaming} />
+ * ```
+ */
+export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
+  const { t, i18n } = useTranslation();
+
+  // Store 상태
+  const items = useInventoryStore(selectItems);
+  const draggingItem = useInventoryStore(selectDraggingItem);
+  const selectedItemId = useInventoryStore((state) => state.selectedItemId);
+  const consumingItemIds = useInventoryStore(selectConsumingItemIds);
+  const selectItem = useInventoryStore((state) => state.selectItem);
+  const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
+  const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
+
+  // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
+  const iconRequestedRef = useRef<Set<string>>(new Set());
+
+  // U-075: 아이템 추가 시 아이콘 생성 요청
+  useEffect(() => {
+    const requestIconsForNewItems = async () => {
+      for (const item of items) {
+        // 이미 요청한 경우 스킵
+        if (iconRequestedRef.current.has(item.id)) continue;
+
+        // 이미 완료된 아이콘이 있는 경우 스킵
+        if (item.iconStatus === 'completed' || item.iconStatus === 'cached') continue;
+
+        // URL 형태의 실제 아이콘이 있으면 스킵 (이모지는 무시)
+        const hasRealIcon =
+          item.icon &&
+          (item.icon.startsWith('http') || item.icon.startsWith('/')) &&
+          !item.icon.includes('placeholder');
+        if (hasRealIcon) continue;
+
+        // iconStatus가 없거나 pending/generating/failed인 경우 아이콘 생성 시도
+        // (failed인 경우도 재시도 허용)
+
+        // 요청 추적
+        iconRequestedRef.current.add(item.id);
+
+        // 아이콘 생성 요청 (비동기)
+        const description = item.description || item.name;
+        const language = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
+
+        setItemIconStatus(item.id, 'generating');
+
+        try {
+          const result = await requestItemIcon(item.id, description, language);
+
+          if (result.isPlaceholder) {
+            // Placeholder 반환됨 - 폴링 시작
+            setItemIconStatus(item.id, 'generating');
+
+            // 백그라운드에서 폴링 (최대 30초)
+            let attempts = 0;
+            const maxAttempts = 15;
+            const pollInterval = 2000; // 2초
+
+            const poll = async () => {
+              if (attempts >= maxAttempts) {
+                setItemIconStatus(item.id, 'failed');
+                return;
+              }
+              attempts++;
+
+              const status = await pollIconStatus(item.id);
+              if (status === 'completed' || status === 'cached') {
+                // 완료됨 - 아이콘 URL 다시 요청
+                const finalResult = await requestItemIcon(item.id, description, language);
+                if (!finalResult.isPlaceholder && finalResult.iconUrl) {
+                  updateItemIcon(item.id, finalResult.iconUrl, 'completed');
+                }
+              } else if (status === 'failed') {
+                setItemIconStatus(item.id, 'failed');
+              } else {
+                // 계속 생성 중 - 다시 폴링
+                setTimeout(poll, pollInterval);
+              }
+            };
+
+            setTimeout(poll, pollInterval);
+          } else if (result.iconUrl) {
+            // 즉시 완료 (캐시)
+            updateItemIcon(item.id, result.iconUrl, result.status);
+          }
+        } catch (error) {
+          console.warn(`[InventoryPanel] 아이콘 생성 실패: ${item.id}`, error);
+          setItemIconStatus(item.id, 'failed');
+        }
+      }
+    };
+
+    requestIconsForNewItems();
+  }, [items, i18n.language, updateItemIcon, setItemIconStatus]);
+
+  // 아이템 선택 핸들러 (토글 기능 포함)
+  const handleSelect = (itemId: string) => {
+    selectItem(itemId === selectedItemId ? null : itemId);
+  };
+
+  // 빈 인벤토리 (U-077: Q3 Option B - 아이템 획득 힌트 포함)
+  if (items.length === 0) {
+    return (
+      <div className="inventory-panel-content">
+        <div className="inventory-empty">
+          <span className="inventory-empty-icon">📦</span>
+          <span className="inventory-empty-text">{t('inventory.empty')}</span>
+          <span className="inventory-empty-hint">{t('inventory.empty_hint')}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inventory-panel-content" data-ui-importance="critical">
+      <div
+        className="inventory-list"
+        role="listbox"
+        aria-label={t('inventory.list_label')}
+        aria-multiselectable={false}
+      >
+        {items.map((item) => (
+          <DraggableItem
+            key={item.id}
+            item={item}
+            disabled={disabled || consumingItemIds.includes(item.id)}
+            isConsuming={consumingItemIds.includes(item.id)}
+            isSelected={selectedItemId === item.id}
+            onSelect={handleSelect}
+          />
+        ))}
+      </div>
+
+      {/* 드래그 오버레이 */}
+      <DragOverlay dropAnimation={null}>
+        {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
+      </DragOverlay>
+    </div>
+  );
+}
+
+export default InventoryPanel;
 </file>
 
 <file path="frontend/src/save/saveGame.ts">
@@ -40879,868 +40960,6 @@ export const selectCompletedQuests = (state: WorldStore) =>
 export const selectIsAnalyzing = (state: WorldStore) => state.isAnalyzing;
 </file>
 
-<file path="frontend/src/locales/en-US/translation.json">
-{
-  "language": {
-    "toggle": "Change Language",
-    "toggle_tooltip": "Click to change language. A new game will start after change.",
-    "ko-KR": "한국어",
-    "en-US": "English"
-  },
-  "error": {
-    "unknown_error": "An unknown error occurred.",
-    "response_processing": "[System] An error occurred while processing response data.",
-    "connection_failed": "[System] Failed to connect to server. Please try again."
-  },
-  "profile": {
-    "select_title": "Select Your Profile",
-    "select_hint": "Each profile has different starting conditions and objectives",
-    "or": "or",
-    "continue_saved": "Continue Saved Game",
-    "change": "Change Profile",
-    "change_tooltip": "Start a new game with a different profile",
-    "narrator": {
-      "name": "Narrator",
-      "description": "Explore diverse stories with abundant resources",
-      "welcome": "Welcome to the Ancient Library. Forgotten tales slumber within these walls...",
-      "items": {
-        "ancient_tome": "Ancient Tome",
-        "quill_pen": "Quill Pen",
-        "memory_fragment": "Memory Fragment"
-      },
-      "quest": {
-        "discover_origin": "Discover the World's Origin",
-        "collect_memories": "Collect 3 Memory Fragments"
-      },
-      "rule": {
-        "time_flows": "Flow of Time",
-        "time_flows_desc": "Time flows normally",
-        "memories_persist": "Memory Persistence",
-        "memories_persist_desc": "Once obtained, memories never fade"
-      },
-      "scene": {
-        "bookshelf": "Mysterious Bookshelf",
-        "bookshelf_hint": "Ancient books are glowing",
-        "portal": "Glowing Portal",
-        "portal_hint": "It seems to lead somewhere"
-      }
-    },
-    "explorer": {
-      "name": "Explorer",
-      "description": "Explore unknown territories and uncover secrets",
-      "welcome": "You wake up in a dark maze. You must find the exit and escape...",
-      "items": {
-        "compass": "Compass",
-        "rope": "Rope",
-        "lantern": "Lantern",
-        "map_fragment": "Map Fragment"
-      },
-      "quest": {
-        "find_exit": "Find the Exit",
-        "explore_areas": "Explore 3 Areas",
-        "gather_supplies": "Gather Supplies"
-      },
-      "rule": {
-        "gravity": "Gravity Law",
-        "gravity_desc": "Objects fall downward",
-        "darkness": "Darkness Law",
-        "darkness_desc": "You cannot see without light"
-      },
-      "scene": {
-        "door": "Ancient Door",
-        "door_hint": "Looks like it needs a key",
-        "mechanism": "Strange Mechanism",
-        "mechanism_hint": "It might be operable",
-        "passage": "Hidden Passage",
-        "passage_hint": "Where does it lead?"
-      }
-    },
-    "tech": {
-      "name": "Tech Expert",
-      "description": "Strategize efficiently with limited resources",
-      "welcome": "System boot complete. Find the optimal path with limited energy...",
-      "items": {
-        "data_core": "Data Core",
-        "circuit_board": "Circuit Board",
-        "energy_cell": "Energy Cell",
-        "scanner": "Scanner Device"
-      },
-      "quest": {
-        "analyze_system": "Complete System Analysis",
-        "optimize_resources": "Optimize Resource Efficiency"
-      },
-      "rule": {
-        "energy_conservation": "Energy Conservation",
-        "energy_conservation_desc": "Energy is neither created nor destroyed",
-        "data_integrity": "Data Integrity",
-        "data_integrity_desc": "Corrupted data cannot be recovered",
-        "system_limits": "System Limits",
-        "system_limits_desc": "There are limits to concurrent processing"
-      },
-      "scene": {
-        "terminal": "Main Terminal",
-        "terminal_hint": "You can access the system",
-        "conduit": "Power Conduit",
-        "conduit_hint": "Energy is flowing through it"
-      }
-    }
-  },
-  "reset": {
-    "button": "Reset",
-    "confirm": "Click again to confirm",
-    "cancel": "Cancel",
-    "tooltip": "Return to the initial state of current profile"
-  },
-  "demo": {
-    "items": {
-      "keycard-alpha": {
-        "name": "Keycard A"
-      },
-      "medkit": {
-        "name": "Medkit"
-      },
-      "flashlight": {
-        "name": "Flashlight"
-      },
-      "data-chip": {
-        "name": "Data Chip"
-      }
-    },
-    "scene": {
-      "terminal": {
-        "label": "Terminal",
-        "hint": "An active terminal"
-      },
-      "door": {
-        "label": "Door",
-        "hint": "It appears to be locked"
-      }
-    },
-    "quest": {
-      "terminal": {
-        "label": "Access the terminal"
-      },
-      "escape": {
-        "label": "Find facility exit"
-      },
-      "collect": {
-        "label": "Collect data chips"
-      }
-    },
-    "rule": {
-      "gravity": {
-        "label": "Gravity Law",
-        "description": "Objects fall downward"
-      },
-      "time": {
-        "label": "Time Flow",
-        "description": "Time flows at normal speed"
-      }
-    }
-  },
-  "quest": {
-    "empty": "[ NO OBJECTIVES ]",
-    "completed": "DONE",
-    "section": {
-      "active": "Active",
-      "completed": "Completed"
-    }
-  },
-  "rule_board": {
-    "empty": "[ NO RULES ]",
-    "active_count": "Active Rules: {{count}}"
-  },
-  "mutation": {
-    "empty": "[ NO MUTATIONS ]",
-    "timeline_title": "Mutation Timeline",
-    "event_count": "{{count}} events",
-    "more_events": "+{{count}} more",
-    "turn_label": "T{{turn}}",
-    "type": {
-      "added": "Added",
-      "modified": "Modified",
-      "removed": "Removed"
-    }
-  },
-  "scene": {
-    "status": {
-      "default": "NO SIGNAL DATA",
-      "loading": "SYNCHRONIZING...",
-      "offline": "CONNECTION LOST",
-      "blocked": "ACCESS RESTRICTED",
-      "low_signal": "LOW SIGNAL",
-      "image_error": "Unable to load scene image.",
-      "image_loading": "Loading scene image...",
-      "image_generating": "Generating new scene...",
-      "initial_sync": "Awaiting global data synchronization...",
-      "syncing": "Synchronizing data...",
-      "alt": "Scene Image"
-    },
-    "processing": {
-      "processing": "Generating scene...",
-      "image_pending": "Forming image...",
-      "rendering": "Applying results..."
-    },
-    "analyzing": {
-      "message": "ANALYZING SCENE...",
-      "hint": "Scanning for objects"
-    },
-    "hotspot": {
-      "layer_label": "Clickable Objects Area",
-      "hint_prefix": "Hint",
-      "click_action": "Click {{label}}",
-      "drop_hint": "Drop here to use",
-      "drop_action": "Use {{item}} on {{target}}",
-      "drop_invalid": "You cannot use {{item}} there.",
-      "demo_hint": "[DEMO TARGET]"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "Queue",
-      "badges": "Badges",
-      "repair": "Auto-repair",
-      "status": {
-        "idle": "IDLE",
-        "processing": "PROCESSING"
-      },
-      "badges_empty": "[ Awaiting Validation ]",
-      "repaired": "(Repaired)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      },
-      "model": {
-        "fast": "Fast (FAST)",
-        "quality": "Quality (QUALITY)",
-        "cheap": "Cheap",
-        "ref": "Reference"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "Enter command...",
-    "processing": "Processing...",
-    "execute": "EXECUTE",
-    "wait": "WAIT",
-    "panel_placeholder": "[ Ready ]",
-    "scale_decrease": "Decrease text size",
-    "scale_increase": "Increase text size",
-    "scale_label": "UI Scale Settings"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal cost",
-    "shard_cost": "Shard cost",
-    "risk_level": "Risk level",
-    "hud_label": "Economy Status",
-    "estimated_cost": "Est. Cost",
-    "confirmed_cost": "Confirmed",
-    "insufficient_funds": "Insufficient funds",
-    "low_balance_warning": "Low balance",
-    "alternatives_title": "Alternatives",
-    "alternative_text_only": "Text-only (no images)",
-    "alternative_low_quality": "Low quality / Fast response",
-    "ledger_title": "Resource Log",
-    "ledger_empty": "[ NO HISTORY ]",
-    "model_label": {
-      "FAST": "Fast",
-      "QUALITY": "Quality",
-      "CHEAP": "Cheap",
-      "REF": "Ref"
-    }
-  },
-  "connection": {
-    "online": "ONLINE",
-    "offline": "OFFLINE"
-  },
-  "inventory": {
-    "empty": "[ NO ITEMS ]",
-    "empty_hint": "Explore scenes to find items",
-    "count": "Inventory ({{count}})",
-    "grid_label": "Inventory Items",
-    "item_label": "{{name}} (Qty: {{quantity}})",
-    "drag_hint": "Drag to use",
-    "item_consumed": "{{name}} consumed"
-  },
-  "interaction": {
-    "hotspot_click": "Click to investigate",
-    "item_drag": "Drag to use",
-    "drop_here": "Drop here",
-    "onboarding_title": "Controls Guide",
-    "onboarding_hotspot": "Click the highlighted areas on the scene to investigate them",
-    "onboarding_item": "Drag inventory items onto scene objects to use them",
-    "onboarding_scanner": "Upload images to the Scanner to convert them into items",
-    "onboarding_skip": "Skip",
-    "onboarding_start": "Start"
-  },
-  "common": {
-    "next": "Next"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ Drag & Drop Area ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ Objectives / Quest List ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ World Rules / Mutation Timeline ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ Pinned Memories / Clues ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ Image Upload Slot ]"
-    }
-  },
-  "scanner": {
-    "dropzone_label": "Drop image or click to upload",
-    "dropzone_text": "Drop Image Here",
-    "dropzone_hint": "Or click to browse files",
-    "upload_label": "Upload image",
-    "preview_alt": "Upload image preview",
-    "uploading": "Uploading...",
-    "analyzing": "Analyzing...",
-    "retry": "Retry",
-    "cancel": "Cancel",
-    "select_items": "Select items to add to inventory",
-    "add_to_inventory": "Add ({{count}})",
-    "detected_objects": "Objects detected: {{count}}",
-    "item_candidates": "Item candidates: {{count}}",
-    "no_candidates": "No item candidates found",
-    "discovery_message": {
-      "one": "You found an item!",
-      "two": "You found two items!",
-      "three": "You found three items! What an amazing discovery!"
-    },
-    "error": {
-      "unsupported_format": "Unsupported image format",
-      "file_too_large": "File too large (max 20MB)",
-      "unknown": "An unknown error occurred"
-    },
-    "item_type": {
-      "key": "Key",
-      "weapon": "Weapon",
-      "tool": "Tool",
-      "clue": "Clue",
-      "material": "Material",
-      "consumable": "Consumable",
-      "document": "Document",
-      "artifact": "Artifact"
-    },
-    "tooltip": {
-      "title": "Scanner",
-      "description": "Upload a real-world photo to transform it into in-game items or clues"
-    },
-    "onboarding": {
-      "message": "Try dragging an image here!",
-      "detail": "Real photos become in-game items",
-      "dismiss": "Got it"
-    },
-    "affordance": {
-      "idle_hint": "Image → Item",
-      "drag_active": "Drop here!"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "Explore",
-        "description": "Look around"
-      },
-      "investigate": {
-        "label": "Investigate",
-        "description": "Examine closely"
-      },
-      "talk": {
-        "label": "Talk",
-        "description": "Start a conversation"
-      }
-    },
-    "card_select": "Card selected: {{cardId}}",
-    "deck_label": "Action Cards",
-    "alternative": "ALT",
-    "insufficient_balance": "Insufficient balance",
-    "server_disabled": "Unavailable",
-    "vision_badge": "VISION",
-    "all_disabled_notice": "No actions available. Check alternatives.",
-    "risk": {
-      "low": "Low",
-      "medium": "Med",
-      "high": "High"
-    },
-    "cost_range": "{{min}}~{{max}}"
-  },
-  "narrative": {
-    "welcome": "Welcome to the Unknown World...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]",
-    "fast_forward_title": "Click to fast-forward",
-    "fast_forward_aria": "Click or press Enter/Space to display text instantly"
-  },
-  "action_log": {
-    "use_item_on_hotspot": "Action: Use {{item}} on {{hotspot}}",
-    "click_hotspot": "Action: Examine {{hotspot}}",
-    "click_action": "Action: {{action}}"
-  }
-}
-</file>
-
-<file path="frontend/src/locales/ko-KR/translation.json">
-{
-  "language": {
-    "toggle": "언어 변경",
-    "toggle_tooltip": "클릭하여 언어를 변경합니다. 변경 후 새 게임이 시작됩니다.",
-    "ko-KR": "한국어",
-    "en-US": "English"
-  },
-  "error": {
-    "unknown_error": "알 수 없는 오류가 발생했습니다.",
-    "response_processing": "[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.",
-    "connection_failed": "[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요."
-  },
-  "profile": {
-    "select_title": "프로필을 선택하세요",
-    "select_hint": "프로필마다 다른 시작 조건과 목표가 있습니다",
-    "or": "또는",
-    "continue_saved": "저장된 게임 계속하기",
-    "change": "프로필 변경",
-    "change_tooltip": "다른 프로필로 새 게임 시작",
-    "narrator": {
-      "name": "서사꾼",
-      "description": "풍부한 자원으로 다양한 이야기를 탐험하세요",
-      "welcome": "고대의 도서관에 오신 것을 환영합니다. 이곳에는 잊혀진 이야기들이 잠들어 있습니다...",
-      "items": {
-        "ancient_tome": "고대 서책",
-        "quill_pen": "깃펜",
-        "memory_fragment": "기억 조각"
-      },
-      "quest": {
-        "discover_origin": "세계의 기원을 발견하기",
-        "collect_memories": "기억 조각 3개 수집하기"
-      },
-      "rule": {
-        "time_flows": "시간의 흐름",
-        "time_flows_desc": "시간은 정상적으로 흐릅니다",
-        "memories_persist": "기억의 지속",
-        "memories_persist_desc": "한번 얻은 기억은 사라지지 않습니다"
-      },
-      "scene": {
-        "bookshelf": "신비한 책장",
-        "bookshelf_hint": "오래된 책들이 빛나고 있다",
-        "portal": "빛나는 포탈",
-        "portal_hint": "어딘가로 통하는 것 같다"
-      }
-    },
-    "explorer": {
-      "name": "탐험가",
-      "description": "미지의 영역을 탐험하고 비밀을 발견하세요",
-      "welcome": "어두운 미로에서 눈을 떴습니다. 출구를 찾아 이곳을 탈출해야 합니다...",
-      "items": {
-        "compass": "나침반",
-        "rope": "밧줄",
-        "lantern": "랜턴",
-        "map_fragment": "지도 조각"
-      },
-      "quest": {
-        "find_exit": "탈출구 찾기",
-        "explore_areas": "3개 구역 탐험하기",
-        "gather_supplies": "보급품 수집"
-      },
-      "rule": {
-        "gravity": "중력 법칙",
-        "gravity_desc": "물체는 아래로 떨어집니다",
-        "darkness": "어둠의 법칙",
-        "darkness_desc": "빛 없이는 앞을 볼 수 없습니다"
-      },
-      "scene": {
-        "door": "고대의 문",
-        "door_hint": "열쇠가 필요해 보인다",
-        "mechanism": "이상한 장치",
-        "mechanism_hint": "작동시킬 수 있을 것 같다",
-        "passage": "숨겨진 통로",
-        "passage_hint": "어디로 이어질까?"
-      }
-    },
-    "tech": {
-      "name": "기술 전문가",
-      "description": "제한된 자원으로 효율적인 전략을 세우세요",
-      "welcome": "시스템 부팅 완료. 제한된 에너지로 최적의 경로를 찾아야 합니다...",
-      "items": {
-        "data_core": "데이터 코어",
-        "circuit_board": "회로 기판",
-        "energy_cell": "에너지 셀",
-        "scanner": "스캐너 장치"
-      },
-      "quest": {
-        "analyze_system": "시스템 분석 완료하기",
-        "optimize_resources": "자원 효율 최적화하기"
-      },
-      "rule": {
-        "energy_conservation": "에너지 보존",
-        "energy_conservation_desc": "에너지는 생성되거나 소멸되지 않습니다",
-        "data_integrity": "데이터 무결성",
-        "data_integrity_desc": "손상된 데이터는 복구할 수 없습니다",
-        "system_limits": "시스템 한계",
-        "system_limits_desc": "동시 처리량에 제한이 있습니다"
-      },
-      "scene": {
-        "terminal": "메인 터미널",
-        "terminal_hint": "시스템에 접속할 수 있다",
-        "conduit": "전력 도관",
-        "conduit_hint": "에너지가 흐르고 있다"
-      }
-    }
-  },
-  "reset": {
-    "button": "리셋",
-    "confirm": "다시 클릭하여 확인",
-    "cancel": "취소",
-    "tooltip": "현재 프로필의 초기 상태로 되돌립니다"
-  },
-  "demo": {
-    "items": {
-      "keycard-alpha": {
-        "name": "키카드 A"
-      },
-      "medkit": {
-        "name": "응급 키트"
-      },
-      "flashlight": {
-        "name": "손전등"
-      },
-      "data-chip": {
-        "name": "데이터칩"
-      }
-    },
-    "scene": {
-      "terminal": {
-        "label": "터미널",
-        "hint": "활성화된 터미널이다"
-      },
-      "door": {
-        "label": "문",
-        "hint": "잠겨있는 것 같다"
-      }
-    },
-    "quest": {
-      "terminal": {
-        "label": "터미널에 접속하기"
-      },
-      "escape": {
-        "label": "시설 탈출구 찾기"
-      },
-      "collect": {
-        "label": "데이터칩 수집"
-      }
-    },
-    "rule": {
-      "gravity": {
-        "label": "중력 법칙",
-        "description": "물체는 아래로 떨어진다"
-      },
-      "time": {
-        "label": "시간 흐름",
-        "description": "시간은 정상 속도로 흐른다"
-      }
-    }
-  },
-  "quest": {
-    "empty": "[ 목표 없음 ]",
-    "completed": "완료",
-    "section": {
-      "active": "진행 중",
-      "completed": "완료됨"
-    }
-  },
-  "rule_board": {
-    "empty": "[ 규칙 없음 ]",
-    "active_count": "활성 규칙: {{count}}개"
-  },
-  "mutation": {
-    "empty": "[ 변형 이력 없음 ]",
-    "timeline_title": "변형 타임라인",
-    "event_count": "{{count}}개 이벤트",
-    "more_events": "+{{count}}개 더 보기",
-    "turn_label": "T{{turn}}",
-    "type": {
-      "added": "추가됨",
-      "modified": "수정됨",
-      "removed": "제거됨"
-    }
-  },
-  "scene": {
-    "status": {
-      "default": "데이터 대기 중",
-      "loading": "동기화 중...",
-      "offline": "연결 끊김",
-      "blocked": "접근 제한됨",
-      "low_signal": "신호 약함",
-      "image_error": "장면 이미지를 불러올 수 없습니다.",
-      "image_loading": "장면 이미지 로딩 중...",
-      "image_generating": "새 장면 생성 중...",
-      "initial_sync": "전역 데이터 동기화 대기 중...",
-      "syncing": "데이터 동기화 중...",
-      "alt": "장면 이미지"
-    },
-    "processing": {
-      "processing": "장면 생성 중...",
-      "image_pending": "이미지 형성 중...",
-      "rendering": "결과 적용 중..."
-    },
-    "analyzing": {
-      "message": "장면 분석 중...",
-      "hint": "오브젝트를 탐색하고 있습니다"
-    },
-    "hotspot": {
-      "layer_label": "클릭 가능한 오브젝트 영역",
-      "hint_prefix": "힌트",
-      "click_action": "{{label}} 클릭",
-      "drop_hint": "여기에 드롭하여 사용",
-      "drop_action": "{{item}}을(를) {{target}}에 사용",
-      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다.",
-      "demo_hint": "[데모 대상]"
-    }
-  },
-  "agent": {
-    "console": {
-      "queue": "대기열",
-      "badges": "검증 배지",
-      "repair": "자동 복구",
-      "status": {
-        "idle": "대기 중",
-        "processing": "처리 중"
-      },
-      "badges_empty": "[ 검증 대기 중 ]",
-      "repaired": "(복구됨)",
-      "phase": {
-        "parse": "Parse",
-        "validate": "Validate",
-        "plan": "Plan",
-        "resolve": "Resolve",
-        "render": "Render",
-        "verify": "Verify",
-        "commit": "Commit"
-      },
-      "badge": {
-        "schema": "Schema",
-        "economy": "Economy",
-        "safety": "Safety",
-        "consistency": "Consistency",
-        "ok": "OK",
-        "fail": "FAIL"
-      },
-      "model": {
-        "fast": "빠름 (FAST)",
-        "quality": "고품질 (QUALITY)",
-        "cheap": "저비용",
-        "ref": "참조"
-      }
-    }
-  },
-  "ui": {
-    "logo": "UNKNOWN WORLD",
-    "command_placeholder": "명령을 입력하세요...",
-    "processing": "처리 중...",
-    "execute": "실행",
-    "wait": "대기",
-    "panel_placeholder": "[ 준비 중 ]",
-    "scale_decrease": "글자 크기 줄이기",
-    "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
-  },
-  "economy": {
-    "signal": "Signal",
-    "shard": "Shard",
-    "signal_cost": "Signal 소모",
-    "shard_cost": "Shard 소모",
-    "risk_level": "위험도",
-    "hud_label": "재화 현황",
-    "estimated_cost": "예상 비용",
-    "confirmed_cost": "확정 비용",
-    "insufficient_funds": "잔액 부족",
-    "low_balance_warning": "잔액이 부족합니다",
-    "alternatives_title": "대안 행동",
-    "alternative_text_only": "텍스트만 생성 (이미지 없음)",
-    "alternative_low_quality": "저품질/빠른 응답 선택",
-    "ledger_title": "거래 장부",
-    "ledger_empty": "[ 이력 없음 ]",
-    "model_label": {
-      "FAST": "빠름",
-      "QUALITY": "고품질",
-      "CHEAP": "저비용",
-      "REF": "참조"
-    }
-  },
-  "connection": {
-    "online": "온라인",
-    "offline": "오프라인"
-  },
-  "inventory": {
-    "empty": "[ 아이템 없음 ]",
-    "empty_hint": "장면을 탐색하여 아이템을 찾으세요",
-    "count": "Inventory ({{count}})",
-    "grid_label": "인벤토리 아이템 목록",
-    "item_label": "{{name}} (수량: {{quantity}})",
-    "drag_hint": "드래그하여 사용",
-    "item_consumed": "{{name}} 사용됨"
-  },
-  "interaction": {
-    "hotspot_click": "클릭하여 조사",
-    "item_drag": "드래그하여 사용",
-    "drop_here": "여기에 놓기",
-    "onboarding_title": "조작 안내",
-    "onboarding_hotspot": "화면의 반짝이는 영역을 클릭하면 조사할 수 있습니다",
-    "onboarding_item": "인벤토리 아이템을 화면의 오브젝트로 드래그하면 사용할 수 있습니다",
-    "onboarding_scanner": "Scanner에 이미지를 업로드하면 아이템으로 변환됩니다",
-    "onboarding_skip": "건너뛰기",
-    "onboarding_start": "시작하기"
-  },
-  "common": {
-    "next": "다음"
-  },
-  "panel": {
-    "inventory": {
-      "title": "Inventory",
-      "placeholder": "[ 드래그 앤 드롭 영역 ]"
-    },
-    "quest": {
-      "title": "Quest",
-      "placeholder": "[ 목표/퀘스트 목록 ]"
-    },
-    "rule_board": {
-      "title": "Rule Board",
-      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
-    },
-    "agent_console": {
-      "title": "Agent Console"
-    },
-    "memory_pin": {
-      "title": "Memory Pin",
-      "placeholder": "[ 고정된 기억/단서 ]"
-    },
-    "scanner": {
-      "title": "Scanner",
-      "placeholder": "[ 이미지 업로드 슬롯 ]"
-    }
-  },
-  "scanner": {
-    "dropzone_label": "이미지를 드롭하거나 클릭하여 업로드",
-    "dropzone_text": "이미지를 드롭하세요",
-    "dropzone_hint": "또는 클릭하여 파일 선택",
-    "upload_label": "이미지 업로드",
-    "preview_alt": "업로드 이미지 미리보기",
-    "uploading": "업로드 중...",
-    "analyzing": "분석 중...",
-    "retry": "다시 시도",
-    "cancel": "취소",
-    "select_items": "인벤토리에 추가할 아이템을 선택하세요",
-    "add_to_inventory": "추가 ({{count}}개)",
-    "detected_objects": "감지된 오브젝트: {{count}}개",
-    "item_candidates": "아이템 후보: {{count}}개",
-    "no_candidates": "아이템 후보를 찾지 못했습니다",
-    "discovery_message": {
-      "one": "아이템을 발견했습니다!",
-      "two": "두 가지를 발견했습니다!",
-      "three": "세 가지를 발견했습니다! 대단한 발견이네요!"
-    },
-    "error": {
-      "unsupported_format": "지원하지 않는 이미지 형식입니다",
-      "file_too_large": "파일이 너무 큽니다 (최대 20MB)",
-      "unknown": "알 수 없는 오류가 발생했습니다"
-    },
-    "item_type": {
-      "key": "열쇠",
-      "weapon": "무기",
-      "tool": "도구",
-      "clue": "단서",
-      "material": "재료",
-      "consumable": "소모품",
-      "document": "문서",
-      "artifact": "유물"
-    },
-    "tooltip": {
-      "title": "스캐너",
-      "description": "현실의 사진을 업로드하면 게임 속 아이템이나 단서로 변환됩니다"
-    },
-    "onboarding": {
-      "message": "이미지를 드래그해 보세요!",
-      "detail": "현실의 사진이 게임 속 아이템으로 변환됩니다",
-      "dismiss": "알겠습니다"
-    },
-    "affordance": {
-      "idle_hint": "이미지 → 아이템",
-      "drag_active": "여기에 놓으세요!"
-    }
-  },
-  "action": {
-    "default": {
-      "explore": {
-        "label": "탐색하기",
-        "description": "주변을 살펴본다"
-      },
-      "investigate": {
-        "label": "조사하기",
-        "description": "자세히 살펴본다"
-      },
-      "talk": {
-        "label": "대화하기",
-        "description": "말을 걸어본다"
-      }
-    },
-    "card_select": "카드 선택: {{cardId}}",
-    "deck_label": "행동 선택 카드",
-    "alternative": "대안",
-    "insufficient_balance": "잔액 부족",
-    "server_disabled": "사용 불가",
-    "vision_badge": "정밀분석",
-    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
-    "risk": {
-      "low": "낮음",
-      "medium": "보통",
-      "high": "높음"
-    },
-    "cost_range": "{{min}}~{{max}}"
-  },
-  "narrative": {
-    "welcome": "미지의 세계에 오신 것을 환영합니다...",
-    "turn_label": "[TURN {{turn}}]",
-    "streaming_label": "[STREAMING]",
-    "fast_forward_title": "클릭하여 빠르게 넘기기",
-    "fast_forward_aria": "클릭하거나 Enter/Space를 눌러 텍스트를 즉시 표시합니다"
-  },
-  "action_log": {
-    "use_item_on_hotspot": "행동 실행: {{item}}을(를) {{hotspot}}에 사용한다",
-    "click_hotspot": "행동 실행: {{hotspot}}을(를) 조사한다",
-    "click_action": "행동 실행: {{action}}"
-  }
-}
-</file>
-
 <file path="backend/src/unknown_world/services/image_generation.py">
 """Unknown World - 이미지 생성 서비스.
 
@@ -42524,6 +41743,870 @@ def validate_image_request(request: ImageGenerationRequest) -> str | None:
         return f"지원하지 않는 이미지 크기: {request.image_size}"
 
     return None
+</file>
+
+<file path="frontend/src/locales/en-US/translation.json">
+{
+  "language": {
+    "toggle": "Change Language",
+    "toggle_tooltip": "Click to change language. A new game will start after change.",
+    "ko-KR": "한국어",
+    "en-US": "English"
+  },
+  "error": {
+    "unknown_error": "An unknown error occurred.",
+    "response_processing": "[System] An error occurred while processing response data.",
+    "connection_failed": "[System] Failed to connect to server. Please try again."
+  },
+  "profile": {
+    "select_title": "Select Your Profile",
+    "select_hint": "Each profile has different starting conditions and objectives",
+    "or": "or",
+    "continue_saved": "Continue Saved Game",
+    "change": "Change Profile",
+    "change_tooltip": "Start a new game with a different profile",
+    "narrator": {
+      "name": "Narrator",
+      "description": "Explore diverse stories with abundant resources",
+      "welcome": "Welcome to the Ancient Library. Forgotten tales slumber within these walls...",
+      "items": {
+        "ancient_tome": "Ancient Tome",
+        "quill_pen": "Quill Pen",
+        "memory_fragment": "Memory Fragment"
+      },
+      "quest": {
+        "discover_origin": "Discover the World's Origin",
+        "collect_memories": "Collect 3 Memory Fragments"
+      },
+      "rule": {
+        "time_flows": "Flow of Time",
+        "time_flows_desc": "Time flows normally",
+        "memories_persist": "Memory Persistence",
+        "memories_persist_desc": "Once obtained, memories never fade"
+      },
+      "scene": {
+        "bookshelf": "Mysterious Bookshelf",
+        "bookshelf_hint": "Ancient books are glowing",
+        "portal": "Glowing Portal",
+        "portal_hint": "It seems to lead somewhere"
+      }
+    },
+    "explorer": {
+      "name": "Explorer",
+      "description": "Explore unknown territories and uncover secrets",
+      "welcome": "You wake up in a dark maze. You must find the exit and escape...",
+      "items": {
+        "compass": "Compass",
+        "rope": "Rope",
+        "lantern": "Lantern",
+        "map_fragment": "Map Fragment"
+      },
+      "quest": {
+        "find_exit": "Find the Exit",
+        "explore_areas": "Explore 3 Areas",
+        "gather_supplies": "Gather Supplies"
+      },
+      "rule": {
+        "gravity": "Gravity Law",
+        "gravity_desc": "Objects fall downward",
+        "darkness": "Darkness Law",
+        "darkness_desc": "You cannot see without light"
+      },
+      "scene": {
+        "door": "Ancient Door",
+        "door_hint": "Looks like it needs a key",
+        "mechanism": "Strange Mechanism",
+        "mechanism_hint": "It might be operable",
+        "passage": "Hidden Passage",
+        "passage_hint": "Where does it lead?"
+      }
+    },
+    "tech": {
+      "name": "Tech Expert",
+      "description": "Strategize efficiently with limited resources",
+      "welcome": "System boot complete. Find the optimal path with limited energy...",
+      "items": {
+        "data_core": "Data Core",
+        "circuit_board": "Circuit Board",
+        "energy_cell": "Energy Cell",
+        "scanner": "Scanner Device"
+      },
+      "quest": {
+        "analyze_system": "Complete System Analysis",
+        "optimize_resources": "Optimize Resource Efficiency"
+      },
+      "rule": {
+        "energy_conservation": "Energy Conservation",
+        "energy_conservation_desc": "Energy is neither created nor destroyed",
+        "data_integrity": "Data Integrity",
+        "data_integrity_desc": "Corrupted data cannot be recovered",
+        "system_limits": "System Limits",
+        "system_limits_desc": "There are limits to concurrent processing"
+      },
+      "scene": {
+        "terminal": "Main Terminal",
+        "terminal_hint": "You can access the system",
+        "conduit": "Power Conduit",
+        "conduit_hint": "Energy is flowing through it"
+      }
+    }
+  },
+  "reset": {
+    "button": "Reset",
+    "confirm": "Click again to confirm",
+    "cancel": "Cancel",
+    "tooltip": "Return to the initial state of current profile"
+  },
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "Keycard A"
+      },
+      "medkit": {
+        "name": "Medkit"
+      },
+      "flashlight": {
+        "name": "Flashlight"
+      },
+      "data-chip": {
+        "name": "Data Chip"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "Terminal",
+        "hint": "An active terminal"
+      },
+      "door": {
+        "label": "Door",
+        "hint": "It appears to be locked"
+      }
+    },
+    "quest": {
+      "terminal": {
+        "label": "Access the terminal"
+      },
+      "escape": {
+        "label": "Find facility exit"
+      },
+      "collect": {
+        "label": "Collect data chips"
+      }
+    },
+    "rule": {
+      "gravity": {
+        "label": "Gravity Law",
+        "description": "Objects fall downward"
+      },
+      "time": {
+        "label": "Time Flow",
+        "description": "Time flows at normal speed"
+      }
+    }
+  },
+  "quest": {
+    "empty": "[ NO OBJECTIVES ]",
+    "completed": "DONE",
+    "section": {
+      "active": "Active",
+      "completed": "Completed"
+    }
+  },
+  "rule_board": {
+    "empty": "[ NO RULES ]",
+    "active_count": "Active Rules: {{count}}"
+  },
+  "mutation": {
+    "empty": "[ NO MUTATIONS ]",
+    "timeline_title": "Mutation Timeline",
+    "event_count": "{{count}} events",
+    "more_events": "+{{count}} more",
+    "turn_label": "T{{turn}}",
+    "type": {
+      "added": "Added",
+      "modified": "Modified",
+      "removed": "Removed"
+    }
+  },
+  "scene": {
+    "status": {
+      "default": "NO SIGNAL DATA",
+      "loading": "SYNCHRONIZING...",
+      "offline": "CONNECTION LOST",
+      "blocked": "ACCESS RESTRICTED",
+      "low_signal": "LOW SIGNAL",
+      "image_error": "Unable to load scene image.",
+      "image_loading": "Loading scene image...",
+      "image_generating": "Generating new scene...",
+      "initial_sync": "Awaiting global data synchronization...",
+      "syncing": "Synchronizing data...",
+      "alt": "Scene Image"
+    },
+    "processing": {
+      "processing": "Generating scene...",
+      "image_pending": "Forming image...",
+      "rendering": "Applying results..."
+    },
+    "analyzing": {
+      "message": "ANALYZING SCENE...",
+      "hint": "Scanning for objects"
+    },
+    "hotspot": {
+      "layer_label": "Clickable Objects Area",
+      "hint_prefix": "Hint",
+      "click_action": "Click {{label}}",
+      "drop_hint": "Drop here to use",
+      "drop_action": "Use {{item}} on {{target}}",
+      "drop_invalid": "You cannot use {{item}} there.",
+      "demo_hint": "[DEMO TARGET]"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "Queue",
+      "badges": "Badges",
+      "repair": "Auto-repair",
+      "status": {
+        "idle": "IDLE",
+        "processing": "PROCESSING"
+      },
+      "badges_empty": "[ Awaiting Validation ]",
+      "repaired": "(Repaired)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      },
+      "model": {
+        "fast": "Fast (FAST)",
+        "quality": "Quality (QUALITY)",
+        "cheap": "Cheap",
+        "ref": "Reference"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "Enter command...",
+    "processing": "Processing...",
+    "execute": "EXECUTE",
+    "wait": "WAIT",
+    "panel_placeholder": "[ Ready ]",
+    "scale_decrease": "Decrease text size",
+    "scale_increase": "Increase text size",
+    "scale_label": "UI Scale Settings"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal cost",
+    "shard_cost": "Shard cost",
+    "risk_level": "Risk level",
+    "hud_label": "Economy Status",
+    "estimated_cost": "Est. Cost",
+    "confirmed_cost": "Confirmed",
+    "insufficient_funds": "Insufficient funds",
+    "low_balance_warning": "Low balance",
+    "alternatives_title": "Alternatives",
+    "alternative_text_only": "Text-only (no images)",
+    "alternative_low_quality": "Low quality / Fast response",
+    "ledger_title": "Resource Log",
+    "ledger_empty": "[ NO HISTORY ]",
+    "model_label": {
+      "FAST": "Fast",
+      "QUALITY": "Quality",
+      "CHEAP": "Cheap",
+      "REF": "Ref"
+    }
+  },
+  "connection": {
+    "online": "ONLINE",
+    "offline": "OFFLINE"
+  },
+  "inventory": {
+    "empty": "[ NO ITEMS ]",
+    "empty_hint": "Explore scenes to find items",
+    "count": "Inventory ({{count}})",
+    "grid_label": "Inventory Items",
+    "list_label": "Inventory Items",
+    "item_label": "{{name}} (Qty: {{quantity}})",
+    "drag_hint": "Drag to use",
+    "item_consumed": "{{name}} consumed"
+  },
+  "interaction": {
+    "hotspot_click": "Click to investigate",
+    "item_drag": "Drag to use",
+    "drop_here": "Drop here",
+    "onboarding_title": "Controls Guide",
+    "onboarding_hotspot": "Click the highlighted areas on the scene to investigate them",
+    "onboarding_item": "Drag inventory items onto scene objects to use them",
+    "onboarding_scanner": "Upload images to the Scanner to convert them into items",
+    "onboarding_skip": "Skip",
+    "onboarding_start": "Start"
+  },
+  "common": {
+    "next": "Next"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ Drag & Drop Area ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ Objectives / Quest List ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ World Rules / Mutation Timeline ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ Pinned Memories / Clues ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ Image Upload Slot ]"
+    }
+  },
+  "scanner": {
+    "dropzone_label": "Drop image or click to upload",
+    "dropzone_text": "Drop Image Here",
+    "dropzone_hint": "Or click to browse files",
+    "upload_label": "Upload image",
+    "preview_alt": "Upload image preview",
+    "uploading": "Uploading...",
+    "analyzing": "Analyzing...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "select_items": "Select items to add to inventory",
+    "add_to_inventory": "Add ({{count}})",
+    "detected_objects": "Objects detected: {{count}}",
+    "item_candidates": "Item candidates: {{count}}",
+    "no_candidates": "No item candidates found",
+    "discovery_message": {
+      "one": "You found an item!",
+      "two": "You found two items!",
+      "three": "You found three items! What an amazing discovery!"
+    },
+    "error": {
+      "unsupported_format": "Unsupported image format",
+      "file_too_large": "File too large (max 20MB)",
+      "unknown": "An unknown error occurred"
+    },
+    "item_type": {
+      "key": "Key",
+      "weapon": "Weapon",
+      "tool": "Tool",
+      "clue": "Clue",
+      "material": "Material",
+      "consumable": "Consumable",
+      "document": "Document",
+      "artifact": "Artifact"
+    },
+    "tooltip": {
+      "title": "Scanner",
+      "description": "Upload a real-world photo to transform it into in-game items or clues"
+    },
+    "onboarding": {
+      "message": "Try dragging an image here!",
+      "detail": "Real photos become in-game items",
+      "dismiss": "Got it"
+    },
+    "affordance": {
+      "idle_hint": "Image → Item",
+      "drag_active": "Drop here!"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "Explore",
+        "description": "Look around"
+      },
+      "investigate": {
+        "label": "Investigate",
+        "description": "Examine closely"
+      },
+      "talk": {
+        "label": "Talk",
+        "description": "Start a conversation"
+      }
+    },
+    "card_select": "Card selected: {{cardId}}",
+    "deck_label": "Action Cards",
+    "alternative": "ALT",
+    "insufficient_balance": "Insufficient balance",
+    "server_disabled": "Unavailable",
+    "vision_badge": "VISION",
+    "all_disabled_notice": "No actions available. Check alternatives.",
+    "risk": {
+      "low": "Low",
+      "medium": "Med",
+      "high": "High"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "Welcome to the Unknown World...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]",
+    "fast_forward_title": "Click to fast-forward",
+    "fast_forward_aria": "Click or press Enter/Space to display text instantly"
+  },
+  "action_log": {
+    "use_item_on_hotspot": "Action: Use {{item}} on {{hotspot}}",
+    "click_hotspot": "Action: Examine {{hotspot}}",
+    "click_action": "Action: {{action}}"
+  }
+}
+</file>
+
+<file path="frontend/src/locales/ko-KR/translation.json">
+{
+  "language": {
+    "toggle": "언어 변경",
+    "toggle_tooltip": "클릭하여 언어를 변경합니다. 변경 후 새 게임이 시작됩니다.",
+    "ko-KR": "한국어",
+    "en-US": "English"
+  },
+  "error": {
+    "unknown_error": "알 수 없는 오류가 발생했습니다.",
+    "response_processing": "[시스템] 응답 데이터를 처리하는 중 문제가 발생했습니다.",
+    "connection_failed": "[시스템] 서버 연결에 실패했습니다. 다시 시도해 주세요."
+  },
+  "profile": {
+    "select_title": "프로필을 선택하세요",
+    "select_hint": "프로필마다 다른 시작 조건과 목표가 있습니다",
+    "or": "또는",
+    "continue_saved": "저장된 게임 계속하기",
+    "change": "프로필 변경",
+    "change_tooltip": "다른 프로필로 새 게임 시작",
+    "narrator": {
+      "name": "서사꾼",
+      "description": "풍부한 자원으로 다양한 이야기를 탐험하세요",
+      "welcome": "고대의 도서관에 오신 것을 환영합니다. 이곳에는 잊혀진 이야기들이 잠들어 있습니다...",
+      "items": {
+        "ancient_tome": "고대 서책",
+        "quill_pen": "깃펜",
+        "memory_fragment": "기억 조각"
+      },
+      "quest": {
+        "discover_origin": "세계의 기원을 발견하기",
+        "collect_memories": "기억 조각 3개 수집하기"
+      },
+      "rule": {
+        "time_flows": "시간의 흐름",
+        "time_flows_desc": "시간은 정상적으로 흐릅니다",
+        "memories_persist": "기억의 지속",
+        "memories_persist_desc": "한번 얻은 기억은 사라지지 않습니다"
+      },
+      "scene": {
+        "bookshelf": "신비한 책장",
+        "bookshelf_hint": "오래된 책들이 빛나고 있다",
+        "portal": "빛나는 포탈",
+        "portal_hint": "어딘가로 통하는 것 같다"
+      }
+    },
+    "explorer": {
+      "name": "탐험가",
+      "description": "미지의 영역을 탐험하고 비밀을 발견하세요",
+      "welcome": "어두운 미로에서 눈을 떴습니다. 출구를 찾아 이곳을 탈출해야 합니다...",
+      "items": {
+        "compass": "나침반",
+        "rope": "밧줄",
+        "lantern": "랜턴",
+        "map_fragment": "지도 조각"
+      },
+      "quest": {
+        "find_exit": "탈출구 찾기",
+        "explore_areas": "3개 구역 탐험하기",
+        "gather_supplies": "보급품 수집"
+      },
+      "rule": {
+        "gravity": "중력 법칙",
+        "gravity_desc": "물체는 아래로 떨어집니다",
+        "darkness": "어둠의 법칙",
+        "darkness_desc": "빛 없이는 앞을 볼 수 없습니다"
+      },
+      "scene": {
+        "door": "고대의 문",
+        "door_hint": "열쇠가 필요해 보인다",
+        "mechanism": "이상한 장치",
+        "mechanism_hint": "작동시킬 수 있을 것 같다",
+        "passage": "숨겨진 통로",
+        "passage_hint": "어디로 이어질까?"
+      }
+    },
+    "tech": {
+      "name": "기술 전문가",
+      "description": "제한된 자원으로 효율적인 전략을 세우세요",
+      "welcome": "시스템 부팅 완료. 제한된 에너지로 최적의 경로를 찾아야 합니다...",
+      "items": {
+        "data_core": "데이터 코어",
+        "circuit_board": "회로 기판",
+        "energy_cell": "에너지 셀",
+        "scanner": "스캐너 장치"
+      },
+      "quest": {
+        "analyze_system": "시스템 분석 완료하기",
+        "optimize_resources": "자원 효율 최적화하기"
+      },
+      "rule": {
+        "energy_conservation": "에너지 보존",
+        "energy_conservation_desc": "에너지는 생성되거나 소멸되지 않습니다",
+        "data_integrity": "데이터 무결성",
+        "data_integrity_desc": "손상된 데이터는 복구할 수 없습니다",
+        "system_limits": "시스템 한계",
+        "system_limits_desc": "동시 처리량에 제한이 있습니다"
+      },
+      "scene": {
+        "terminal": "메인 터미널",
+        "terminal_hint": "시스템에 접속할 수 있다",
+        "conduit": "전력 도관",
+        "conduit_hint": "에너지가 흐르고 있다"
+      }
+    }
+  },
+  "reset": {
+    "button": "리셋",
+    "confirm": "다시 클릭하여 확인",
+    "cancel": "취소",
+    "tooltip": "현재 프로필의 초기 상태로 되돌립니다"
+  },
+  "demo": {
+    "items": {
+      "keycard-alpha": {
+        "name": "키카드 A"
+      },
+      "medkit": {
+        "name": "응급 키트"
+      },
+      "flashlight": {
+        "name": "손전등"
+      },
+      "data-chip": {
+        "name": "데이터칩"
+      }
+    },
+    "scene": {
+      "terminal": {
+        "label": "터미널",
+        "hint": "활성화된 터미널이다"
+      },
+      "door": {
+        "label": "문",
+        "hint": "잠겨있는 것 같다"
+      }
+    },
+    "quest": {
+      "terminal": {
+        "label": "터미널에 접속하기"
+      },
+      "escape": {
+        "label": "시설 탈출구 찾기"
+      },
+      "collect": {
+        "label": "데이터칩 수집"
+      }
+    },
+    "rule": {
+      "gravity": {
+        "label": "중력 법칙",
+        "description": "물체는 아래로 떨어진다"
+      },
+      "time": {
+        "label": "시간 흐름",
+        "description": "시간은 정상 속도로 흐른다"
+      }
+    }
+  },
+  "quest": {
+    "empty": "[ 목표 없음 ]",
+    "completed": "완료",
+    "section": {
+      "active": "진행 중",
+      "completed": "완료됨"
+    }
+  },
+  "rule_board": {
+    "empty": "[ 규칙 없음 ]",
+    "active_count": "활성 규칙: {{count}}개"
+  },
+  "mutation": {
+    "empty": "[ 변형 이력 없음 ]",
+    "timeline_title": "변형 타임라인",
+    "event_count": "{{count}}개 이벤트",
+    "more_events": "+{{count}}개 더 보기",
+    "turn_label": "T{{turn}}",
+    "type": {
+      "added": "추가됨",
+      "modified": "수정됨",
+      "removed": "제거됨"
+    }
+  },
+  "scene": {
+    "status": {
+      "default": "데이터 대기 중",
+      "loading": "동기화 중...",
+      "offline": "연결 끊김",
+      "blocked": "접근 제한됨",
+      "low_signal": "신호 약함",
+      "image_error": "장면 이미지를 불러올 수 없습니다.",
+      "image_loading": "장면 이미지 로딩 중...",
+      "image_generating": "새 장면 생성 중...",
+      "initial_sync": "전역 데이터 동기화 대기 중...",
+      "syncing": "데이터 동기화 중...",
+      "alt": "장면 이미지"
+    },
+    "processing": {
+      "processing": "장면 생성 중...",
+      "image_pending": "이미지 형성 중...",
+      "rendering": "결과 적용 중..."
+    },
+    "analyzing": {
+      "message": "장면 분석 중...",
+      "hint": "오브젝트를 탐색하고 있습니다"
+    },
+    "hotspot": {
+      "layer_label": "클릭 가능한 오브젝트 영역",
+      "hint_prefix": "힌트",
+      "click_action": "{{label}} 클릭",
+      "drop_hint": "여기에 드롭하여 사용",
+      "drop_action": "{{item}}을(를) {{target}}에 사용",
+      "drop_invalid": "그곳에는 {{item}}을(를) 사용할 수 없습니다.",
+      "demo_hint": "[데모 대상]"
+    }
+  },
+  "agent": {
+    "console": {
+      "queue": "대기열",
+      "badges": "검증 배지",
+      "repair": "자동 복구",
+      "status": {
+        "idle": "대기 중",
+        "processing": "처리 중"
+      },
+      "badges_empty": "[ 검증 대기 중 ]",
+      "repaired": "(복구됨)",
+      "phase": {
+        "parse": "Parse",
+        "validate": "Validate",
+        "plan": "Plan",
+        "resolve": "Resolve",
+        "render": "Render",
+        "verify": "Verify",
+        "commit": "Commit"
+      },
+      "badge": {
+        "schema": "Schema",
+        "economy": "Economy",
+        "safety": "Safety",
+        "consistency": "Consistency",
+        "ok": "OK",
+        "fail": "FAIL"
+      },
+      "model": {
+        "fast": "빠름 (FAST)",
+        "quality": "고품질 (QUALITY)",
+        "cheap": "저비용",
+        "ref": "참조"
+      }
+    }
+  },
+  "ui": {
+    "logo": "UNKNOWN WORLD",
+    "command_placeholder": "명령을 입력하세요...",
+    "processing": "처리 중...",
+    "execute": "실행",
+    "wait": "대기",
+    "panel_placeholder": "[ 준비 중 ]",
+    "scale_decrease": "글자 크기 줄이기",
+    "scale_increase": "글자 크기 늘리기",
+    "scale_label": "UI 스케일 설정"
+  },
+  "economy": {
+    "signal": "Signal",
+    "shard": "Shard",
+    "signal_cost": "Signal 소모",
+    "shard_cost": "Shard 소모",
+    "risk_level": "위험도",
+    "hud_label": "재화 현황",
+    "estimated_cost": "예상 비용",
+    "confirmed_cost": "확정 비용",
+    "insufficient_funds": "잔액 부족",
+    "low_balance_warning": "잔액이 부족합니다",
+    "alternatives_title": "대안 행동",
+    "alternative_text_only": "텍스트만 생성 (이미지 없음)",
+    "alternative_low_quality": "저품질/빠른 응답 선택",
+    "ledger_title": "거래 장부",
+    "ledger_empty": "[ 이력 없음 ]",
+    "model_label": {
+      "FAST": "빠름",
+      "QUALITY": "고품질",
+      "CHEAP": "저비용",
+      "REF": "참조"
+    }
+  },
+  "connection": {
+    "online": "온라인",
+    "offline": "오프라인"
+  },
+  "inventory": {
+    "empty": "[ 아이템 없음 ]",
+    "empty_hint": "장면을 탐색하여 아이템을 찾으세요",
+    "count": "Inventory ({{count}})",
+    "grid_label": "인벤토리 아이템 목록",
+    "list_label": "인벤토리 아이템 목록",
+    "item_label": "{{name}} (수량: {{quantity}})",
+    "drag_hint": "드래그하여 사용",
+    "item_consumed": "{{name}} 사용됨"
+  },
+  "interaction": {
+    "hotspot_click": "클릭하여 조사",
+    "item_drag": "드래그하여 사용",
+    "drop_here": "여기에 놓기",
+    "onboarding_title": "조작 안내",
+    "onboarding_hotspot": "화면의 반짝이는 영역을 클릭하면 조사할 수 있습니다",
+    "onboarding_item": "인벤토리 아이템을 화면의 오브젝트로 드래그하면 사용할 수 있습니다",
+    "onboarding_scanner": "Scanner에 이미지를 업로드하면 아이템으로 변환됩니다",
+    "onboarding_skip": "건너뛰기",
+    "onboarding_start": "시작하기"
+  },
+  "common": {
+    "next": "다음"
+  },
+  "panel": {
+    "inventory": {
+      "title": "Inventory",
+      "placeholder": "[ 드래그 앤 드롭 영역 ]"
+    },
+    "quest": {
+      "title": "Quest",
+      "placeholder": "[ 목표/퀘스트 목록 ]"
+    },
+    "rule_board": {
+      "title": "Rule Board",
+      "placeholder": "[ 월드 규칙/변형 타임라인 ]"
+    },
+    "agent_console": {
+      "title": "Agent Console"
+    },
+    "memory_pin": {
+      "title": "Memory Pin",
+      "placeholder": "[ 고정된 기억/단서 ]"
+    },
+    "scanner": {
+      "title": "Scanner",
+      "placeholder": "[ 이미지 업로드 슬롯 ]"
+    }
+  },
+  "scanner": {
+    "dropzone_label": "이미지를 드롭하거나 클릭하여 업로드",
+    "dropzone_text": "이미지를 드롭하세요",
+    "dropzone_hint": "또는 클릭하여 파일 선택",
+    "upload_label": "이미지 업로드",
+    "preview_alt": "업로드 이미지 미리보기",
+    "uploading": "업로드 중...",
+    "analyzing": "분석 중...",
+    "retry": "다시 시도",
+    "cancel": "취소",
+    "select_items": "인벤토리에 추가할 아이템을 선택하세요",
+    "add_to_inventory": "추가 ({{count}}개)",
+    "detected_objects": "감지된 오브젝트: {{count}}개",
+    "item_candidates": "아이템 후보: {{count}}개",
+    "no_candidates": "아이템 후보를 찾지 못했습니다",
+    "discovery_message": {
+      "one": "아이템을 발견했습니다!",
+      "two": "두 가지를 발견했습니다!",
+      "three": "세 가지를 발견했습니다! 대단한 발견이네요!"
+    },
+    "error": {
+      "unsupported_format": "지원하지 않는 이미지 형식입니다",
+      "file_too_large": "파일이 너무 큽니다 (최대 20MB)",
+      "unknown": "알 수 없는 오류가 발생했습니다"
+    },
+    "item_type": {
+      "key": "열쇠",
+      "weapon": "무기",
+      "tool": "도구",
+      "clue": "단서",
+      "material": "재료",
+      "consumable": "소모품",
+      "document": "문서",
+      "artifact": "유물"
+    },
+    "tooltip": {
+      "title": "스캐너",
+      "description": "현실의 사진을 업로드하면 게임 속 아이템이나 단서로 변환됩니다"
+    },
+    "onboarding": {
+      "message": "이미지를 드래그해 보세요!",
+      "detail": "현실의 사진이 게임 속 아이템으로 변환됩니다",
+      "dismiss": "알겠습니다"
+    },
+    "affordance": {
+      "idle_hint": "이미지 → 아이템",
+      "drag_active": "여기에 놓으세요!"
+    }
+  },
+  "action": {
+    "default": {
+      "explore": {
+        "label": "탐색하기",
+        "description": "주변을 살펴본다"
+      },
+      "investigate": {
+        "label": "조사하기",
+        "description": "자세히 살펴본다"
+      },
+      "talk": {
+        "label": "대화하기",
+        "description": "말을 걸어본다"
+      }
+    },
+    "card_select": "카드 선택: {{cardId}}",
+    "deck_label": "행동 선택 카드",
+    "alternative": "대안",
+    "insufficient_balance": "잔액 부족",
+    "server_disabled": "사용 불가",
+    "vision_badge": "정밀분석",
+    "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
+    "risk": {
+      "low": "낮음",
+      "medium": "보통",
+      "high": "높음"
+    },
+    "cost_range": "{{min}}~{{max}}"
+  },
+  "narrative": {
+    "welcome": "미지의 세계에 오신 것을 환영합니다...",
+    "turn_label": "[TURN {{turn}}]",
+    "streaming_label": "[STREAMING]",
+    "fast_forward_title": "클릭하여 빠르게 넘기기",
+    "fast_forward_aria": "클릭하거나 Enter/Space를 눌러 텍스트를 즉시 표시합니다"
+  },
+  "action_log": {
+    "use_item_on_hotspot": "행동 실행: {{item}}을(를) {{hotspot}}에 사용한다",
+    "click_hotspot": "행동 실행: {{hotspot}}을(를) 조사한다",
+    "click_action": "행동 실행: {{action}}"
+  }
+}
 </file>
 
 </files>

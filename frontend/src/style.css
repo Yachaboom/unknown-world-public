@@ -4331,9 +4331,13 @@ button:disabled,
 }
 
 /* ============================================
-   25. Inventory Panel 스타일 (U-011)
+   25. Inventory Panel 스타일 (U-011, U-088)
    - RULE-002: 게임 UI로 상시 노출
-   - dnd-kit 드래그 가능 아이템
+   - U-088: Row(행) 레이아웃 전환
+     Q1: Row 48px, 아이콘 32px (컴팩트)
+     Q2: 구분선 + 줄무늬 조합
+     Q3: Hover 툴팁만 (U-056 유지)
+     Q4: 아이콘 영역만 드래그 가능
    ============================================ */
 
 .inventory-panel-content {
@@ -4371,12 +4375,11 @@ button:disabled,
   box-shadow: 0 0 8px rgba(51, 255, 0, 0.5);
 }
 
-/* 인벤토리 그리드 */
-.inventory-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs);
+/* U-088: 인벤토리 리스트 (Row 레이아웃) */
+.inventory-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
 
 /* 빈 인벤토리 */
@@ -4411,66 +4414,68 @@ button:disabled,
   font-style: italic;
 }
 
-/* 인벤토리 아이템 */
+/* U-088: 인벤토리 아이템 (Row 형태) */
 .inventory-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
-  border: 1px solid var(--text-dim);
-  border-radius: var(--border-radius);
-  background: linear-gradient(180deg, rgba(0, 30, 0, 0.8) 0%, rgba(0, 15, 0, 0.9) 100%);
-  cursor: grab;
+  gap: var(--spacing-sm);
+  padding: 6px 12px;
+  min-height: 48px; /* Q1: Row 48px */
+  border-bottom: 1px solid rgba(51, 255, 0, 0.15); /* Q2: 구분선 */
+  background: transparent;
+  cursor: default; /* Q4: Row 자체는 드래그 불가, 아이콘만 드래그 */
   transition:
-    border-color 0.2s,
+    background-color 0.2s,
     box-shadow 0.2s,
-    transform 0.15s,
     opacity 0.2s;
   user-select: none;
-  touch-action: none;
-  /* U-077: 힌트 팝업 z-index 기준점 */
   position: relative;
+}
+
+/* Q2: Option C - 줄무늬 (zebra striping) */
+.inventory-item:nth-child(even) {
+  background: rgba(51, 255, 0, 0.03);
+}
+
+/* 마지막 Row는 구분선 제거 */
+.inventory-item:last-child {
+  border-bottom: none;
 }
 
 /* 아이템 호버 */
 .inventory-item:hover:not(.disabled):not(.dragging) {
-  border-color: var(--text-color);
-  box-shadow: 0 0 8px rgba(51, 255, 0, 0.3);
-  transform: translateY(-2px);
+  background: rgba(51, 255, 0, 0.08);
+  box-shadow: inset 0 0 8px rgba(51, 255, 0, 0.1);
   /* U-077: 힌트 팝업이 형제 아이템 위에 표시되도록 */
   z-index: 2;
 }
 
-/* 아이템 선택 상태 */
+/* U-088: 아이템 선택 상태 (Q3: Option A) */
 .inventory-item.selected {
-  border-color: var(--accent-color);
-  box-shadow:
-    0 0 10px var(--accent-color),
-    inset 0 0 5px rgba(255, 0, 255, 0.1);
+  background: rgba(255, 0, 255, 0.1);
+  box-shadow: inset 3px 0 0 var(--accent-color);
 }
 
 /* 아이템 드래그 중 */
 .inventory-item.dragging {
-  opacity: 0.3; /* 드래그 중인 원본은 더 투명하게 */
-  cursor: grabbing;
-  border-style: dashed;
-  box-shadow: none; /* 드래그 중인 원본 글로우 제거 */
+  opacity: 0.3;
+  border-bottom-style: dashed;
+  box-shadow: none;
 }
 
 /* 아이템 비활성화 */
 .inventory-item.disabled {
   cursor: not-allowed;
   opacity: 0.5;
-  border-color: var(--text-dim);
 }
 
 .inventory-item.disabled:hover {
-  transform: none;
+  background: transparent;
   box-shadow: none;
 }
 
-/* U-096: 아이템 소비(삭제) fade-out 애니메이션 */
+/* U-096: 아이템 소비(삭제) fade-out 애니메이션 (Row 형태) */
 .inventory-item.item-consumed {
   animation: item-consume-fadeout 0.5s ease-out forwards;
   pointer-events: none;
@@ -4480,59 +4485,78 @@ button:disabled,
 @keyframes item-consume-fadeout {
   0% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateX(0);
     filter: none;
   }
   40% {
     opacity: 0.7;
-    transform: scale(0.95);
+    transform: translateX(-4px);
     filter: brightness(1.5) saturate(0.5);
-    border-color: var(--warning-color);
-    box-shadow: 0 0 12px var(--warning-color);
+    box-shadow: inset 3px 0 0 var(--warning-color);
   }
   100% {
     opacity: 0;
-    transform: scale(0.6);
+    transform: translateX(-8px);
     filter: brightness(2) saturate(0);
-    border-color: transparent;
     box-shadow: none;
   }
 }
 
-/* 드래그 오버레이 (커서 따라다니는 아이템) */
-.inventory-item.overlay {
-  border-color: var(--accent-color);
+/* U-088: 드래그 오버레이 — 아이콘만 표시 (Q4: Option B) */
+.inventory-overlay-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  background: rgba(0, 20, 0, 0.95);
   box-shadow:
     0 0 20px var(--accent-color),
-    0 8px 24px rgba(0, 0, 0, 0.6);
-  transform: scale(1.05) rotate(3deg);
+    0 4px 16px rgba(0, 0, 0, 0.6);
   cursor: grabbing;
   z-index: 10001;
   pointer-events: none;
-  opacity: 1 !important;
 }
 
-/* 아이템 아이콘 */
+.inventory-overlay-icon .inventory-item-icon-img {
+  width: 30px;
+  height: 30px;
+}
+
+.inventory-overlay-icon .inventory-item-icon-emoji {
+  font-size: 1.5rem;
+}
+
+/* U-088: 아이콘 (32px, 드래그 핸들 — Q1/Q4) */
 .inventory-item-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px; /* 40px -> 44px */
-  height: 44px;
+  width: 32px; /* Q1: 32px */
+  height: 32px;
+  flex-shrink: 0;
   border: 1px solid var(--text-dim);
   border-radius: 2px;
   background-color: rgba(0, 0, 0, 0.4);
+  cursor: grab; /* Q4: 아이콘이 드래그 핸들 */
+  touch-action: none;
+}
+
+.inventory-item-icon:active {
+  cursor: grabbing;
 }
 
 .inventory-item-icon-img {
-  width: 36px; /* 32px -> 36px */
-  height: 36px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   image-rendering: pixelated;
 }
 
 .inventory-item-icon-emoji {
-  font-size: 1.8rem; /* 1.5rem -> 1.8rem */
+  font-size: 1.3rem;
 }
 
 /* U-075: 아이콘 로딩 상태 */
@@ -4554,8 +4578,8 @@ button:disabled,
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border: 2px solid transparent;
   border-top: 2px solid var(--primary-color);
   border-radius: 50%;
@@ -4571,26 +4595,27 @@ button:disabled,
   }
 }
 
-/* 아이템 정보 */
+/* U-088: 아이템 정보 (Row 가로 배치) */
 .inventory-item-info {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
-  width: 100%;
+  gap: var(--spacing-sm);
+  flex: 1;
+  min-width: 0; /* text-overflow 작동을 위해 필요 */
 }
 
 .inventory-item-name {
   font-size: var(--font-size-xs);
   color: var(--text-color);
-  text-align: center;
+  text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
-  display: block;
+  flex: 1;
+  min-width: 0;
 }
 
 .inventory-item-quantity {
@@ -4599,41 +4624,39 @@ button:disabled,
   color: var(--warning-color);
   font-weight: bold;
   text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+  flex-shrink: 0;
 }
 
 /* 포커스 상태 (접근성) */
 .inventory-item:focus-visible {
   outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .inventory-item:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* 모바일 조정 */
+/* 모바일 조정 (U-088) */
 @media (max-width: 768px) {
-  .inventory-grid {
-    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-    gap: 4px;
-  }
-
   .inventory-item {
-    padding: var(--spacing-xs);
+    padding: 4px 8px;
+    min-height: 40px;
+    gap: var(--spacing-xs);
   }
 
   .inventory-item-icon {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
 
   .inventory-item-icon-img {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 
   .inventory-item-icon-emoji {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
 
   .inventory-item-name {
@@ -4641,18 +4664,10 @@ button:disabled,
   }
 }
 
-/* reduced-motion: 드래그 애니메이션 완화 */
+/* reduced-motion (U-088) */
 @media (prefers-reduced-motion: reduce) {
   .inventory-item {
     transition: none;
-  }
-
-  .inventory-item:hover:not(.disabled):not(.dragging) {
-    transform: none;
-  }
-
-  .inventory-item.overlay {
-    transform: none;
   }
 }
 

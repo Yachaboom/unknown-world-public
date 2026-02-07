@@ -292,6 +292,7 @@
     "empty_hint": "Explore scenes to find items",
     "count": "Inventory ({{count}})",
     "grid_label": "Inventory Items",
+    "list_label": "Inventory Items",
     "item_label": "{{name}} (Qty: {{quantity}})",
     "drag_hint": "Drag to use",
     "item_consumed": "{{name}} consumed"

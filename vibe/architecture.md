@@ -62,7 +62,7 @@ frontend/src/api/turnStream.ts
 frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.tsx
 frontend/src/components/EconomyHud.tsx
-frontend/src/components/InventoryPanel.tsx
+frontend/src/components/InventoryPanel.tsx (Row 렌더링 도입)
 frontend/src/components/NarrativeFeed.tsx
 frontend/src/components/QuestPanel.tsx
 frontend/src/components/RuleBoard.tsx
@@ -93,10 +93,12 @@ shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
 backend/tests/unit/services/test_u093_timeout_retry.py
 backend/tests/unit/test_u096_consumption.py
+vibe/unit-results/U-088[Mvp].md
 vibe/unit-results/U-094[Mvp].md
 vibe/unit-results/U-095[Mvp].md
 vibe/unit-results/U-096[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
+vibe/unit-runbooks/U-088-inventory-row-layout-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
 vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
@@ -379,6 +381,22 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 - **연결 상태 복구 (RU-003-S1)**: 스트림 결과에 따른 `connected` 상태 자동 관리.
 - **Scene 상태 전이 (RU-003-T1)**: `image_url` 존재 여부에 따른 `sceneState` 자동 결정 (SSOT).
 - **Abort(취소) 정책**: 사용자에 의한 중단 시 UI를 안전하게 스트리밍 종료 상태로 복구.
+
+---
+
+## 42. 인벤토리 UI Row 형태 전환 (U-088[Mvp])
+
+1. **Row 기반 리스트 레이아웃 (Q1, Q2)**:
+    - **Grid-to-Row**: 인벤토리 아이템을 그리드 형태에서 48px 높이의 Row 형태로 전환하여 좁은 공간에서도 텍스트 정보를 효과적으로 표시함.
+    - **Visual Separation**: Row 간 미세한 구분선(border-bottom)과 짝수 행에 적용된 미묘한 배경색 차이(Zebra striping)를 통해 시각적 피로도를 낮추고 아이템 식별성을 높임.
+2. **아이콘 전용 드래그 핸들 (Q4 Option B)**:
+    - **Interaction Isolation**: 드래그 리스너(`listeners`, `attributes`)를 행 전체가 아닌 좌측의 **32px 아이콘 영역**에만 바인딩함.
+    - **Conflict Resolution**: 이를 통해 행 클릭(아이템 선택)과 드래그 조작 간의 충돌을 방지하고, 명확한 조작 핸들을 제공하여 사용자 실수(Fat Finger)를 예방함.
+3. **컴팩트 드래그 오버레이**:
+    - **Scene Visibility**: 드래그 중인 오버레이는 행 전체가 아닌 아이콘(40px 박스)만 표시하도록 구성하여, 아이템을 핫스팟으로 옮기는 동안 장면(Scene) 이미지를 가리지 않도록 최적화함.
+4. **상태 강조 및 가독성 (Q3, U-056)**:
+    - **Magenta Selection**: 선택된 아이템 행 좌측에 3px 마젠타 강조선(`box-shadow`)을 적용하여 현재 조작 대상을 명확히 함.
+    - **Ellipsis & Tooltip**: 긴 아이템 이름은 `ellipsis`로 처리하되, `title` 속성을 통한 네이티브 툴팁으로 전체 이름과 수량 정보를 보존함.
 
 ---
 

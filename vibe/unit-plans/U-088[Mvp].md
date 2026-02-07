@@ -166,25 +166,25 @@ const { attributes, listeners, setNodeRef, transform } = useDraggable({
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Row 높이와 아이콘 크기?
-  - Option A: Row 48px, 아이콘 32px (컴팩트)
+- [x] **Q1**: Row 높이와 아이콘 크기?
+  - ✅Option A: Row 48px, 아이콘 32px (컴팩트)
   - Option B: Row 56px, 아이콘 40px (여유로움)
   - Option C: 가변 높이 (아이템 설명 길이에 따라)
 
-- [ ] **Q2**: Row 간 구분 방식?
+- [x] **Q2**: Row 간 구분 방식?
   - Option A: 구분선 (border-bottom 1px)
   - Option B: 줄무늬 (zebra striping)
-  - Option C: 구분선 + 줄무늬 조합
+  - ✅Option C: 구분선 + 줄무늬 조합
   - Option D: gap만 사용 (구분선 없음)
 
-- [ ] **Q3**: 아이템 확장/상세 정보 표시?
-  - Option A: Hover 툴팁만 (기존 U-056 유지)
+- [x] **Q3**: 아이템 확장/상세 정보 표시?
+  - ✅Option A: Hover 툴팁만 (기존 U-056 유지)
   - Option B: 클릭 시 Row가 확장되어 상세 정보 표시
   - Option C: 별도 상세 패널(사이드) 표시
 
-- [ ] **Q4**: 드래그 핸들 위치?
+- [x] **Q4**: 드래그 핸들 위치?
   - Option A: Row 전체가 드래그 가능
-  - Option B: 아이콘 영역만 드래그 가능
+  - ✅Option B: 아이콘 영역만 드래그 가능 - 아이콘만 드래그 이미
   - Option C: 별도 드래그 핸들 아이콘 추가 (⋮⋮)
 
 ## 참고 자료

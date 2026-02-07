@@ -292,6 +292,7 @@
     "empty_hint": "장면을 탐색하여 아이템을 찾으세요",
     "count": "Inventory ({{count}})",
     "grid_label": "인벤토리 아이템 목록",
+    "list_label": "인벤토리 아이템 목록",
     "item_label": "{{name}} (수량: {{quantity}})",
     "drag_hint": "드래그하여 사용",
     "item_consumed": "{{name}} 사용됨"

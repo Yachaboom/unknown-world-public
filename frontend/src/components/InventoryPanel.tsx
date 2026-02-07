@@ -1,12 +1,18 @@
 /**
- * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp]).
+ * Unknown World - Inventory Panel 컴포넌트 (U-011[Mvp], U-088[Mvp]).
  *
- * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 제공합니다.
+ * dnd-kit 기반 드래그 가능한 인벤토리 아이템 UI를 Row(행) 형태로 제공합니다.
  *
  * 설계 원칙:
  *   - RULE-002: Inventory는 게임 UI로 상시 노출 (채팅 입력 대체 금지)
  *   - tech-stack: dnd-kit 기반 draggable 구현
  *   - U-012 연결: 드래그 데이터에 item_id 포함하여 드롭 타겟에 전달
+ *
+ * U-088[Mvp]: Row 형태 전환
+ *   - Q1: Row 48px, 아이콘 32px (컴팩트)
+ *   - Q2: 구분선 + 줄무늬 조합
+ *   - Q3: Hover 툴팁만 (U-056 유지)
+ *   - Q4: 아이콘 영역만 드래그 가능, 아이콘만 드래그 이미지
  *
  * U-074[Mvp]: 아이템 인터랙션 안내 UX
  *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
@@ -20,7 +26,7 @@
  * @module components/InventoryPanel
  */
 
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useDraggable, DragOverlay } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +35,6 @@ import {
   type InventoryItem,
   selectItems,
   selectDraggingItem,
-  selectSelectedItemId,
   selectConsumingItemIds,
   requestItemIcon,
   pollIconStatus,
@@ -44,11 +49,13 @@ import { DND_TYPE, type InventoryDragData } from '../dnd/types';
 
 interface DraggableItemProps {
   item: InventoryItem;
-  isSelected: boolean;
-  onSelect: (itemId: string) => void;
   disabled?: boolean;
   /** U-096: 소비 중(fade-out 진행 중) 여부 */
   isConsuming?: boolean;
+  /** U-088: 선택 여부 */
+  isSelected?: boolean;
+  /** U-088: 선택 핸들러 */
+  onSelect?: (itemId: string) => void;
 }
 
 /**
@@ -59,10 +66,10 @@ interface DraggableItemProps {
  */
 function DraggableItem({
   item,
-  isSelected,
-  onSelect,
   disabled = false,
   isConsuming = false,
+  isSelected = false,
+  onSelect,
 }: DraggableItemProps) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
@@ -100,13 +107,6 @@ function DraggableItem({
     }),
     [transform, isDragging],
   );
-
-  // 클릭 핸들러 (선택)
-  const handleClick = useCallback(() => {
-    if (!disabled) {
-      onSelect(item.id);
-    }
-  }, [disabled, item.id, onSelect]);
 
   // U-075: 아이콘 렌더링 (이모지 또는 이미지, 로딩 상태 포함)
   const renderIcon = () => {
@@ -152,17 +152,18 @@ function DraggableItem({
       ref={setNodeRef}
       style={style}
       className={`inventory-item ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''} ${isConsuming ? 'item-consumed' : ''}`}
-      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => !disabled && onSelect?.(item.id)}
       aria-label={t('inventory.item_label', { name: item.name, quantity: item.quantity })}
       aria-selected={isSelected}
       // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
       title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
-      {...attributes}
-      {...listeners}
     >
-      <div className="inventory-item-icon">{renderIcon()}</div>
+      {/* U-088 Q4: 아이콘 영역만 드래그 핸들 */}
+      <div className="inventory-item-icon" {...attributes} {...listeners}>
+        {renderIcon()}
+      </div>
       <div className="inventory-item-info">
         <span className="inventory-item-name">{item.name}</span>
         {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
@@ -190,11 +191,10 @@ interface ItemOverlayProps {
 }
 
 /**
- * 드래그 오버레이 아이템.
- * 드래그 중일 때 커서를 따라다니는 아이템 표시입니다.
+ * 드래그 오버레이 — 아이콘만 표시 (U-088 Q4: Option B).
+ * 드래그 중일 때 커서를 따라다니는 아이콘입니다.
  */
 function ItemOverlay({ item }: ItemOverlayProps) {
-  // 아이콘 렌더링
   const renderIcon = () => {
     if (item.icon) {
       if (item.icon.startsWith('http') || item.icon.startsWith('/')) {
@@ -206,12 +206,8 @@ function ItemOverlay({ item }: ItemOverlayProps) {
   };
 
   return (
-    <div className="inventory-item overlay">
-      <div className="inventory-item-icon">{renderIcon()}</div>
-      <div className="inventory-item-info">
-        <span className="inventory-item-name">{item.name}</span>
-        {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
-      </div>
+    <div className="inventory-overlay-icon" title={item.name}>
+      {renderIcon()}
     </div>
   );
 }
@@ -228,8 +224,8 @@ interface InventoryPanelProps {
 /**
  * Inventory Panel 컴포넌트.
  *
- * 인벤토리 아이템을 그리드로 표시하고, 드래그 가능하게 합니다.
- * DndContext는 App 최상단에 배치됩니다 (Q1: Option A).
+ * U-088: 인벤토리 아이템을 Row(행) 형태로 표시합니다.
+ * 아이콘 영역만 드래그 핸들(Q4: Option B), DndContext는 App 최상단(Q1: Option A).
  *
  * U-075: 아이템 추가 시 아이콘 동적 생성 요청
  *
@@ -244,7 +240,7 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
   // Store 상태
   const items = useInventoryStore(selectItems);
   const draggingItem = useInventoryStore(selectDraggingItem);
-  const selectedItemId = useInventoryStore(selectSelectedItemId);
+  const selectedItemId = useInventoryStore((state) => state.selectedItemId);
   const consumingItemIds = useInventoryStore(selectConsumingItemIds);
   const selectItem = useInventoryStore((state) => state.selectItem);
   const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
@@ -331,14 +327,10 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
     requestIconsForNewItems();
   }, [items, i18n.language, updateItemIcon, setItemIconStatus]);
 
-  // 아이템 선택 핸들러
-  const handleSelect = useCallback(
-    (itemId: string) => {
-      // 이미 선택된 아이템 클릭 시 선택 해제
-      selectItem(selectedItemId === itemId ? null : itemId);
-    },
-    [selectedItemId, selectItem],
-  );
+  // 아이템 선택 핸들러 (토글 기능 포함)
+  const handleSelect = (itemId: string) => {
+    selectItem(itemId === selectedItemId ? null : itemId);
+  };
 
   // 빈 인벤토리 (U-077: Q3 Option B - 아이템 획득 힌트 포함)
   if (items.length === 0) {
@@ -356,19 +348,19 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
   return (
     <div className="inventory-panel-content" data-ui-importance="critical">
       <div
-        className="inventory-grid"
+        className="inventory-list"
         role="listbox"
-        aria-label={t('inventory.grid_label')}
+        aria-label={t('inventory.list_label')}
         aria-multiselectable={false}
       >
         {items.map((item) => (
           <DraggableItem
             key={item.id}
             item={item}
-            isSelected={selectedItemId === item.id}
-            onSelect={handleSelect}
             disabled={disabled || consumingItemIds.includes(item.id)}
             isConsuming={consumingItemIds.includes(item.id)}
+            isSelected={selectedItemId === item.id}
+            onSelect={handleSelect}
           />
         ))}
       </div>
