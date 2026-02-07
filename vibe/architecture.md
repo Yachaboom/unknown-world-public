@@ -90,16 +90,19 @@ frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
+backend/tests/unit/services/test_u093_timeout_retry.py
 vibe/unit-results/U-077[Mvp].md
 vibe/unit-results/U-089[Mvp].md
 vibe/unit-results/U-090[Mvp].md
 vibe/unit-results/U-091[Mvp].md
 vibe/unit-results/U-092[Mvp].md
+vibe/unit-results/U-093[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
 vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
 vibe/unit-runbooks/U-092-item-icon-preset-runbook.md
+vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -271,18 +274,22 @@ vibe/unit-runbooks/U-092-item-icon-preset-runbook.md
     
     ---
     
-    ## 39. 인벤토리 아이템 아이콘 동적 생성 (U-075[Mvp])
-    
-    1. **아이콘 생성 파이프라인 (Backend)**:
-        - **Description-based Generation**: 아이템 설명을 기반으로 `IMAGE_FAST` 모델(gemini-2.5-flash-image)을 호출하여 64x64 픽셀 아트 아이콘을 생성함.
-        - **Simple Background Policy (U-091)**: 런타임 지연 최소화를 위해 rembg 배경 제거를 생략하며, 대신 프롬프트를 통해 "투명/단색 배경"을 유도하여 시각적 조화를 유지함.
-        - **Language Consistency**: 아이템 이름이 세션 언어와 일치하도록 프롬프트를 제어하여 다국어 환경에서의 정합성을 보장함.
-    2. **효율적 캐싱 및 비동기 처리**:
-        - **MD5 Hash Caching**: 아이템 설명의 MD5 해시를 캐시 키로 사용하여 동일한 아이템에 대한 중복 생성을 방지하고 응답 속도를 극대화함.
-        - **Option B Policy (Background Gen)**: 턴 응답 시에는 placeholder(📦)를 먼저 반환하고, 실제 아이콘은 백그라운드에서 비동기로 생성하여 텍스트 TTFB를 보호함.
-    3. **인벤토리 UI 동기화 (Frontend)**:
-        - **Dynamic Icon URL**: `inventoryStore`에서 아이템별 `icon_url`을 관리하며, 백엔드로부터 생성 완료 신호를 받거나 폴링을 통해 실제 아이콘으로 교체함.
-        - **Visual Feedback**: 아이콘 생성 중에는 스캔라인 애니메이션 및 로딩 상태를 표시하여 시스템의 활동성을 체감하게 함.
+## 39. 인벤토리 아이템 아이콘 동적 생성 및 안정화 (U-075, U-093)
+
+1. **아이콘 생성 파이프라인 (Backend)**:
+    - **Description-based Generation**: 아이템 설명을 기반으로 `IMAGE_FAST` 모델(gemini-2.5-flash-image)을 호출하여 64x64 픽셀 아트 아이콘을 생성함.
+    - **Simple Background Policy (U-091)**: 런타임 지연 최소화를 위해 rembg 배경 제거를 생략하며, 대신 프롬프트를 통해 "투명/단색 배경"을 유도하여 시각적 조화를 유지함.
+    - **Language Consistency**: 아이템 이름이 세션 언어와 일치하도록 프롬프트를 제어하여 다국어 환경에서의 정합성을 보장함.
+2. **타임아웃 상향 및 자동 재시도 (U-093)**:
+    - **Timeout Extension**: 네트워크 및 서버 지연에 대응하기 위해 생성 타임아웃을 30초에서 **90초**로 상향 조정함.
+    - **Exponential Backoff Retry**: 타임아웃 또는 서버 에러 발생 시 **최대 1회 자동 재시도**(총 2회 시도)를 수행하며, 재시도 간 2초 기반의 지수 백오프를 적용함.
+    - **Retry Filter**: Quota 초과, Safety 차단 등 복구 불가능한 에러는 재시도 대상에서 제외하여 불필요한 비용 발생을 방지함.
+3. **효율적 캐싱 및 비동기 처리**:
+    - **MD5 Hash Caching**: 아이템 설명의 MD5 해시를 캐시 키로 사용하여 동일한 아이템에 대한 중복 생성을 방지하고 응답 속도를 극대화함.
+    - **Option B Policy (Background Gen)**: 턴 응답 시에는 placeholder(📦)를 먼저 반환하고, 실제 아이콘은 백그라운드에서 비동기로 생성하여 텍스트 TTFB를 보호함.
+4. **인벤토리 UI 동기화 (Frontend)**:
+    - **Dynamic Icon URL**: `inventoryStore`에서 아이템별 `icon_url`을 관리하며, 백엔드로부터 생성 완료 신호를 받거나 폴링을 통해 실제 아이콘으로 교체함.
+    - **Visual Feedback**: 아이콘 생성 중에는 스캔라인 애니메이션 및 로딩 상태를 표시하여 시스템의 활동성을 체감하게 함.
     
     ---
     

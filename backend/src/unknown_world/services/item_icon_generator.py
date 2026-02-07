@@ -4,6 +4,7 @@
 캐싱, 언어 정합성을 보장합니다.
 
 U-091: 런타임 rembg 제거 - 배경 제거 없이 프롬프트로 어두운 배경 유도.
+U-093: 타임아웃 90초 상향, 최대 1회 재시도(총 2회), 지수 백오프, 폴백 보강.
 
 설계 원칙:
     - RULE-004: 실패 시 안전한 폴백 제공 (placeholder 아이콘)
@@ -16,8 +17,12 @@ U-091: 런타임 rembg 제거 - 배경 제거 없이 프롬프트로 어두운 �
     - Q2: Option A (64x64 픽셀)
     - Q3: Option A (픽셀 아트 스타일 - CRT 테마)
 
+페어링 질문 결정 (U-093[Mvp]):
+    - Q1: Option B (최대 1회 재시도, 총 2회 시도)
+
 참조:
     - vibe/unit-plans/U-075[Mvp].md
+    - vibe/unit-plans/U-093[Mvp].md
     - vibe/ref/nanobanana-mcp.md (CRT 테마 아트 디렉션)
 """
 
@@ -71,8 +76,31 @@ no text, no decorations, no shadows, no complex gradients
 # 아이콘 캐시 디렉토리
 ICON_CACHE_SUBDIR = "icons"
 
-# 백그라운드 생성 타임아웃 (Q1: Option B 비동기 생성)
-ICON_GENERATION_TIMEOUT_SECONDS = 30
+# 백그라운드 생성 타임아웃 (U-093: 30초 → 90초 상향)
+ICON_GENERATION_TIMEOUT_SECONDS = 90
+
+# U-093: 재시도 설정 (Q1: Option B - 최대 1회 재시도, 총 2회 시도)
+ICON_MAX_RETRIES = 1
+"""최대 재시도 횟수."""
+
+ICON_RETRY_BASE_DELAY_SECONDS = 2.0
+"""재시도 기본 대기 시간 (초). 지수 백오프 적용: delay * 2^(attempt-1)."""
+
+# 재시도 제외 키워드 (4xx 클라이언트 에러, quota 초과, 안전 차단)
+_NON_RETRYABLE_KEYWORDS = frozenset(
+    {
+        "quota",
+        "rate_limit",
+        "rate limit",
+        "billing",
+        "safety",
+        "blocked",
+        "invalid",
+        "permission",
+        "authentication",
+        "authorization",
+    }
+)
 
 
 class IconGenerationStatus(StrEnum):
@@ -280,6 +308,42 @@ class IconCache:
 
 
 # =============================================================================
+# 재시도 판별 헬퍼 (U-093)
+# =============================================================================
+
+
+def _is_retryable_message(message: str) -> bool:
+    """에러 메시지 기반으로 재시도 가능 여부를 판단합니다.
+
+    재시도 제외: 4xx 클라이언트 에러, quota 초과, 안전 차단 등.
+
+    Args:
+        message: 에러 메시지
+
+    Returns:
+        bool: 재시도 가능 여부
+    """
+    message_lower = message.lower()
+    return not any(keyword in message_lower for keyword in _NON_RETRYABLE_KEYWORDS)
+
+
+def _is_retryable_exception(exc: Exception) -> bool:
+    """예외 타입 기반으로 재시도 가능 여부를 판단합니다.
+
+    재시도 가능: 네트워크/서버 에러 (ConnectionError, OSError 등).
+    재시도 제외: 클라이언트 로직 에러 (ValueError, TypeError 등).
+
+    Args:
+        exc: 발생한 예외
+
+    Returns:
+        bool: 재시도 가능 여부
+    """
+    non_retryable_types = (ValueError, TypeError, AttributeError, KeyError)
+    return not isinstance(exc, non_retryable_types)
+
+
+# =============================================================================
 # 아이콘 생성기
 # =============================================================================
 
@@ -435,7 +499,11 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
     async def _generate_icon_internal(
         self, request: IconGenerationRequest
     ) -> IconGenerationResponse:
-        """내부 아이콘 생성 로직.
+        """내부 아이콘 생성 로직 (U-093: 재시도 지원).
+
+        최대 ICON_MAX_RETRIES회 재시도하며, 지수 백오프를 적용합니다.
+        재시도 대상: 타임아웃, 네트워크 에러, 5xx 응답.
+        재시도 제외: 4xx 클라이언트 에러, quota 초과, 안전 차단.
 
         Args:
             request: 아이콘 생성 요청
@@ -445,125 +513,163 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
         """
         start_time = datetime.now(UTC)
         desc_hash = hashlib.md5(request.item_description.encode()).hexdigest()[:8]
+        max_attempts = ICON_MAX_RETRIES + 1  # 총 시도 횟수 (U-093 Q1: Option B → 2회)
 
-        try:
-            from unknown_world.services.image_generation import (
-                ImageGenerationRequest,
-                ImageGenerationStatus,
-            )
+        from unknown_world.services.image_generation import (
+            ImageGenerationRequest,
+            ImageGenerationStatus,
+        )
 
-            # 프롬프트 생성
-            prompt = self._build_icon_prompt(request.item_description, request.language)
+        # 프롬프트 및 요청 구성 (1회만 - 재시도 시 동일 프롬프트 재사용)
+        prompt = self._build_icon_prompt(request.item_description, request.language)
 
-            # 이미지 생성 요청 구성
-            # U-091: rembg 런타임 제거 - 배경 제거 없이 프롬프트로 어두운 배경 유도
-            gen_request = ImageGenerationRequest(
-                prompt=prompt,
-                image_size="1024x1024",  # 모델 지원 표준 해상도 사용 (U-075 핫픽스: 64x64는 미지원)
-                aspect_ratio="1:1",
-                model_label="FAST",  # Q2: 아이콘은 저지연 모델
-            )
+        # U-091: rembg 런타임 제거 - 배경 제거 없이 프롬프트로 어두운 배경 유도
+        gen_request = ImageGenerationRequest(
+            prompt=prompt,
+            image_size="1024x1024",  # 모델 지원 표준 해상도 (U-075 핫픽스: 64x64 미지원)
+            aspect_ratio="1:1",
+            model_label="FAST",  # Q2: 아이콘은 저지연 모델
+        )
 
-            generator = self._get_image_generator()
-            response = await asyncio.wait_for(
-                generator.generate(gen_request),
-                timeout=ICON_GENERATION_TIMEOUT_SECONDS,
-            )
+        last_error_message: str | None = None
 
-            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-
-            if response.status == ImageGenerationStatus.COMPLETED and response.image_url:
-                # 캐시에 저장 (파일 읽기)
-                # 생성된 파일을 캐시 디렉토리로 복사
-                if response.image_id:
-                    src_path = get_generated_images_dir() / f"{response.image_id}.png"
-                    # U-091: rembg 런타임 제거 - _nobg 파일 검색 불필요
-                    if src_path.exists():
-                        image_data = src_path.read_bytes()
-                        cached_url = self._cache.set(request.item_description, image_data)
-                        self._completed_urls[request.item_id] = cached_url
-                        logger.info(
-                            "[ItemIconGenerator] 아이콘 생성 완료",
-                            extra={
-                                "item_id": request.item_id,
-                                "desc_hash": desc_hash,
-                                "elapsed_ms": elapsed_ms,
-                            },
-                        )
-                        return IconGenerationResponse(
-                            status=IconGenerationStatus.COMPLETED,
-                            icon_url=cached_url,
-                            item_id=request.item_id,
-                            is_placeholder=False,
-                            generation_time_ms=elapsed_ms,
-                            message="아이콘이 성공적으로 생성되었습니다.",
-                        )
-
-                # URL 직접 반환 (파일 복사 실패 시)
-                return IconGenerationResponse(
-                    status=IconGenerationStatus.COMPLETED,
-                    icon_url=response.image_url,
-                    item_id=request.item_id,
-                    is_placeholder=False,
-                    generation_time_ms=elapsed_ms,
-                    message="아이콘이 생성되었습니다.",
+        for attempt in range(1, max_attempts + 1):
+            try:
+                generator = self._get_image_generator()
+                response = await asyncio.wait_for(
+                    generator.generate(gen_request),
+                    timeout=ICON_GENERATION_TIMEOUT_SECONDS,
                 )
 
-            # 생성 실패
-            logger.warning(
-                "[ItemIconGenerator] 아이콘 생성 실패",
-                extra={
-                    "item_id": request.item_id,
-                    "desc_hash": desc_hash,
-                    "status": response.status,
-                    "error_msg": response.message,  # 'message'는 logging 예약어
-                },
-            )
-            return IconGenerationResponse(
-                status=IconGenerationStatus.FAILED,
-                icon_url=self.get_placeholder_url(request.item_id),
-                item_id=request.item_id,
-                is_placeholder=True,
-                generation_time_ms=elapsed_ms,
-                message=response.message or "아이콘 생성에 실패했습니다.",
-            )
+                elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
-        except TimeoutError:
-            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-            logger.warning(
-                "[ItemIconGenerator] 아이콘 생성 타임아웃",
-                extra={
-                    "item_id": request.item_id,
-                    "timeout_seconds": ICON_GENERATION_TIMEOUT_SECONDS,
-                },
-            )
-            return IconGenerationResponse(
-                status=IconGenerationStatus.FAILED,
-                icon_url=self.get_placeholder_url(request.item_id),
-                item_id=request.item_id,
-                is_placeholder=True,
-                generation_time_ms=elapsed_ms,
-                message=f"아이콘 생성 타임아웃 ({ICON_GENERATION_TIMEOUT_SECONDS}초)",
-            )
+                if response.status == ImageGenerationStatus.COMPLETED and response.image_url:
+                    # 성공: 캐시에 저장
+                    if response.image_id:
+                        src_path = get_generated_images_dir() / f"{response.image_id}.png"
+                        if src_path.exists():
+                            image_data = src_path.read_bytes()
+                            cached_url = self._cache.set(request.item_description, image_data)
+                            self._completed_urls[request.item_id] = cached_url
+                            logger.info(
+                                "[ItemIconGenerator] 아이콘 생성 완료",
+                                extra={
+                                    "item_id": request.item_id,
+                                    "desc_hash": desc_hash,
+                                    "elapsed_ms": elapsed_ms,
+                                    "attempt": attempt,
+                                },
+                            )
+                            return IconGenerationResponse(
+                                status=IconGenerationStatus.COMPLETED,
+                                icon_url=cached_url,
+                                item_id=request.item_id,
+                                is_placeholder=False,
+                                generation_time_ms=elapsed_ms,
+                                message="아이콘이 성공적으로 생성되었습니다.",
+                            )
 
-        except Exception as e:
-            elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
-            error_type = type(e).__name__
-            logger.exception(
-                "[ItemIconGenerator] 아이콘 생성 중 오류",
-                extra={
-                    "item_id": request.item_id,
-                    "error_type": error_type,
-                },
-            )
-            return IconGenerationResponse(
-                status=IconGenerationStatus.FAILED,
-                icon_url=self.get_placeholder_url(request.item_id),
-                item_id=request.item_id,
-                is_placeholder=True,
-                generation_time_ms=elapsed_ms,
-                message=f"아이콘 생성 중 오류: {error_type}",
-            )
+                    # URL 직접 반환 (파일 복사 실패 시)
+                    return IconGenerationResponse(
+                        status=IconGenerationStatus.COMPLETED,
+                        icon_url=response.image_url,
+                        item_id=request.item_id,
+                        is_placeholder=False,
+                        generation_time_ms=elapsed_ms,
+                        message="아이콘이 생성되었습니다.",
+                    )
+
+                # API 레벨 실패
+                last_error_message = response.message or "아이콘 생성에 실패했습니다."
+
+                # U-093: 재시도 가능 여부 판단 후 재시도
+                if attempt < max_attempts and _is_retryable_message(last_error_message):
+                    delay = ICON_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                    logger.warning(
+                        "[ItemIconGenerator] 아이콘 생성 실패, 재시도 예정",
+                        extra={
+                            "item_id": request.item_id,
+                            "desc_hash": desc_hash,
+                            "attempt": f"{attempt}/{max_attempts}",
+                            "retry_delay_s": delay,
+                            "error_msg": last_error_message,
+                        },
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+
+                # 재시도 불가 또는 마지막 시도
+                break
+
+            except TimeoutError:
+                last_error_message = f"아이콘 생성 타임아웃 ({ICON_GENERATION_TIMEOUT_SECONDS}초)"
+
+                # U-093: 타임아웃은 항상 재시도 대상
+                if attempt < max_attempts:
+                    delay = ICON_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                    logger.warning(
+                        "[ItemIconGenerator] 아이콘 생성 타임아웃, 재시도 예정",
+                        extra={
+                            "item_id": request.item_id,
+                            "desc_hash": desc_hash,
+                            "attempt": f"{attempt}/{max_attempts}",
+                            "retry_delay_s": delay,
+                            "timeout_seconds": ICON_GENERATION_TIMEOUT_SECONDS,
+                        },
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                break
+
+            except Exception as e:
+                error_type = type(e).__name__
+                last_error_message = f"아이콘 생성 중 오류: {error_type}"
+
+                # U-093: 재시도 가능 예외인 경우만 재시도
+                if attempt < max_attempts and _is_retryable_exception(e):
+                    delay = ICON_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                    logger.warning(
+                        "[ItemIconGenerator] 아이콘 생성 중 오류, 재시도 예정",
+                        extra={
+                            "item_id": request.item_id,
+                            "desc_hash": desc_hash,
+                            "attempt": f"{attempt}/{max_attempts}",
+                            "retry_delay_s": delay,
+                            "error_type": error_type,
+                        },
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+
+                # 재시도 불가 에러 (로깅 후 종료)
+                logger.exception(
+                    "[ItemIconGenerator] 아이콘 생성 중 복구 불가 오류",
+                    extra={
+                        "item_id": request.item_id,
+                        "error_type": error_type,
+                    },
+                )
+                break
+
+        # 모든 시도 실패 → placeholder 유지 (RULE-004: 안전한 폴백)
+        elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
+        logger.warning(
+            "[ItemIconGenerator] 아이콘 생성 최종 실패",
+            extra={
+                "item_id": request.item_id,
+                "desc_hash": desc_hash,
+                "total_attempts": max_attempts,
+                "elapsed_ms": elapsed_ms,
+            },
+        )
+        return IconGenerationResponse(
+            status=IconGenerationStatus.FAILED,
+            icon_url=self.get_placeholder_url(request.item_id),
+            item_id=request.item_id,
+            is_placeholder=True,
+            generation_time_ms=elapsed_ms,
+            message=f"아이콘 생성 실패 ({max_attempts}/{max_attempts} 시도): {last_error_message}",
+        )
 
     async def get_icon_status(
         self, item_id: str, request: IconGenerationRequest | None = None

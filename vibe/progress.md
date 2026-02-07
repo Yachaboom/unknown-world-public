@@ -1,5 +1,38 @@
 # 프로젝트 진행 상황
 
+## [2026-02-07 18:25] U-093[Mvp]: ItemIconGenerator 아이콘 생성 타임아웃 수정 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 아이콘 생성 타임아웃 상향(30s -> 90s) 및 자동 재시도 로직(최대 1회, 총 2회 시도) 구현
+- **추가 컴포넌트**: `vibe/unit-results/U-093[Mvp].md` (보고서), `vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md` (런북), `backend/tests/unit/services/test_u093_timeout_retry.py` (단위 테스트)
+- **달성 요구사항**: [RULE-004] 실패 내성 및 안전 폴백, [PRD 6.7] 인벤토리 시각화 안정성 강화
+
+### 기술적 구현 세부사항
+
+**타임아웃 및 재시도 정책**:
+- **Timeout Extension**: 네트워크 및 서버 지연에 대응하기 위해 타임아웃을 90초로 상향 조정.
+- **Exponential Backoff Retry**: 타임아웃이나 서버 에러 발생 시 2초 대기 후 1회 재시도 수행. 4xx 에러나 Quota/Safety 차단 등 복구 불가능한 케이스는 재시도에서 즉시 제외.
+- **Fail-safe Logic**: 모든 시도 실패 시 placeholder 아이콘을 유지하고 상세 시도 횟수(2/2)를 로그에 남겨 추적성 확보.
+
+**코드 구조**:
+repo-root/
+└── backend/
+    ├── src/unknown_world/services/item_icon_generator.py (타임아웃 및 재시도 로직)
+    └── tests/unit/services/test_u093_timeout_retry.py (재시도 시나리오 검증)
+
+### 성능 및 품질 지표
+
+- **성능**: 비동기 처리를 통해 재시도 중에도 턴 진행이 블록되지 않음 확인.
+- **품질**: 단위 테스트 5종(타임아웃, 재시도 성공, 재시도 불가 에러 등) 100% 통과.
+
+### 다음 단계
+
+- **U-094**: ImageUnderstanding 응답 파싱 예외 시 자동 재시도
+- **U-095**: Scanner 아이템 생성 개수 랜덤화
+
+---
+
 ## [2026-02-07 17:45] U-092[Mvp]: 기본 초기 아이템 아이콘 프리셋 이미지 (nanobanana-mcp 활용) 완료
 
 ### 구현 완료 항목
