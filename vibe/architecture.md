@@ -91,18 +91,14 @@ frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
 backend/tests/unit/services/test_u093_timeout_retry.py
-vibe/unit-results/U-077[Mvp].md
-vibe/unit-results/U-089[Mvp].md
-vibe/unit-results/U-090[Mvp].md
-vibe/unit-results/U-091[Mvp].md
-vibe/unit-results/U-092[Mvp].md
-vibe/unit-results/U-093[Mvp].md
+vibe/unit-results/U-094[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
 vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
 vibe/unit-runbooks/U-092-item-icon-preset-runbook.md
 vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md
+vibe/unit-runbooks/U-094-scan-retry-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -115,10 +111,20 @@ vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 
----
+    ---
 
-## 45. 기본 초기 아이템 아이콘 프리셋 이미지 (U-092[Mvp])
+## 46. ImageUnderstanding 응답 파싱 예외 시 자동 재시도 (U-094[Mvp])
 
+1. **비전 파이프라인 Repair Loop**:
+    - **Retry Logic**: `ImageUnderstandingService`에서 비전 모델 응답 파싱 실패 시 최대 **2회 자동 재시도**(총 3회 시도)를 수행함.
+    - **Exponential Backoff**: 재시도 간 1.0초, 2.0초의 지수 백오프를 적용하여 모델 및 네트워크 일시적 오류에 대응함.
+2. **프롬프트 보정 및 강화 (Option B)**:
+    - **Reinforcement Prompt**: 재시도 시 "유효한 JSON 형식으로만 응답하라"는 마크다운 제거 지시어(`SCAN_RETRY_REINFORCEMENT`)를 프롬프트에 동적으로 결합하여 모델의 출력 형식을 강제함.
+3. **스마트 예외 판별 및 폴백 (RULE-004)**:
+    - **Retry Filter**: 안전 차단(Safety Block), 인증 실패(401), 할당량 초과(429) 등 재시도가 불필요한 케이스는 즉시 폴백하여 지연을 최소화함.
+    - **Safe Fallback**: 모든 재시도 실패 시 i18n 대응된 에러 메시지와 함께 빈 아이템 목록을 포함한 표준 `ScanResult`를 반환하여 프론트엔드 렌더링 안정성을 확보함.
+4. **관측 가능성 및 로깅 (RULE-007)**:
+    - **Execution Trace**: 각 시도 횟수와 실패 사유를 서버 로그에 기록하여 비전 파이프라인의 성능과 안정성을 모니터링함.
 1. **프리셋 아이콘 레지스트리 (Static Assets)**:
     - **Asset Library**: 데모 프로필 초기 아이템 및 자주 등장하는 공통 아이템 30종에 대해 사전 제작된 64x64 픽셀 아트 아이콘을 `frontend/public/ui/items/`에 배치함.
     - **Registry Mapping**: 아이템 ID와 에셋 경로를 1:1로 매핑하는 `itemIconPresets.ts`를 통해 클라이언트 사이드에서 즉시 조회 가능하도록 함.

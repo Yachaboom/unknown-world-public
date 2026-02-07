@@ -1,35 +1,35 @@
 # 프로젝트 진행 상황
 
-## [2026-02-07 18:25] U-093[Mvp]: ItemIconGenerator 아이콘 생성 타임아웃 수정 완료
+## [2026-02-07 18:50] U-094[Mvp]: ImageUnderstanding 응답 파싱 예외 시 자동 재시도 완료
 
 ### 구현 완료 항목
 
-- **핵심 기능**: 아이콘 생성 타임아웃 상향(30s -> 90s) 및 자동 재시도 로직(최대 1회, 총 2회 시도) 구현
-- **추가 컴포넌트**: `vibe/unit-results/U-093[Mvp].md` (보고서), `vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md` (런북), `backend/tests/unit/services/test_u093_timeout_retry.py` (단위 테스트)
-- **달성 요구사항**: [RULE-004] 실패 내성 및 안전 폴백, [PRD 6.7] 인벤토리 시각화 안정성 강화
+- **핵심 기능**: Scanner(`POST /api/scan`)의 응답 파싱 실패 시 최대 2회 자동 재시도 및 지수 백오프 구현
+- **추가 컴포넌트**: `vibe/unit-results/U-094[Mvp].md` (보고서), `vibe/unit-runbooks/U-094-scan-retry-runbook.md` (런북)
+- **달성 요구사항**: [RULE-004] 실패 내성 및 안전 폴백, [PRD 8.4] 구조화 출력 검증 및 복구 강화, [PRD 8.6] 이미지 이해 안정성 개선
 
 ### 기술적 구현 세부사항
 
-**타임아웃 및 재시도 정책**:
-- **Timeout Extension**: 네트워크 및 서버 지연에 대응하기 위해 타임아웃을 90초로 상향 조정.
-- **Exponential Backoff Retry**: 타임아웃이나 서버 에러 발생 시 2초 대기 후 1회 재시도 수행. 4xx 에러나 Quota/Safety 차단 등 복구 불가능한 케이스는 재시도에서 즉시 제외.
-- **Fail-safe Logic**: 모든 시도 실패 시 placeholder 아이콘을 유지하고 상세 시도 횟수(2/2)를 로그에 남겨 추적성 확보.
+**재시도 및 복구 정책**:
+- **Automatic Repair**: Gemini 비전 모델 응답이 JSON Schema를 벗어나는 경우를 감지하여 1초, 2초 간격으로 자동 재시도.
+- **Prompt Reinforcement**: 재시도 시 "유효한 JSON 형식으로만 응답하라"는 지시어를 프롬프트에 동적으로 추가하여 성공 확률 향상.
+- **Selective Retry**: 안전 차단(Safety Block), 인증 실패, 할당량 초과 등은 재시도 대상에서 제외하여 리소스 낭비 방지.
+- **Graceful Fallback**: 모든 시도 실패 시 i18n 대응된 에러 메시지와 함께 빈 아이템 목록을 반환하여 시스템 중단 방지.
 
 **코드 구조**:
 repo-root/
 └── backend/
-    ├── src/unknown_world/services/item_icon_generator.py (타임아웃 및 재시도 로직)
-    └── tests/unit/services/test_u093_timeout_retry.py (재시도 시나리오 검증)
+    └── src/unknown_world/services/image_understanding.py (재시도 루프 및 파싱 보정 로직)
 
 ### 성능 및 품질 지표
 
-- **성능**: 비동기 처리를 통해 재시도 중에도 턴 진행이 블록되지 않음 확인.
-- **품질**: 단위 테스트 5종(타임아웃, 재시도 성공, 재시도 불가 에러 등) 100% 통과.
+- **안정성**: 간헐적인 모델 응답 오류에 대해 최대 3회의 시도 기회를 부여하여 스캐너 성공률 개선.
+- **관측 가능성**: 재시도 횟수 및 실패 사유를 서버 로그에 구조화하여 기록.
 
 ### 다음 단계
 
-- **U-094**: ImageUnderstanding 응답 파싱 예외 시 자동 재시도
 - **U-095**: Scanner 아이템 생성 개수 랜덤화
+- **U-096**: 인벤토리 아이템 드래그 앤 드롭 정렬 보존
 
 ---
 

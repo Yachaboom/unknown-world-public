@@ -94,9 +94,9 @@ Scanner(`POST /api/scan`)의 **이미지 이해(ImageUnderstanding) 응답 파�
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 재시도 시 프롬프트 변경?
+- [x] **Q1**: 재시도 시 프롬프트 변경?
   - Option A: 동일 프롬프트로 재요청 (비결정성 활용)
-  - Option B: "JSON 형식으로 반드시 응답하세요" 추가 지시 포함
+  - ✅Option B: "JSON 형식으로 반드시 응답하세요" 추가 지시 포함
   - Option C: temperature를 낮춰서 재시도 (0.5 → 0.3)
 
 ## 참고 자료

@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -164,6 +165,40 @@ SCAN_PROMPTS: dict[Language, str] = {
     Language.KO: SCAN_PROMPT_KO,
     Language.EN: SCAN_PROMPT_EN,
 }
+
+
+# =============================================================================
+# 재시도 설정 (U-094: ImageUnderstanding 응답 파싱 예외 시 자동 재시도)
+# =============================================================================
+
+SCAN_MAX_RETRIES = 2
+"""최대 재시도 횟수 (총 3회 시도: 1 초기 + 2 재시도)."""
+
+SCAN_RETRY_BACKOFF_SECONDS: list[float] = [1.0, 2.0]
+"""재시도 간 백오프 시간 (초)."""
+
+SCAN_RETRY_REINFORCEMENT: dict[Language, str] = {
+    Language.KO: (
+        "\n\n⚠️ 중요: 반드시 유효한 JSON 형식으로만 응답하세요. "
+        "마크다운 코드 블록(```)을 사용하지 말고 순수 JSON만 반환하세요."
+    ),
+    Language.EN: (
+        "\n\n⚠️ IMPORTANT: You MUST respond with valid JSON format only. "
+        "Do NOT use markdown code blocks (```). Return pure JSON only."
+    ),
+}
+"""재시도 시 추가되는 JSON 형식 강조 지시 (U-094 Q1: Option B)."""
+
+_NON_RETRYABLE_ERROR_NAMES: frozenset[str] = frozenset(
+    {
+        "Unauthenticated",
+        "PermissionDenied",
+        "ResourceExhausted",
+        "InvalidArgument",
+        "NotFound",
+    }
+)
+"""재시도 불가 API 에러 타입 이름 (인증/할당량/권한 등)."""
 
 
 # =============================================================================
@@ -453,6 +488,70 @@ def _parse_vision_response(
 
 
 # =============================================================================
+# 재시도 헬퍼 함수 (U-094)
+# =============================================================================
+
+
+def _is_non_retryable_api_error(error: Exception) -> bool:
+    """재시도 불가 API 에러인지 확인합니다 (U-094).
+
+    인증 실패(401), 권한 거부(403), 할당량 초과(429) 등은
+    재시도해도 동일한 결과이므로 즉시 폴백합니다.
+
+    Args:
+        error: 발생한 예외
+
+    Returns:
+        True이면 재시도 불가
+    """
+    return any(cls.__name__ in _NON_RETRYABLE_ERROR_NAMES for cls in type(error).__mro__)
+
+
+def _is_safety_blocked_response(response: Any) -> bool:
+    """Gemini 응답이 안전 정책에 의해 차단되었는지 확인합니다 (U-094).
+
+    안전 차단은 재시도해도 동일한 결과이므로 즉시 폴백합니다.
+
+    Args:
+        response: Gemini API 응답 객체
+
+    Returns:
+        True이면 안전 차단됨
+    """
+    try:
+        # candidates[0].finish_reason 확인
+        if hasattr(response, "candidates") and response.candidates:
+            candidate = response.candidates[0]
+            finish_reason = getattr(candidate, "finish_reason", None)
+            if finish_reason is not None:
+                reason_str = str(finish_reason).upper()
+                if reason_str in ("SAFETY", "BLOCKED", "RECITATION"):
+                    return True
+        # prompt_feedback.block_reason 확인
+        if hasattr(response, "prompt_feedback"):
+            feedback = response.prompt_feedback
+            if hasattr(feedback, "block_reason") and feedback.block_reason:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _get_final_failure_message(language: Language) -> str:
+    """최종 실패 시 사용자에게 표시할 메시지를 반환합니다 (U-094, RULE-006).
+
+    Args:
+        language: 응답 언어
+
+    Returns:
+        i18n 폴백 메시지
+    """
+    if language == Language.KO:
+        return "이미지 분석에 실패했습니다. 다시 시도해주세요."
+    return "Image analysis failed. Please try again."
+
+
+# =============================================================================
 # 이미지 이해 서비스 클래스
 # =============================================================================
 
@@ -626,7 +725,13 @@ class ImageUnderstandingService:
         content_type: str,
         language: Language,
     ) -> ScanResult:
-        """비전 모델을 호출합니다.
+        """비전 모델을 호출합니다 (파싱 실패 시 자동 재시도 포함).
+
+        U-094: ImageUnderstanding 응답 파싱 예외 시 자동 재시도.
+        - 최대 2회 재시도 (총 3회 시도)
+        - 재시도 시 JSON 형식 강조 지시 추가 (Q1: Option B)
+        - 백오프: 1초, 2초
+        - 재시도 제외: 인증 실패(401), 할당량 초과(429), 안전 차단
 
         Args:
             image_content: 이미지 바이트 데이터
@@ -634,13 +739,129 @@ class ImageUnderstandingService:
             language: 응답 언어
 
         Returns:
-            ScanResult: 분석 결과
+            ScanResult: 분석 결과 (성공 또는 폴백)
         """
         if self._genai_client is None:
             return _create_fallback_result("비전 클라이언트가 초기화되지 않았습니다")
 
-        # 프롬프트 선택
+        last_result: ScanResult | None = None
+
+        for attempt in range(SCAN_MAX_RETRIES + 1):  # 0=초기, 1~2=재시도
+            is_retry = attempt > 0
+
+            # 재시도 시 백오프 대기
+            if is_retry:
+                backoff_seconds = SCAN_RETRY_BACKOFF_SECONDS[attempt - 1]
+                logger.info(
+                    "[Scan] 파싱 실패, 재시도 %d/%d (백오프 %.1f초)",
+                    attempt,
+                    SCAN_MAX_RETRIES,
+                    backoff_seconds,
+                )
+                await asyncio.sleep(backoff_seconds)
+
+            try:
+                result = await self._execute_single_vision_call(
+                    image_content,
+                    content_type,
+                    language,
+                    is_retry=is_retry,
+                )
+
+                # 완전 성공 → 즉시 반환
+                if result.status == ScanStatus.COMPLETED:
+                    if is_retry:
+                        logger.info(
+                            "[Scan] 재시도 성공 (%d/%d 시도)",
+                            attempt + 1,
+                            SCAN_MAX_RETRIES + 1,
+                        )
+                    return result
+
+                # 안전 차단 → 재시도 불가, 즉시 반환
+                if result.status == ScanStatus.BLOCKED:
+                    logger.warning("[Scan] 안전 차단, 재시도 건너뜀")
+                    return result
+
+                # PARTIAL/FAILED → 재시도 대상
+                last_result = result
+                logger.warning(
+                    "[Scan] 파싱 실패 (시도 %d/%d, 상태: %s)",
+                    attempt + 1,
+                    SCAN_MAX_RETRIES + 1,
+                    result.status.value,
+                )
+
+            except Exception as e:
+                error_type = type(e).__name__
+
+                # 재시도 불가 API 에러 (인증/할당량/권한)
+                if _is_non_retryable_api_error(e):
+                    logger.error(
+                        "[Scan] 재시도 불가 API 오류: %s",
+                        error_type,
+                    )
+                    return _create_fallback_result(
+                        f"API 오류로 이미지 분석에 실패했습니다: {error_type}",
+                    )
+
+                # 기타 예외 → 재시도
+                logger.warning(
+                    "[Scan] API 호출 예외 (시도 %d/%d)",
+                    attempt + 1,
+                    SCAN_MAX_RETRIES + 1,
+                    extra={"error_type": error_type},
+                )
+                last_result = _create_fallback_result(
+                    f"API 호출 오류: {error_type}",
+                )
+
+        # 모든 재시도 실패 → 폴백 반환
+        total_attempts = SCAN_MAX_RETRIES + 1
+        logger.error(
+            "[Scan] 모든 재시도 실패 (%d/%d 시도), 폴백 응답 반환",
+            total_attempts,
+            total_attempts,
+        )
+
+        if last_result is not None:
+            last_result.message = _get_final_failure_message(language)
+            return last_result
+
+        return _create_fallback_result(_get_final_failure_message(language))
+
+    async def _execute_single_vision_call(
+        self,
+        image_content: bytes,
+        content_type: str,
+        language: Language,
+        *,
+        is_retry: bool = False,
+    ) -> ScanResult:
+        """단일 비전 모델 API 호출을 실행합니다.
+
+        U-094: 재시도 시 JSON 형식 강조 지시를 프롬프트에 추가합니다.
+
+        Args:
+            image_content: 이미지 바이트 데이터
+            content_type: MIME 타입
+            language: 응답 언어
+            is_retry: 재시도 여부 (True면 JSON 강조 지시 추가)
+
+        Returns:
+            ScanResult: 파싱된 분석 결과
+
+        Raises:
+            Exception: API 호출 중 발생한 예외 (호출자에서 재시도/폴백 처리)
+        """
+        # 프롬프트 선택 (U-094: 재시도 시 JSON 형식 강조 추가)
         prompt_text = SCAN_PROMPTS.get(language, SCAN_PROMPT_KO)
+        if is_retry:
+            reinforcement = SCAN_RETRY_REINFORCEMENT.get(
+                language,
+                SCAN_RETRY_REINFORCEMENT[Language.KO],
+            )
+            prompt_text = prompt_text + reinforcement
 
         # 모델 ID 조회
         model_id = get_model_id(ModelLabel.VISION)
@@ -651,6 +872,7 @@ class ImageUnderstandingService:
                 "model_id": model_id,
                 "language": language.value,
                 "image_size_kb": len(image_content) // 1024,
+                "is_retry": is_retry,
             },
         )
 
@@ -677,6 +899,22 @@ class ImageUnderstandingService:
             contents=contents,  # type: ignore[reportArgumentType]
             config=config,
         )
+
+        # 안전 차단 확인 (U-094: 안전 차단은 재시도 제외)
+        if _is_safety_blocked_response(response):
+            msg = (
+                "안전 정책에 의해 이미지 분석이 차단되었습니다."
+                if language == Language.KO
+                else "Image analysis was blocked by safety policy."
+            )
+            return ScanResult(
+                status=ScanStatus.BLOCKED,
+                caption="",
+                objects=[],
+                item_candidates=[],
+                message=msg,
+                analysis_time_ms=0,
+            )
 
         # 응답 텍스트 추출
         response_text: str = ""
