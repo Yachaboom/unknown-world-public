@@ -97,13 +97,17 @@ export const SaveGameSchema = z
       .default([])
       .describe('인벤토리 아이템'),
 
-    /** 활성 퀘스트 */
+    /** 활성 퀘스트 (U-078: 목표 시스템 강화) */
     quests: z
       .array(
         z.object({
           id: z.string(),
           label: z.string(),
           is_completed: z.boolean().default(false),
+          description: z.string().nullable().default(null),
+          is_main: z.boolean().default(false),
+          progress: z.number().int().min(0).max(100).default(0),
+          reward_signal: z.number().int().min(0).default(0),
         }),
       )
       .default([])
@@ -222,10 +226,15 @@ export function createSaveGame(input: SaveGameInput): SaveGame {
       quantity: item.quantity,
       iconStatus: item.iconStatus, // U-075: 아이콘 생성 상태 저장
     })),
+    // U-078: 목표 시스템 강화 - 새 필드 포함
     quests: input.quests.map((quest) => ({
       id: quest.id,
       label: quest.label,
       is_completed: quest.is_completed,
+      description: quest.description ?? null,
+      is_main: quest.is_main ?? false,
+      progress: quest.progress ?? 0,
+      reward_signal: quest.reward_signal ?? 0,
     })),
     activeRules: input.activeRules.map((rule) => ({
       id: rule.id,

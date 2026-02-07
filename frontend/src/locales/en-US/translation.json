@@ -28,7 +28,9 @@
       },
       "quest": {
         "discover_origin": "Discover the World's Origin",
-        "collect_memories": "Collect 3 Memory Fragments"
+        "discover_origin_desc": "Find clues and uncover how this world was created",
+        "collect_memories": "Collect 3 Memory Fragments",
+        "read_ancient_tome": "Decipher the Ancient Tome"
       },
       "rule": {
         "time_flows": "Flow of Time",
@@ -55,6 +57,7 @@
       },
       "quest": {
         "find_exit": "Find the Exit",
+        "find_exit_desc": "Explore the maze and find the hidden exit to escape",
         "explore_areas": "Explore 3 Areas",
         "gather_supplies": "Gather Supplies"
       },
@@ -85,7 +88,9 @@
       },
       "quest": {
         "analyze_system": "Complete System Analysis",
-        "optimize_resources": "Optimize Resource Efficiency"
+        "analyze_system_desc": "Access the core terminal and analyze the system structure",
+        "optimize_resources": "Optimize Resource Efficiency",
+        "scan_terminal": "Perform Terminal Scan"
       },
       "rule": {
         "energy_conservation": "Energy Conservation",
@@ -162,7 +167,17 @@
     "section": {
       "active": "Active",
       "completed": "Completed"
-    }
+    },
+    "main_objective": "Main Objective",
+    "sub_objectives": "Sub-objectives",
+    "progress": "Progress {{progress}}%",
+    "reward_preview": "Reward: {{signal}} Signal",
+    "reward_earned": "+{{signal}} Signal earned!",
+    "objective_complete": "Objective Complete!",
+    "free_exploration": "Free Exploration",
+    "free_exploration_desc": "Explore the world freely without a set objective",
+    "no_sub_objectives": "No sub-objectives yet",
+    "tracker_no_objective": "No Objective"
   },
   "rule_board": {
     "empty": "[ NO RULES ]",

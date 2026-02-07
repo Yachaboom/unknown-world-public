@@ -392,13 +392,27 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // 잔액 부족 상태 업데이트
     economyStore.updateBalanceLowStatus(newEconomy);
 
-    // 6. Quest 상태 업데이트 (U-013)
+    // 6. Quest 상태 업데이트 (U-013, U-078: 목표 시스템 강화)
     // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
     // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가
+    // U-078: 서브 목표 완료 시 보상 알림 시스템 내러티브 추가
     const newQuests = [...state.quests];
     for (const updatedQuest of output.world.quests_updated) {
       const existingIndex = newQuests.findIndex((q) => q.id === updatedQuest.id);
       if (existingIndex >= 0) {
+        // U-078: 미완료 → 완료 전환 감지 (보상 피드백용)
+        const prevQuest = newQuests[existingIndex];
+        if (
+          !prevQuest.is_completed &&
+          updatedQuest.is_completed &&
+          updatedQuest.reward_signal > 0
+        ) {
+          newNarrativeEntries.push({
+            turn: newTurnCount,
+            text: `🎯 ${i18n.t('quest.objective_complete')} ${i18n.t('quest.reward_earned', { signal: updatedQuest.reward_signal })}`,
+            type: 'system',
+          });
+        }
         // 기존 퀘스트 업데이트
         newQuests[existingIndex] = updatedQuest;
       } else {
@@ -635,6 +649,15 @@ export const selectActiveQuests = (state: WorldStore) =>
 /** 완료된 퀘스트 셀렉터 */
 export const selectCompletedQuests = (state: WorldStore) =>
   state.quests.filter((q) => q.is_completed);
+
+// ============ U-078: 목표 시스템 셀렉터 ============
+
+/** 주 목표(Main Objective) 셀렉터 - is_main=true인 첫 번째 퀘스트 */
+export const selectMainObjective = (state: WorldStore) =>
+  state.quests.find((q) => q.is_main) ?? null;
+
+/** 서브 목표(Sub-objectives) 셀렉터 - is_main=false인 퀘스트 */
+export const selectSubObjectives = (state: WorldStore) => state.quests.filter((q) => !q.is_main);
 
 // ============ U-089: 정밀분석 셀렉터 ============
 

@@ -64,11 +64,15 @@ export interface DemoProfileInitialState {
     icon: string;
     quantity: number;
   }>;
-  /** 초기 퀘스트 정의 */
+  /** 초기 퀘스트 정의 (U-078: 목표 시스템 강화) */
   questDefs: Array<{
     id: string;
     labelKey: string;
     is_completed: boolean;
+    descriptionKey?: string;
+    is_main?: boolean;
+    progress?: number;
+    reward_signal?: number;
   }>;
   /** 초기 규칙 정의 */
   ruleDefs: Array<{
@@ -137,12 +141,23 @@ export const PROFILE_NARRATOR: DemoProfile = {
       {
         id: 'quest-discover-origin',
         labelKey: 'profile.narrator.quest.discover_origin',
+        descriptionKey: 'profile.narrator.quest.discover_origin_desc',
         is_completed: false,
+        is_main: true,
+        progress: 0,
+        reward_signal: 50,
       },
       {
         id: 'quest-collect-memories',
         labelKey: 'profile.narrator.quest.collect_memories',
         is_completed: false,
+        reward_signal: 15,
+      },
+      {
+        id: 'quest-read-ancient-tome',
+        labelKey: 'profile.narrator.quest.read_ancient_tome',
+        is_completed: false,
+        reward_signal: 10,
       },
     ],
     ruleDefs: [
@@ -202,16 +217,26 @@ export const PROFILE_EXPLORER: DemoProfile = {
       },
     ],
     questDefs: [
-      { id: 'quest-find-exit', labelKey: 'profile.explorer.quest.find_exit', is_completed: false },
+      {
+        id: 'quest-find-exit',
+        labelKey: 'profile.explorer.quest.find_exit',
+        descriptionKey: 'profile.explorer.quest.find_exit_desc',
+        is_completed: false,
+        is_main: true,
+        progress: 15,
+        reward_signal: 50,
+      },
       {
         id: 'quest-explore-areas',
         labelKey: 'profile.explorer.quest.explore_areas',
         is_completed: false,
+        reward_signal: 20,
       },
       {
         id: 'quest-gather-supplies',
         labelKey: 'profile.explorer.quest.gather_supplies',
         is_completed: true,
+        reward_signal: 10,
       },
     ],
     ruleDefs: [
@@ -275,12 +300,23 @@ export const PROFILE_TECH: DemoProfile = {
       {
         id: 'quest-analyze-system',
         labelKey: 'profile.tech.quest.analyze_system',
+        descriptionKey: 'profile.tech.quest.analyze_system_desc',
         is_completed: false,
+        is_main: true,
+        progress: 0,
+        reward_signal: 40,
       },
       {
         id: 'quest-optimize-resources',
         labelKey: 'profile.tech.quest.optimize_resources',
         is_completed: false,
+        reward_signal: 15,
+      },
+      {
+        id: 'quest-scan-terminal',
+        labelKey: 'profile.tech.quest.scan_terminal',
+        is_completed: false,
+        reward_signal: 10,
       },
     ],
     ruleDefs: [
@@ -380,10 +416,15 @@ export function profileToSaveGameInput(
       icon: getPresetIconUrl(item.id) ?? item.icon,
       quantity: item.quantity,
     })),
+    // U-078: 목표 시스템 강화 - 주 목표/서브 목표/진행률/보상 반영
     quests: profile.initialState.questDefs.map((quest) => ({
       id: quest.id,
       label: t(quest.labelKey),
       is_completed: quest.is_completed,
+      description: quest.descriptionKey ? t(quest.descriptionKey) : null,
+      is_main: quest.is_main ?? false,
+      progress: quest.progress ?? 0,
+      reward_signal: quest.reward_signal ?? 0,
     })),
     activeRules: profile.initialState.ruleDefs.map((rule) => ({
       id: rule.id,

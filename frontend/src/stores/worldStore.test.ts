@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useWorldStore } from './worldStore';
+import { useWorldStore, selectMainObjective, selectSubObjectives } from './worldStore';
 import type { TurnOutput } from '../schemas/turn';
 
 // i18next 모킹 (U-072)
@@ -60,6 +60,10 @@ describe('worldStore (U-013: Quest + Rules)', () => {
             id: 'q1',
             label: '첫 번째 임무',
             is_completed: false,
+            description: null,
+            is_main: false,
+            progress: 0,
+            reward_signal: 0,
           },
         ],
         rules_changed: [],
@@ -99,7 +103,17 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       world: {
         inventory_added: [],
         inventory_removed: [],
-        quests_updated: [{ id: 'q1', label: '임무', is_completed: false }],
+        quests_updated: [
+          {
+            id: 'q1',
+            label: '임무',
+            is_completed: false,
+            description: null,
+            is_main: false,
+            progress: 0,
+            reward_signal: 0,
+          },
+        ],
         rules_changed: [],
         relationships_changed: [],
         memory_pins: [],
@@ -129,7 +143,17 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       world: {
         inventory_added: [],
         inventory_removed: [],
-        quests_updated: [{ id: 'q1', label: '임무', is_completed: true }],
+        quests_updated: [
+          {
+            id: 'q1',
+            label: '임무',
+            is_completed: true,
+            description: null,
+            is_main: false,
+            progress: 100,
+            reward_signal: 0,
+          },
+        ],
         rules_changed: [],
         relationships_changed: [],
         memory_pins: [],
@@ -268,7 +292,17 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       useWorldStore.setState({
         turnCount: 10,
         economy: { signal: 50, memory_shard: 0 },
-        quests: [{ id: 'q1', label: '퀘스트', is_completed: false }],
+        quests: [
+          {
+            id: 'q1',
+            label: '퀘스트',
+            is_completed: false,
+            description: null,
+            is_main: false,
+            progress: 0,
+            reward_signal: 0,
+          },
+        ],
       });
 
       // 2. 리셋 실행
@@ -405,6 +439,140 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       const state = useWorldStore.getState();
       expect(state.narrativeEntries).toHaveLength(1);
       expect(state.narrativeEntries[0].text).toBe('일반 내러티브');
+    });
+  });
+
+  describe('Objective System (U-078[Mvp])', () => {
+    it('selectMainObjective는 is_main=true인 퀘스트를 반환해야 한다', () => {
+      useWorldStore.setState({
+        quests: [
+          {
+            id: 'q1',
+            label: '서브',
+            is_main: false,
+            is_completed: false,
+            progress: 0,
+            reward_signal: 0,
+            description: null,
+          },
+          {
+            id: 'q2',
+            label: '메인',
+            is_main: true,
+            is_completed: false,
+            progress: 50,
+            reward_signal: 100,
+            description: null,
+          },
+        ],
+      });
+
+      const main = selectMainObjective(useWorldStore.getState());
+      expect(main?.id).toBe('q2');
+    });
+
+    it('selectSubObjectives는 is_main=false인 퀘스트들을 반환해야 한다', () => {
+      useWorldStore.setState({
+        quests: [
+          {
+            id: 'q1',
+            label: '서브1',
+            is_main: false,
+            is_completed: false,
+            progress: 0,
+            reward_signal: 0,
+            description: null,
+          },
+          {
+            id: 'q2',
+            label: '메인',
+            is_main: true,
+            is_completed: false,
+            progress: 50,
+            reward_signal: 100,
+            description: null,
+          },
+          {
+            id: 'q3',
+            label: '서브2',
+            is_main: false,
+            is_completed: false,
+            progress: 0,
+            reward_signal: 0,
+            description: null,
+          },
+        ],
+      });
+
+      const subs = selectSubObjectives(useWorldStore.getState());
+      expect(subs).toHaveLength(2);
+      expect(subs.map((s) => s.id)).toContain('q1');
+      expect(subs.map((s) => s.id)).toContain('q3');
+    });
+
+    it('퀘스트 완료 시 reward_signal이 있으면 알림 메시지가 추가되어야 한다', () => {
+      // 1. 초기 상태: 미완료 퀘스트
+      useWorldStore.setState({
+        quests: [
+          {
+            id: 'q1',
+            label: '임무',
+            is_main: false,
+            is_completed: false,
+            progress: 0,
+            reward_signal: 50,
+            description: null,
+          },
+        ],
+      });
+
+      // 2. 완료 업데이트
+      const output: Partial<TurnOutput> = {
+        narrative: '임무 완료',
+        economy: {
+          cost: { signal: 0, memory_shard: 0 },
+          balance_after: { signal: 150, memory_shard: 5 },
+        },
+        ui: {
+          scene: { image_url: '', alt_text: '' },
+          action_deck: { cards: [] },
+          objects: [],
+        },
+        world: {
+          inventory_added: [],
+          inventory_removed: [],
+          quests_updated: [
+            {
+              id: 'q1',
+              label: '임무',
+              is_main: false,
+              is_completed: true,
+              progress: 100,
+              reward_signal: 50,
+              description: null,
+            },
+          ],
+          rules_changed: [],
+          relationships_changed: [],
+          memory_pins: [],
+        },
+        agent_console: {
+          current_phase: 'commit',
+          badges: ['schema_ok'],
+          repair_count: 0,
+          model_label: 'FAST',
+        },
+        safety: { blocked: false, message: null },
+      };
+
+      useWorldStore.getState().applyTurnOutput(output as TurnOutput);
+
+      const state = useWorldStore.getState();
+      // 일반 내러티브 + 보상 알림 총 2개
+      expect(state.narrativeEntries).toHaveLength(2);
+      expect(state.narrativeEntries[1].text).toContain('quest.objective_complete');
+      expect(state.narrativeEntries[1].text).toContain('quest.reward_earned');
+      expect(state.narrativeEntries[1].type).toBe('system');
     });
   });
 

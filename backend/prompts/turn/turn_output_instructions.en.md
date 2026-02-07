@@ -73,8 +73,27 @@ Specify the rules for each field in the TurnOutput JSON schema.
   - description: Item description (for icon generation)
   - quantity: Quantity (default 1)
 - inventory_removed[]: Consumed/removed item ID array
-- quests_updated[]: Updated quests
+- quests_updated[]: Updated quests (U-078: Objective System Enhancement)
+  - id: Unique quest ID
+  - label: Quest name (English)
+  - is_completed: Whether achieved (boolean)
+  - description: Detailed objective description (optional, string | null)
+  - is_main: Whether this is the main objective (boolean, default false)
+  - progress: Progress percentage (0~100, used for main objective)
+  - reward_signal: Signal reward on completion (int, 0 means no reward)
 - memory_pins[]: Pin candidates
+
+#### Objective Management Rules (U-078)
+
+Update objective states based on player actions each turn:
+
+1. **One main objective (is_main=true) must always exist.** When the current main objective is completed, create a new one.
+2. **Sub-objectives (is_main=false)** serve as step-by-step guides toward the main objective. Keep 3-5 active at a time.
+3. **Progress**: Increase progress when player actions contribute to the main objective. Set to 100 when all sub-objectives are complete.
+4. **Sub-objective completion**: Set is_completed=true. If reward_signal is set, that Signal amount is automatically awarded (must be reflected in economy.balance_after).
+5. **Main objective completion (progress=100)**: Set is_completed=true, award reward_signal, and include a new main objective in quests_updated.
+6. **Narrative reflection**: Naturally reflect objective progress/completion in the narrative. (e.g., "The portal's secrets are slowly revealing... (Objective Progress: 40%)")
+7. **Reward reflection**: When a sub-objective is completed, add reward_signal to economy.balance_after.signal. Ensure cost and balance_after consistency.
 
 #### Item Consumption (inventory_removed) Rules (U-096)
 

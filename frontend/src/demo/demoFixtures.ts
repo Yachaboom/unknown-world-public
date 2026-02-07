@@ -111,26 +111,44 @@ export interface DemoQuestDef {
   labelKey: string;
   /** 완료 여부 */
   is_completed: boolean;
+  /** i18n 설명 키 (선택, U-078) */
+  descriptionKey?: string;
+  /** 주 목표 여부 (U-078) */
+  is_main?: boolean;
+  /** 진행률 0~100 (U-078) */
+  progress?: number;
+  /** Signal 보상량 (U-078) */
+  reward_signal?: number;
 }
 
 /**
- * 데모용 퀘스트 목록.
+ * 데모용 퀘스트 목록 (U-078: 목표 시스템 강화).
  */
 export const DEMO_QUESTS: readonly DemoQuestDef[] = [
   {
     id: 'demo-quest-terminal',
     labelKey: 'demo.quest.terminal.label',
+    descriptionKey: 'demo.quest.terminal.description',
     is_completed: false,
+    is_main: true,
+    progress: 30,
+    reward_signal: 50,
   },
   {
     id: 'demo-quest-escape',
     labelKey: 'demo.quest.escape.label',
     is_completed: false,
+    is_main: false,
+    progress: 0,
+    reward_signal: 20,
   },
   {
     id: 'demo-quest-collect',
     labelKey: 'demo.quest.collect.label',
     is_completed: true,
+    is_main: false,
+    progress: 100,
+    reward_signal: 10,
   },
 ] as const;
 

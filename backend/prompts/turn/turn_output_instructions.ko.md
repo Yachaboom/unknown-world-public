@@ -73,8 +73,27 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
   - description: 아이템 설명 (아이콘 생성용)
   - quantity: 수량 (기본 1)
 - inventory_removed[]: 제거(소비)된 아이템 ID 배열
-- quests_updated[]: 업데이트된 퀘스트
+- quests_updated[]: 업데이트된 퀘스트 (U-078: 목표 시스템 강화)
+  - id: 퀘스트 고유 ID
+  - label: 퀘스트 이름 (한국어)
+  - is_completed: 달성 여부 (boolean)
+  - description: 목표 상세 설명 (선택, string | null)
+  - is_main: 주 목표 여부 (boolean, 기본 false)
+  - progress: 진행률 (0~100, 주 목표에서 사용)
+  - reward_signal: 달성 시 Signal 보상량 (int, 0이면 보상 없음)
 - memory_pins[]: 고정 후보
+
+#### 목표 관리 규칙 (U-078)
+
+매 턴 플레이어 행동에 따라 목표 상태를 업데이트합니다:
+
+1. **주 목표(is_main=true)는 항상 하나** 존재해야 합니다. 현재 주 목표가 완료되면 새 주 목표를 생성합니다.
+2. **서브 목표(is_main=false)**는 주 목표 달성을 위한 단계별 가이드입니다. 한 번에 최대 3~5개를 유지합니다.
+3. **진행률(progress)**: 플레이어 행동이 주 목표에 기여할 때 progress를 올립니다. 모든 서브 목표가 완료되면 100으로 설정합니다.
+4. **서브 목표 달성 시**: is_completed=true로 설정합니다. reward_signal이 있으면 해당 Signal이 자동 지급됩니다 (economy.balance_after에 반영 필수).
+5. **주 목표 달성 시(progress=100)**: is_completed=true로 설정하고 reward_signal을 지급합니다. 동시에 새로운 주 목표를 quests_updated에 포함합니다.
+6. **내러티브 반영**: 목표 달성/진행을 내러티브에 자연스럽게 반영합니다. (예: "포탈의 비밀이 조금씩 드러나고 있습니다... (목표 진행: 40%)")
+7. **보상 반영**: 서브 목표 완료 시 reward_signal만큼 economy.balance_after.signal에 추가합니다. 반드시 cost와 balance_after의 일관성을 유지하세요.
 
 #### 아이템 소비(inventory_removed) 규칙 (U-096)
 

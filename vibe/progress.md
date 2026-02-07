@@ -1,39 +1,42 @@
 # 프로젝트 진행 상황
 
-## [2026-02-07 23:15] U-088[Mvp]: 인벤토리 UI Row 형태 전환 완료
+## [2026-02-08 17:35] U-078[Mvp]: 게임 목표 시스템 강화 완료
 
 ### 구현 완료 항목
 
-- **핵심 기능**: 인벤토리 아이템 표시 방식을 그리드에서 [아이콘 | 이름 | 수량] 형태의 행(Row) 기반 레이아웃으로 전면 개편
-- **추가 컴포넌트**: `vibe/unit-results/U-088[Mvp].md` (보고서), `vibe/unit-runbooks/U-088-inventory-row-layout-runbook.md` (런북)
-- **달성 요구사항**: [PRD 6.7] 인벤토리 가독성 및 조작성 개선, [U-088] Row 형태 UI 전환 사양 충족
+- **핵심 기능**: 주 목표(Main Objective)와 서브 목표(Sub-objectives) 분리, 진행률 바 및 보상 가시화, 화면 상단 고정 ObjectiveTracker(미니 트래커) 구현.
+- **추가 컴포넌트**: `vibe/unit-results/U-078[Mvp].md` (보고서), `vibe/unit-runbooks/U-078-objective-system-runbook.md` (런북), `frontend/src/components/ObjectiveTracker.tsx` (신규).
+- **달성 요구사항**: [PRD 6.7] Quest/Objective 패널 강화, [U-078] 명확한 목표 제시 및 진행 가이드 사양 충족.
 
 ### 기술적 구현 세부사항
 
-**인벤토리 리스트 아키텍처**:
-- **Row Layout**: 48px 높이의 행 기반 디자인과 Zebra striping(줄무늬), 구분선을 적용하여 리스트 가독성을 극대화.
-- **Precision Dragging**: `dnd-kit`의 리스너를 아이콘 영역(32px)에만 한정하여, 아이템 선택과 드래그 조작의 충돌을 방지하고 정확한 드래그 핸들링 구현.
-- **Compact Overlay**: 드래그 중인 아이템을 행 전체가 아닌 40px 컴팩트 아이콘 오버레이로 표시하여 장면(Scene) 가시성 확보.
-- **State Feedback**: 마젠타 컬러 기반의 선택 상태 강조선(inset box-shadow) 및 호버 피드백을 통해 상호작용 상태를 명확히 전달.
+**목표 시스템 아키텍처**:
+- **Dual Objective Structure**: `is_main` 플래그를 기준으로 주 목표(강조 카드 + 진행률)와 서브 목표(체크리스트)를 분리 렌더링하여 플레이어의 우선순위 판단 지원.
+- **HUD Mini-Tracker**: `ObjectiveTracker`를 통해 현재 목표와 전체 서브 목표 진행 상황(`1/3`)을 상시 노출, 목표가 없는 "자유 탐색" 시 자동 숨김 처리.
+- **Reward Feedback Loop**: 목표 달성 시 `worldStore`에서 시스템 내러티브(보상 획득 알림)를 자동 생성하여 즉각적인 성취감 제공.
+- **CRT Aesthetics**: L자 브래켓(`::before/after`), 마젠타 강조색, 글로우 텍스트를 적용하여 게임 내러티브와 조화를 이루는 목표 UI 디자인.
 
 **코드 구조**:
 repo-root/
 └── frontend/src/
     ├── components/
-    │   └── InventoryPanel.tsx (Row 렌더링 및 부분 드래그 로직 적용)
-    └── style.css (Row 레이아웃, 줄무늬, 선택 강조, 오버레이 스타일 추가)
+    │   ├── QuestPanel.tsx (주/서브 목표 분리 및 진행률 바 추가)
+    │   └── ObjectiveTracker.tsx (신규: 미니 트래커)
+    ├── stores/worldStore.ts (목표 분리 셀렉터 및 완료 피드백 로직)
+    └── data/demoProfiles.ts (프로필별 강화된 목표 데이터 반영)
 
 ### 성능 및 품질 지표
 
-- **가독성**: 긴 아이템 이름에 대해 `text-overflow: ellipsis`를 적용하고 네이티브 툴팁으로 전체 이름을 제공하여 레이아웃 안정성 확보.
-- **조작 정밀도**: 아이콘 전용 드래그 핸들 시스템을 통해 오작동률을 낮추고 기존 핫스팟 드롭 파이프라인과의 완벽한 호환성 유지.
+- **조작 편의성**: 화면 상단 트래커를 통해 패널을 열지 않고도 현재 상태 확인 가능 (정보 접근성 향상).
+- **안정성**: `useShallow` 셀렉터를 사용하여 참조 불일치로 인한 불필요한 리렌더링 방지 및 런타임 성능 확보.
 
 ### 다음 단계
 
-- **CP-MVP-03**: 인벤토리 Row UI를 포함한 전체 게임 루프 통합 검증
-- **U-081**: 사이드바 레이아웃 확장성 검토
+- **U-079[Mvp]**: 재화 부족 시 이미지 생성 허용 및 보상 획득 경로 다변화
+- **U-082[Mvp]**: Agent Console 레이아웃 최적화
 
 ---
+
 
 ## [2026-02-07 22:35] U-096[Mvp]: 아이템 사용 시 소비(삭제) 로직 완료
 

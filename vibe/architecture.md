@@ -64,6 +64,7 @@ frontend/src/components/AgentConsole.tsx
 frontend/src/components/EconomyHud.tsx
 frontend/src/components/InventoryPanel.tsx (Row 렌더링 도입)
 frontend/src/components/NarrativeFeed.tsx
+frontend/src/components/ObjectiveTracker.tsx
 frontend/src/components/QuestPanel.tsx
 frontend/src/components/RuleBoard.tsx
 frontend/src/components/ScannerSlot.tsx
@@ -160,6 +161,20 @@ vibe/unit-runbooks/U-096-item-consumption-runbook.md
     - **Delayed State Update**: 500ms(CSS Transition) 대기 후 `clearConsuming`을 통해 실제 데이터를 상태에서 제거하여 조작의 연속성과 시각적 피드백을 일치시킴.
 3. **턴 결과 동기화 (worldStore)**:
     - **Atomic Application**: `applyTurnOutput` 단계에서 인벤토리 추가(`inventory_added`)와 삭제(`inventory_removed`)를 원자적으로 처리하여 서버와 클라이언트 간의 상태 정합성을 100% 유지함.
+
+---
+
+## 49. 게임 목표 시스템 강화 (U-078[Mvp])
+
+1. **주 목표 및 서브 목표 이원화 (Dual Objective)**:
+    - **Main Objective**: `is_main: true` 플래그가 설정된 목표를 주 목표로 정의함. Quest 패널 상단에 강조 표시되며, 전용 진행률 바(0~100%)와 보상 정보를 가시화하여 플레이어의 최종 목적지를 명확히 함.
+    - **Sub-objectives**: 부가적인 과업들을 체크리스트 형태로 관리하며, 완료 시 취소선 및 보상 획득 완료 메시지를 통해 중간 성취감을 제공함.
+2. **ObjectiveTracker (HUD 미니 트래커)**:
+    - **Persistent Visibility**: 화면 상단 중앙(`game-center` 영역)에 고정된 HUD 요소를 통해 주 목표 제목과 서브 목표 달성 카운트(`n/m`)를 상시 노출함.
+    - **Auto-Hide Policy**: 목표가 부여되지 않은 "자유 탐색" 상태에서는 UI를 자동으로 숨겨 Scene Canvas의 개방감을 확보함.
+3. **보상 피드백 루프 (Reward Notification)**:
+    - **System Narrative Integration**: 목표 달성 시 `worldStore`가 이를 감지하여 `🎯 목표 달성! [보상] 시그널 획득` 메시지를 내러티브 피드에 시스템 유형으로 자동 삽입함.
+    - **Visual Feedback**: 마젠타 강조색과 L자 브래켓 디자인을 적용하여 CRT 테마의 일관성을 유지하면서도 중요 정보를 효과적으로 전달함.
 1. **프리셋 아이콘 레지스트리 (Static Assets)**:
     - **Asset Library**: 데모 프로필 초기 아이템 및 자주 등장하는 공통 아이템 30종에 대해 사전 제작된 64x64 픽셀 아트 아이콘을 `frontend/public/ui/items/`에 배치함.
     - **Registry Mapping**: 아이템 ID와 에셋 경로를 1:1로 매핑하는 `itemIconPresets.ts`를 통해 클라이언트 사이드에서 즉시 조회 가능하도록 함.

@@ -46,6 +46,8 @@ import { ActionDeck } from './components/ActionDeck';
 import { InventoryPanel } from './components/InventoryPanel';
 // U-013: Quest + Rule Board + Mutation Timeline
 import { QuestPanel } from './components/QuestPanel';
+// U-078: Objective Tracker (미니 트래커)
+import { ObjectiveTracker } from './components/ObjectiveTracker';
 import { RuleBoard } from './components/RuleBoard';
 import { MutationTimeline } from './components/MutationTimeline';
 // U-022: Scanner Slot
@@ -468,6 +470,8 @@ function App() {
           </aside>
 
           <main className="game-center">
+            {/* U-078: 목표 미니 트래커 (항상 상단에 표시, Q2: Option B) */}
+            <ObjectiveTracker />
             <SceneCanvas onHotspotClick={handleHotspotClick} />
             <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
           </main>

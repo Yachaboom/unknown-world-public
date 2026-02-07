@@ -28,7 +28,9 @@
       },
       "quest": {
         "discover_origin": "세계의 기원을 발견하기",
-        "collect_memories": "기억 조각 3개 수집하기"
+        "discover_origin_desc": "이 세계가 어떻게 만들어졌는지 단서를 찾아 밝혀내세요",
+        "collect_memories": "기억 조각 3개 수집하기",
+        "read_ancient_tome": "고대 서책을 해독하기"
       },
       "rule": {
         "time_flows": "시간의 흐름",
@@ -55,6 +57,7 @@
       },
       "quest": {
         "find_exit": "탈출구 찾기",
+        "find_exit_desc": "미로를 탐험하고 숨겨진 출구를 찾아 탈출하세요",
         "explore_areas": "3개 구역 탐험하기",
         "gather_supplies": "보급품 수집"
       },
@@ -85,7 +88,9 @@
       },
       "quest": {
         "analyze_system": "시스템 분석 완료하기",
-        "optimize_resources": "자원 효율 최적화하기"
+        "analyze_system_desc": "핵심 터미널에 접근하여 시스템의 구조를 파악하세요",
+        "optimize_resources": "자원 효율 최적화하기",
+        "scan_terminal": "터미널 스캔 수행하기"
       },
       "rule": {
         "energy_conservation": "에너지 보존",
@@ -162,7 +167,17 @@
     "section": {
       "active": "진행 중",
       "completed": "완료됨"
-    }
+    },
+    "main_objective": "주 목표",
+    "sub_objectives": "세부 목표",
+    "progress": "진행률 {{progress}}%",
+    "reward_preview": "보상: {{signal}} Signal",
+    "reward_earned": "+{{signal}} Signal 획득!",
+    "objective_complete": "목표 달성!",
+    "free_exploration": "자유 탐색 중",
+    "free_exploration_desc": "정해진 목표 없이 세계를 자유롭게 탐험하세요",
+    "no_sub_objectives": "세부 목표가 아직 없습니다",
+    "tracker_no_objective": "목표 없음"
   },
   "rule_board": {
     "empty": "[ 규칙 없음 ]",

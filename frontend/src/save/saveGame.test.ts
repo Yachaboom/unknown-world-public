@@ -27,7 +27,17 @@ describe('saveGame utility (U-015[Mvp])', () => {
     turnCount: 1,
     narrativeHistory: [{ turn: 1, text: '테스트 내러티브' }],
     inventory: [{ id: 'item1', name: '아이템1', quantity: 1 }],
-    quests: [{ id: 'q1', label: '퀘스트1', is_completed: false }],
+    quests: [
+      {
+        id: 'q1',
+        label: '퀘스트1',
+        is_completed: false,
+        description: null,
+        is_main: false,
+        progress: 0,
+        reward_signal: 0,
+      },
+    ],
     activeRules: [{ id: 'r1', label: '규칙1', description: '설명1' }],
     mutationTimeline: [],
     sceneObjects: [],

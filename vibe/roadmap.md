@@ -4,15 +4,15 @@
 
 ## 진행 현황
 
-**전체**: 107/137 (78.1%) | **MVP**: 107/119 (89.9%) | **MMP**: 0/18 (0%)
+**전체**: 108/137 (78.8%) | **MVP**: 108/119 (90.7%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-4 | MMP D-10
+**예상 완료(가정)**: MVP D-3 | MMP D-9
 _U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가)_
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-078[Mvp]](unit-plans/U-078[Mvp].md) 게임 목표 시스템 강화 / **최근 완료**: [U-088[Mvp]](unit-results/U-088[Mvp].md) (2026-02-07)
+**진행 중(현재 포커스)**: [U-079[Mvp]](unit-plans/U-079[Mvp].md) ⚡재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 / **최근 완료**: [U-078[Mvp]](unit-results/U-078[Mvp].md) (2026-02-08)
 
 **블로커**: 없음
 
@@ -168,8 +168,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-078[Mvp]](unit-plans/U-078[Mvp].md) | 게임 목표 시스템 강화 - 명확한 목표 제시 및 진행 가이드 | Depends=U-013,U-015 | ⏸️
-ID=[U-079[Mvp]](unit-plans/U-079[Mvp].md) | ⚡재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 | Depends=U-014,U-019,U-078 | ⏸️
+ID=[U-079[Mvp]](unit-plans/U-079[Mvp].md) | ⚡재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 | Depends=U-014,U-019,U-078 | 🚧
 ~~ID=[U-081[Mvp]](unit-plans/U-081[Mvp].md) | UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정 | Depends=U-049,U-077~~ | **Skip** (U-077에 흡수: 사이드바 패널 영역 분배/min-height/max-height 범위를 U-077 완료 기준에 통합)
 ID=[U-082[Mvp]](unit-plans/U-082[Mvp].md) | UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 | Depends=U-049 | ⏸️
 ID=[U-083[Mvp]](unit-plans/U-083[Mvp].md) | UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 | Depends=U-009 | ⏸️
@@ -208,6 +207,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-078[Mvp]](unit-results/U-078[Mvp].md): 게임 목표 시스템 강화 (2026-02-08)
 - ✅ [U-088[Mvp]](unit-results/U-088[Mvp].md): 인벤토리 UI Row 형태 전환 (2026-02-07)
 - ✅ [U-096[Mvp]](unit-results/U-096[Mvp].md): 아이템 사용 시 소비(삭제) 로직 반영 (2026-02-07)
 - ✅ [U-095[Mvp]](unit-results/U-095[Mvp].md): Scanner 아이템 생성 개수 랜덤화 (1~3개, 가중치) (2026-02-07)

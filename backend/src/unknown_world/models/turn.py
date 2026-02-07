@@ -404,14 +404,20 @@ class WorldRule(BaseModel):
 
 
 class Quest(BaseModel):
-    """퀘스트/목표 (Quest Panel).
+    """퀘스트/목표 (Quest Panel) - U-078 목표 시스템 강화.
 
     플레이어가 달성해야 하는 현재 목표입니다.
+    is_main=true인 퀘스트가 주 목표(Main Objective)이며,
+    나머지는 서브 목표(Sub-objectives)로 표시됩니다.
 
     Attributes:
         id: 퀘스트 고유 ID
         label: 퀘스트 이름
         is_completed: 달성 여부
+        description: 목표 상세 설명 (선택)
+        is_main: 주 목표 여부 (true이면 Quest 패널 상단에 강조 표시)
+        progress: 진행률 (0~100, 주 목표에서 사용)
+        reward_signal: 달성 시 Signal 보상량 (0이면 보상 없음)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -419,6 +425,10 @@ class Quest(BaseModel):
     id: str = Field(description="퀘스트 고유 ID")
     label: str = Field(description="퀘스트 이름")
     is_completed: bool = Field(default=False, description="달성 여부")
+    description: str | None = Field(default=None, description="목표 상세 설명 (선택)")
+    is_main: bool = Field(default=False, description="주 목표 여부")
+    progress: Annotated[int, Field(ge=0, le=100, description="진행률 (0~100)")] = 0
+    reward_signal: Annotated[int, Field(ge=0, description="달성 시 Signal 보상량")] = 0
 
 
 class InventoryItemData(BaseModel):

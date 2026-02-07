@@ -353,14 +353,19 @@ export const WorldRuleSchema = z
 export type WorldRule = z.infer<typeof WorldRuleSchema>;
 
 /**
- * 퀘스트/목표 (Quest Panel).
+ * 퀘스트/목표 (Quest Panel) - U-078 목표 시스템 강화.
  * 플레이어가 달성해야 하는 현재 목표입니다.
+ * is_main=true인 퀘스트가 주 목표(Main Objective)로 Quest 패널 상단에 강조 표시됩니다.
  */
 export const QuestSchema = z
   .object({
     id: z.string().describe('퀘스트 고유 ID'),
     label: z.string().describe('퀘스트 이름'),
     is_completed: z.boolean().default(false).describe('달성 여부'),
+    description: z.string().nullable().default(null).describe('목표 상세 설명 (선택)'),
+    is_main: z.boolean().default(false).describe('주 목표 여부'),
+    progress: z.number().int().min(0).max(100).default(0).describe('진행률 (0~100)'),
+    reward_signal: z.number().int().min(0).default(0).describe('달성 시 Signal 보상량'),
   })
   .strict();
 export type Quest = z.infer<typeof QuestSchema>;

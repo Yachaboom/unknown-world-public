@@ -61,12 +61,16 @@ export function useDemoInitializer() {
         setSceneObjects(demoSceneObjects);
       }
 
-      // 데모용 mock 퀘스트 초기화 (U-013)
+      // 데모용 mock 퀘스트 초기화 (U-013, U-078)
       if (quests.length === 0) {
         const demoQuests: Quest[] = DEMO_QUESTS.map((q) => ({
           id: q.id,
           label: t(q.labelKey),
           is_completed: q.is_completed,
+          description: q.descriptionKey ? t(q.descriptionKey) : null,
+          is_main: q.is_main ?? false,
+          progress: q.progress ?? 0,
+          reward_signal: q.reward_signal ?? 0,
         }));
         useWorldStore.setState({ quests: demoQuests });
       }

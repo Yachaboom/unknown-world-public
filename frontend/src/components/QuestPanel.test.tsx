@@ -19,44 +19,77 @@ describe('QuestPanel (U-013)', () => {
     useWorldStore.getState().reset();
   });
 
-  it('퀘스트가 없을 때 빈 상태를 표시해야 한다', () => {
+  it('퀘스트가 없을 때 자유 탐색 상태를 표시해야 한다', () => {
     render(<QuestPanel />);
-    expect(screen.getByText('quest.empty')).toBeInTheDocument();
+    // U-078: 빈 상태 → "자유 탐색" 안내로 변경
+    expect(screen.getByText('quest.free_exploration')).toBeInTheDocument();
+    expect(screen.getByText('quest.free_exploration_desc')).toBeInTheDocument();
   });
 
   it('진행 중인 퀘스트를 목록에 표시해야 한다', () => {
     useWorldStore.setState({
-      quests: [{ id: 'q1', label: '액티브 퀘스트', is_completed: false }],
-    });
-
-    render(<QuestPanel />);
-    expect(screen.getByText('quest.section.active')).toBeInTheDocument();
-    expect(screen.getByText('액티브 퀘스트')).toBeInTheDocument();
-    expect(screen.getByText('☐')).toBeInTheDocument();
-  });
-
-  it('완료된 퀘스트를 목록에 표시해야 한다', () => {
-    useWorldStore.setState({
-      quests: [{ id: 'q2', label: '완료된 퀘스트', is_completed: true }],
-    });
-
-    render(<QuestPanel />);
-    expect(screen.getByText('quest.section.completed')).toBeInTheDocument();
-    expect(screen.getByText('완료된 퀘스트')).toBeInTheDocument();
-    expect(screen.getByText('☑')).toBeInTheDocument();
-    expect(screen.getByText('quest.completed')).toBeInTheDocument();
-  });
-
-  it('진행 중인 퀘스트와 완료된 퀘스트를 모두 표시해야 한다', () => {
-    useWorldStore.setState({
       quests: [
-        { id: 'q1', label: '액티브', is_completed: false },
-        { id: 'q2', label: '완료', is_completed: true },
+        {
+          id: 'q1',
+          label: '액티브 퀘스트',
+          is_completed: false,
+          description: null,
+          is_main: false,
+          progress: 0,
+          reward_signal: 0,
+        },
       ],
     });
 
     render(<QuestPanel />);
-    expect(screen.getByText('액티브')).toBeInTheDocument();
-    expect(screen.getByText('완료')).toBeInTheDocument();
+    expect(screen.getByText('액티브 퀘스트')).toBeInTheDocument();
+  });
+
+  it('완료된 퀘스트를 목록에 표시해야 한다', () => {
+    useWorldStore.setState({
+      quests: [
+        {
+          id: 'q2',
+          label: '완료된 퀘스트',
+          is_completed: true,
+          description: null,
+          is_main: false,
+          progress: 100,
+          reward_signal: 10,
+        },
+      ],
+    });
+
+    render(<QuestPanel />);
+    expect(screen.getByText('완료된 퀘스트')).toBeInTheDocument();
+  });
+
+  it('주 목표와 세부 목표를 구분하여 표시해야 한다', () => {
+    useWorldStore.setState({
+      quests: [
+        {
+          id: 'q1',
+          label: '주 목표',
+          is_completed: false,
+          description: '주 목표 설명',
+          is_main: true,
+          progress: 50,
+          reward_signal: 100,
+        },
+        {
+          id: 'q2',
+          label: '세부 목표',
+          is_completed: false,
+          description: null,
+          is_main: false,
+          progress: 0,
+          reward_signal: 20,
+        },
+      ],
+    });
+
+    render(<QuestPanel />);
+    expect(screen.getByText('주 목표')).toBeInTheDocument();
+    expect(screen.getByText('세부 목표')).toBeInTheDocument();
   });
 });
