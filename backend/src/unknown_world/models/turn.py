@@ -578,6 +578,8 @@ class EconomyOutput(BaseModel):
     Attributes:
         cost: 이번 턴에 소비된 비용
         balance_after: 소비 후 잔액
+        credit: 사용 중인 크레딧 (빚, Signal 단위, U-079)
+        low_balance_warning: 잔액 부족 경고 여부 (U-079)
 
     Important:
         - cost와 balance_after는 항상 포함되어야 합니다.
@@ -588,6 +590,8 @@ class EconomyOutput(BaseModel):
 
     cost: CurrencyAmount = Field(description="이번 턴에 소비된 비용")
     balance_after: CurrencyAmount = Field(description="소비 후 잔액")
+    credit: int = Field(default=0, description="사용 중인 크레딧 (빚, Signal 단위)")
+    low_balance_warning: bool = Field(default=False, description="잔액 부족 경고 여부")
 
 
 # =============================================================================

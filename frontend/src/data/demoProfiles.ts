@@ -56,6 +56,7 @@ export interface DemoProfileInitialState {
   economy: {
     signal: number;
     memory_shard: number;
+    credit: number;
   };
   /** 초기 인벤토리 아이템 정의 (ID와 i18n 키) */
   inventoryDefs: Array<{
@@ -121,6 +122,7 @@ export const PROFILE_NARRATOR: DemoProfile = {
     economy: {
       signal: 200,
       memory_shard: 10,
+      credit: 0,
     },
     inventoryDefs: [
       {
@@ -204,6 +206,7 @@ export const PROFILE_EXPLORER: DemoProfile = {
     economy: {
       signal: 150,
       memory_shard: 5,
+      credit: 0,
     },
     inventoryDefs: [
       { id: 'compass', nameKey: 'profile.explorer.items.compass', icon: '🧭', quantity: 1 },
@@ -289,6 +292,7 @@ export const PROFILE_TECH: DemoProfile = {
     economy: {
       signal: 80,
       memory_shard: 15,
+      credit: 0,
     },
     inventoryDefs: [
       { id: 'data-core', nameKey: 'profile.tech.items.data_core', icon: '💿', quantity: 1 },
@@ -400,6 +404,7 @@ export function profileToSaveGameInput(
     economy: {
       signal: profile.initialState.economy.signal,
       memory_shard: profile.initialState.economy.memory_shard,
+      credit: profile.initialState.economy.credit,
     },
     economyLedger: [],
     turnCount: 0,

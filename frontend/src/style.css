@@ -5737,3 +5737,208 @@ button:disabled,
     animation: none;
   }
 }
+
+/* =============================================================================
+ * U-079: 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화
+ * ============================================================================= */
+
+/* ---- 인벤토리 판매 버튼 ---- */
+.inventory-sell-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 200, 0, 0.5);
+  border-radius: 4px;
+  background: rgba(255, 200, 0, 0.1);
+  color: #ffc800;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-micro-en);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.inventory-sell-btn:hover {
+  background: rgba(255, 200, 0, 0.25);
+  border-color: #ffc800;
+  box-shadow: 0 0 8px rgba(255, 200, 0, 0.3);
+}
+
+.inventory-sell-btn:active {
+  transform: scale(0.95);
+}
+
+.inventory-sell-btn .sell-icon {
+  font-size: 0.75rem;
+}
+
+.inventory-sell-btn .sell-price {
+  font-weight: 700;
+}
+
+/* ---- 재화 획득 액션 카드 배지 ---- */
+.earn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, rgba(255, 200, 0, 0.25), rgba(255, 165, 0, 0.2));
+  border: 1px solid rgba(255, 200, 0, 0.5);
+  color: #ffc800;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-micro-en);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: earn-badge-glow 2s ease-in-out infinite;
+}
+
+@keyframes earn-badge-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(255, 200, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(255, 200, 0, 0.5);
+  }
+}
+
+.action-card.card-earn {
+  border-color: rgba(255, 200, 0, 0.4);
+}
+
+.action-card.card-earn:hover:not(:disabled) {
+  border-color: #ffc800;
+  box-shadow:
+    0 0 12px rgba(255, 200, 0, 0.3),
+    inset 0 0 12px rgba(255, 200, 0, 0.05);
+}
+
+/* ---- EconomyHud: FAST 폴백 안내 ---- */
+.economy-alternatives-enhanced .alternatives-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fast-fallback-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin: 4px 0;
+  background: rgba(51, 255, 0, 0.08);
+  border: 1px solid rgba(51, 255, 0, 0.2);
+  border-radius: 4px;
+  font-size: var(--font-size-xs);
+}
+
+.fast-fallback-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(51, 255, 0, 0.2);
+  border: 1px solid rgba(51, 255, 0, 0.4);
+  color: var(--primary-color);
+  font-family: var(--font-micro-en);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.fast-fallback-text {
+  color: var(--text-dim);
+  font-size: var(--font-size-xs);
+}
+
+/* ---- 재화 획득 토스트 알림 ---- */
+.currency-toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 200, 0, 0.5);
+  border-radius: 8px;
+  background: rgba(10, 10, 10, 0.95);
+  box-shadow:
+    0 4px 20px rgba(255, 200, 0, 0.2),
+    0 0 30px rgba(255, 200, 0, 0.1);
+  backdrop-filter: blur(8px);
+  animation:
+    toast-slide-in 0.3s ease-out,
+    toast-fade-out 0.5s ease-in 2.5s forwards;
+  pointer-events: auto;
+}
+
+.currency-toast-icon {
+  font-size: 1.25rem;
+}
+
+.currency-toast-amount {
+  font-family: var(--font-micro-en);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffc800;
+}
+
+.currency-toast-reason {
+  font-size: var(--font-size-xs);
+  color: var(--text-dim);
+}
+
+.currency-toast-close {
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.875rem;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.currency-toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(-50%) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* reduced-motion: U-079 애니메이션 완화 */
+@media (prefers-reduced-motion: reduce) {
+  .earn-badge {
+    animation: none;
+  }
+
+  .currency-toast {
+    animation: none;
+    opacity: 1;
+  }
+}

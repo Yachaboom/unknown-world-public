@@ -74,6 +74,8 @@ describe('Item Consumption (U-096)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           action_deck: { cards: [] },

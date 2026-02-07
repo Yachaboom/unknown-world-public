@@ -286,6 +286,13 @@
     "confirmed_cost": "확정 비용",
     "insufficient_funds": "잔액 부족",
     "low_balance_warning": "잔액이 부족합니다",
+    "low_balance_title": "Signal 부족 - 대안 안내",
+    "credit": "크레딧",
+    "credit_desc": "현재 사용 중인 크레딧(부채)입니다. 재화 획득 시 우선 상환됩니다.",
+    "fast_fallback_notice": "이미지는 기본 품질(FAST)로 무료 생성됩니다",
+    "hint_sell_items": "인벤토리 아이템을 판매하여 Signal을 획득하세요",
+    "hint_earn_actions": "재화 획득 카드(⚡)를 선택하세요",
+    "hint_complete_quests": "목표를 달성하여 보상을 받으세요",
     "alternatives_title": "대안 행동",
     "alternative_text_only": "텍스트만 생성 (이미지 없음)",
     "alternative_low_quality": "저품질/빠른 응답 선택",
@@ -310,7 +317,12 @@
     "list_label": "인벤토리 아이템 목록",
     "item_label": "{{name}} (수량: {{quantity}})",
     "drag_hint": "드래그하여 사용",
-    "item_consumed": "{{name}} 사용됨"
+    "item_consumed": "{{name}} 사용됨",
+    "sell_tooltip": "판매 (+{{price}} Signal)",
+    "sell_aria": "{{item}} 판매 (+{{price}} Signal)",
+    "sell_narrative": "💰 {{item}}을(를) 판매하여 {{signal}} Signal을 획득했습니다.",
+    "sell_toast": "{{item}} 판매 완료!",
+    "sell_ledger_reason": "아이템 판매"
   },
   "interaction": {
     "hotspot_click": "클릭하여 조사",
@@ -421,6 +433,7 @@
     "insufficient_balance": "잔액 부족",
     "server_disabled": "사용 불가",
     "vision_badge": "정밀분석",
+    "earn_badge": "Signal 획득",
     "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
     "risk": {
       "low": "낮음",

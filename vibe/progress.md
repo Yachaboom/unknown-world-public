@@ -1,5 +1,43 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 18:30] U-079[Mvp]: 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Signal 잔액 부족 시 FAST 모델로 자동 폴백 및 무료 이미지 생성 정책 도입, 인벤토리 아이템 판매 기능, 'earn_' 액션 카드 전용 강조(금색 테두리/배지).
+- **추가 컴포넌트**: `vibe/unit-results/U-079[Mvp].md` (보고서), `vibe/unit-runbooks/U-079-low-balance-image-currency-runbook.md` (런북), `backend/src/unknown_world/config/economy.py` (신규).
+- **달성 요구사항**: [PRD 5.5] 예상 비용/대안 제공, [RULE-005] 경제 인바리언트 준수(잔액 부족 대응), [U-079] 게임 플로우 연속성 확보.
+
+### 기술적 구현 세부사항
+
+**경제 정책 및 복구 루프**:
+- **Graceful Degradation**: `render_helpers.py`에서 잔액 부족(`cost > balance`)을 감지하여 `QUALITY` 모델 대신 `FAST` 모델을 강제 선택하고, 비용을 `0`으로 처리하여 게임 중단을 방지함.
+- **Inventory Liquidation**: `worldStore`에 `sellItem` 액션을 추가하여 모든 아이템을 5 Signal로 즉시 환전할 수 있는 비상 수단을 제공함.
+- **Contextual GM Hints**: `turn_output_instructions`를 강화하여 플레이어 재화가 낮을 때 내러티브에 자연스럽게 아이템 판매나 탐색을 유도하는 힌트를 포함하도록 유도함.
+- **Visual Warning System**: `EconomyHud`에서 실시간 잔액을 감시하여 `LOW_BALANCE_THRESHOLD`(10) 미만 시 빨간색 경고 및 대안 안내 배너를 노출함.
+
+**코드 구조**:
+repo-root/
+├── backend/src/unknown_world/
+│   ├── config/economy.py (신규: 정책 상수 중앙화)
+│   └── orchestrator/stages/render_helpers.py (폴백 판정 로직)
+└── frontend/src/
+    ├── stores/economyStore.ts (잔액 상태 감지 및 경고 관리)
+    ├── components/EconomyHud.tsx (폴백 안내 및 힌트 UI)
+    └── components/InventoryPanel.tsx (아이템 판매 버튼 및 애니메이션)
+
+### 성능 및 품질 지표
+
+- **가용성**: 재화 고갈 상황에서도 장면 시각화(이미지)가 유지되어 플레이 이탈 방지.
+- **UX**: 토스트 알림(`CurrencyToastUI`)을 통해 재화 획득 및 소비 내역을 즉각적으로 피드백함.
+
+### 다음 단계
+
+- **U-082[Mvp]**: Agent Console 레이아웃 최적화
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-08 17:35] U-078[Mvp]: 게임 목표 시스템 강화 완료
 
 ### 구현 완료 항목

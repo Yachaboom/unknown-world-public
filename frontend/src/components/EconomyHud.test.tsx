@@ -23,7 +23,7 @@ describe('EconomyHud', () => {
   });
 
   it('현재 잔액을 올바르게 표시해야 한다', () => {
-    useWorldStore.getState().setEconomy({ signal: 50, memory_shard: 5 });
+    useWorldStore.getState().setEconomy({ signal: 50, memory_shard: 5, credit: 0 });
 
     render(<EconomyHud />);
 
@@ -46,7 +46,7 @@ describe('EconomyHud', () => {
   });
 
   it('감당할 수 없는 예상 비용일 때 경고를 표시해야 한다', () => {
-    useWorldStore.getState().setEconomy({ signal: 5, memory_shard: 0 });
+    useWorldStore.getState().setEconomy({ signal: 5, memory_shard: 0, credit: 0 });
     useEconomyStore.getState().setCostEstimate({
       min: { signal: 10, memory_shard: 0 },
       max: { signal: 15, memory_shard: 0 },
@@ -76,14 +76,24 @@ describe('EconomyHud', () => {
 
   it('잔액 부족 시 경고 및 대안을 표시해야 한다', () => {
     // 임계값 10, 현재 잔액 5
-    useWorldStore.getState().setEconomy({ signal: 5, memory_shard: 0 });
+    useWorldStore.getState().setEconomy({ signal: 5, memory_shard: 0, credit: 0 });
     useEconomyStore.getState().updateBalanceLowStatus({ signal: 5, memory_shard: 0 });
 
     render(<EconomyHud />);
 
     expect(screen.getByText('economy.low_balance_warning')).toBeInTheDocument();
-    expect(screen.getByText('economy.alternatives_title')).toBeInTheDocument();
-    expect(screen.getByText('economy.alternative_text_only')).toBeInTheDocument();
+    expect(screen.getByText('economy.low_balance_title')).toBeInTheDocument();
+    expect(screen.getByText('economy.fast_fallback_notice')).toBeInTheDocument();
+    expect(screen.getByText('economy.hint_sell_items')).toBeInTheDocument();
+  });
+
+  it('크레딧이 있을 때 표시해야 한다', () => {
+    useWorldStore.getState().setEconomy({ signal: 0, memory_shard: 5, credit: 10 });
+
+    render(<EconomyHud />);
+
+    expect(screen.getByText(/economy.credit/)).toBeInTheDocument();
+    expect(screen.getByText('-10')).toBeInTheDocument();
   });
 
   it('compact 모드에서는 잔액만 표시해야 한다', () => {

@@ -136,6 +136,12 @@ const VISION_TRIGGER_ACTION_IDS: ReadonlySet<string> = new Set([
 /** VISION 비용 배수 (U-076 Q2: 1.5x) */
 const VISION_COST_MULTIPLIER = 1.5;
 
+/**
+ * U-079: 재화 획득 액션 카드 ID 접두사.
+ * 이 접두사로 시작하는 카드는 재화 획득 카드로 표시합니다.
+ */
+const EARN_ACTION_PREFIX = 'earn_';
+
 // =============================================================================
 // 타입 정의
 // =============================================================================
@@ -158,6 +164,8 @@ interface CardDisplayInfo extends ActionCard {
   isQualityAction: boolean;
   /** U-076: VISION(정밀분석) 사용 여부 */
   isVisionAction: boolean;
+  /** U-079: 재화 획득 액션 여부 */
+  isEarnAction: boolean;
   /** U-069/U-076: 배수 적용된 표시 비용 */
   displayCost: { signal: number; memory_shard: number };
 }
@@ -317,6 +325,7 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
     card.is_alternative ? 'card-alternative' : '',
     card.isQualityAction ? 'card-quality' : '',
     card.isVisionAction ? 'card-vision' : '',
+    card.isEarnAction ? 'card-earn' : '',
     `risk-border-${card.risk}`,
   ]
     .filter(Boolean)
@@ -349,10 +358,18 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
         </span>
       )}
 
-      {/* 대안 카드 표시 (QUALITY/VISION이 아닐 때만) */}
-      {!card.isQualityAction && !card.isVisionAction && card.is_alternative && (
-        <span className="alternative-badge">{t('action.alternative')}</span>
+      {/* U-079: 재화 획득 카드 배지 (earn_ 접두사) */}
+      {card.isEarnAction && (
+        <span className="earn-badge" title={t('action.earn_badge')}>
+          {'\u26A1'} {t('action.earn_badge')}
+        </span>
       )}
+
+      {/* 대안 카드 표시 (QUALITY/VISION/EARN이 아닐 때만) */}
+      {!card.isQualityAction &&
+        !card.isVisionAction &&
+        !card.isEarnAction &&
+        card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
 
       {/* 카드 타이틀 */}
       <div className="action-card-title">{card.label}</div>
@@ -420,6 +437,9 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
       // U-069: QUALITY 모델 트리거 체크 (VISION이면 QUALITY 아님)
       const isQualityAction = !isVisionAction && QUALITY_TRIGGER_ACTION_IDS.has(card.id);
 
+      // U-079: 재화 획득 카드 감지 (earn_ 접두사)
+      const isEarnAction = card.id.startsWith(EARN_ACTION_PREFIX);
+
       // U-069/U-076: 배수 적용된 표시 비용 계산
       const displayCost = isVisionAction
         ? {
@@ -461,6 +481,7 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
         finalDisabledReason,
         isQualityAction,
         isVisionAction,
+        isEarnAction,
         displayCost,
       };
     });

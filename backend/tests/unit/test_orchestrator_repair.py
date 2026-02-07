@@ -192,5 +192,37 @@ async def test_validate_economy_negative_attempt(sample_turn_input: TurnInput) -
     result = validate_business_rules(sample_turn_input, invalid_output)
 
     assert result.is_valid is False
-    # Signal 잔액 불일치 (100 - 120 = -20 인데 실제 0이므로 mismatch)
-    assert any("signal" in err["message"].lower() for err in result.errors)
+    # Signal 잔액 불일치 또는 Credit 불일치 감지
+    assert any(
+        "signal" in err["message"].lower() or "credit" in err["message"].lower()
+        for err in result.errors
+    )
+
+
+@pytest.mark.asyncio
+async def test_validate_economy_allow_credit(sample_turn_input: TurnInput) -> None:
+    """잔액보다 높은 비용이지만 크레딧 한도 내인 경우 허용 확인 (U-079)."""
+    # snapshot: signal=100
+    # cost: signal=130 (빚 30 필요)
+    # MAX_CREDIT = 50 이므로 통과해야 함
+
+    valid_credit_output = TurnOutput(
+        language=Language.KO,
+        narrative="크레딧 사용",
+        ui=UIOutput(action_deck=ActionDeck(cards=[]), objects=[]),
+        world=WorldDelta(),
+        render=RenderOutput(image_job=None),
+        economy=EconomyOutput(
+            cost=CurrencyAmount(signal=130, memory_shard=0),
+            balance_after=CurrencyAmount(signal=0, memory_shard=5),
+            credit=30,  # 빚 30 명시
+            low_balance_warning=True,
+        ),
+        safety=SafetyOutput(blocked=False),
+        agent_console=AgentConsole(repair_count=0),
+    )
+
+    result = validate_business_rules(sample_turn_input, valid_credit_output)
+
+    assert result.is_valid is True
+    assert not result.errors

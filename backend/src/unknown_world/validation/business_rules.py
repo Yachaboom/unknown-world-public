@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from unknown_world.config.economy import MAX_CREDIT
 from unknown_world.models.turn import Language
 from unknown_world.validation.language_gate import (
     LanguageGateResult,
@@ -183,7 +184,7 @@ def _validate_economy(
 
     검증 항목:
     - 잔액 음수 금지
-    - snapshot 대비 과도한 비용 청구 금지
+    - snapshot 대비 과도한 비용 청구 금지 (U-079: 크레딧 허용)
     - cost와 balance_after 일관성
     """
     economy = turn_output.economy
@@ -191,7 +192,11 @@ def _validate_economy(
     messages = BUSINESS_RULE_MESSAGES[result.language]
 
     # 1. 과도한 비용 청구 금지 (snapshot < cost)
-    if snapshot.signal < economy.cost.signal:
+    # U-079: 크레딧(빚)을 허용하여 잔액보다 큰 비용 지불 가능
+    # 허용 범위: snapshot.signal + MAX_CREDIT >= cost.signal
+    effective_signal = snapshot.signal + MAX_CREDIT
+
+    if effective_signal < economy.cost.signal:
         result.add_error(
             BusinessRuleError.ECONOMY_NEGATIVE_BALANCE,
             messages["signal_insufficient"].format(have=snapshot.signal, need=economy.cost.signal),
@@ -219,12 +224,14 @@ def _validate_economy(
         )
 
     # 3. cost와 balance_after 일관성 검증
-    # balance_after = snapshot - cost 여야 함
-    expected_signal = snapshot.signal - economy.cost.signal
-    expected_shard = snapshot.memory_shard - economy.cost.memory_shard
+    # balance_after = snapshot - cost + credit_delta 여야 함
+    # (또는 credit 필드가 사용 중인 총 빚을 나타냄)
+    # U-079 단순화: balance_after.signal = max(0, snapshot.signal - cost.signal)
+    # credit = max(0, cost.signal - snapshot.signal)
+    expected_signal = max(0, snapshot.signal - economy.cost.signal)
+    expected_shard = max(0, snapshot.memory_shard - economy.cost.memory_shard)
+    expected_credit = max(0, economy.cost.signal - snapshot.signal)
 
-    # 이미 위에서 snapshot < cost 체크를 했으므로,
-    # 여기서는 단순 일치 여부만 확인 (음수 결과는 위에서 차단됨)
     if economy.balance_after.signal != expected_signal:
         result.add_error(
             BusinessRuleError.ECONOMY_COST_MISMATCH,
@@ -239,6 +246,13 @@ def _validate_economy(
             messages["memory_shard_mismatch"].format(
                 expected=expected_shard, actual=economy.balance_after.memory_shard
             ),
+        )
+
+    # credit 일관성 검증
+    if economy.credit != expected_credit:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            f"Credit mismatch: expected {expected_credit}, actual {economy.credit}",
         )
 
 

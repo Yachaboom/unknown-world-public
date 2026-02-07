@@ -27,6 +27,11 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from unknown_world.config.economy import (
+    FAST_IMAGE_COST_SIGNAL,
+    IMAGE_GENERATION_COST_SIGNAL,
+)
+
 if TYPE_CHECKING:
     from unknown_world.models.turn import (
         EconomySnapshot,
@@ -62,13 +67,6 @@ class ImagePolicy(BaseModel):
 
 # 기본 정책 인스턴스
 DEFAULT_IMAGE_POLICY = ImagePolicy()
-
-# MVP: 이미지 생성 고정 비용 (Q1 결정: Option A)
-IMAGE_GENERATION_COST_SIGNAL = 10
-"""이미지 생성에 필요한 Signal 비용 (MVP 고정값)."""
-
-IMAGE_GENERATION_COST_MEMORY_SHARD = 0
-"""이미지 생성에 필요한 Memory Shard 비용 (MVP에서는 0)."""
 
 
 # =============================================================================
@@ -121,6 +119,8 @@ class ImageGenerationDecision:
         image_size: 이미지 크기 (생성 시)
         estimated_cost_signal: 예상 Signal 비용
         fallback_message: 생성 불가 시 폴백 메시지 (선택)
+        model_override: 모델 오버라이드 (U-079: 잔액 부족 시 FAST 강제)
+        is_low_balance_fallback: 잔액 부족 FAST 폴백 여부 (U-079)
     """
 
     should_generate: bool
@@ -131,6 +131,8 @@ class ImageGenerationDecision:
     reference_image_url: str | None = None
     estimated_cost_signal: int = IMAGE_GENERATION_COST_SIGNAL
     fallback_message: str | None = None
+    model_override: str | None = None
+    is_low_balance_fallback: bool = False
 
 
 # =============================================================================
@@ -290,31 +292,36 @@ def decide_image_generation(
     # 클라이언트에서 제공한 이전 이미지를 우선 사용하여 연속성 유지
     effective_reference_url = previous_image_url or image_job.reference_image_url
 
-    # 4. 잔액 확인 (RULE-005)
+    # 4. 잔액 확인 + U-079: FAST 폴백 정책
+    # RULE-005(잔액 음수 금지) 준수하면서 게임 흐름 차단 방지
+    # - 잔액 >= IMAGE_GENERATION_COST_SIGNAL: QUALITY 모델 (정상)
+    # - 잔액 < IMAGE_GENERATION_COST_SIGNAL: FAST 모델 폴백 (무료)
     if not can_afford_image_generation(economy_snapshot, IMAGE_GENERATION_COST_SIGNAL):
-        fallback_msg = get_fallback_message(language)
+        # U-079: 잔액 부족 → FAST 모델로 폴백 (비용 0, 무료 기본 이미지)
         logger.info(
-            "[RenderHelpers] 잔액 부족, 이미지 생성 건너뜀",
+            "[RenderHelpers] 잔액 부족, FAST 모델 폴백 (U-079)",
             extra={
                 "current_signal": economy_snapshot.signal,
                 "required_signal": IMAGE_GENERATION_COST_SIGNAL,
+                "fallback_cost": FAST_IMAGE_COST_SIGNAL,
                 "prompt_hash": prompt_hash,
             },
         )
         return ImageGenerationDecision(
-            should_generate=False,
-            reason="insufficient_balance",
+            should_generate=True,
+            reason="low_balance_fast_fallback",
             prompt_hash=prompt_hash,
             aspect_ratio=image_job.aspect_ratio,
             image_size=image_job.image_size,
             reference_image_url=effective_reference_url,
-            estimated_cost_signal=IMAGE_GENERATION_COST_SIGNAL,
-            fallback_message=fallback_msg,
+            estimated_cost_signal=FAST_IMAGE_COST_SIGNAL,
+            model_override="FAST",
+            is_low_balance_fallback=True,
         )
 
-    # 모든 조건 통과 - 이미지 생성 진행
+    # 모든 조건 통과 - QUALITY 이미지 생성 진행
     logger.info(
-        "[RenderHelpers] 이미지 생성 판정 통과",
+        "[RenderHelpers] 이미지 생성 판정 통과 (QUALITY)",
         extra={
             "prompt_hash": prompt_hash,
             "aspect_ratio": image_job.aspect_ratio,

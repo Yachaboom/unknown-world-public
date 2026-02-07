@@ -82,6 +82,8 @@ describe('agentStore', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 0 },
+        credit: 0,
+        low_balance_warning: false,
       },
       safety: { blocked: false, message: null },
       ui: { action_deck: { cards: [] }, objects: [], scene: { image_url: null, alt_text: null } },

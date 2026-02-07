@@ -610,3 +610,20 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **스키마 및 가시성 정제**:
     - **Field Pruning**: `TurnOutput` 및 `ImageJob` 등에서 `remove_background`, `background_removed` 등 불필요해진 제어 플래그를 서버/클라이언트 양측에서 제거함.
     - **Health Monitoring**: `/health` 엔드포인트에서 rembg 관련 상태 필드를 제거하여 시스템 헬스 체크의 핵심 가용성 집중도를 높임.
+
+---
+
+## 50. 재화 부족 시 이미지 생성 허용 및 획득 경로 다양화 (U-079[Mvp])
+
+1. **경제 정책 완화 및 FAST 폴백 (Graceful Degradation)**:
+    - **Low Balance Detection**: 플레이어의 Signal 잔액이 이미지 생성 비용(10)보다 적을 때 `LOW_BALANCE` 상태로 정의함.
+    - **Automatic Fallback**: 잔액 부족 시 이미지 생성을 차단하는 대신, **FAST 모델**(gemini-2.5-flash-image)로 자동 전환하고 생성 비용을 **0 Signal**로 오버라이드하여 게임 연속성을 보장함.
+    - **Visual Feedback**: Economy HUD 및 이미지 로딩 오버레이에 "잔액 부족으로 기본 품질(FAST) 이미지를 무료로 생성합니다" 안내를 표시하여 유저 인지 강화.
+2. **아이템 판매 시스템 (Currency Recovery)**:
+    - **Inventory Liquidation**: 인벤토리의 모든 아이템에 "판매(Sell)" 버튼을 추가하여 즉시 Signal로 환전할 수 있는 기능 구현.
+    - **Standard Pricing**: MVP 단계에서는 모든 아이템의 판매 가격을 **5 Signal**로 고정하고, 판매 시 전용 토스트 알림 및 거래 장부 기록을 제공함.
+3. **재화 획득 액션 카드 및 GM 지침**:
+    - **Earn-prefixed Actions**: GM이 `earn_` 접두사가 붙은 액션 카드(예: `earn_search`, `earn_rest`)를 생성할 경우, Action Deck에서 금색 테두리와 "⚡ Signal 획득" 배지를 적용하여 강조함.
+    - **Contextual Hints**: 잔액이 매우 낮을 때 GM이 내러티브를 통해 아이템 판매나 탐색 등 재화 획득 경로를 자연스럽게 힌트로 제공하도록 프롬프트 지침을 강화함.
+4. **상태 관리 및 영속성**:
+    - **isLowBalance 플래그**: `economyStore`에서 실시간 잔액을 감시하여 UI 경고 상태를 관리하며, 세이브 데이터(`SaveGame`)에 판매 기록 및 잔액 변화를 영속화함.

@@ -22,7 +22,7 @@ describe('saveGame utility (U-015[Mvp])', () => {
     language: 'ko-KR',
     profileId: 'explorer',
     seed: 'test-seed',
-    economy: { signal: 100, memory_shard: 5 },
+    economy: { signal: 100, memory_shard: 5, credit: 0 },
     economyLedger: [],
     turnCount: 1,
     narrativeHistory: [{ turn: 1, text: '테스트 내러티브' }],

@@ -8,6 +8,7 @@ import { useEconomyStore, selectIsBalanceLow } from '../stores/economyStore';
 interface GameHeaderProps {
   signal: number;
   memoryShard: number;
+  credit: number;
   isConnected: boolean;
   uiScale: UIScale;
   onIncreaseScale: () => void;
@@ -19,6 +20,7 @@ interface GameHeaderProps {
 export function GameHeader({
   signal,
   memoryShard,
+  credit,
   isConnected,
   uiScale,
   onIncreaseScale,
@@ -43,7 +45,12 @@ export function GameHeader({
           onDecreaseScale={onDecreaseScale}
         />
         {/* Economy HUD (U-014: 예상 비용/확정 비용 표시 포함) */}
-        <EconomyHudHeader signal={signal} memoryShard={memoryShard} isLow={isBalanceLow} />
+        <EconomyHudHeader
+          signal={signal}
+          memoryShard={memoryShard}
+          credit={credit}
+          isLow={isBalanceLow}
+        />
         <div className="connection-status">
           <span className={`status-indicator ${isConnected ? '' : 'offline'}`} />
           <span>{isConnected ? t('connection.online') : t('connection.offline')}</span>

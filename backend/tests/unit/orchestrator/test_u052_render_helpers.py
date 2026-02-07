@@ -136,17 +136,19 @@ def test_decide_image_generation_success(base_turn_output):
 
 
 def test_decide_image_generation_insufficient_balance(base_turn_output):
-    """잔액 부족으로 거절되는 케이스 (RULE-005)."""
+    """잔액 부족 시 FAST 폴백으로 무료 생성 (U-079)."""
     job = ImageJob(should_generate=True, prompt="A treasure chest")
     base_turn_output.render = RenderOutput(image_job=job)
-    # 비용 10인데 잔액 5
+    # 비용 10인데 잔액 5 → U-079: FAST 폴백
     economy = EconomySnapshot(signal=5, memory_shard=0)
 
     decision = decide_image_generation(base_turn_output, economy, language="ko-KR")
 
-    assert decision.should_generate is False
-    assert decision.reason == "insufficient_balance"
-    assert "잔액이 부족하여" in decision.fallback_message
+    assert decision.should_generate is True
+    assert decision.reason == "low_balance_fast_fallback"
+    assert decision.model_override == "FAST"
+    assert decision.is_low_balance_fallback is True
+    assert decision.estimated_cost_signal == 0
     assert decision.prompt_hash == get_prompt_hash(job.prompt)
 
 
@@ -174,15 +176,20 @@ def test_decide_image_generation_empty_prompt(base_turn_output):
 
 
 def test_decide_image_generation_language_fallback(base_turn_output):
-    """언어별 폴백 메시지 확인 (RULE-006)."""
+    """잔액 부족 시 FAST 폴백으로 생성 - 언어 무관 (U-079)."""
     job = ImageJob(should_generate=True, prompt="Gold coins")
     base_turn_output.render = RenderOutput(image_job=job)
     economy = EconomySnapshot(signal=0, memory_shard=0)
 
-    # 한국어
+    # 한국어 - U-079: FAST 폴백 (fallback_message 없음, 생성 허용)
     decision_ko = decide_image_generation(base_turn_output, economy, language="ko-KR")
-    assert "이미지를 생성할 수 없습니다" in decision_ko.fallback_message
+    assert decision_ko.should_generate is True
+    assert decision_ko.reason == "low_balance_fast_fallback"
+    assert decision_ko.model_override == "FAST"
+    assert decision_ko.is_low_balance_fallback is True
 
-    # 영어
+    # 영어 - 동일한 FAST 폴백
     decision_en = decide_image_generation(base_turn_output, economy, language="en-US")
-    assert "Insufficient balance" in decision_en.fallback_message
+    assert decision_en.should_generate is True
+    assert decision_en.reason == "low_balance_fast_fallback"
+    assert decision_en.model_override == "FAST"

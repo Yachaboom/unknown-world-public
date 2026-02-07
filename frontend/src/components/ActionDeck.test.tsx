@@ -57,7 +57,7 @@ describe('ActionDeck Component', () => {
   beforeEach(() => {
     // 스토어 초기화
     useActionDeckStore.setState({ cards: [] });
-    useWorldStore.setState({ economy: { signal: 100, memory_shard: 5 } });
+    useWorldStore.setState({ economy: { signal: 100, memory_shard: 5, credit: 0 } });
     useAgentStore.setState({ isStreaming: false });
   });
 
@@ -82,7 +82,7 @@ describe('ActionDeck Component', () => {
   // U-065: cost_estimate 제거됨, cost만 사용
   it('disables cards when balance is insufficient in worldStore', () => {
     useActionDeckStore.setState({ cards: mockCards });
-    useWorldStore.setState({ economy: { signal: 5, memory_shard: 0 } });
+    useWorldStore.setState({ economy: { signal: 5, memory_shard: 0, credit: 0 } });
 
     render(<ActionDeck />);
 

@@ -15,7 +15,7 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { useWorldStore } from '../stores/worldStore';
+import { useWorldStore, type EconomyState } from '../stores/worldStore';
 import {
   useEconomyStore,
   selectCostEstimate,
@@ -74,7 +74,7 @@ function CurrencyIcon({ type, size = 20 }: CurrencyIconProps) {
 // =============================================================================
 
 interface BalanceDisplayProps {
-  balance: CurrencyAmount;
+  balance: EconomyState;
   isLow?: boolean;
 }
 
@@ -90,6 +90,12 @@ function BalanceDisplay({ balance, isLow }: BalanceDisplayProps) {
         </span>
         <span className="balance-label">{t('economy.signal')}</span>
       </div>
+      {balance.credit > 0 && (
+        <div className="balance-credit" title={t('economy.credit_desc')}>
+          <span className="credit-label">{t('economy.credit')}: </span>
+          <span className="credit-value">-{balance.credit}</span>
+        </div>
+      )}
       <div className="balance-item">
         <CurrencyIcon type="shard" />
         <span className="balance-value" data-testid="shard-balance">
@@ -290,16 +296,24 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
         />
       )}
 
-      {/* 대안 안내 (잔액 부족 시) */}
+      {/* U-079: 잔액 부족 시 대안 안내 + FAST 폴백 라벨 */}
       {isBalanceLow && (
-        <div className="economy-alternatives" data-ui-importance="critical">
+        <div
+          className="economy-alternatives economy-alternatives-enhanced"
+          data-ui-importance="critical"
+        >
           <div className="alternatives-header">
-            <span className="alternatives-icon">💡</span>
-            <span className="alternatives-title">{t('economy.alternatives_title')}</span>
+            <span className="alternatives-icon">{'\u26A1'}</span>
+            <span className="alternatives-title">{t('economy.low_balance_title')}</span>
+          </div>
+          <div className="fast-fallback-notice">
+            <span className="fast-fallback-badge">FAST</span>
+            <span className="fast-fallback-text">{t('economy.fast_fallback_notice')}</span>
           </div>
           <ul className="alternatives-list">
-            <li>{t('economy.alternative_text_only')}</li>
-            <li>{t('economy.alternative_low_quality')}</li>
+            <li>{t('economy.hint_sell_items')}</li>
+            <li>{t('economy.hint_earn_actions')}</li>
+            <li>{t('economy.hint_complete_quests')}</li>
           </ul>
         </div>
       )}
@@ -330,6 +344,7 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
 export interface EconomyHudHeaderProps {
   signal: number;
   memoryShard: number;
+  credit: number;
   isLow?: boolean;
 }
 
@@ -337,7 +352,7 @@ export interface EconomyHudHeaderProps {
  * GameHeader에서 사용하는 간소화된 Economy HUD.
  * 기존 GameHeader의 economy-hud를 대체합니다.
  */
-export function EconomyHudHeader({ signal, memoryShard, isLow }: EconomyHudHeaderProps) {
+export function EconomyHudHeader({ signal, memoryShard, credit, isLow }: EconomyHudHeaderProps) {
   const { t } = useTranslation();
   const costEstimate = useEconomyStore(selectCostEstimate);
 
@@ -364,6 +379,11 @@ export function EconomyHudHeader({ signal, memoryShard, isLow }: EconomyHudHeade
       <span className="currency-value" data-testid="header-signal">
         {t('economy.signal')}: {signal}
       </span>
+      {credit > 0 && (
+        <span className="credit-value header-credit" title={t('economy.credit_desc')}>
+          -{credit}
+        </span>
+      )}
       <span className="icon-wrapper shard-icon" aria-label={t('economy.shard')}>
         <img
           src="/ui/icons/shard-24.png"

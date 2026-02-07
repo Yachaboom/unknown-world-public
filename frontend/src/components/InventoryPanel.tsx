@@ -40,6 +40,9 @@ import {
   pollIconStatus,
 } from '../stores/inventoryStore';
 import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
+import { useWorldStore } from '../stores/worldStore';
+import { useEconomyStore } from '../stores/economyStore';
+import { ITEM_SELL_PRICE_SIGNAL } from '../save/constants';
 import { InteractionHint } from './InteractionHint';
 import { DND_TYPE, type InventoryDragData } from '../dnd/types';
 
@@ -56,6 +59,10 @@ interface DraggableItemProps {
   isSelected?: boolean;
   /** U-088: 선택 핸들러 */
   onSelect?: (itemId: string) => void;
+  /** U-079: 판매 가능 여부 (잔액 부족 시 표시) */
+  showSellButton?: boolean;
+  /** U-079: 판매 핸들러 */
+  onSell?: (itemId: string, itemName: string) => void;
 }
 
 /**
@@ -70,6 +77,8 @@ function DraggableItem({
   isConsuming = false,
   isSelected = false,
   onSelect,
+  showSellButton = false,
+  onSell,
 }: DraggableItemProps) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
@@ -169,8 +178,25 @@ function DraggableItem({
         {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
       </div>
 
+      {/* U-079: 판매 버튼 (잔액 부족 시 표시) */}
+      {showSellButton && !disabled && !isDragging && !isConsuming && (
+        <button
+          type="button"
+          className="inventory-sell-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSell?.(item.id, item.name);
+          }}
+          title={t('inventory.sell_tooltip', { price: ITEM_SELL_PRICE_SIGNAL })}
+          aria-label={t('inventory.sell_aria', { item: item.name, price: ITEM_SELL_PRICE_SIGNAL })}
+        >
+          <span className="sell-icon">{'\u26A1'}</span>
+          <span className="sell-price">+{ITEM_SELL_PRICE_SIGNAL}</span>
+        </button>
+      )}
+
       {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
-      {isHovered && !disabled && !isDragging && shouldShowHint && (
+      {isHovered && !disabled && !isDragging && shouldShowHint && !showSellButton && (
         <InteractionHint
           text={t('interaction.item_drag')}
           icon="drag"
@@ -245,6 +271,10 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
   const selectItem = useInventoryStore((state) => state.selectItem);
   const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
   const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
+
+  // U-079: 잔액 부족 시 판매 버튼 표시
+  const isBalanceLow = useEconomyStore((state) => state.isBalanceLow);
+  const sellItem = useWorldStore((state) => state.sellItem);
 
   // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
   const iconRequestedRef = useRef<Set<string>>(new Set());
@@ -361,6 +391,8 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
             isConsuming={consumingItemIds.includes(item.id)}
             isSelected={selectedItemId === item.id}
             onSelect={handleSelect}
+            showSellButton={isBalanceLow}
+            onSell={sellItem}
           />
         ))}
       </div>

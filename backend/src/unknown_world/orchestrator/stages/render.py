@@ -36,7 +36,6 @@ from unknown_world.models.turn import (
     ValidationBadge,
 )
 from unknown_world.orchestrator.stages.render_helpers import (
-    IMAGE_GENERATION_COST_SIGNAL,
     ImageFallbackResult,
     ImageGenerationDecision,
     create_image_fallback_result,
@@ -113,6 +112,18 @@ async def _execute_image_generation(
         },
     )
 
+    # U-079: FAST 폴백 시 model_label 오버라이드
+    effective_model_label = image_decision.model_override or "QUALITY"
+
+    if image_decision.is_low_balance_fallback:
+        logger.info(
+            "[Render] U-079: 잔액 부족 FAST 폴백 적용",
+            extra={
+                "model_override": effective_model_label,
+                "estimated_cost": image_decision.estimated_cost_signal,
+            },
+        )
+
     # ImageGenerationRequest 생성
     # U-091: rembg 런타임 제거 - remove_background, image_type_hint 제거
     request = ImageGenerationRequest(
@@ -123,6 +134,7 @@ async def _execute_image_generation(
         reference_image_url=image_decision.reference_image_url,
         session_id=None,  # 세션 ID는 필요 시 TurnInput에서 추출
         seed=ctx.seed,
+        model_label=effective_model_label,
     )
 
     try:
@@ -437,33 +449,23 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
                     "reason": image_decision.reason,
                     "prompt_hash": image_decision.prompt_hash,
                     "estimated_cost": image_decision.estimated_cost_signal,
+                    "is_low_balance_fallback": image_decision.is_low_balance_fallback,
+                    "model_override": image_decision.model_override,
                 },
             )
 
-            # 잔액 부족으로 생성 불가 시 폴백 메시지 처리
-            if (
-                not image_decision.should_generate
-                and image_decision.reason == "insufficient_balance"
-                and image_decision.fallback_message
-            ):
-                logger.info(
-                    "[Render] 잔액 부족, 텍스트-only 폴백 적용",
-                    extra={
-                        "current_signal": economy_snapshot.signal,
-                        "required_signal": IMAGE_GENERATION_COST_SIGNAL,
-                    },
-                )
-                # U-054: 폴백 메시지를 TurnOutput.narrative에 추가 (RULE-004/005)
-                new_narrative = ctx.output.narrative + "\n\n" + image_decision.fallback_message
-                ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
-
             # U-053: 이미지 생성이 필요한 경우 비동기 호출
+            # U-079: FAST 폴백 포함 (잔액 부족이어도 should_generate=True)
             if image_decision.should_generate:
                 ctx = await _execute_image_generation(
                     ctx=ctx,
                     image_decision=image_decision,
                     emit=emit,
                 )
+
+                # U-079: 잔액 부족 폴백 발생 시 경제 정보 사후 조정
+                if image_decision.is_low_balance_fallback:
+                    ctx = _adjust_economy_for_fallback(ctx, image_decision)
         else:
             logger.debug("[Render] TurnOutput 없음, 이미지 판정 건너뜀")
     else:
@@ -480,5 +482,60 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
             phase=AgentPhase.RENDER,
         )
     )
+
+    return ctx
+
+
+def _adjust_economy_for_fallback(
+    ctx: PipelineContext,
+    image_decision: ImageGenerationDecision,
+) -> PipelineContext:
+    """잔액 부족 폴백 발생 시 경제 정보를 조정합니다.
+
+    U-079: FAST 모델 폴백 시 비용을 0으로 조정하고 잔액을 보존합니다.
+    또한 low_balance_warning을 활성화합니다.
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        image_decision: 이미지 생성 판정 결과
+
+    Returns:
+        업데이트된 컨텍스트
+    """
+    if ctx.output is None:
+        return ctx
+
+    logger.info(
+        "[Render] U-079: 경제 정보 조정 (FAST 폴백 적용)",
+        extra={
+            "original_cost": ctx.output.economy.cost.signal,
+            "new_cost": image_decision.estimated_cost_signal,
+        },
+    )
+
+    # 1. 비용 조정 (FAST_IMAGE_COST_SIGNAL = 0)
+    new_cost = ctx.output.economy.cost.model_copy(
+        update={"signal": image_decision.estimated_cost_signal}
+    )
+
+    # 2. 잔액 재계산 (snapshot - new_cost)
+    # RULE-005 준수를 위해 balance_after를 다시 계산
+    new_signal = max(0, ctx.economy_snapshot.signal - image_decision.estimated_cost_signal)
+    new_shard = max(0, ctx.economy_snapshot.memory_shard - new_cost.memory_shard)
+
+    new_balance = ctx.output.economy.balance_after.model_copy(
+        update={"signal": new_signal, "memory_shard": new_shard}
+    )
+
+    # 3. EconomyOutput 업데이트
+    new_economy = ctx.output.economy.model_copy(
+        update={
+            "cost": new_cost,
+            "balance_after": new_balance,
+            "low_balance_warning": True,
+        }
+    )
+
+    ctx.output = ctx.output.model_copy(update={"economy": new_economy})
 
     return ctx

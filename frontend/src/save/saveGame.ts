@@ -61,6 +61,7 @@ export const SaveGameSchema = z
       .object({
         signal: z.number().int().min(0),
         memory_shard: z.number().int().min(0),
+        credit: z.number().int().default(0).describe('사용 중인 크레딧 (빚)'),
       })
       .describe('재화 상태'),
 
@@ -197,6 +198,7 @@ export function createSaveGame(input: SaveGameInput): SaveGame {
     economy: {
       signal: input.economy.signal,
       memory_shard: input.economy.memory_shard,
+      credit: input.economy.credit,
     },
     economyLedger: input.economyLedger.map((entry) => ({
       turnId: entry.turnId,

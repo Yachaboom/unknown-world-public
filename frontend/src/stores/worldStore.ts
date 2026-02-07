@@ -26,6 +26,7 @@ import type { SceneCanvasState, SceneProcessingPhase } from '../types/scene';
 import { useActionDeckStore } from './actionDeckStore';
 import { useInventoryStore, parseInventoryAdded } from './inventoryStore';
 import { useEconomyStore } from './economyStore';
+import { ITEM_SELL_PRICE_SIGNAL } from '../save/constants';
 import i18n from '../i18n';
 
 // =============================================================================
@@ -36,6 +37,8 @@ import i18n from '../i18n';
 export interface EconomyState {
   signal: number;
   memory_shard: number;
+  /** 사용 중인 크레딧 (빚, Signal 단위, U-079) */
+  credit: number;
 }
 
 /**
@@ -75,6 +78,21 @@ export interface MutationEvent {
   timestamp: number;
 }
 
+/**
+ * U-079: 재화 획득 토스트 알림 데이터.
+ * 아이템 판매, 퀘스트 보상 등 재화 변동 시 팝업 표시.
+ */
+export interface CurrencyToast {
+  /** 토스트 고유 ID (중복 방지) */
+  id: string;
+  /** 변동된 Signal 양 (양수: 획득, 음수: 소비) */
+  signalDelta: number;
+  /** 변동 사유 표시 텍스트 */
+  reason: string;
+  /** 생성 시간 (자동 닫힘 계산용) */
+  createdAt: number;
+}
+
 /** World/Session 상태 */
 export interface WorldState {
   /** 재화 상태 (RULE-005) */
@@ -106,6 +124,14 @@ export interface WorldState {
    * true일 때 SceneImage는 기존 이미지를 유지하고 분석 전용 오버레이를 표시합니다.
    */
   isAnalyzing: boolean;
+
+  // ============ U-079: 재화 획득 토스트 알림 ============
+
+  /**
+   * 현재 표시 중인 토스트 알림 (U-079).
+   * null이면 토스트 없음, 값이 있으면 일정 시간 후 자동 사라짐.
+   */
+  currencyToast: CurrencyToast | null;
 }
 
 /** World Store 액션 */
@@ -192,6 +218,28 @@ export interface WorldActions {
    * @param analyzing - 분석 실행 중 여부
    */
   setIsAnalyzing: (analyzing: boolean) => void;
+
+  // ============ U-079: 아이템 판매 + 토스트 ============
+
+  /**
+   * 아이템을 판매하여 Signal을 획득합니다 (U-079).
+   * 인벤토리에서 수량 1 감소, economy에 판매 가격 추가, Ledger 기록.
+   *
+   * @param itemId - 판매할 아이템 ID
+   * @param itemName - 아이템 이름 (토스트 표시용)
+   */
+  sellItem: (itemId: string, itemName: string) => void;
+
+  /**
+   * 재화 획득 토스트를 표시합니다 (U-079).
+   * 일정 시간 후 자동으로 사라집니다.
+   */
+  showCurrencyToast: (toast: Omit<CurrencyToast, 'id' | 'createdAt'>) => void;
+
+  /**
+   * 토스트를 닫습니다 (U-079).
+   */
+  dismissCurrencyToast: () => void;
 }
 
 export type WorldStore = WorldState & WorldActions;
@@ -220,7 +268,7 @@ export type WorldStore = WorldState & WorldActions;
 function createInitialState(): WorldState {
   return {
     // RU-004-Q5: Placeholder - 실제 값은 프로필/세이브에서 주입됨
-    economy: { signal: 100, memory_shard: 5 },
+    economy: { signal: 100, memory_shard: 5, credit: 0 },
     isConnected: true,
     sceneState: { status: 'default', message: '' },
     sceneObjects: [],
@@ -232,6 +280,8 @@ function createInitialState(): WorldState {
     mutationTimeline: [],
     // U-089: 정밀분석 상태
     isAnalyzing: false,
+    // U-079: 재화 획득 토스트
+    currencyToast: null,
   };
 }
 
@@ -292,6 +342,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     const newEconomy: EconomyState = {
       signal: output.economy.balance_after.signal,
       memory_shard: output.economy.balance_after.memory_shard,
+      credit: output.economy.credit,
     };
 
     // 4. Scene Objects 업데이트 (U-010: 핫스팟 오버레이)
@@ -388,6 +439,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       cost: output.economy.cost,
       balanceAfter: output.economy.balance_after,
       modelLabel: output.agent_console.model_label ?? 'FAST',
+      lowBalanceWarning: output.economy.low_balance_warning,
     });
     // 잔액 부족 상태 업데이트
     economyStore.updateBalanceLowStatus(newEconomy);
@@ -601,6 +653,87 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
   setIsAnalyzing: (analyzing) => {
     set({ isAnalyzing: analyzing });
   },
+
+  // ============ U-079: 아이템 판매 + 토스트 ============
+
+  sellItem: (itemId, itemName) => {
+    const state = get();
+
+    // 1. 인벤토리에서 아이템 수량 감소 (1개 제거)
+    const invStore = useInventoryStore.getState();
+    const item = invStore.items.find((i) => i.id === itemId);
+    if (!item) return; // 아이템 없으면 무시
+
+    // fade-out 애니메이션 후 제거
+    invStore.markConsuming([itemId]);
+    setTimeout(() => {
+      useInventoryStore.getState().clearConsuming([itemId]);
+    }, 500);
+
+    // 2. Signal 추가 (RULE-005: 잔액 음수 금지이므로 추가만)
+    const sellPrice = ITEM_SELL_PRICE_SIGNAL;
+    const newEconomy: EconomyState = {
+      signal: state.economy.signal + sellPrice,
+      memory_shard: state.economy.memory_shard,
+      credit: state.economy.credit,
+    };
+
+    // 3. 내러티브에 판매 기록 추가
+    const sellText = i18n.t('inventory.sell_narrative', {
+      item: itemName,
+      signal: sellPrice,
+    });
+
+    set({
+      economy: newEconomy,
+      narrativeEntries: [
+        ...state.narrativeEntries,
+        {
+          turn: state.turnCount,
+          text: sellText,
+          type: 'system' as const,
+        },
+      ],
+    });
+
+    // 4. Economy Store에 Ledger 기록
+    const economyStore = useEconomyStore.getState();
+    economyStore.addLedgerEntry({
+      turnId: state.turnCount,
+      reason: `${i18n.t('inventory.sell_ledger_reason')}: ${itemName}`,
+      cost: { signal: -sellPrice, memory_shard: 0 }, // 음수 cost = 수입
+      balanceAfter: newEconomy,
+      modelLabel: 'FAST',
+    });
+    economyStore.updateBalanceLowStatus(newEconomy);
+
+    // 5. 토스트 알림
+    get().showCurrencyToast({
+      signalDelta: sellPrice,
+      reason: i18n.t('inventory.sell_toast', { item: itemName }),
+    });
+  },
+
+  showCurrencyToast: (toastData) => {
+    const toast: CurrencyToast = {
+      ...toastData,
+      id: `toast-${Date.now()}`,
+      createdAt: Date.now(),
+    };
+    set({ currencyToast: toast });
+
+    // 3초 후 자동 닫힘
+    setTimeout(() => {
+      const current = useWorldStore.getState().currencyToast;
+      if (current?.id === toast.id) {
+        useWorldStore.getState().dismissCurrencyToast();
+      }
+    }, 3000);
+  },
+
+  dismissCurrencyToast: () => {
+    set({ currencyToast: null });
+  },
 }));
 
 // =============================================================================
@@ -663,3 +796,14 @@ export const selectSubObjectives = (state: WorldStore) => state.quests.filter((q
 
 /** 정밀분석 실행 중 여부 셀렉터 */
 export const selectIsAnalyzing = (state: WorldStore) => state.isAnalyzing;
+
+/** U-079: 재화 획득 토스트 셀렉터 */
+export const selectCurrencyToast = (state: WorldStore) => state.currencyToast;
+
+// =============================================================================
+// DEV: 디버그용 글로벌 노출 (프로덕션에서 제거됨)
+// =============================================================================
+
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__worldStore = useWorldStore;
+}

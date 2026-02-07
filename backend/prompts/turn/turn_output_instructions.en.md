@@ -29,7 +29,12 @@ Specify the rules for each field in the TurnOutput JSON schema.
 - Type: object (required)
 - cost: Resources consumed this turn {signal: int, memory_shard: int}
 - balance_after: Balance after consumption {signal: int, memory_shard: int}
-- **Important**: balance_after.signal >= 0, balance_after.memory_shard >= 0
+- credit: Used credit (Debt in Signal, int)
+- low_balance_warning: Low balance warning flag (boolean)
+- **Important**: 
+  - balance_after.signal >= 0, balance_after.memory_shard >= 0 (Negative balance strictly forbidden)
+  - If the balance is insufficient to pay the cost, reduce `cost` within the balance range or record it in `credit`.
+  - Set `low_balance_warning` to true if Signal balance is less than 15.
 
 ### safety
 - Type: object (required)
@@ -105,6 +110,20 @@ When a player **drags and drops an inventory item onto a hotspot (drop event)**,
 4. When an item is consumed, reflect the result naturally in the narrative. (e.g., "You use the key to unlock the door. The key snaps and crumbles away.")
 5. When a `drop` input triggers an item effect, the **default behavior is to consume (remove)** the item. Only keep the item if it is clearly reusable.
 6. **Quantity-based Consumption**: For stackable items with a quantity, including the item ID once in `inventory_removed` reduces the quantity by 1. The item is only fully removed from the inventory if its quantity becomes 0.
+
+#### Currency Acquisition Path Diversification (U-079)
+
+When the player's Signal balance is low (balance_after.signal < 15), **actively provide currency earning opportunities**:
+
+1. **Currency Earning Action Cards**: Include 1-2 action cards of the following types (cost 0 or very cheap):
+   - Exploration/Discovery: "Search the surroundings" (cost: {signal: 0, memory_shard: 0})
+   - Trade/Reward: "Talk to the strange merchant" (cost: {signal: 0, memory_shard: 0})
+   - Challenge/Achievement: "Attempt the trial" (cost: {signal: 2, memory_shard: 0}, high reward on success)
+   - Prefix these card IDs with `earn_` for identification (e.g., `earn_search`, `earn_trade`, `earn_challenge`)
+   - The GM should create currency earning cards that feel natural within the world and current situation
+2. **Item Selling Hint**: When the player has items in inventory and balance is low, naturally hint at the **possibility of selling** in the narrative. (e.g., "You might have something worth trading in your belongings...")
+3. **Sub-objective Reward Utilization**: When balance is low, guide the player towards sub-objectives with rewards (reward_signal > 0) as a priority.
+4. **Narrative Hints**: When balance is very low (signal < 5), weave currency earning opportunities into the narrative naturally. (e.g., "Something faintly glowing catches your eye on the ground...")
 
 ### render
 - image_job: Image generation job (optional)

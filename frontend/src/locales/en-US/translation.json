@@ -286,6 +286,13 @@
     "confirmed_cost": "Confirmed",
     "insufficient_funds": "Insufficient funds",
     "low_balance_warning": "Low balance",
+    "low_balance_title": "Low Signal - Alternatives",
+    "credit": "Credit",
+    "credit_desc": "Current credit (debt) being used. Will be repaid first when earning currency.",
+    "fast_fallback_notice": "Images will be generated in basic quality (FAST) for free",
+    "hint_sell_items": "Sell inventory items to earn Signal",
+    "hint_earn_actions": "Select currency earning cards (\u26A1)",
+    "hint_complete_quests": "Complete objectives to earn rewards",
     "alternatives_title": "Alternatives",
     "alternative_text_only": "Text-only (no images)",
     "alternative_low_quality": "Low quality / Fast response",
@@ -310,7 +317,12 @@
     "list_label": "Inventory Items",
     "item_label": "{{name}} (Qty: {{quantity}})",
     "drag_hint": "Drag to use",
-    "item_consumed": "{{name}} consumed"
+    "item_consumed": "{{name}} consumed",
+    "sell_tooltip": "Sell (+{{price}} Signal)",
+    "sell_aria": "Sell {{item}} (+{{price}} Signal)",
+    "sell_narrative": "\uD83D\uDCB0 Sold {{item}} and earned {{signal}} Signal.",
+    "sell_toast": "Sold {{item}}!",
+    "sell_ledger_reason": "Item sold"
   },
   "interaction": {
     "hotspot_click": "Click to investigate",
@@ -421,6 +433,7 @@
     "insufficient_balance": "Insufficient balance",
     "server_disabled": "Unavailable",
     "vision_badge": "VISION",
+    "earn_badge": "Earn Signal",
     "all_disabled_notice": "No actions available. Check alternatives.",
     "risk": {
       "low": "Low",

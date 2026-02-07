@@ -522,6 +522,8 @@ export const EconomyOutputSchema = z
   .object({
     cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
     balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
+    credit: z.number().int().default(0).describe('사용 중인 크레딧 (빚, Signal 단위)'),
+    low_balance_warning: z.boolean().default(false).describe('잔액 부족 경고 여부'),
   })
   .strict();
 export type EconomyOutput = z.infer<typeof EconomyOutputSchema>;
@@ -679,6 +681,8 @@ export function createFallbackTurnOutput(
     economy: {
       cost: { signal: 0, memory_shard: 0 },
       balance_after: balanceAfter,
+      credit: 0,
+      low_balance_warning: false,
     },
     safety: {
       blocked: false,

@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+from unknown_world.config.economy import LOW_BALANCE_THRESHOLD
 from unknown_world.models.turn import (
     ActionCard,
     ActionDeck,
@@ -125,6 +126,9 @@ def create_safe_fallback(
     # Consistency: 폴백에서는 언어/좌표 문제가 없으므로 CONSISTENCY_OK
     badges.append(ValidationBadge.CONSISTENCY_OK)
 
+    # U-079: 잔액 부족 경고 여부 결정
+    is_low = balance.signal < LOW_BALANCE_THRESHOLD
+
     return TurnOutput(
         language=language,
         narrative=narrative,
@@ -137,6 +141,8 @@ def create_safe_fallback(
         economy=EconomyOutput(
             cost=CurrencyAmount(signal=0, memory_shard=0),
             balance_after=balance,
+            credit=0,
+            low_balance_warning=is_low,
         ),
         safety=SafetyOutput(
             blocked=is_blocked,

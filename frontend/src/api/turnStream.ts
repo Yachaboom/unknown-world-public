@@ -312,6 +312,8 @@ function createFallbackTurnOutput(
     economy: {
       cost: { signal: 0, memory_shard: 0 },
       balance_after: balanceAfter,
+      credit: 0,
+      low_balance_warning: false,
     },
     safety: {
       blocked: false,
@@ -494,6 +496,8 @@ function createClientFallbackTurnOutput(
         signal: economySnapshot.signal,
         memory_shard: economySnapshot.memory_shard,
       },
+      credit: 0,
+      low_balance_warning: false,
     },
     safety: {
       blocked: false,

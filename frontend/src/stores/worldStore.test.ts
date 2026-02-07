@@ -46,6 +46,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
+        credit: 0,
+        low_balance_warning: false,
       },
       ui: {
         scene: { image_url: '', alt_text: '' },
@@ -94,6 +96,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
+        credit: 0,
+        low_balance_warning: false,
       },
       ui: {
         scene: { image_url: '', alt_text: '' },
@@ -134,6 +138,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
+        credit: 0,
+        low_balance_warning: false,
       },
       ui: {
         scene: { image_url: '', alt_text: '' },
@@ -179,6 +185,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
+        credit: 0,
+        low_balance_warning: false,
       },
       ui: {
         scene: { image_url: '', alt_text: '' },
@@ -226,6 +234,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
+        credit: 0,
+        low_balance_warning: false,
       },
       ui: {
         scene: { image_url: '', alt_text: '' },
@@ -256,6 +266,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       economy: {
         cost: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
+        credit: 0,
+        low_balance_warning: false,
       },
       ui: {
         scene: { image_url: '', alt_text: '' },
@@ -291,7 +303,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       // 1. 임의의 상태 설정
       useWorldStore.setState({
         turnCount: 10,
-        economy: { signal: 50, memory_shard: 0 },
+        economy: { signal: 50, memory_shard: 0, credit: 0 },
         quests: [
           {
             id: 'q1',
@@ -369,6 +381,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: '', alt_text: '' },
@@ -411,6 +425,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: '', alt_text: '' },
@@ -532,6 +548,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 150, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: '', alt_text: '' },
@@ -596,6 +614,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: 'new_img.png', alt_text: '' },
@@ -650,6 +670,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: '', alt_text: '' },
@@ -713,6 +735,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: '', alt_text: '' },
@@ -768,6 +792,8 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         economy: {
           cost: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
+          credit: 0,
+          low_balance_warning: false,
         },
         ui: {
           scene: { image_url: '', alt_text: '' },

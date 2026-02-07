@@ -54,7 +54,7 @@ describe('sessionLifecycle (RU-004[Mvp])', () => {
         language: 'ko-KR',
         profileId: 'explorer',
         savedAt: new Date().toISOString(),
-        economy: { signal: 100, memory_shard: 5 },
+        economy: { signal: 100, memory_shard: 5, credit: 0 },
         economyLedger: [],
         turnCount: 1,
         narrativeHistory: [],
@@ -106,7 +106,7 @@ describe('sessionLifecycle (RU-004[Mvp])', () => {
         language: 'en-US',
         profileId: 'explorer',
         savedAt: new Date().toISOString(),
-        economy: { signal: 123, memory_shard: 45 },
+        economy: { signal: 123, memory_shard: 45, credit: 0 },
         economyLedger: [],
         turnCount: 5,
         narrativeHistory: [{ turn: 1, text: 'old message' }],
@@ -157,7 +157,7 @@ describe('sessionLifecycle (RU-004[Mvp])', () => {
       });
 
       // 상태 변경 시뮬레이션
-      useWorldStore.setState({ turnCount: 10, economy: { signal: 0, memory_shard: 0 } });
+      useWorldStore.setState({ turnCount: 10, economy: { signal: 0, memory_shard: 0, credit: 0 } });
 
       const result = resetToCurrentProfile({
         t: mockT,
@@ -219,7 +219,7 @@ describe('sessionLifecycle (RU-004[Mvp])', () => {
           language: 'ko-KR',
           profileId: 'saved-profile',
           savedAt: new Date().toISOString(),
-          economy: { signal: 100, memory_shard: 5 },
+          economy: { signal: 100, memory_shard: 5, credit: 0 },
           economyLedger: [],
           turnCount: 1,
           narrativeHistory: [],

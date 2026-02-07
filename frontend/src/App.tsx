@@ -435,6 +435,7 @@ function App() {
           <GameHeader
             signal={economy.signal}
             memoryShard={economy.memory_shard}
+            credit={economy.credit}
             isConnected={isConnected}
             uiScale={uiScale}
             onIncreaseScale={increaseUIScale}
@@ -517,7 +518,37 @@ function App() {
 
       {/* U-074: 온보딩 가이드 (화면 우하단 팝업) */}
       <OnboardingGuide />
+
+      {/* U-079: 재화 획득 토스트 알림 */}
+      <CurrencyToastUI />
     </>
+  );
+}
+
+/**
+ * U-079: 재화 획득 토스트 알림 컴포넌트.
+ * worldStore.currencyToast 상태를 구독하여 팝업 표시.
+ */
+function CurrencyToastUI() {
+  const toast = useWorldStore((state) => state.currencyToast);
+  const dismiss = useWorldStore((state) => state.dismissCurrencyToast);
+
+  if (!toast) return null;
+
+  return (
+    <div className="currency-toast" role="alert" aria-live="assertive">
+      <span className="currency-toast-icon">
+        {toast.signalDelta > 0 ? '\u26A1' : '\uD83D\uDCB8'}
+      </span>
+      <span className="currency-toast-amount">
+        {toast.signalDelta > 0 ? '+' : ''}
+        {toast.signalDelta} Signal
+      </span>
+      <span className="currency-toast-reason">{toast.reason}</span>
+      <button type="button" className="currency-toast-close" onClick={dismiss} aria-label="Close">
+        {'\u2715'}
+      </button>
+    </div>
   );
 }
 

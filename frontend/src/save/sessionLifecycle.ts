@@ -169,6 +169,7 @@ export function startSessionFromProfile(args: {
     economy: {
       signal: saveGame.economy.signal,
       memory_shard: saveGame.economy.memory_shard,
+      credit: (saveGame.economy as any).credit ?? 0,
     },
     turnCount: 0,
     narrativeEntries: saveGame.narrativeHistory,
@@ -222,6 +223,7 @@ export async function continueSession(): Promise<SessionContinueResult | null> {
     economy: {
       signal: saveGame.economy.signal,
       memory_shard: saveGame.economy.memory_shard,
+      credit: (saveGame.economy as any).credit ?? 0,
     },
     turnCount: saveGame.turnCount,
     narrativeEntries: saveGame.narrativeHistory,

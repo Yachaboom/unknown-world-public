@@ -29,7 +29,12 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
 - 타입: object (필수)
 - cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
 - balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
-- **중요**: balance_after.signal >= 0, balance_after.memory_shard >= 0
+- credit: 사용 중인 크레딧 (빚, Signal 단위, int)
+- low_balance_warning: 잔액 부족 경고 여부 (boolean)
+- **중요**: 
+  - balance_after.signal >= 0, balance_after.memory_shard >= 0 (음수 절대 불가)
+  - 잔액이 부족하여 비용을 지불할 수 없는 경우, `cost`를 잔액 범위 내로 낮추거나 `credit`을 기록하세요.
+  - Signal 잔액이 15 미만이면 `low_balance_warning`을 true로 설정합니다.
 
 ### safety
 - 타입: object (필수)
@@ -105,6 +110,20 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
 4. 아이템을 사용하여 효과가 발생했으면, 내러티브에 해당 아이템의 소비/사용 결과를 자연스럽게 반영하세요. (예: "열쇠를 사용하여 문을 열었습니다. 열쇠가 부러져 사라졌습니다.")
 5. `drop` 입력이 있는데 아이템 사용 효과가 발생했다면, 기본적으로 해당 아이템은 **소비(제거)**하는 것을 원칙으로 합니다. 재사용 가능하다고 판단되는 경우에만 유지합니다.
 6. **수량 기반 소비**: 수량이 여러 개인 아이템(stackable)은 `inventory_removed`에 ID가 1번 포함될 때마다 수량이 1씩 감소합니다. 수량이 1개인 경우에만 인벤토리에서 완전히 제거됩니다.
+
+#### 재화 획득 경로 다양화 (U-079)
+
+플레이어의 Signal 잔액이 부족할 때(balance_after.signal < 15), **재화 획득 기회를 적극적으로 제공**합니다:
+
+1. **재화 획득 액션 카드**: 다음과 같은 유형의 액션 카드를 1~2장 포함합니다 (비용 0 또는 매우 저렴하게):
+   - 탐색/발견: "주변을 수색한다" (cost: {signal: 0, memory_shard: 0})
+   - 거래/보상: "이상한 상인과 대화한다" (cost: {signal: 0, memory_shard: 0})
+   - 도전/성취: "시련에 도전한다" (cost: {signal: 2, memory_shard: 0}, 성공 시 보상 큼)
+   - 이런 카드의 ID에는 `earn_` 접두사를 붙여 구분합니다 (예: `earn_search`, `earn_trade`, `earn_challenge`)
+   - GM은 세계관과 현재 상황에 맞는 자연스러운 방식으로 재화 획득 카드를 생성합니다
+2. **아이템 판매 힌트**: 플레이어 인벤토리에 아이템이 있고 잔액이 부족하면, 내러티브에 **판매 가능성**을 자연스럽게 암시합니다. (예: "주머니 속 물건 중 팔 수 있는 것이 있을지도 모릅니다.")
+3. **서브 목표 보상 활용**: 잔액 부족 시 보상이 있는 서브 목표(reward_signal > 0)를 우선적으로 진행할 수 있도록 유도합니다.
+4. **내러티브 힌트**: 잔액이 매우 부족하면(signal < 5) 내러티브에 재화 획득 기회를 자연스럽게 녹입니다. (예: "바닥에서 희미하게 빛나는 무언가가 눈에 띕니다...")
 
 ### render
 - image_job: 이미지 생성 작업 (선택)

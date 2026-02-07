@@ -42,6 +42,8 @@ export interface LedgerEntry {
   balanceAfter: CurrencyAmount;
   /** 모델 라벨 (FAST/QUALITY/CHEAP/REF) */
   modelLabel?: ModelLabel;
+  /** 잔액 부족 경고 여부 (U-079) */
+  lowBalanceWarning?: boolean;
   /** 기록 시간 */
   timestamp: number;
 }
@@ -275,6 +277,8 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
           turnId: entry.turnId,
           modelLabel: entry.modelLabel,
         },
+        // U-079: 서버에서 전달된 경고 상태 반영
+        isBalanceLow: entry.lowBalanceWarning ?? state.isBalanceLow,
         // 턴 완료 후 예상 비용 초기화
         costEstimate: null,
       };
@@ -421,4 +425,9 @@ export function canAffordEstimate(
   estimate: CostEstimateState,
 ): { affordable: boolean; shortfall: CurrencyAmount } {
   return canAffordCost(balance, estimate.max);
+}
+
+// DEV: 디버그용 글로벌 노출
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__economyStore = useEconomyStore;
 }
