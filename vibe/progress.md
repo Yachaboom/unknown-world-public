@@ -1,5 +1,41 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 20:50] U-082[Mvp]: UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Agent Console 상세 정보 기본 접힘 및 토글 구현, Economy HUD 재화 잔액/아이콘 확대, 사이드바 레이아웃 비율 조정(HUD 영역 확장).
+- **추가 컴포넌트**: `vibe/unit-results/U-082.md` (보고서), `vibe/unit-runbooks/U-082-agent-console-economy-hud-runbook.md` (런북).
+- **달성 요구사항**: [PRD 6.8] 에이전트 동작 가시화(배지 상시 노출), [RULE-002] 게임 UI 레이아웃 고정 및 HUD 강화.
+
+### 기술적 구현 세부사항
+
+**레이아웃 최적화 전략**:
+- **Compact Agent Console**: Plan/Queue 영역을 기본 `collapsed` 상태로 설정하고 배지만 노출하여 화면 공간 효율화.
+- **Enhanced Economy HUD**: 재화 잔액 폰트(1.25rem) 및 아이콘(28px) 확대를 통해 게임 경제 상태 시인성 대폭 개선.
+- **Flexible Layout Allocation**: `App.tsx`에서 Economy HUD에 `flex-1`을 부여하여 Agent Console 축소 시 남은 공간을 자동으로 점유하도록 레이아웃 정책 변경.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/
+    │   ├── AgentConsole.tsx (접힘/펼침 토글 및 배지 상시 노출)
+    │   └── EconomyHud.tsx (잔액/비용 확대 및 스타일 보정)
+    ├── App.tsx (사이드바 패널 flex 비율 조정)
+    └── style.css (확대된 UI 요소 및 토글 애니메이션 스타일)
+
+### 성능 및 품질 지표
+
+- **가시성**: 핵심 정보(재화 잔액)의 인지 속도 향상.
+- **UX**: 사이드바 전체 스크롤 없이도 모든 패널 정보에 효율적으로 접근 가능.
+
+### 다음 단계
+
+- **U-083[Mvp]**: UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-08 18:30] U-079[Mvp]: 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 완료
 
 ### 구현 완료 항목

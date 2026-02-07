@@ -4,6 +4,11 @@
  * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
  * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
  *
+ * U-082: Agent Console 축소/확장 토글
+ *   - 기본 접힘(collapsed): Badges + StreamingStatus + ModelLabel만 compact 표시
+ *   - 확장(expanded): Plan/Queue/RepairTrace 등 상세 정보 표시
+ *   - Q1: Option A (기본 접힘), Q3: Option A (상태 저장하지 않음)
+ *
  * 설계 원칙:
  *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
  *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
@@ -11,6 +16,7 @@
  * @module components/AgentConsole
  */
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useAgentStore,
@@ -258,20 +264,57 @@ function StreamingStatus() {
 /**
  * Agent Console 컴포넌트.
  *
- * Plan/Queue/Badges/Auto-repair를 실시간으로 표시합니다.
- * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
+ * U-082: 기본 접힘(collapsed)으로 시작하며, Badges + StreamingStatus만 compact 표시.
+ * 토글 버튼으로 Plan/Queue/RepairTrace 등 상세 정보를 펼칠 수 있습니다.
  *
+ * Q1: Option A - 기본 접힘
+ * Q3: Option A - 상태 저장하지 않음 (매번 기본 상태로 시작)
+ *
+ * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
  * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
  * U-069: 현재 사용 중인 모델 라벨(FAST/QUALITY) 표시 추가
  */
 export function AgentConsole() {
+  const { t } = useTranslation();
+  // U-082 Q1 Option A: 기본 접힘, Q3 Option A: 저장하지 않음
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
-    <div className="agent-console-content" data-ui-importance="critical">
-      <StreamingStatus />
-      <ModelLabelBadge />
-      <PhaseQueue />
-      <BadgesPanel />
-      <RepairTrace />
+    <div
+      className={`agent-console-content ${isExpanded ? 'agent-console-expanded' : 'agent-console-collapsed'}`}
+      data-ui-importance="critical"
+    >
+      {/* U-082: 항상 표시 영역 - StreamingStatus + Badges + ModelLabel + 토글 */}
+      <div className="agent-console-always">
+        <div className="agent-console-summary">
+          <StreamingStatus />
+          <ModelLabelBadge />
+        </div>
+        <BadgesPanel />
+        <button
+          type="button"
+          className="agent-console-toggle"
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
+          title={isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
+        >
+          <span className="toggle-icon">{isExpanded ? '▲' : '▼'}</span>
+          <span className="toggle-text">
+            {isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
+          </span>
+        </button>
+      </div>
+
+      {/* U-082: 확장 시에만 표시 - Plan/Queue/RepairTrace */}
+      {isExpanded && (
+        <div className="agent-console-details">
+          <PhaseQueue />
+          <RepairTrace />
+        </div>
+      )}
+
+      {/* 에러는 항상 표시 */}
       <ErrorDisplay />
     </div>
   );

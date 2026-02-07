@@ -232,3 +232,19 @@ mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 - **추정 원인**: `TurnInput` 스키마가 변경되어 `previous_image_url`이 필수 필드가 되었으나, 기존 테스트 코드의 모의 데이터(Mock data)가 업데이트되지 않음.
 - **보류 사유**: U-070[Mvp] 범위 밖 (액션 로그 출력 기능과 무관한 기존 테스트 코드의 타입 정합성 이슈).
 - **권장 조치**: 테스트 파일 내의 `TurnInput` 모의 데이터에 `previous_image_url: null` 추가.
+
+## 2026-02-08 이슈: InventoryPanel.test.tsx Suite 실패 - initReactI18next mock 누락 (U-082 테스트 발견)
+
+- **발견 위치**: `frontend/src/components/InventoryPanel.test.tsx`
+- **현상**: 테스트 스위트 전체 실패 - `Error: [vitest] No "initReactI18next" export is defined on the "react-i18next" mock.`
+- **추정 원인**: `InventoryPanel.test.tsx`의 `vi.mock('react-i18next')` 설정에서 `initReactI18next` export가 누락됨. `src/i18n.ts`가 `initReactI18next`를 import하여 사용하는데, mock에서 이를 제공하지 않아 모듈 로드 시 실패.
+- **보류 사유**: U-082[Mvp] 범위 밖 (Agent Console/Economy HUD 레이아웃 변경과 무관한 기존 테스트 mock 이슈).
+- **권장 조치**: mock에 `initReactI18next: { type: '3rdParty', init: () => {} }` 추가 (EconomyHud.test.tsx 패턴 참조).
+
+## 2026-02-08 이슈: inventoryStore.test.ts parseInventoryAdded iconStatus 불일치 (U-082 테스트 발견)
+
+- **발견 위치**: `frontend/src/stores/inventoryStore.test.ts:99`
+- **현상**: `parseInventoryAdded` 테스트 실패 - `Expected: iconStatus: "ready"` vs `Received: iconStatus: "completed"`
+- **추정 원인**: `parseInventoryAdded` 함수가 아이콘 URL이 있는 아이템의 `iconStatus`를 `"ready"` 대신 `"completed"`로 설정하도록 변경되었으나, 테스트 기대값이 업데이트되지 않음.
+- **보류 사유**: U-082[Mvp] 범위 밖 (인벤토리 아이콘 상태 로직과 무관).
+- **권장 조치**: 테스트 기대값을 `iconStatus: "completed"`로 수정하거나, `parseInventoryAdded` 구현 의도를 확인 후 정렬.

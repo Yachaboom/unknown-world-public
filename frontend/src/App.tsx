@@ -477,16 +477,13 @@ function App() {
             <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
           </main>
 
-          {/* U-049: 우측 사이드바 스크롤 전략 - Agent Console만 flex-1 (Q1 Option A) */}
+          {/* U-082: 우측 사이드바 - Agent Console 축소 + Economy HUD flex-1 확대
+               (U-049 Q1 Option A 반전: Economy가 유연 확장, Agent Console은 콘텐츠 기반) */}
           <aside className="sidebar-right">
-            <Panel
-              title={t('panel.agent_console.title')}
-              className="panel-agent-console flex-1"
-              hasChrome
-            >
+            <Panel title={t('panel.agent_console.title')} className="panel-agent-console" hasChrome>
               <AgentConsole />
             </Panel>
-            <Panel title={t('economy.hud_label')} className="panel-economy" hasChrome>
+            <Panel title={t('economy.hud_label')} className="panel-economy flex-1" hasChrome>
               <EconomyHud />
             </Panel>
             <Panel title={t('panel.scanner.title')} className="panel-scanner" hasChrome>

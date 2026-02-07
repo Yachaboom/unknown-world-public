@@ -1965,20 +1965,34 @@ body {
 }
 
 /* ===========================================
-   11.1 사이드바 패널별 높이 전략 (U-049)
-   - Q1 Option A: Agent Console만 flex-1 (유연 높이)
-   - Economy/Scanner는 콘텐츠에 맞춰 축소
+   11.1 사이드바 패널별 높이 전략 (U-082 반전)
+   - U-049 원본: Agent Console flex-1 / Economy 고정
+   - U-082 변경: Agent Console 콘텐츠 기반 / Economy flex-1
+   - Agent Console: 기본 접힘(collapsed), 필요 시 확장
+   - Economy HUD: 유연 확장으로 재화 현황 가시성 강화
    =========================================== */
 
-/* Agent Console: 유연 확장 (Q1 Option A) */
+/* Agent Console: 콘텐츠 기반 높이 (U-082: flex-1 제거)
+   - 접힘 시: flex-shrink: 0 (축소 금지)
+   - 확장 시: max-height 제한 + 내부 스크롤로 overflow 방지 */
 .panel-agent-console {
-  /* flex-1은 className으로 받음 - 별도 설정 불필요 */
+  flex-shrink: 0; /* U-082: 접힘 시 다른 패널에 밀려 축소되지 않음 */
 }
 
-/* Economy HUD: 콘텐츠 기반 높이, 최대 제한 */
+/* U-082 fix: 확장 시 max-height 제한으로 sidebar overflow 방지 */
+.panel-agent-console:has(.agent-console-expanded) {
+  flex-shrink: 1; /* 확장 시에는 축소 허용 */
+  max-height: 40%; /* sidebar 높이의 40%까지만 */
+}
+
+.panel-agent-console:has(.agent-console-expanded) .panel-content {
+  overflow-y: auto; /* 확장 콘텐츠가 넘칠 경우 내부 스크롤 */
+}
+
+/* Economy HUD: 유연 확장 (U-082: flex-1 부여) */
 .panel-economy {
-  flex-shrink: 0; /* 다른 패널에 밀려 축소되지 않음 */
-  max-height: 280px; /* U-049: 과도한 확장 방지 */
+  /* flex-1은 className으로 받음 - 별도 설정 불필요 */
+  min-height: 120px; /* U-082: 최소 가시성 보장 */
 }
 
 .panel-economy .panel-content {
@@ -2272,8 +2286,82 @@ button:disabled,
 .agent-console-content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
   font-size: 0.75rem;
+}
+
+/* U-082: Agent Console 접힘/펼침 토글 구조 */
+.agent-console-always {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.agent-console-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.agent-console-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  width: 100%;
+  padding: 3px var(--spacing-xs);
+  background: rgba(0, 20, 0, 0.6);
+  border: 1px solid var(--text-dim);
+  border-radius: 2px;
+  color: var(--text-dim);
+  font-family: var(--font-micro-en);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background-color 0.2s;
+}
+
+.agent-console-toggle:hover {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  background: rgba(255, 0, 255, 0.05);
+}
+
+.agent-console-toggle:focus-visible {
+  outline: 1px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.toggle-icon {
+  font-size: 0.5rem;
+}
+
+.toggle-text {
+  font-size: 0.5625rem;
+}
+
+/* U-082: 접힌 상태에서 더 컴팩트한 레이아웃 */
+.agent-console-collapsed .badges-panel {
+  padding: var(--spacing-xs) 0 0;
+  border-top: none;
+}
+
+.agent-console-collapsed .badges-panel .badges-grid {
+  gap: 2px;
+}
+
+/* U-082: 확장 시 상세 정보 영역 */
+.agent-console-details {
+  border-top: 1px solid var(--text-dim);
+  padding-top: var(--spacing-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 
 /* 스트리밍 상태 */
@@ -2281,8 +2369,7 @@ button:disabled,
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs);
-  border-bottom: 1px solid var(--text-dim);
+  padding: 0; /* U-082: 인라인 표시로 변경 */
 }
 
 .streaming-status .status-dot {
@@ -3109,10 +3196,11 @@ button:disabled,
   gap: 4px;
 }
 
+/* U-082: 잔액 폰트 사이즈 확대 (가시성 강화) */
 .balance-value {
   font-family: var(--font-micro-en);
   font-weight: bold;
-  font-size: var(--font-size-sm);
+  font-size: 1.25rem; /* U-082: var(--font-size-sm) → 1.25rem 확대 */
 }
 
 .balance-label {
@@ -3214,10 +3302,11 @@ button:disabled,
   margin: 0 2px;
 }
 
+/* U-082: 비용 폰트 사이즈 확대 */
 .cost-value {
   font-family: var(--font-micro-en);
   font-weight: bold;
-  font-size: var(--font-size-sm);
+  font-size: 1rem; /* U-082: 확대 */
   color: var(--warning-color);
 }
 

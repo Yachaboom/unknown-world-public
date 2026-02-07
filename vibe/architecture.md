@@ -23,6 +23,7 @@ backend/src/unknown_world/api/scanner.py
 backend/src/unknown_world/api/turn_stream_events.py
 backend/src/unknown_world/api/turn_streaming_helpers.py
 backend/src/unknown_world/api/turn.py
+backend/src/unknown_world/config/economy.py
 backend/src/unknown_world/config/models.py
 backend/src/unknown_world/main.py
 backend/src/unknown_world/models/scanner.py
@@ -56,13 +57,13 @@ backend/src/unknown_world/validation/language_gate.py
 backend/tests/unit/orchestrator/test_u090_hotspot_restriction.py
 frontend/public/ui/items/
 frontend/public/ui/manifest.json
-frontend/src/App.tsx
+frontend/src/App.tsx (사이드바 패널 flex-1 레이아웃 적용)
 frontend/src/main.tsx
 frontend/src/api/turnStream.ts
 frontend/src/components/ActionDeck.tsx
-frontend/src/components/AgentConsole.tsx
-frontend/src/components/EconomyHud.tsx
-frontend/src/components/InventoryPanel.tsx (Row 렌더링 도입)
+frontend/src/components/AgentConsole.tsx (접힘/펼침 토글 구현)
+frontend/src/components/EconomyHud.tsx (재화 잔액/아이콘 확대 반영)
+frontend/src/components/InventoryPanel.tsx
 frontend/src/components/NarrativeFeed.tsx
 frontend/src/components/ObjectiveTracker.tsx
 frontend/src/components/QuestPanel.tsx
@@ -87,27 +88,15 @@ frontend/src/stores/economyStore.ts
 frontend/src/stores/agentStore.ts
 frontend/src/stores/actionDeckStore.ts
 frontend/src/stores/inventoryStore.ts
-frontend/src/stores/inventory_consumption.test.ts
 frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
-backend/tests/unit/services/test_u093_timeout_retry.py
-backend/tests/unit/test_u096_consumption.py
+vibe/unit-results/U-082.md
 vibe/unit-results/U-088[Mvp].md
 vibe/unit-results/U-094[Mvp].md
 vibe/unit-results/U-095[Mvp].md
 vibe/unit-results/U-096[Mvp].md
-vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
-vibe/unit-runbooks/U-088-inventory-row-layout-runbook.md
-vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
-vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
-vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
-vibe/unit-runbooks/U-092-item-icon-preset-runbook.md
-vibe/unit-runbooks/U-093-icon-timeout-fix-runbook.md
-vibe/unit-runbooks/U-094-scan-retry-runbook.md
-vibe/unit-runbooks/U-095-scanner-randomize-runbook.md
-vibe/unit-runbooks/U-096-item-consumption-runbook.md
 ```
 
 ### 주요 디렉토리 설명

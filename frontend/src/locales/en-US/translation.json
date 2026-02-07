@@ -261,7 +261,9 @@
         "quality": "Quality (QUALITY)",
         "cheap": "Cheap",
         "ref": "Reference"
-      }
+      },
+      "expand": "Details",
+      "collapse": "Collapse"
     }
   },
   "ui": {

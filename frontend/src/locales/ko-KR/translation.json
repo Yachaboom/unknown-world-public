@@ -261,7 +261,9 @@
         "quality": "고품질 (QUALITY)",
         "cheap": "저비용",
         "ref": "참조"
-      }
+      },
+      "expand": "상세 보기",
+      "collapse": "접기"
     }
   },
   "ui": {

@@ -47,7 +47,8 @@ interface CurrencyIconProps {
   size?: number;
 }
 
-function CurrencyIcon({ type, size = 20 }: CurrencyIconProps) {
+/** U-082: 기본 아이콘 크기를 24→28px로 확대 (가시성 향상) */
+function CurrencyIcon({ type, size = 28 }: CurrencyIconProps) {
   const { t } = useTranslation();
 
   const iconSrc = type === 'signal' ? '/ui/icons/signal-24.png' : '/ui/icons/shard-24.png';
@@ -150,9 +151,9 @@ function CostDisplay({ type, min, max, cost, affordable, label }: CostDisplayPro
         {label && <span className="cost-label">{label}</span>}
       </div>
       <div className="cost-values">
-        {/* Signal 비용 */}
+        {/* Signal 비용 - U-082: 아이콘 크기 14→18px */}
         <div className="cost-item">
-          <CurrencyIcon type="signal" size={14} />
+          <CurrencyIcon type="signal" size={18} />
           <span className="cost-value">
             {type === 'estimate' && min && max
               ? isRange
@@ -168,7 +169,7 @@ function CostDisplay({ type, min, max, cost, affordable, label }: CostDisplayPro
           (type === 'confirmed' && cost && cost.memory_shard > 0)) && (
           <div className="cost-item">
             <span className="cost-separator">|</span>
-            <CurrencyIcon type="shard" size={14} />
+            <CurrencyIcon type="shard" size={18} />
             <span className="cost-value">
               {type === 'estimate' && min && max
                 ? isRange

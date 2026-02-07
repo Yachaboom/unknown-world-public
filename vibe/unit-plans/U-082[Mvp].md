@@ -149,18 +149,18 @@ return (
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Agent Console 기본 상태는?
-  - Option A: **기본 접힘** (Badges만 표시, 클릭으로 확장)
+- [x] **Q1**: Agent Console 기본 상태는?
+  - ✅ Option A: **기본 접힘** (Badges만 표시, 클릭으로 확장)
   - Option B: 기본 펼침 (현재와 동일)
   - Option C: 사용자 설정에 따라 기억
 
-- [ ] **Q2**: Economy HUD 위치는?
-  - Option A: 현재 위치 유지, 크기만 확대
+- [x] **Q2**: Economy HUD 위치는?
+  - ✅ Option A: 현재 위치 유지, 크기만 확대
   - Option B: 상단(Header) 영역으로 이동
   - Option C: Agent Console 상단에 통합
 
-- [ ] **Q3**: Agent Console 확장 상태 저장?
-  - Option A: 저장하지 않음 (매번 기본 상태로 시작)
+- [x] **Q3**: Agent Console 확장 상태 저장?
+  - ✅ Option A: 저장하지 않음 (매번 기본 상태로 시작)
   - Option B: localStorage에 저장
   - Option C: 세션 상태에 포함
 
