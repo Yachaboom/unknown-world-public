@@ -7,7 +7,7 @@
 | Unit ID   | U-109[Mmp]         |
 | Phase     | MMP                |
 | 예상 소요 | 90분               |
-| 의존성    | U-019,U-020,RU-005 |
+| 의존성    | U-019,U-020,RU-005,U-076 |
 | 우선순위  | High               |
 
 ## 작업 목표
@@ -15,6 +15,8 @@
 Gemini 3 Flash의 **Agentic Vision(Code Execution)** 을 활용해 "생성된 장면 이미지"를 분석하고, **Scene Hotspots(클릭 오브젝트)** 의 bbox가 실제 이미지와 **항상 정합**되도록 보장한다.
 
 **배경**: 현재 GM이 이미지 생성 전에 핫스팟 좌표를 "상상"해서 지정하므로, 실제 생성된 이미지의 오브젝트 위치와 핫스팟이 어긋나는 문제가 발생한다. Agentic Vision은 Think→Act→Observe 루프로 이미지 패치를 직접 조사(줌/크롭/주석)하며 **실제 오브젝트 위치를 정확하게 추출**할 수 있다. (PRD 6.7/8.6, `https://blog.google/innovation-and-ai/technology/developers-tools/agentic-vision-gemini-3-flash/`)
+
+**MVP 선행 (U-076 완료)**: MVP에서 U-076으로 "사용자 트리거(정밀분석) 기반" Agentic Vision 분석이 이미 구현되었다. `agentic_vision.py` 서비스, 프롬프트, 핫스팟 추가 로직이 존재하므로 본 유닛에서는 이를 **재사용하고 "자동 실행"으로 확장**하는 데 집중한다. U-090(핫스팟 정밀분석 전용 제한) 정책과 충돌하므로, MMP 구현 시 U-090 정책을 **"자동 실행에서도 핫스팟 생성 허용"으로 완화**해야 한다.
 
 **핵심 원칙**: 이미지가 생성될 때마다 Agentic Vision을 **자동 실행**하여 핫스팟 정합성을 보장한다. 트리거 기반 선택 방식은 사용하지 않는다.
 
@@ -31,9 +33,10 @@ Gemini 3 Flash의 **Agentic Vision(Code Execution)** 을 활용해 "생성된 �
 
 **생성**:
 
-- `backend/prompts/vision/scene_affordances.ko.md` - Agentic Vision용 "장면 affordances 추출" 프롬프트(Structured Outputs 전제, XML 태그 규격)
+- `backend/prompts/vision/scene_affordances.ko.md` - Agentic Vision용 "장면 affordances 추출" 프롬프트(Structured Outputs 전제, XML 태그 규격) **(U-076에서 이미 유사 프롬프트 존재 → 확장/재사용)**
 - `backend/prompts/vision/scene_affordances.en.md` - 동일(영문)
-- `backend/src/unknown_world/services/agentic_vision.py` - Flash+Code Execution 기반 이미지 조사(줌/크롭) + affordances 구조화 출력 래퍼
+
+**참고: `agentic_vision.py`는 U-076에서 이미 생성됨 → 본 유닛에서는 "자동 실행" 트리거 로직만 추가**
 
 **수정**:
 
@@ -52,17 +55,17 @@ Gemini 3 Flash의 **Agentic Vision(Code Execution)** 을 활용해 "생성된 �
 
 ## 구현 흐름
 
-### 1단계: Agentic Vision affordances 추출 서비스 구현
+### 1단계: 기존 Agentic Vision 서비스 확장 (U-076 재사용)
 
-- `agentic_vision.py`에서 `gemini-3-flash-preview`로 "장면 affordances 추출"을 수행한다.
-- built-in tool로 `code_execution`을 활성화하여, 모델이 이미지 패치를 반복 검사(줌/크롭/주석)할 수 있게 한다.
-- 응답은 Structured Outputs(JSON Schema)로 받아서:
+- **U-076에서 구현된 `agentic_vision.py`를 재사용**하고, "자동 실행" 모드를 추가한다.
+- 기존 서비스는 사용자 트리거("정밀분석" 액션) 기반이었으므로, "이미지 생성 완료 → 자동 호출" 경로를 추가한다.
+- 응답 스키마는 기존과 동일:
   - `label`(표시명)
   - `box_2d`(0~1000 정규화 bbox, `[ymin,xmin,ymax,xmax]` 형식)
   - `interaction_hint`(상호작용 힌트)
   - (선택) `confidence`, `evidence_notes`(디버그/관측용)
-  형태로 정규화한다.
 - 실패 시에는 빈 affordances로 폴백하고, 턴 생성 흐름을 중단하지 않는다. (RULE-004)
+- **정책 충돌 해결**: U-090(핫스팟 정밀분석 전용 제한)을 MMP에서 완화하여, 자동 비전 분석에서도 핫스팟 생성을 허용한다.
 
 ### 2단계: Render stage에 자동 비전 분석 통합
 

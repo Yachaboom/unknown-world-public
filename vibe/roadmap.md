@@ -4,9 +4,10 @@
 
 ## 진행 현황
 
-**전체**: 96/138 (69.6%) | **MVP**: 96/120 (80.0%) | **MMP**: 0/18 (0%)
+**전체**: 96/137 (70.1%) | **MVP**: 96/119 (80.7%) | **MMP**: 0/18 (0%)
 
 **예상 완료(가정)**: MVP D-5 | MMP D-11
+_U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가)_
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
@@ -33,6 +34,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **[2026-02-07 추가]** 런타임 안정화/단순화: **런타임 rembg 파이프라인 일괄 제거(U-091)**, **기본 초기 아이템 프리셋 아이콘(nanobanana-mcp, U-092)**.
 - **[2026-02-07 추가]** 파이프라인 안정성: **ItemIconGenerator 타임아웃 수정(U-093)**, **ImageUnderstanding 응답 파싱 예외 시 자동 재시도(U-094)**.
 - **[2026-02-07 추가]** 게임플레이 개선: **Scanner 아이템 생성 1~3개 랜덤화(U-095)**, **아이템 사용 시 소비(삭제) 로직(U-096)**.
+- **[2026-02-07 추가]** 정밀 판독: **U-081 skip(U-077에 흡수)** - Quest/Rule 확장 시 Inventory 보호 범위를 U-077(인벤토리 스크롤)에 병합하여 중복 제거. **U-109[Mmp] 의존성에 U-076 추가** - MVP 선행(정밀분석) 완료 반영으로 범위 축소 및 재사용 명시.
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -71,7 +73,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | ---- | --------- | -------------------------------------- | ---------- | ------ | ---- |
 | MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 11/11  | ✅   |
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 11/23  | 🚧   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 11/22  | 🚧   |
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-24 | 10/10  | ✅   |
 | MVP  | CP-MVP-04 | **✓ 체크포인트: 실모델 Hard Gate**     | 2026-01-21 | -      | ✅   |
@@ -94,7 +96,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
 - **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**, **아이템→핫스팟 사용 시 액션 로그 출력**, **처리중 Scene UI 로딩 인디케이터**, **레이아웃 확장(좌우 빈공간 활용) ✅**, **핫스팟/아이템 인터랙션 안내 UX**, **인벤토리 스크롤(아이템 많아질 때)**, **인벤토리 Row 형태 전환(정보 가독성/DnD 조작성)**, **Quest/Rule 확장 시 Inventory 영역 보호**, **Agent Console 축소 + 재화 현황 확대**, **액션 카드 대안 뱃지 레이아웃 안정화**, **아이템 사용 시 소비(삭제) 반영**
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**, **U-070, U-071, U-073, U-074**, **U-077, U-088**, **U-081, U-082, U-083**, **U-086, U-087**, **U-096**
+- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**, **U-070, U-071, U-073, U-074**, **U-077(+U-081 흡수), U-088**, **U-082, U-083**, **U-086, U-087**, **U-096**
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
@@ -166,7 +168,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-077[Mvp]](unit-plans/U-077[Mvp].md) | 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 | Depends=U-011,U-049 | ⏸️
+ID=[U-077[Mvp]](unit-plans/U-077[Mvp].md) | 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 **(+U-081 흡수: 사이드바 패널 영역 분배)** | Depends=U-011,U-049 | ⏸️
 ID=[U-089[Mvp]](unit-plans/U-089[Mvp].md) | ⚡핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX | Depends=U-076,U-071 | ⏸️
 ID=[U-090[Mvp]](unit-plans/U-090[Mvp].md) | ⚡핫스팟 생성을 정밀분석 전용으로 제한 (기본 턴 핫스팟 생성 금지) | Depends=U-076,U-010 | ⏸️
 ID=[U-091[Mvp]](unit-plans/U-091[Mvp].md) | 런타임 rembg 파이프라인 일괄 제거 - 서버 단순화/안정화 | Depends=U-035,U-045,U-075 | ⏸️
@@ -178,7 +180,7 @@ ID=[U-096[Mvp]](unit-plans/U-096[Mvp].md) | 아이템 사용 시 소비(삭제) 
 ID=[U-088[Mvp]](unit-plans/U-088[Mvp].md) | 인벤토리 UI Row 형태 전환 - 정보 가독성 및 DnD 조작성 향상 | Depends=U-011,U-077 | ⏸️
 ID=[U-078[Mvp]](unit-plans/U-078[Mvp].md) | 게임 목표 시스템 강화 - 명확한 목표 제시 및 진행 가이드 | Depends=U-013,U-015 | ⏸️
 ID=[U-079[Mvp]](unit-plans/U-079[Mvp].md) | ⚡재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 | Depends=U-014,U-019,U-078 | ⏸️
-ID=[U-081[Mvp]](unit-plans/U-081[Mvp].md) | UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정 | Depends=U-049,U-077 | ⏸️
+~~ID=[U-081[Mvp]](unit-plans/U-081[Mvp].md) | UI 레이아웃 - Quest/Rule 확장 시 Inventory 영역 침범 수정 | Depends=U-049,U-077~~ | **Skip** (U-077에 흡수: 사이드바 패널 영역 분배/min-height/max-height 범위를 U-077 완료 기준에 통합)
 ID=[U-082[Mvp]](unit-plans/U-082[Mvp].md) | UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 | Depends=U-049 | ⏸️
 ID=[U-083[Mvp]](unit-plans/U-083[Mvp].md) | UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 | Depends=U-009 | ⏸️
 ID=[U-085[Mvp]](unit-plans/U-085[Mvp].md) | ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 | Depends=U-066,U-049 | ⏸️
@@ -198,7 +200,7 @@ ID=[U-100[Mmp]](unit-plans/U-100[Mmp].md) | ⚡Dockerfile/로컬 실행(프론�
 ID=[U-101[Mmp]](unit-plans/U-101[Mmp].md) | ⚡Cloud Run 배포 구성 + env/secret 가이드 | Depends=U-100 | ⏸️
 ID=[U-102[Mmp]](unit-plans/U-102[Mmp].md) | ⚡GCS 스토리지 어댑터(이미지/아티팩트) | Depends=U-100 | ⏸️
 ID=[U-103[Mmp]](unit-plans/U-103[Mmp].md) | 이미지 편집(멀티턴, REF 유지) | Depends=U-019,U-102 | ⏸️
-ID=[U-109[Mmp]](unit-plans/U-109[Mmp].md) | Agentic Vision: 생성된 장면 이미지 기반 행동/핫스팟 근거화 | Depends=U-019,U-020,RU-005 | ⏸️
+ID=[U-109[Mmp]](unit-plans/U-109[Mmp].md) | Agentic Vision: 생성된 장면 이미지 기반 행동/핫스팟 근거화 **(U-076 재사용→자동 실행 확장)** | Depends=U-019,U-020,RU-005,U-076 | ⏸️
 ID=[U-104[Mmp]](unit-plans/U-104[Mmp].md) | 장기 세션 메모리 요약/핀 추천 고도화 | Depends=U-025 | ⏸️
 ID=[U-105[Mmp]](unit-plans/U-105[Mmp].md) | ⚡Scenario Library(5) + 자동 리플레이 확장 | Depends=U-026 | ⏸️
 ID=[RU-010[Mmp]](unit-plans/RU-010[Mmp].md) | 리팩토링: 스키마/상수 SSOT 강화 + 파일 분리 | Depends=U-105 | ⏸️
