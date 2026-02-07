@@ -93,6 +93,7 @@ frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
 vibe/unit-results/U-082.md
+vibe/unit-results/U-083[Mvp].md
 vibe/unit-results/U-088[Mvp].md
 vibe/unit-results/U-094[Mvp].md
 vibe/unit-results/U-095[Mvp].md
@@ -108,6 +109,35 @@ vibe/unit-results/U-096[Mvp].md
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 51. Agent Console 축소 및 재화 현황 확대 (U-082[Mvp])
+
+1. **사이드바 레이아웃 비율 조정 (Flex-based Allocation)**:
+    - **UI Hierarchy**: 게임의 핵심 동력인 재화(Economy) 상태를 최상위 정보로 격상함. `App.tsx`에서 `EconomyHud` 컴포넌트에 `flex-1`을 부여하여 사이드바의 남은 공간을 우선적으로 점유하게 함.
+    - **Compact Agent Console**: 관측 가능성(Observability) 증거인 Plan/Queue 영역을 기본적으로 접힌(`collapsed`) 상태로 제공하여 화면 복잡도를 낮추고 핵심 게임 UI에 집중할 수 있도록 개선함.
+2. **Economy HUD 시인성 강화**:
+    - **Large Scale Visuals**: 재화 잔액 숫자를 1.25rem(20px)으로 확대하고, Signal/Shard 아이콘을 28px로 키워 플레이어가 현재 자원을 직관적으로 인지할 수 있도록 함.
+    - **Layout Normalization**: 확대된 요소들이 CRT 패널 경계를 벗어나지 않도록 `style.css`에서 여백 및 정렬 로직을 재조정함.
+3. **상태 기반 접힘 로직 (Toggleable Console)**:
+    - **Persistent Badges**: 콘솔이 접힌 상태에서도 `Schema OK`, `Economy OK` 등의 배지(Badges)는 상시 노출하여 오케스트레이션 투명성을 유지함.
+    - **Smooth Transition**: CSS 애니메이션을 통해 접힘/펼침 상태 전환을 자연스럽게 처리하고, `localStorage`를 통해 사용자의 마지막 상태를 선호도에 따라 유지 가능하게 함.
+
+---
+
+## 52. 액션 카드 대안 뱃지 레이아웃 안정화 (U-083[Mvp])
+
+1. **뱃지 레이아웃 구조 개선 (Separate Badge Row)**:
+    - **Relocation**: 뱃지들을 기존 `absolute` 위치에서 비용 표시 행 아래의 **독립된 Flex 행**(`.action-card-badges`)으로 이동함.
+    - **Overlap Prevention**: 이를 통해 긴 뱃지 이름이 비용 아이콘이나 카드 제목을 가리는 현상을 원천적으로 방지함.
+2. **뱃지 노출 정책 및 오버플로 제어 (Overflow Management)**:
+    - **MAX_VISIBLE_BADGES**: 카드당 최대 **2개**의 뱃지만 직접 노출하는 정책을 도입함.
+    - **+N Badge**: 2개를 초과하는 뱃지는 `+N` 형태의 오버플로 뱃지로 통합 표시하며, 마우스 호버 시 `title` 속성을 통해 전체 목록을 툴팁으로 제공함.
+    - **Ellipsis & Tooltip**: 각 뱃지에 `max-width: 90px`와 `text-overflow: ellipsis`를 적용하여 긴 텍스트(예: "저해상도 대안")가 레이아웃을 깨지 않도록 보호함.
+3. **카드 높이 불변성 유지 (Fixed Height Invariant)**:
+    - **Flex Alignment**: 카드 내 타이틀 영역(`action-card-title`)에 `flex: 1`을 적용하여, 하단 뱃지 행의 존재 유무나 개수(0~2개)와 상관없이 모든 액션 카드의 전체 높이가 일정하게 유지되도록 설계함.
+    - **UI Stability**: 3~6장의 카드가 나열되는 Action Deck에서 특정 카드가 튀어 보이거나 레이아웃이 출렁이는 문제를 해결하여 "고정 게임 UI" 사양을 충족함.
 
     ---
 

@@ -1537,8 +1537,8 @@ body {
 
 .action-deck {
   display: flex;
-  /* U-050 v5: 카드가 콘텐츠 높이에 맞게 조절되도록 (stretch 대신) */
-  align-items: flex-start;
+  /* U-083: 뱃지 유무와 관계없이 카드 높이를 일관되게 유지 */
+  align-items: stretch;
   gap: var(--spacing-sm);
   /* U-050 v6: 카드 높이 축소에 맞춰 min-height 감소 */
   min-height: 85px;
@@ -1641,6 +1641,8 @@ body {
   padding-bottom: 2px;
   border-bottom: 1px solid var(--text-dim);
   -webkit-font-smoothing: antialiased;
+  /* U-083: 남는 공간을 타이틀이 차지 → 비용/뱃지가 항상 카드 하단 정렬 */
+  flex: 1;
 }
 
 /* 카드 설명 - U-050 v6: 컴팩트 카드에 맞춰 축소 */
@@ -1664,6 +1666,8 @@ body {
   /* U-050 v6: 컨텐츠에 맞는 너비 + 카드 내 가운데 배치 */
   width: fit-content;
   margin: 0 auto;
+  /* U-083: 비용 행을 카드 하단으로 밀어넣기 (타이틀 flex:1과 연동) */
+  margin-top: auto;
   /* U-049: 더 강한 배경 대비 */
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.85) 100%);
   border: 1px solid rgba(51, 255, 0, 0.2);
@@ -1740,19 +1744,62 @@ body {
   line-height: 1.2;
 }
 
-/* 대안 카드 배지 */
-.action-card .alternative-badge {
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  padding: 2px 6px;
-  font-size: 0.5rem;
+/* U-083: 뱃지 컨테이너 - 비용 아래 별도 행 (Q3: Option C) */
+.action-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+/* U-083: 통합 뱃지 기본 스타일 (Q2: ellipsis + 툴팁) */
+.action-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  font-size: 0.55rem;
   font-weight: bold;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  border-radius: 2px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+/* U-083: 뱃지 타입별 색상 */
+.action-card-badge.badge-alternative {
   background-color: var(--text-color);
   color: var(--bg-color);
-  border-radius: 2px;
+}
+
+.action-card-badge.badge-quality {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+}
+
+.action-card-badge.badge-vision {
+  background: linear-gradient(135deg, #00e5ff, #00b0ff);
+  color: #000;
+}
+
+.action-card-badge.badge-earn {
+  background: linear-gradient(135deg, rgba(255, 200, 0, 0.4), rgba(255, 165, 0, 0.35));
+  border: 1px solid rgba(255, 200, 0, 0.5);
+  color: #ffc800;
+}
+
+/* U-083: "외 N개" 오버플로 표시 (Q1: Option B) */
+.action-card-badge.badge-overflow {
+  background-color: var(--text-dim);
+  color: var(--bg-color);
+  font-size: 0.5rem;
+  max-width: unset;
+  cursor: help;
 }
 
 /* 대안 카드 스타일 */
@@ -1778,20 +1825,7 @@ body {
     0 0 30px rgba(255, 215, 0, 0.2);
 }
 
-.action-card .quality-badge {
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  padding: 1px 6px;
-  font-size: 0.55rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  background: linear-gradient(135deg, #ffd700, #ff8c00);
-  color: #000;
-  border-radius: 2px;
-  z-index: 2;
-}
+/* U-083: quality-badge는 .action-card-badge.badge-quality로 통합됨 (하위 호환 제거) */
 
 .action-card-cost .quality-cost {
   color: #ffd700;
@@ -1815,20 +1849,7 @@ body {
     0 0 30px rgba(0, 229, 255, 0.2);
 }
 
-.action-card .vision-badge {
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  padding: 1px 6px;
-  font-size: 0.55rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  background: linear-gradient(135deg, #00e5ff, #00b0ff);
-  color: #000;
-  border-radius: 2px;
-  z-index: 2;
-}
+/* U-083: vision-badge는 .action-card-badge.badge-vision으로 통합됨 (하위 호환 제거) */
 
 .action-card-cost .vision-cost {
   color: #00e5ff;
@@ -2840,7 +2861,7 @@ button:disabled,
 .action-card-cost,
 .action-card-hints,
 .action-card-hints .hint-text,
-.action-card .alternative-badge,
+.action-card-badge,
 .card-disabled-overlay .disabled-reason,
 .narrative-timestamp,
 .phase-queue .queue-label,
@@ -5869,20 +5890,9 @@ button:disabled,
 }
 
 /* ---- 재화 획득 액션 카드 배지 ---- */
-.earn-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 6px;
-  border-radius: 3px;
-  background: linear-gradient(135deg, rgba(255, 200, 0, 0.25), rgba(255, 165, 0, 0.2));
-  border: 1px solid rgba(255, 200, 0, 0.5);
-  color: #ffc800;
-  font-size: var(--font-size-xs);
-  font-family: var(--font-micro-en);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* U-083: .earn-badge → .action-card-badge.badge-earn 으로 통합됨.
+   아래 glow 애니메이션은 badge-earn에 적용. */
+.action-card-badge.badge-earn {
   animation: earn-badge-glow 2s ease-in-out infinite;
 }
 
@@ -6022,7 +6032,7 @@ button:disabled,
 
 /* reduced-motion: U-079 애니메이션 완화 */
 @media (prefers-reduced-motion: reduce) {
-  .earn-badge {
+  .action-card-badge.badge-earn {
     animation: none;
   }
 

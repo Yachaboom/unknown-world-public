@@ -145,4 +145,68 @@ describe('ActionDeck Component', () => {
     expect(card1).toBeDisabled();
     expect(cardAlt).toBeDisabled();
   });
+
+  describe('Badge Layout (U-083)', () => {
+    it('renders multiple badges (VISION + EARN) simultaneously', () => {
+      // earn_ 접두사가 있고 VISION_TRIGGER_ACTION_IDS에 포함된 ID
+      const complexCard: ActionCard[] = [
+        {
+          id: 'earn_정밀분석',
+          label: 'Complex Action',
+          cost: { signal: 5, memory_shard: 0 },
+          risk: 'medium',
+          enabled: true,
+          is_alternative: false,
+        },
+      ];
+      useActionDeckStore.setState({ cards: complexCard });
+      render(<ActionDeck />);
+
+      // VISION 뱃지 (🔍 action.vision_badge)
+      expect(screen.getByText(/action\.vision_badge/)).toBeInTheDocument();
+      // EARN 뱃지 (⚡ action.earn_badge)
+      expect(screen.getByText(/action\.earn_badge/)).toBeInTheDocument();
+    });
+
+    it('limits visible badges to 2 and shows overflow count', () => {
+      // VISION + EARN + ALT = 3개
+      const threeBadgesCard: ActionCard[] = [
+        {
+          id: 'earn_정밀분석',
+          label: 'Three Badges',
+          cost: { signal: 5, memory_shard: 0 },
+          risk: 'medium',
+          enabled: true,
+          is_alternative: true, // 수정된 로직에 의해 다른 뱃지가 있어도 추가됨
+        },
+      ];
+      useActionDeckStore.setState({ cards: threeBadgesCard });
+      render(<ActionDeck />);
+
+      // VISION과 EARN은 표시되어야 함 (collectBadges 순서상)
+      expect(screen.getByText(/action\.vision_badge/)).toBeInTheDocument();
+      expect(screen.getByText(/action\.earn_badge/)).toBeInTheDocument();
+
+      // ALT는 3번째이므로 숨겨지고 +1이 나타나야 함
+      expect(screen.queryByText('Alt')).not.toBeInTheDocument();
+      expect(screen.getByText('+1')).toBeInTheDocument();
+    });
+
+    it('shows alternative badge only when no other badges are present', () => {
+      const altOnlyCard: ActionCard[] = [
+        {
+          id: 'simple-alt',
+          label: 'Alt Only',
+          cost: { signal: 1, memory_shard: 0 },
+          risk: 'low',
+          enabled: true,
+          is_alternative: true,
+        },
+      ];
+      useActionDeckStore.setState({ cards: altOnlyCard });
+      render(<ActionDeck />);
+
+      expect(screen.getByText('Alt')).toBeInTheDocument();
+    });
+  });
 });

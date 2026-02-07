@@ -312,8 +312,73 @@ interface ActionCardItemProps {
 }
 
 /**
+ * U-083: 뱃지 최대 표시 개수 (Q1: Option B - 최대 2개 + "외 N개")
+ */
+const MAX_VISIBLE_BADGES = 2;
+
+/**
+ * 카드에 표시할 뱃지 목록을 수집한다.
+ * U-083: 각 뱃지를 통합 배열로 모아 최대 2개까지만 렌더링 + 초과분 "외 N개" 표시.
+ */
+interface BadgeInfo {
+  key: string;
+  className: string;
+  label: string;
+  tooltip: string;
+}
+
+function collectBadges(card: CardDisplayInfo, t: (key: string) => string): BadgeInfo[] {
+  const badges: BadgeInfo[] = [];
+
+  // U-076: VISION(정밀분석) 배지 (최우선)
+  if (card.isVisionAction) {
+    const label = `\uD83D\uDD0D ${t('action.vision_badge')}`;
+    badges.push({
+      key: 'vision',
+      className: 'badge-vision',
+      label,
+      tooltip: t('action.vision_badge'),
+    });
+  }
+
+  // U-069: QUALITY 모델 배지 (VISION이 아닐 때)
+  if (!card.isVisionAction && card.isQualityAction) {
+    badges.push({
+      key: 'quality',
+      className: 'badge-quality',
+      label: '\u2605 QUALITY',
+      tooltip: t('economy.model_label.QUALITY'),
+    });
+  }
+
+  // U-079: 재화 획득 카드 배지
+  if (card.isEarnAction) {
+    const label = `\u26A1 ${t('action.earn_badge')}`;
+    badges.push({
+      key: 'earn',
+      className: 'badge-earn',
+      label,
+      tooltip: t('action.earn_badge'),
+    });
+  }
+
+  // U-083: 대안 카드 표시 (조건 완화: 다른 뱃지가 있어도 표시될 수 있도록 함)
+  // 재화 부족 등으로 '대안'이면서 'QUALITY'일 수 있는 상황 지원
+  if (card.is_alternative) {
+    badges.push({
+      key: 'alt',
+      className: 'badge-alternative',
+      label: t('action.alternative'),
+      tooltip: t('action.alternative'),
+    });
+  }
+
+  return badges;
+}
+
+/**
  * 단일 카드 컴포넌트 - U-065 단순화, U-069 QUALITY 배지 지원.
- * description, hint, reward_hint 필드 제거됨
+ * U-083: 뱃지를 비용 아래 별도 행으로 이동, 최대 2개 + "외 N개", ellipsis + 툴팁
  */
 function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProps) {
   const { t } = useTranslation();
@@ -331,6 +396,11 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
     .filter(Boolean)
     .join(' ');
 
+  // U-083: 뱃지 수집 및 최대 2개 제한
+  const allBadges = useMemo(() => collectBadges(card, t), [card, t]);
+  const visibleBadges = allBadges.slice(0, MAX_VISIBLE_BADGES);
+  const overflowCount = allBadges.length - MAX_VISIBLE_BADGES;
+
   return (
     <button
       type="button"
@@ -344,38 +414,38 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
       aria-disabled={disabled || card.isDisabled}
       title={card.finalDisabledReason ?? undefined}
     >
-      {/* U-076: VISION(정밀분석) 배지 (최우선 표시) */}
-      {card.isVisionAction && (
-        <span className="vision-badge" title={t('action.vision_badge')}>
-          {'\uD83D\uDD0D'} {t('action.vision_badge')}
-        </span>
-      )}
-
-      {/* U-069: QUALITY 모델 배지 (VISION이 아닐 때) */}
-      {!card.isVisionAction && card.isQualityAction && (
-        <span className="quality-badge" title={t('economy.model_label.QUALITY')}>
-          {'\u2605'} QUALITY
-        </span>
-      )}
-
-      {/* U-079: 재화 획득 카드 배지 (earn_ 접두사) */}
-      {card.isEarnAction && (
-        <span className="earn-badge" title={t('action.earn_badge')}>
-          {'\u26A1'} {t('action.earn_badge')}
-        </span>
-      )}
-
-      {/* 대안 카드 표시 (QUALITY/VISION/EARN이 아닐 때만) */}
-      {!card.isQualityAction &&
-        !card.isVisionAction &&
-        !card.isEarnAction &&
-        card.is_alternative && <span className="alternative-badge">{t('action.alternative')}</span>}
-
       {/* 카드 타이틀 */}
       <div className="action-card-title">{card.label}</div>
 
       {/* 비용/위험도 정보 */}
       <CardCostDisplay card={card} />
+
+      {/* U-083: 뱃지 컨테이너 - 비용 아래 별도 행 (Q3: Option C) */}
+      {allBadges.length > 0 && (
+        <div className="action-card-badges">
+          {visibleBadges.map((badge) => (
+            <span
+              key={badge.key}
+              className={`action-card-badge ${badge.className}`}
+              title={badge.tooltip}
+            >
+              {badge.label}
+            </span>
+          ))}
+          {/* Q1: Option B - 초과분 "외 N개" 표시 */}
+          {overflowCount > 0 && (
+            <span
+              className="action-card-badge badge-overflow"
+              title={allBadges
+                .slice(MAX_VISIBLE_BADGES)
+                .map((b) => b.label)
+                .join(', ')}
+            >
+              +{overflowCount}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 비활성화 오버레이 */}
       {card.isDisabled && (
@@ -431,14 +501,20 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   // U-069: QUALITY 모델 트리거 및 비용 배수 계산 추가
   const processedCards: CardDisplayInfo[] = useMemo(() => {
     return displayCards.map((card) => {
-      // U-076: VISION(정밀분석) 트리거 체크 (QUALITY보다 우선)
-      const isVisionAction = VISION_TRIGGER_ACTION_IDS.has(card.id);
-
-      // U-069: QUALITY 모델 트리거 체크 (VISION이면 QUALITY 아님)
-      const isQualityAction = !isVisionAction && QUALITY_TRIGGER_ACTION_IDS.has(card.id);
-
       // U-079: 재화 획득 카드 감지 (earn_ 접두사)
       const isEarnAction = card.id.startsWith(EARN_ACTION_PREFIX);
+
+      // U-083: 접두사를 제거한 순수 ID (VISION/QUALITY 체크용)
+      const baseId = isEarnAction ? card.id.slice(EARN_ACTION_PREFIX.length) : card.id;
+
+      // U-076: VISION(정밀분석) 트리거 체크 (QUALITY보다 우선)
+      const isVisionAction =
+        VISION_TRIGGER_ACTION_IDS.has(card.id) || VISION_TRIGGER_ACTION_IDS.has(baseId);
+
+      // U-069: QUALITY 모델 트리거 체크 (VISION이면 QUALITY 아님)
+      const isQualityAction =
+        !isVisionAction &&
+        (QUALITY_TRIGGER_ACTION_IDS.has(card.id) || QUALITY_TRIGGER_ACTION_IDS.has(baseId));
 
       // U-069/U-076: 배수 적용된 표시 비용 계산
       const displayCost = isVisionAction

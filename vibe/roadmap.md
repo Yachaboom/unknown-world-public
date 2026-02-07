@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 110/137 (80.3%) | **MVP**: 110/119 (92.4%) | **MMP**: 0/18 (0%)
+**전체**: 111/137 (81.0%) | **MVP**: 111/119 (93.3%) | **MMP**: 0/18 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP D-8
 _U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가)_
@@ -12,7 +12,7 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-083[Mvp]](unit-plans/U-083[Mvp].md) 액션 카드 대안 뱃지 레이아웃 깨짐 수정 / **최근 완료**: [U-082[Mvp]](vibe/unit-results/U-082.md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-085[Mvp]](unit-plans/U-085[Mvp].md) ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 / **최근 완료**: [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md) (2026-02-08)
 
 **블로커**: 없음
 
@@ -168,7 +168,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-083[Mvp]](unit-plans/U-083[Mvp].md) | UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 | Depends=U-009 | ⏸️
 ID=[U-085[Mvp]](unit-plans/U-085[Mvp].md) | ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 | Depends=U-066,U-049 | ⏸️
 ID=[U-086[Mvp]](unit-plans/U-086[Mvp].md) | 턴 진행 피드백 보강 - 타이핑 효과와 이미지 생성 지연 동기화 | Depends=U-066,U-071 | ⏸️
 ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
@@ -204,6 +203,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md): UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 (2026-02-08)
 - ✅ [U-082[Mvp]](vibe/unit-results/U-082.md): UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 (2026-02-08)
 - ✅ [U-079[Mvp]](unit-results/U-079[Mvp].md): 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 (2026-02-08)
 - ✅ [U-078[Mvp]](unit-results/U-078[Mvp].md): 게임 목표 시스템 강화 (2026-02-08)
