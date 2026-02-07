@@ -132,6 +132,8 @@
     0 0 20px rgba(240, 98, 146, 0.2),
     inset 0 0 4px rgba(240, 98, 146, 0.15);
   transform: scale(1.01);
+  /* 호버 시 z-index를 최상위로 올려 툴팁이 다른 핫스팟 위에 표시 */
+  z-index: 100 !important;
 }
 
 /* 호버 시 코너 마커 색상 변경 */
@@ -291,6 +293,8 @@
   left: 50%;
   transform: translateX(-50%);
   min-width: 100px;
+  /* 다른 핫스팟 클릭을 차단하지 않도록 이벤트 투과 */
+  pointer-events: none;
   max-width: 220px;
   padding: var(--spacing-xs) var(--spacing-sm);
   background-color: rgba(20, 0, 30, 0.95);
@@ -324,6 +328,25 @@
   transform: translateX(-50%);
   border: 7px solid transparent;
   border-top-color: var(--hotspot-primary);
+}
+
+/* 상단 여백 부족 시 툴팁을 아래쪽에 표시 */
+.hotspot.tooltip-below .hotspot-tooltip {
+  bottom: auto;
+  top: calc(100% + 10px);
+}
+
+.hotspot.tooltip-below .hotspot-tooltip::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--hotspot-primary);
+}
+
+/* 드롭 타겟 + 아래쪽 툴팁 화살표 색상 */
+.hotspot.tooltip-below.drop-target-active .hotspot-tooltip::after {
+  border-top-color: transparent;
+  border-bottom-color: var(--hotspot-drop);
 }
 
 /* 툴팁 라벨 */

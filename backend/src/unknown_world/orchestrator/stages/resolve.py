@@ -111,12 +111,10 @@ async def _execute_vision_analysis(
             # affordances → SceneObject 변환
             new_objects = affordances_to_scene_objects(result.affordances)
 
-            # 기존 objects와 병합 (Q3 결정: Option B - 추가)
-            existing_objects = list(ctx.output.ui.objects)
-            merged_objects = existing_objects + new_objects
-
-            # max_length=5 제한 (SceneObject)
-            merged_objects = merged_objects[:5]
+            # 정밀분석: 비전 결과로 대체 (텍스트 모델은 이미지를 보지 않아 불일치)
+            # 텍스트 모델이 생성한 objects는 내러티브 기반이므로
+            # 실제 이미지를 분석한 비전 결과만 사용해야 정합성 유지
+            merged_objects = new_objects[:5]
 
             # UI 업데이트
             new_ui = ctx.output.ui.model_copy(update={"objects": merged_objects})

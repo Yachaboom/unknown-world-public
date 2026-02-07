@@ -71,7 +71,7 @@ async def main():
 
             # Pydantic 검증 시도
             try:
-                output = TurnOutput.model_validate(data)
+                TurnOutput.model_validate(data)
                 print("=== PYDANTIC VALIDATION OK ===")
             except ValidationError as e:
                 print("=== PYDANTIC VALIDATION ERRORS ===")

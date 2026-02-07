@@ -86,7 +86,9 @@ frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 vibe/unit-results/U-077[Mvp].md
+vibe/unit-results/U-089[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
+vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -440,3 +442,17 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **모델 티어링 (FAST/QUALITY)**:
     - **Tiered Generation**: `model_label` 파라미터를 통해 `gemini-2.5-flash-image`(FAST, 저지연)와 `gemini-3-pro-image-preview`(QUALITY, 고품질) 모델을 선택적으로 호출 가능한 구조 구축.
     - **Fallback Policy**: 로딩 중에는 이전 이미지를 유지(Option A)하고 로딩 인디케이터를 표시하며, 생성 실패 시 안전하게 이전 장면으로 수렴함.
+
+---
+
+## 42. 정밀분석 UX 핫픽스 및 이미지 유지 (U-089[Mvp])
+
+1. **분석 중 이미지 보존 정책 (Persistent Scene)**:
+    - **isAnalyzing 상태**: `worldStore`에 도입된 `isAnalyzing` 플래그를 통해 정밀분석 실행 중임을 전역적으로 식별함.
+    - **UI 분기 (SceneImage)**: 일반 턴 처리(`processingPhase`)와 달리, `isAnalyzing`이 `true`일 때는 기존 이미지를 숨기지 않고 `0.5 opacity`와 **시안(Cyan) 틴트**를 적용하여 배경으로 유지함.
+2. **정밀분석 전용 오버레이 UX**:
+    - **Visual Distinction**: 기존의 원형 스피너 로딩(U-071) 대신, 화면 전체를 위에서 아래로 훑는 **스캔라인 스윕(Scanline Sweep)** 애니메이션과 시안색 글로우 라벨을 적용하여 "분석 작업"임을 시각화함.
+    - **깜빡임 방지 (Minimum Display)**: 분석이 매우 빠르게 완료되더라도 최소 500ms 동안 오버레이를 유지하여 UX 안정성을 확보함.
+3. **트리거 감지 및 수명 주기**:
+    - **Trigger Mirroring**: 백엔드의 정밀분석 트리거 로직(Action ID/Keywords)을 프론트엔드 `turnRunner.ts`에 미러링하여 클라이언트 사이드에서 즉시 분석 상태로 진입함.
+    - **Auto-Reset**: 턴 완료(`Complete`) 또는 에러(`Error`) 발생 시 `isAnalyzing` 상태를 자동으로 해제하여 인터랙션 잠금을 방지함.

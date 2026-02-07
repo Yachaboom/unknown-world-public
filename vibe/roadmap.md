@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 97/137 (70.8%) | **MVP**: 97/119 (81.5%) | **MMP**: 0/18 (0%)
+**전체**: 99/137 (72.3%) | **MVP**: 99/119 (83.2%) | **MMP**: 0/18 (0%)
 
 **예상 완료(가정)**: MVP D-5 | MMP D-11
 _U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가)_
@@ -12,7 +12,7 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) API 키 인증 핫픽스 / **최근 완료**: [U-077[Mvp]](unit-results/U-077[Mvp].md) (2026-02-07)
+**진행 중(현재 포커스)**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) API 키 인증 핫픽스 / **최근 완료**: [U-089[Mvp]](unit-results/U-089[Mvp].md) (2026-02-07)
 
 **블로커**: 없음
 
@@ -168,7 +168,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-089[Mvp]](unit-plans/U-089[Mvp].md) | ⚡핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX | Depends=U-076,U-071 | ⏸️
 ID=[U-090[Mvp]](unit-plans/U-090[Mvp].md) | ⚡핫스팟 생성을 정밀분석 전용으로 제한 (기본 턴 핫스팟 생성 금지) | Depends=U-076,U-010 | ⏸️
 ID=[U-091[Mvp]](unit-plans/U-091[Mvp].md) | 런타임 rembg 파이프라인 일괄 제거 - 서버 단순화/안정화 | Depends=U-035,U-045,U-075 | ⏸️
 ID=[U-092[Mvp]](unit-plans/U-092[Mvp].md) | 기본 초기 아이템 아이콘 프리셋 이미지 (nanobanana-mcp 활용) | Depends=U-075,U-091 | ⏸️
@@ -217,6 +216,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-089[Mvp]](unit-results/U-089[Mvp].md): 핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX (2026-02-07)
 - ✅ [U-077[Mvp]](unit-results/U-077[Mvp].md): 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 (+U-081 흡수) (2026-02-07)
 - ✅ [U-076[Mvp]](unit-results/U-076[Mvp].md): "정밀분석" 액션으로 기존 이미지 Agentic Vision 분석 및 핫스팟 추가 (2026-02-07)
 - ✅ [U-075[Mvp]](unit-results/U-075[Mvp].md): 인벤토리 아이템 아이콘 동적 생성(rembg/캐싱/i18n) (2026-02-06)

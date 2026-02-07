@@ -71,6 +71,7 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
   // Store 상태 (RU-003: 컴포넌트 내에서 직접 구독)
   const state = useWorldStore((state) => state.sceneState);
   const objects = useWorldStore((state) => state.sceneObjects);
+  const isAnalyzing = useWorldStore((state) => state.isAnalyzing);
   const isStreaming = useAgentStore((state) => state.isStreaming);
 
   const disabled = propsDisabled ?? isStreaming;
@@ -153,12 +154,14 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
     <div ref={canvasRef} className="scene-canvas">
       {/* U-020: 장면 이미지 (Lazy loading + placeholder/폴백 포함) */}
       {/* U-071: 처리 단계 및 이미지 생성 상태 전달 */}
+      {/* U-089: 정밀분석 상태 전달 (기존 이미지 유지 + 분석 오버레이) */}
       <SceneImage
         status={status}
         imageUrl={imageUrl}
         message={message}
         processingPhase={processingPhase}
         isGenerating={imageLoading}
+        isAnalyzing={isAnalyzing}
       />
 
       {/* 핫스팟 오버레이 레이어 (RU-003-S2: 면적순 정렬) */}

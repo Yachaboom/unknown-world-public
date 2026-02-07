@@ -26,6 +26,48 @@ import { useAgentStore } from '../stores/agentStore';
 import { useWorldStore } from '../stores/worldStore';
 
 // =============================================================================
+// U-089: 정밀분석(Agentic Vision) 트리거 감지 상수
+// 백엔드 config/models.py VISION_TRIGGER_ACTION_IDS / VISION_TRIGGER_KEYWORDS와 동기화
+// =============================================================================
+
+const VISION_TRIGGER_ACTION_IDS = new Set([
+  'deep_analyze',
+  '정밀분석',
+  'analyze_scene',
+  'examine_scene',
+  'look_closely',
+]);
+
+const VISION_TRIGGER_KEYWORDS = [
+  '정밀분석',
+  '장면 분석',
+  '이미지 분석',
+  '자세히 보기',
+  'analyze scene',
+  'deep analyze',
+  'look closely',
+  'examine scene',
+];
+
+/** U-089: 정밀분석 오버레이 최소 표시 시간 (ms) - 깜빡임 방지 */
+const ANALYZING_MIN_DISPLAY_MS = 500;
+
+/**
+ * U-089: 정밀분석(Agentic Vision) 트리거 여부를 판단합니다.
+ * 백엔드의 ModelConfig.is_vision_trigger()와 동일한 로직입니다.
+ */
+function isVisionTrigger(actionId?: string, text?: string): boolean {
+  if (actionId && VISION_TRIGGER_ACTION_IDS.has(actionId)) return true;
+  if (text) {
+    const textLower = text.toLowerCase();
+    for (const keyword of VISION_TRIGGER_KEYWORDS) {
+      if (textLower.includes(keyword.toLowerCase())) return true;
+    }
+  }
+  return false;
+}
+
+// =============================================================================
 // 타입 정의
 // =============================================================================
 
@@ -153,6 +195,9 @@ export function createTurnRunner(deps: {
   // U-080: 이미지 생성 요청 중복 방지 (StrictMode 대응)
   let imageJobPending = false;
 
+  // U-089: 정밀분석 오버레이 최소 표시 시간 관리
+  let analyzingStartTime = 0;
+
   /**
    * 턴을 실행합니다.
    */
@@ -164,6 +209,25 @@ export function createTurnRunner(deps: {
     // Store 액션 가져오기 (클로저 외부에서 호출 시점에 최신 상태 참조)
     const agentStore = useAgentStore.getState();
     const worldStore = useWorldStore.getState();
+
+    // U-089: 정밀분석 트리거 감지
+    const visionAnalysis = isVisionTrigger(params.actionId, params.text);
+
+    /**
+     * U-089: 분석 상태를 해제합니다.
+     * 최소 표시 시간(500ms)을 보장하여 오버레이 깜빡임을 방지합니다.
+     */
+    const finishAnalyzing = () => {
+      const elapsed = Date.now() - analyzingStartTime;
+      const remaining = ANALYZING_MIN_DISPLAY_MS - elapsed;
+      if (remaining > 0) {
+        setTimeout(() => {
+          useWorldStore.getState().setIsAnalyzing(false);
+        }, remaining);
+      } else {
+        useWorldStore.getState().setIsAnalyzing(false);
+      }
+    };
 
     // 재화 스냅샷 가져오기
     const economySnapshot = worldStore.economy;
@@ -189,8 +253,20 @@ export function createTurnRunner(deps: {
     // Agent Store 시작
     agentStore.startStream();
 
-    // Scene Canvas를 로딩 상태로 전환 (U-031)
-    worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+    // U-089: 정밀분석 시 isAnalyzing 활성화 (기존 이미지 유지 + 분석 오버레이)
+    if (visionAnalysis) {
+      worldStore.setIsAnalyzing(true);
+      analyzingStartTime = Date.now();
+    }
+
+    // U-071: 처리 단계를 'processing'으로 전환
+    worldStore.setProcessingPhase('processing');
+
+    // U-089: 정밀분석 시 Scene 상태를 변경하지 않음 (기존 이미지 유지)
+    // 일반 턴: Scene Canvas를 로딩 상태로 전환 (U-031)
+    if (!visionAnalysis) {
+      worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+    }
 
     // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
     // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
@@ -285,6 +361,10 @@ export function createTurnRunner(deps: {
         useWorldStore.getState().setConnected(false);
         // U-071: 에러 시 idle로 전환
         useWorldStore.getState().setProcessingPhase('idle');
+        // U-089: 에러 시 분석 상태 해제 (최소 표시 시간 적용)
+        if (visionAnalysis) {
+          finishAnalyzing();
+        }
         // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
         const errorCode = event.code;
         if (errorCode === 'SAFETY_BLOCKED') {
@@ -308,6 +388,11 @@ export function createTurnRunner(deps: {
         // 이미지 잡이 있으면 이미지 생성 완료/실패 시 idle로 전환됨
         if (!imageJobPending) {
           useWorldStore.getState().setProcessingPhase('idle');
+        }
+
+        // U-089: 턴 완료 시 분석 상태 해제 (최소 표시 시간 적용)
+        if (visionAnalysis) {
+          finishAnalyzing();
         }
       },
     };
@@ -374,6 +459,9 @@ export function useTurnRunner(deps: {
   // U-080: 이미지 생성 요청 중복 방지 (StrictMode 대응)
   const imageJobPendingRef = useRef<boolean>(false);
 
+  // U-089: 정밀분석 오버레이 최소 표시 시간 관리
+  const analyzingStartTimeRef = useRef<number>(0);
+
   // runTurn을 useCallback으로 정의
   const runTurn = useCallback(
     (params: RunTurnParams): void => {
@@ -384,6 +472,25 @@ export function useTurnRunner(deps: {
       // Store 액션 가져오기
       const agentStore = useAgentStore.getState();
       const worldStore = useWorldStore.getState();
+
+      // U-089: 정밀분석 트리거 감지
+      const visionAnalysis = isVisionTrigger(params.actionId, params.text);
+
+      /**
+       * U-089: 분석 상태를 해제합니다.
+       * 최소 표시 시간(500ms)을 보장하여 오버레이 깜빡임을 방지합니다.
+       */
+      const finishAnalyzing = () => {
+        const elapsed = Date.now() - analyzingStartTimeRef.current;
+        const remaining = ANALYZING_MIN_DISPLAY_MS - elapsed;
+        if (remaining > 0) {
+          setTimeout(() => {
+            useWorldStore.getState().setIsAnalyzing(false);
+          }, remaining);
+        } else {
+          useWorldStore.getState().setIsAnalyzing(false);
+        }
+      };
 
       // 재화 스냅샷 가져오기
       const economySnapshot = worldStore.economy;
@@ -409,11 +516,20 @@ export function useTurnRunner(deps: {
       // Agent Store 시작
       agentStore.startStream();
 
+      // U-089: 정밀분석 시 isAnalyzing 활성화 (기존 이미지 유지 + 분석 오버레이)
+      if (visionAnalysis) {
+        worldStore.setIsAnalyzing(true);
+        analyzingStartTimeRef.current = Date.now();
+      }
+
       // U-071: 처리 단계를 'processing'으로 전환
       worldStore.setProcessingPhase('processing');
 
-      // Scene Canvas를 로딩 상태로 전환 (U-031)
-      worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+      // U-089: 정밀분석 시 Scene 상태를 변경하지 않음 (기존 이미지 유지)
+      // 일반 턴: Scene Canvas를 로딩 상태로 전환 (U-031)
+      if (!visionAnalysis) {
+        worldStore.setSceneState({ status: 'loading', message: t('scene.status.syncing') });
+      }
 
       // 스트림 콜백 설정 (RU-003-Q3: agentStore + worldStore로 라우팅)
       // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
@@ -503,6 +619,10 @@ export function useTurnRunner(deps: {
           useWorldStore.getState().setConnected(false);
           // U-071: 에러 시 idle로 전환
           useWorldStore.getState().setProcessingPhase('idle');
+          // U-089: 에러 시 분석 상태 해제 (최소 표시 시간 적용)
+          if (visionAnalysis) {
+            finishAnalyzing();
+          }
           // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
           const errorCode = event.code;
           if (errorCode === 'SAFETY_BLOCKED') {
@@ -528,6 +648,11 @@ export function useTurnRunner(deps: {
           // 이미지 잡이 있으면 이미지 생성 완료/실패 시 idle로 전환됨
           if (!imageJobPendingRef.current) {
             useWorldStore.getState().setProcessingPhase('idle');
+          }
+
+          // U-089: 턴 완료 시 분석 상태 해제 (최소 표시 시간 적용)
+          if (visionAnalysis) {
+            finishAnalyzing();
           }
         },
       };

@@ -1,5 +1,74 @@
 # 프로젝트 진행 상황
 
+## [2026-02-07 10:15] U-089[Mvp]: 핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 정밀분석 실행 시 기존 Scene 이미지를 유지한 채 분석 전용 오버레이(시안 스캔라인 + "장면 분석 중..." 글로우 라벨) 표시
+- **상태 관리**: `worldStore`에 `isAnalyzing` 플래그 추가, `turnRunner`에서 트리거 감지 및 토글
+- **달성 요구사항**: [FR-UI-01] CRT 테마 일관성, [NFR-UX-01] 접근성(prefers-reduced-motion)
+
+### 기술적 구현 세부사항
+
+**사용 기술/라이브러리**:
+
+- React + Zustand: `isAnalyzing` 상태 관리 및 컴포넌트 간 전달
+- CSS Animations: 스캔라인 스윕(`analyzing-sweep`), 글로우 펄스(`analyzing-text-pulse`)
+
+**설계 패턴 및 아키텍처 선택**:
+
+- **트리거 미러링**: 백엔드의 `VISION_TRIGGER_ACTION_IDS`/`KEYWORDS`를 프론트엔드에 미러링하여 일관된 감지
+- **최소 표시 시간(500ms)**: `finishAnalyzing()` 헬퍼로 오버레이 깜빡임 방지
+- **기존 로딩 분기**: `isAnalyzing` 시 기존 `processingPhase: image_pending` 경로 우회
+
+**코드 구조**:
+frontend/src/
+├── stores/worldStore.ts (수정: isAnalyzing 상태)
+├── turn/turnRunner.ts (수정: 트리거 감지 + 토글)
+├── components/
+│   ├── SceneCanvas.tsx (수정: isAnalyzing 구독)
+│   └── SceneImage.tsx (수정: 분석 오버레이 렌더)
+├── style.css (수정: .scene-analyzing 스타일)
+└── locales/{ko-KR,en-US}/translation.json (수정: 분석 메시지)
+
+### 성능 및 품질 지표
+
+- **코드 품질**: ESLint/TypeScript 타입체크 통과, 린트 에러 0건
+- **접근성**: `prefers-reduced-motion` 존중 (애니메이션 비활성화)
+- **회귀 없음**: 일반 턴 로딩 UI 정상 동작 확인
+
+### 다음 단계
+
+- **U-090**: 핫스팟 생성을 정밀분석 전용으로 제한
+- **CP-MVP-03**: 정밀분석 데모 시나리오 통합
+
+---
+- **최소 표시 시간(500ms)**: `finishAnalyzing()` 헬퍼로 오버레이 깜빡임 방지
+- **기존 로딩 분기**: `isAnalyzing` 시 기존 `processingPhase: image_pending` 경로 우회
+
+**코드 구조**:
+frontend/src/
+├── stores/worldStore.ts (수정: isAnalyzing 상태)
+├── turn/turnRunner.ts (수정: 트리거 감지 + 토글)
+├── components/
+│   ├── SceneCanvas.tsx (수정: isAnalyzing 구독)
+│   └── SceneImage.tsx (수정: 분석 오버레이 렌더)
+├── style.css (수정: .scene-analyzing 스타일)
+└── locales/{ko-KR,en-US}/translation.json (수정: 분석 메시지)
+
+### 성능 및 품질 지표
+
+- **코드 품질**: ESLint/TypeScript 타입체크 통과, 린트 에러 0건
+- **접근성**: `prefers-reduced-motion` 존중 (애니메이션 비활성화)
+- **회귀 없음**: 일반 턴 로딩 UI 정상 동작 확인
+
+### 다음 단계
+
+- **U-090**: 핫스팟 생성을 정밀분석 전용으로 제한
+- **CP-MVP-03**: 정밀분석 데모 시나리오 통합
+
+---
+
 ## [2026-02-07 16:35] U-077[Mvp]: 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 완료
 
 ### 구현 완료 항목

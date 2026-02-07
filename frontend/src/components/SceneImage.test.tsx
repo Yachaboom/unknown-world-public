@@ -169,4 +169,43 @@ describe('SceneImage Component (U-020)', () => {
       expect(screen.getByText('scene.processing.processing')).toBeInTheDocument();
     });
   });
+
+  describe('Analyzing Overlay (U-089[Mvp])', () => {
+    it('isAnalyzing이 true일 때 분석 전용 오버레이와 메시지를 표시해야 함', () => {
+      render(<SceneImage status="scene" isAnalyzing={true} />);
+
+      expect(screen.getByText('scene.analyzing.message')).toBeInTheDocument();
+      expect(screen.getByText('scene.analyzing.hint')).toBeInTheDocument();
+      // 스캔라인 요소 존재 확인
+      expect(document.querySelector('.scene-analyzing-scanline')).toBeInTheDocument();
+    });
+
+    it('정밀분석 중에는 기존 이미지를 유지해야 함 (Option B)', async () => {
+      const { rerender } = render(<SceneImage status="scene" imageUrl="old-url.png" />);
+
+      // 1. 첫 번째 이미지 로드 완료
+      await act(async () => {
+        if (imageInstances[0]?.onload) imageInstances[0].onload();
+      });
+
+      expect(screen.getByAltText('scene.status.alt')).toHaveAttribute('src', 'old-url.png');
+
+      // 2. 정밀분석 시작
+      rerender(<SceneImage status="scene" imageUrl="old-url.png" isAnalyzing={true} />);
+
+      // 이미지 요소가 여전히 존재해야 함 (기존 이미지 유지)
+      expect(screen.getByAltText('scene.status.alt')).toHaveAttribute('src', 'old-url.png');
+      // 분석 오버레이 표시 확인
+      expect(screen.getByText('scene.analyzing.message')).toBeInTheDocument();
+    });
+
+    it('isAnalyzing이 true일 때는 processingPhase 오버레이보다 우선해야 함', () => {
+      render(<SceneImage status="scene" isAnalyzing={true} processingPhase="processing" />);
+
+      // 분석 오버레이는 표시됨
+      expect(screen.getByText('scene.analyzing.message')).toBeInTheDocument();
+      // 일반 처리 오버레이는 숨겨짐
+      expect(screen.queryByText('scene.processing.processing')).not.toBeInTheDocument();
+    });
+  });
 });

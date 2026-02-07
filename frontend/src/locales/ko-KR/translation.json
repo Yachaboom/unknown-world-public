@@ -199,6 +199,10 @@
       "image_pending": "이미지 형성 중...",
       "rendering": "결과 적용 중..."
     },
+    "analyzing": {
+      "message": "장면 분석 중...",
+      "hint": "오브젝트를 탐색하고 있습니다"
+    },
     "hotspot": {
       "layer_label": "클릭 가능한 오브젝트 영역",
       "hint_prefix": "힌트",

@@ -199,6 +199,10 @@
       "image_pending": "Forming image...",
       "rendering": "Applying results..."
     },
+    "analyzing": {
+      "message": "ANALYZING SCENE...",
+      "hint": "Scanning for objects"
+    },
     "hotspot": {
       "layer_label": "Clickable Objects Area",
       "hint_prefix": "Hint",

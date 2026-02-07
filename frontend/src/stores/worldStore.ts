@@ -98,6 +98,14 @@ export interface WorldState {
   activeRules: WorldRule[];
   /** 룰 변형 이벤트 타임라인 (최신순) */
   mutationTimeline: MutationEvent[];
+
+  // ============ U-089: 정밀분석 상태 ============
+
+  /**
+   * 정밀분석(Agentic Vision) 실행 중 여부 (U-089).
+   * true일 때 SceneImage는 기존 이미지를 유지하고 분석 전용 오버레이를 표시합니다.
+   */
+  isAnalyzing: boolean;
 }
 
 /** World Store 액션 */
@@ -174,6 +182,16 @@ export interface WorldActions {
    * @param phase - 현재 처리 단계 (idle, processing, image_pending, rendering)
    */
   setProcessingPhase: (phase: SceneProcessingPhase) => void;
+
+  // ============ U-089: 정밀분석 상태 관리 ============
+
+  /**
+   * 정밀분석(Agentic Vision) 실행 상태를 설정합니다 (U-089).
+   * true로 설정하면 SceneImage가 기존 이미지를 유지하면서 분석 전용 오버레이를 표시합니다.
+   *
+   * @param analyzing - 분석 실행 중 여부
+   */
+  setIsAnalyzing: (analyzing: boolean) => void;
 }
 
 export type WorldStore = WorldState & WorldActions;
@@ -212,6 +230,8 @@ function createInitialState(): WorldState {
     quests: [],
     activeRules: [],
     mutationTimeline: [],
+    // U-089: 정밀분석 상태
+    isAnalyzing: false,
   };
 }
 
@@ -522,6 +542,12 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       },
     }));
   },
+
+  // ============ U-089: 정밀분석 상태 관리 ============
+
+  setIsAnalyzing: (analyzing) => {
+    set({ isAnalyzing: analyzing });
+  },
 }));
 
 // =============================================================================
@@ -570,3 +596,8 @@ export const selectActiveQuests = (state: WorldStore) =>
 /** 완료된 퀘스트 셀렉터 */
 export const selectCompletedQuests = (state: WorldStore) =>
   state.quests.filter((q) => q.is_completed);
+
+// ============ U-089: 정밀분석 셀렉터 ============
+
+/** 정밀분석 실행 중 여부 셀렉터 */
+export const selectIsAnalyzing = (state: WorldStore) => state.isAnalyzing;

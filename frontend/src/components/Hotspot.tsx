@@ -140,6 +140,11 @@ function HotspotComponent({
   // 상태 결정
   const isHighlighted = isHovered || isOver;
 
+  // 툴팁 방향 결정: 상단 여백이 부족하면 아래쪽으로 표시
+  // 툴팁 높이(~80px) + 여유분을 기준으로 판단
+  const TOOLTIP_FLIP_THRESHOLD = 80;
+  const tooltipBelow = pixelBox.top < TOOLTIP_FLIP_THRESHOLD;
+
   // CSS 클래스 조합
   const classNames = [
     'hotspot',
@@ -147,6 +152,7 @@ function HotspotComponent({
     disabled ? 'disabled' : '',
     isOver ? 'drop-target-active' : '',
     isDemoState ? 'demo-target' : '',
+    tooltipBelow ? 'tooltip-below' : '',
   ]
     .filter(Boolean)
     .join(' ');
