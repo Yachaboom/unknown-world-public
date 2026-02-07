@@ -1,7 +1,9 @@
 """Unknown World - 아이템 아이콘 동적 생성 서비스 (U-075[Mvp]).
 
 이 모듈은 인벤토리 아이템 설명을 기반으로 64x64 픽셀 아트 아이콘을 동적 생성합니다.
-rembg 배경 제거, 캐싱, 언어 정합성을 보장합니다.
+캐싱, 언어 정합성을 보장합니다.
+
+U-091: 런타임 rembg 제거 - 배경 제거 없이 프롬프트로 어두운 배경 유도.
 
 설계 원칙:
     - RULE-004: 실패 시 안전한 폴백 제공 (placeholder 아이콘)
@@ -16,7 +18,6 @@ rembg 배경 제거, 캐싱, 언어 정합성을 보장합니다.
 
 참조:
     - vibe/unit-plans/U-075[Mvp].md
-    - vibe/unit-results/U-035[Mvp].md (rembg 통합)
     - vibe/ref/nanobanana-mcp.md (CRT 테마 아트 디렉션)
 """
 
@@ -455,13 +456,12 @@ Technical requirements:
             prompt = self._build_icon_prompt(request.item_description, request.language)
 
             # 이미지 생성 요청 구성
+            # U-091: rembg 런타임 제거 - 배경 제거 없이 프롬프트로 어두운 배경 유도
             gen_request = ImageGenerationRequest(
                 prompt=prompt,
                 image_size="1024x1024",  # 모델 지원 표준 해상도 사용 (U-075 핫픽스: 64x64는 미지원)
                 aspect_ratio="1:1",
                 model_label="FAST",  # Q2: 아이콘은 저지연 모델
-                remove_background=True,  # U-075: 배경 제거 활성화 (rembg 연동)
-                image_type_hint="icon",
             )
 
             generator = self._get_image_generator()
@@ -477,10 +477,7 @@ Technical requirements:
                 # 생성된 파일을 캐시 디렉토리로 복사
                 if response.image_id:
                     src_path = get_generated_images_dir() / f"{response.image_id}.png"
-                    # U-075: rembg 활성화로 _nobg 파일이 우선적으로 생성됨
-                    nobg_path = get_generated_images_dir() / f"{response.image_id}_nobg.png"
-                    if nobg_path.exists():
-                        src_path = nobg_path
+                    # U-091: rembg 런타임 제거 - _nobg 파일 검색 불필요
                     if src_path.exists():
                         image_data = src_path.read_bytes()
                         cached_url = self._cache.set(request.item_description, image_data)

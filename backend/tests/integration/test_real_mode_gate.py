@@ -99,17 +99,14 @@ class TestServerHealthWithEnv:
         assert data["service"] == "unknown-world-backend"
         assert "version" in data
 
-    def test_health_includes_rembg_status(self, client: TestClient) -> None:
-        """[Happy] /health 응답에 rembg 상태가 포함됩니다."""
+    def test_health_no_rembg_field(self, client: TestClient) -> None:
+        """[Happy] /health 응답에 rembg 상태가 포함되지 않습니다 (U-091 제거)."""
         # When: 헬스체크 요청
         response = client.get("/health")
 
-        # Then: rembg 정보 포함
+        # Then: rembg 정보가 없어야 함 (U-091: 런타임 rembg 제거)
         data = response.json()
-        assert "rembg" in data
-        rembg_info = data["rembg"]
-        assert rembg_info["status"] in ("ready", "degraded", "unavailable", "pending")
-        assert "installed" in rembg_info
+        assert "rembg" not in data
 
     def test_uw_mode_environment_variable_loaded(self) -> None:
         """[Happy] UW_MODE 환경변수가 올바르게 로드됩니다."""
@@ -404,9 +401,6 @@ class TestSecurityCompliance:
         # Then: 민감 정보 미포함
         response_text = json.dumps(data)
         assert "GOOGLE_APPLICATION_CREDENTIALS" not in response_text
-        assert ".key" not in response_text.lower() or "key" in data.get("rembg", {}).get(
-            "status", ""
-        )
         assert "token" not in response_text.lower()
         assert "secret" not in response_text.lower()
 

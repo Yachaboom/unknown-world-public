@@ -433,8 +433,8 @@ export type WorldDelta = z.infer<typeof WorldDeltaSchema>;
  * 이미지 생성 작업 - U-065 단순화.
  * 조건부 이미지 생성/편집 요청입니다.
  *
- * U-035: remove_background, image_type_hint 필드 추가 (rembg 배경 제거)
  * U-065 단순화: reference_image_ids 배열 크기 제한 (최대 2개)
+ * U-091: rembg 런타임 제거 - remove_background, image_type_hint 필드 삭제
  */
 export const ImageJobSchema = z
   .object({
@@ -453,12 +453,6 @@ export const ImageJobSchema = z
       .nullable()
       .default(null)
       .describe('참조 이미지 URL (선택, AI 모델 응답 호환용)'),
-    remove_background: z.boolean().default(false).describe('배경 제거 여부 (U-035, rembg 사용)'),
-    image_type_hint: z
-      .string()
-      .nullable()
-      .default(null)
-      .describe('이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)'),
   })
   .strict();
 export type ImageJob = z.infer<typeof ImageJobSchema>;
@@ -468,7 +462,7 @@ export type ImageJob = z.infer<typeof ImageJobSchema>;
  * 이미지 생성/편집 관련 정보입니다.
  *
  * U-053: image_url, image_id, generation_time_ms 필드 추가 (후처리에서 채움)
- * U-035: background_removed 필드 추가 (rembg 배경 제거 결과)
+ * U-091: rembg 런타임 제거 - background_removed 필드 삭제
  */
 export const RenderOutputSchema = z
   .object({
@@ -489,7 +483,6 @@ export const RenderOutputSchema = z
       .nullable()
       .default(null)
       .describe('이미지 생성 소요 시간 (ms, U-053)'),
-    background_removed: z.boolean().default(false).describe('배경 제거 수행 여부 (U-035)'),
   })
   .strict();
 export type RenderOutput = z.infer<typeof RenderOutputSchema>;
@@ -616,7 +609,6 @@ export const TurnOutputSchema = z
       image_url: null,
       image_id: null,
       generation_time_ms: null,
-      background_removed: false,
     }).describe('렌더링 정보'),
 
     // 에이전트 콘솔 필드
@@ -705,7 +697,6 @@ export function createFallbackTurnOutput(
       image_url: null,
       image_id: null,
       generation_time_ms: null,
-      background_removed: false,
     },
     agent_console: {
       current_phase: 'commit',

@@ -107,13 +107,13 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: rembg 패키지 처리?
-  - Option A: 완전 제거 (`pyproject.toml`에서 삭제)
+- [x] **Q1**: rembg 패키지 처리?
+  - ✅ Option A: 완전 제거 (`pyproject.toml`에서 삭제)
   - Option B: dev 의존으로 이동 (개발 시 에셋 제작용)
   - Option C: optional 의존으로 분리 (`pip install unknown-world[rembg]`)
 
-- [ ] **Q2**: 아이콘 배경 처리 대안?
-  - Option A: 프롬프트로 "투명/단색 배경" 유도 (배경 제거 없이)
+- [x] **Q2**: 아이콘 배경 처리 대안?
+  - ✅ Option A: 프롬프트로 "투명/단색 배경" 유도 (배경 제거 없이) - 이건 이미 프롬프트로 그렇게 하는중
   - Option B: 프리셋 아이콘만 사용 (동적 생성 시 배경 그대로)
   - Option C: CSS mask/clip으로 프론트에서 원형 크롭
 

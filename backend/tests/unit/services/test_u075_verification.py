@@ -59,8 +59,8 @@ async def test_inventory_item_data_serialization():
 
 
 @pytest.mark.asyncio
-async def test_item_icon_generator_rembg_enabled_check(icon_generator, mock_image_generator):
-    """Verify if rembg is enabled in the generator."""
+async def test_item_icon_generator_generates_icon(icon_generator, mock_image_generator):
+    """Verify icon generator calls image generator without rembg (U-091)."""
     from unknown_world.services.image_generation import (
         ImageGenerationResponse,
         ImageGenerationStatus,
@@ -82,5 +82,5 @@ async def test_item_icon_generator_rembg_enabled_check(icon_generator, mock_imag
         await icon_generator.generate_icon(request, wait_for_completion=True)
 
         called_request = mocked_gen.call_args[0][0]
-        # DESIRED: remove_background should be True (U-075 plan)
-        assert called_request.remove_background is True
+        # U-091: rembg 런타임 제거 - remove_background 필드가 더 이상 없음
+        assert called_request.model_label == "FAST"

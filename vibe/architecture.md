@@ -45,10 +45,8 @@ backend/src/unknown_world/orchestrator/stages/verify.py
 backend/src/unknown_world/services/agentic_vision.py
 backend/src/unknown_world/services/genai_client.py
 backend/src/unknown_world/services/image_generation.py
-backend/src/unknown_world/services/image_postprocess.py
 backend/src/unknown_world/services/image_understanding.py
 backend/src/unknown_world/services/item_icon_generator.py
-backend/src/unknown_world/services/rembg_preflight.py
 backend/src/unknown_world/storage/local_storage.py
 backend/src/unknown_world/storage/paths.py
 backend/src/unknown_world/storage/storage.py
@@ -90,9 +88,11 @@ shared/schemas/turn/turn_output.schema.json
 vibe/unit-results/U-077[Mvp].md
 vibe/unit-results/U-089[Mvp].md
 vibe/unit-results/U-090[Mvp].md
+vibe/unit-results/U-091[Mvp].md
 vibe/unit-runbooks/U-077-inventory-scroll-ux-runbook.md
 vibe/unit-runbooks/U-089-analyzing-overlay-runbook.md
 vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
+vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -252,7 +252,7 @@ vibe/unit-runbooks/U-090-hotspot-restriction-runbook.md
     
     1. **아이콘 생성 파이프라인 (Backend)**:
         - **Description-based Generation**: 아이템 설명을 기반으로 `IMAGE_FAST` 모델(gemini-2.5-flash-image)을 호출하여 64x64 픽셀 아트 아이콘을 생성함.
-        - **rembg Integration**: 생성된 이미지의 배경을 `rembg` 서비스를 통해 투명화 처리하여 인벤토리 슬롯과의 시각적 조화를 꾀함.
+        - **Simple Background Policy (U-091)**: 런타임 지연 최소화를 위해 rembg 배경 제거를 생략하며, 대신 프롬프트를 통해 "투명/단색 배경"을 유도하여 시각적 조화를 유지함.
         - **Language Consistency**: 아이템 이름이 세션 언어와 일치하도록 프롬프트를 제어하여 다국어 환경에서의 정합성을 보장함.
     2. **효율적 캐싱 및 비동기 처리**:
         - **MD5 Hash Caching**: 아이템 설명의 MD5 해시를 캐시 키로 사용하여 동일한 아이템에 대한 중복 생성을 방지하고 응답 속도를 극대화함.
@@ -313,11 +313,11 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ---
 
-## 17. Preflight 및 모델 관리 정책 (U-045[Mvp])
+## 17. 런타임 최적화 및 프리플라이트 정책 (U-091[Mvp])
 
-1. **서버 시작 시 프리플라이트**: `rembg` 및 필수 모델 상태 자동 점검 및 부재 시 다운로드 시도.
-2. **Degraded 모드**: 모델 다운로드 실패 시에도 서버 가용성을 유지하며 후처리 기능만 비활성화.
-3. **런타임 가드**: 대용량 다운로드에 의한 런타임 지연 원천 차단.
+1. **런타임 rembg 제거**: 서버 부팅 지연(100~200MB 모델 체크) 및 런타임 복잡도를 줄이기 위해 배경 제거 파이프라인을 런타임에서 일괄 제거함.
+2. **즉시 기동 아키텍처**: 필수적인 GenAI 클라이언트 가용성만 확인하고, 모델 다운로드와 같은 중량 작업을 배제하여 서버 시작 시간을 즉시(1초 이내) 완료 수준으로 단축함.
+3. **Dev-only 전처리**: 배경 제거가 필요한 에셋(UI 아이콘, 프레임 등)은 개발 시점(nanobanana-mcp)에 미리 처리하여 정적 파일로 서빙함.
 
 ---
 
@@ -495,6 +495,16 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
     - **Persistence Policy**: 일반 턴에서는 이전 정밀분석 결과를 그대로 유지하여 연속적인 게임 경험을 제공함.
 
-3. **GM 프롬프트 정책 (RULE-009)**:
+---
 
-    - **Explicit Instruction**: `turn_output_instructions`를 통해 GM에게 "핫스팟은 정밀분석 전용"임을 명시적으로 지시하여 모델 레벨에서의 오동작을 최소화함.
+## 44. 런타임 rembg 파이프라인 일괄 제거 (U-091[Mvp])
+
+1. **런타임 의존성 제거**:
+    - **rembg Package**: `pyproject.toml`에서 rembg 패키지를 런타임 의존성에서 제외하여 서버 바이너리 크기 및 시작 복잡도를 감소시킴.
+    - **Preflight Removal**: 서버 startup 시점에 수행되던 모델 다운로드/점검 로직을 완전히 제거하여 부팅 시간을 획득함.
+2. **파이프라인 단순화 (Simplified Pipeline)**:
+    - **Image/Icon Workflow**: 이미지 및 아이콘 생성 단계에서 `image_postprocess.py` 호출을 제거하고, 모델이 생성한 원본 바이트를 즉시 저장하도록 경로를 단축함.
+    - **Prompt-based Optimization**: 배경 제거 단계가 사라짐에 따라, 아이콘 생성 프롬프트를 "단순 배경" 스타일로 고도화하여 시각적 정합성을 보완함.
+3. **스키마 및 가시성 정제**:
+    - **Field Pruning**: `TurnOutput` 및 `ImageJob` 등에서 `remove_background`, `background_removed` 등 불필요해진 제어 플래그를 서버/클라이언트 양측에서 제거함.
+    - **Health Monitoring**: `/health` 엔드포인트에서 rembg 관련 상태 필드를 제거하여 시스템 헬스 체크의 핵심 가용성 집중도를 높임.

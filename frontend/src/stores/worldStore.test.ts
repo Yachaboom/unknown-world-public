@@ -439,7 +439,6 @@ describe('worldStore (U-013: Quest + Rules)', () => {
           image_job: null,
           image_id: 'img_1',
           generation_time_ms: 1000,
-          background_removed: false,
         },
         world: {
           inventory_added: [],
@@ -499,12 +498,9 @@ describe('worldStore (U-013: Quest + Rules)', () => {
             image_size: '1024x1024',
             reference_image_ids: [],
             reference_image_url: null,
-            remove_background: false,
-            image_type_hint: null,
           },
           image_id: null,
           generation_time_ms: null,
-          background_removed: false,
         },
         world: {
           inventory_added: [],

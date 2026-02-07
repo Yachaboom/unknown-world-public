@@ -98,7 +98,6 @@ describe('agentStore', () => {
         image_url: null,
         image_id: null,
         generation_time_ms: null,
-        background_removed: false,
       },
       agent_console: {
         repair_count: 2,

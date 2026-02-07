@@ -124,8 +124,6 @@ class ImageGenerationRequest(BaseModel):
         reference_image_ids: 참조 이미지 ID 목록 (선택, 편집용)
         reference_image_url: 참조 이미지 URL (U-068: 이전 턴 이미지 연결성)
         session_id: 세션 ID (파일 그룹화용)
-        remove_background: 배경 제거 여부 (U-035, rembg 사용)
-        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
         model_label: 모델 티어링 라벨 (U-066: FAST/QUALITY)
     """
 
@@ -140,12 +138,7 @@ class ImageGenerationRequest(BaseModel):
         description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
     )
     session_id: str | None = Field(default=None, description="세션 ID")
-    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
     seed: int | None = Field(default=None, description="결정적 생성을 위한 시드 (선택)")
-    image_type_hint: str | None = Field(
-        default=None,
-        description="이미지 유형 힌트 (object/character/icon 등, rembg 모델 선택용)",
-    )
     model_label: str = Field(
         default="QUALITY",
         description="모델 티어링 라벨 (U-066: FAST=저지연 프리뷰, QUALITY=고품질)",
@@ -161,8 +154,6 @@ class ImageGenerationResponse(BaseModel):
         image_url: 생성된 이미지 URL (성공 시)
         message: 상태 메시지 (실패 시 오류 설명)
         generation_time_ms: 생성 소요 시간 (밀리초)
-        background_removed: 배경 제거 수행 여부 (U-035)
-        rembg_model_used: 사용된 rembg 모델 (배경 제거 시)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -172,8 +163,6 @@ class ImageGenerationResponse(BaseModel):
     image_url: str | None = Field(default=None, description="생성된 이미지 URL")
     message: str | None = Field(default=None, description="상태 메시지")
     generation_time_ms: int = Field(default=0, description="생성 소요 시간 (ms)")
-    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
-    rembg_model_used: str | None = Field(default=None, description="사용된 rembg 모델")
 
 
 # =============================================================================
@@ -258,7 +247,6 @@ class MockImageGenerator:
                 "size": request.image_size,
                 "aspect_ratio": request.aspect_ratio,
                 "model_label": request.model_label,
-                "remove_background": request.remove_background,
                 "reference_image_url": request.reference_image_url,
             },
         )
@@ -280,45 +268,10 @@ class MockImageGenerator:
         file_path = self._output_dir / file_name
         file_path.write_bytes(placeholder_png)
 
-        # U-035: 배경 제거 후처리 (조건부)
-        background_removed = False
-        rembg_model_used: str | None = None
-        final_file_path = file_path
-        final_file_name = file_name
-
-        if request.remove_background:
-            from unknown_world.services.image_postprocess import get_image_postprocessor
-
-            postprocessor = get_image_postprocessor()
-            result = postprocessor.remove_background(
-                input_path=file_path,
-                image_type_hint=request.image_type_hint,
-            )
-
-            if result.status.value == "success":
-                background_removed = True
-                rembg_model_used = result.model_used
-                final_file_path = result.output_path
-                final_file_name = final_file_path.name
-
-                logger.debug(
-                    "[ImageGen] Mock 이미지 배경 제거 완료",
-                    extra={
-                        "image_id": image_id,
-                        "model": rembg_model_used,
-                        "rembg_time_ms": result.processing_time_ms,
-                    },
-                )
-            else:
-                logger.warning(
-                    "[ImageGen] Mock 이미지 배경 제거 실패, 원본 사용",
-                    extra={"image_id": image_id, "message": result.message},
-                )
-                final_file_path = result.output_path
-                final_file_name = final_file_path.name
+        # U-091: rembg 런타임 제거 - 배경 제거 후처리 없이 바로 저장
 
         # 서빙 URL 생성 (RU-006-Q5: 중앙화된 URL 빌더 사용)
-        image_url = build_image_url(final_file_name, category="generated")
+        image_url = build_image_url(file_name, category="generated")
 
         elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
@@ -327,7 +280,6 @@ class MockImageGenerator:
             extra={
                 "image_id": image_id,
                 "elapsed_ms": elapsed_ms,
-                "background_removed": background_removed,
             },
         )
 
@@ -337,8 +289,6 @@ class MockImageGenerator:
             image_url=image_url,
             message="Mock 이미지가 생성되었습니다.",
             generation_time_ms=elapsed_ms,
-            background_removed=background_removed,
-            rembg_model_used=rembg_model_used,
         )
 
     def _create_placeholder_png(self, size_str: str) -> bytes:
@@ -553,7 +503,6 @@ class ImageGenerator:
                 "aspect_ratio": request.aspect_ratio,
                 "model": selected_model_id,
                 "model_label": request.model_label,
-                "remove_background": request.remove_background,
                 "has_reference": has_reference,
             },
         )
@@ -618,47 +567,10 @@ class ImageGenerator:
             file_path = self._output_dir / file_name
             file_path.write_bytes(image_bytes)
 
-            # U-035: 배경 제거 후처리 (조건부)
-            background_removed = False
-            rembg_model_used: str | None = None
-            final_file_path = file_path
-            final_file_name = file_name
-
-            if request.remove_background:
-                from unknown_world.services.image_postprocess import (
-                    get_image_postprocessor,
-                )
-
-                postprocessor = get_image_postprocessor()
-                result = postprocessor.remove_background(
-                    input_path=file_path,
-                    image_type_hint=request.image_type_hint,
-                )
-
-                if result.status.value == "success":
-                    background_removed = True
-                    rembg_model_used = result.model_used
-                    final_file_path = result.output_path
-                    final_file_name = final_file_path.name
-
-                    logger.debug(
-                        "[ImageGen] 이미지 배경 제거 완료",
-                        extra={
-                            "image_id": image_id,
-                            "model": rembg_model_used,
-                            "rembg_time_ms": result.processing_time_ms,
-                        },
-                    )
-                else:
-                    logger.warning(
-                        "[ImageGen] 이미지 배경 제거 실패, 원본 사용",
-                        extra={"image_id": image_id, "message": result.message},
-                    )
-                    final_file_path = result.output_path
-                    final_file_name = final_file_path.name
+            # U-091: rembg 런타임 제거 - 배경 제거 후처리 없이 바로 저장
 
             # 서빙 URL 생성 (RU-006-Q5: 중앙화된 URL 빌더 사용)
-            image_url = build_image_url(final_file_name, category="generated")
+            image_url = build_image_url(file_name, category="generated")
             elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
             logger.info(
@@ -667,7 +579,6 @@ class ImageGenerator:
                     "image_id": image_id,
                     "elapsed_ms": elapsed_ms,
                     "size_bytes": len(image_bytes),
-                    "background_removed": background_removed,
                 },
             )
 
@@ -677,8 +588,6 @@ class ImageGenerator:
                 image_url=image_url,
                 message="이미지가 성공적으로 생성되었습니다.",
                 generation_time_ms=elapsed_ms,
-                background_removed=background_removed,
-                rembg_model_used=rembg_model_used,
             )
 
         except TimeoutError:

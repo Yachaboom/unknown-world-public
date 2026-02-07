@@ -114,6 +114,7 @@ async def _execute_image_generation(
     )
 
     # ImageGenerationRequest 생성
+    # U-091: rembg 런타임 제거 - remove_background, image_type_hint 제거
     request = ImageGenerationRequest(
         prompt=image_job.prompt,
         aspect_ratio=image_decision.aspect_ratio or image_job.aspect_ratio,
@@ -121,9 +122,7 @@ async def _execute_image_generation(
         reference_image_ids=image_job.reference_image_ids,
         reference_image_url=image_decision.reference_image_url,
         session_id=None,  # 세션 ID는 필요 시 TurnInput에서 추출
-        remove_background=image_job.remove_background,
         seed=ctx.seed,
-        image_type_hint=image_job.image_type_hint,
     )
 
     try:
@@ -142,7 +141,6 @@ async def _execute_image_generation(
                     "image_url": response.image_url,
                     "generation_time_ms": response.generation_time_ms,
                     "total_elapsed_ms": elapsed_ms,
-                    "background_removed": response.background_removed,
                 },
             )
 
@@ -152,7 +150,6 @@ async def _execute_image_generation(
                 image_url=response.image_url,
                 image_id=response.image_id,
                 generation_time_ms=response.generation_time_ms,
-                background_removed=response.background_removed,
             )
 
         else:
@@ -327,7 +324,6 @@ def _update_render_output(
     image_url: str | None,
     image_id: str | None,
     generation_time_ms: int,
-    background_removed: bool,
 ) -> PipelineContext:
     """TurnOutput.render에 이미지 생성 결과를 반영합니다.
 
@@ -340,7 +336,6 @@ def _update_render_output(
         image_url: 생성된 이미지 URL
         image_id: 생성된 이미지 ID
         generation_time_ms: 생성 소요 시간 (ms)
-        background_removed: 배경 제거 수행 여부
 
     Returns:
         업데이트된 컨텍스트
@@ -362,7 +357,6 @@ def _update_render_output(
         image_url=image_url,
         image_id=image_id,
         generation_time_ms=generation_time_ms,
-        background_removed=background_removed,
     )
 
     # TurnOutput 전체를 model_copy로 갱신

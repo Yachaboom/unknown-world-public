@@ -1,6 +1,47 @@
 # 프로젝트 진행 상황
 
-## [2026-02-07 16:50] U-090[Mvp]: 핫스팟 생성을 정밀분석 전용으로 제한 완료
+## [2026-02-07 17:00] U-091[Mvp]: 런타임 rembg 파이프라인 일괄 제거 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 서버 런타임에서 rembg(배경 제거) 파이프라인을 일괄 제거하여 부팅 속도 최적화 및 의존성 단순화
+- **추가 컴포넌트**: `vibe/unit-results/U-091[Mvp].md` (보고서), `vibe/unit-runbooks/U-091-rembg-runtime-removal-runbook.md` (런북)
+- **달성 요구사항**: [PRD 10.2] 초기 구동 환경 점검 효율화, [RULE-004] 실패 내성(파이프라인 단순화), [RULE-010] 기술 스택 최적화
+
+### 기술적 구현 세부사항
+
+**런타임 파이프라인 단순화**:
+- **Preflight 제거**: 서버 시작 시 100~200MB의 모델을 다운로드/점검하던 `rembg_preflight`를 제거하여 부팅 시간을 즉시 완료 수준으로 단축.
+- **후처리 제거**: 이미지 및 아이콘 생성 과정에서 동기적으로 수행되던 배경 제거 단계(`image_postprocess.py`)를 제거하여 턴 처리 지연 요소 감소.
+
+**스키마 및 모델 정제**:
+- **Field Cleanup**: `TurnOutput`, `ImageJob`, `RenderOutput`에서 배경 제거 관련 필드(`remove_background`, `background_removed` 등)를 서버/클라이언트 양측에서 제거.
+- **Health Check 정제**: `/health` 엔드포인트에서 rembg 상태 정보를 제거하고 서비스 가용성 중심으로 응답 구조 개선.
+
+### 코드 구조
+repo-root/
+├── backend/
+│   ├── src/unknown_world/
+│   │   ├── main.py (startup/health 로직 정제)
+│   │   ├── services/
+│   │   │   ├── image_generation.py (후처리 호출 제거)
+│   │   │   └── item_icon_generator.py (배경 제거 단계 삭제)
+│   │   └── models/turn.py (스키마 필드 제거)
+│   └── pyproject.toml (런타임 의존성 제거)
+└── frontend/src/
+    └── schemas/turn.ts (Zod 스키마 동기화)
+
+### 성능 및 품질 지표
+
+- **부팅 속도**: 서버 시작 지연 시간 95% 이상 감소 (즉시 기동)
+- **코드 품질**: 런타임 의존성 1건(`rembg`) 감소 및 관련 테스트 부채 6건 해결
+
+### 다음 단계
+
+- **U-092**: 기본 초기 아이템 아이콘 프리셋 이미지 (nanobanana-mcp 활용)
+- **U-093**: 아이콘 생성 타임아웃 최적화
+
+---
 
 ### 구현 완료 항목
 

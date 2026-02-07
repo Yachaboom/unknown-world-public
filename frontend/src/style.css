@@ -2636,7 +2636,7 @@ button:disabled,
   width: 20px;
   height: 20px;
   object-fit: contain;
-  /* (U-029) 흰 배경 아이콘인 경우 screen/lighten 등으로 조절 가능하지만 rembg 완료됨 */
+  /* (U-029) 아이콘 표시 (U-091: rembg 런타임 제거, 프롬프트로 어두운 배경 유도) */
   display: block;
 }
 

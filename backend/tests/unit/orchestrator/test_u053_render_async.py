@@ -46,7 +46,6 @@ def mock_generator():
             image_id="test_img_123",
             image_url="http://localhost/images/test_img_123.png",
             generation_time_ms=1200,
-            background_removed=False,
         )
     )
     return generator
@@ -95,7 +94,6 @@ async def test_render_stage_sync_success(mock_emit, mock_generator):
     assert result_ctx.output.render.image_url == "http://localhost/images/test_img_123.png"
     assert result_ctx.output.render.image_id == "test_img_123"
     assert result_ctx.output.render.generation_time_ms == 1200
-    assert result_ctx.output.render.background_removed is False
 
 
 @pytest.mark.asyncio

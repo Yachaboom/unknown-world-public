@@ -509,8 +509,6 @@ class ImageJob(BaseModel):
         aspect_ratio: 가로세로 비율 (예: "16:9", "1:1")
         image_size: 이미지 크기 (예: "1024x1024")
         reference_image_ids: 참조 이미지 ID 목록 (최대 2개)
-        remove_background: 배경 제거 여부 (U-035, rembg 사용)
-        image_type_hint: 이미지 유형 힌트 (rembg 모델 자동 선택용)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -527,11 +525,6 @@ class ImageJob(BaseModel):
         default=None,
         description="참조 이미지 URL (U-068: 이전 턴 이미지를 참조하여 연속성 유지)",
     )
-    remove_background: bool = Field(default=False, description="배경 제거 여부 (U-035, rembg 사용)")
-    image_type_hint: str | None = Field(
-        default=None,
-        description="이미지 유형 힌트 (object/character/icon/portrait 등, rembg 모델 자동 선택용)",
-    )
 
 
 class RenderOutput(BaseModel):
@@ -545,7 +538,6 @@ class RenderOutput(BaseModel):
         image_url: 생성된 이미지 URL (선택, 후처리에서 채움, U-053)
         image_id: 생성된 이미지 ID (선택, 후처리에서 채움, U-053)
         generation_time_ms: 이미지 생성 소요 시간 (밀리초, 선택, U-053)
-        background_removed: 배경 제거 수행 여부 (U-035, 선택)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -560,7 +552,6 @@ class RenderOutput(BaseModel):
     generation_time_ms: int | None = Field(
         default=None, description="이미지 생성 소요 시간 (ms, U-053)"
     )
-    background_removed: bool = Field(default=False, description="배경 제거 수행 여부 (U-035)")
 
 
 # =============================================================================
