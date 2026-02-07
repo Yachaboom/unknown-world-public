@@ -349,6 +349,11 @@
     "detected_objects": "Objects detected: {{count}}",
     "item_candidates": "Item candidates: {{count}}",
     "no_candidates": "No item candidates found",
+    "discovery_message": {
+      "one": "You found an item!",
+      "two": "You found two items!",
+      "three": "You found three items! What an amazing discovery!"
+    },
     "error": {
       "unsupported_format": "Unsupported image format",
       "file_too_large": "File too large (max 20MB)",

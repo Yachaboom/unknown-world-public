@@ -411,6 +411,11 @@ export function ScannerSlot({ language, disabled = false }: ScannerSlotProps) {
 
       {state === 'result' && scanResult && (
         <div className="scanner-result">
+          {/* U-095: 다수 아이템 발견 피드백 메시지 */}
+          <div className="scanner-discovery-message" role="status">
+            {getDiscoveryMessage(scanResult.item_candidates.length, t)}
+          </div>
+
           {/* 프리뷰 + 캡션 */}
           <div className="scanner-result-header">
             {previewUrl && (
@@ -527,4 +532,17 @@ function getItemTypeEmoji(itemType: string): string {
     artifact: '💎',
   };
   return emojiMap[itemType] ?? '📦';
+}
+
+/**
+ * 아이템 발견 개수에 따른 피드백 메시지 (U-095).
+ *
+ * @param count - 발견된 아이템 수
+ * @param t - i18n 번역 함수
+ * @returns 피드백 메시지
+ */
+function getDiscoveryMessage(count: number, t: (key: string) => string): string {
+  if (count >= 3) return t('scanner.discovery_message.three');
+  if (count === 2) return t('scanner.discovery_message.two');
+  return t('scanner.discovery_message.one');
 }

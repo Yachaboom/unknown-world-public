@@ -20,9 +20,15 @@ from unknown_world.services.image_understanding import (
 @pytest.fixture
 def service():
     """ImageUnderstandingService 인스턴스 (Real 모드 강제)."""
-    with patch(
-        "unknown_world.services.image_understanding.ImageUnderstandingService._initialize_client"
+    with (
+        patch(
+            "unknown_world.services.image_understanding.ImageUnderstandingService._initialize_client"
+        ),
+        patch("unknown_world.services.image_understanding.load_prompt") as mock_load,
     ):
+        # 기본 프롬프트 반환 설정 ({count} 포함)
+        mock_load.return_value = "Analyze this image. Find {count} items."
+
         svc = ImageUnderstandingService(force_mock=False)
         # Real 모드 강제 (재시도 로직 활성화)
         svc._is_mock = False

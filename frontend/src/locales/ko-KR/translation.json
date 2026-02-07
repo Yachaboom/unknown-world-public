@@ -349,6 +349,11 @@
     "detected_objects": "감지된 오브젝트: {{count}}개",
     "item_candidates": "아이템 후보: {{count}}개",
     "no_candidates": "아이템 후보를 찾지 못했습니다",
+    "discovery_message": {
+      "one": "아이템을 발견했습니다!",
+      "two": "두 가지를 발견했습니다!",
+      "three": "세 가지를 발견했습니다! 대단한 발견이네요!"
+    },
     "error": {
       "unsupported_format": "지원하지 않는 이미지 형식입니다",
       "file_too_large": "파일이 너무 큽니다 (최대 20MB)",

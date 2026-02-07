@@ -3861,6 +3861,34 @@ button:disabled,
   padding: var(--spacing-xs);
 }
 
+/* U-095: 다수 아이템 발견 피드백 메시지 */
+.scanner-discovery-message {
+  text-align: center;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--color-accent, #00ff88);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-accent-dim, rgba(0, 255, 136, 0.3));
+  border-radius: var(--radius-sm, 4px);
+  background: rgba(0, 255, 136, 0.08);
+  animation: scanner-discovery-pulse 1.5s ease-in-out;
+}
+
+@keyframes scanner-discovery-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .scanner-result-header {
   display: flex;
   align-items: flex-start;

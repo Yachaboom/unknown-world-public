@@ -73,7 +73,7 @@ logger = logging.getLogger(__name__)
 _PROMPTS_ROOT = Path(__file__).parent.parent.parent.parent / "prompts"
 
 # 프롬프트 카테고리
-PromptCategory = Literal["system", "turn", "image"]
+PromptCategory = Literal["system", "turn", "image", "scan", "vision"]
 
 # 언어 코드 매핑
 _LANGUAGE_CODE_MAP: dict[Language, str] = {

@@ -125,6 +125,20 @@ vibe/unit-runbooks/U-094-scan-retry-runbook.md
     - **Safe Fallback**: 모든 재시도 실패 시 i18n 대응된 에러 메시지와 함께 빈 아이템 목록을 포함한 표준 `ScanResult`를 반환하여 프론트엔드 렌더링 안정성을 확보함.
 4. **관측 가능성 및 로깅 (RULE-007)**:
     - **Execution Trace**: 각 시도 횟수와 실패 사유를 서버 로그에 기록하여 비전 파이프라인의 성능과 안정성을 모니터링함.
+
+---
+
+## 47. Scanner 아이템 생성 개수 랜덤화 정책 (U-095[Mvp])
+
+1. **아이템 발견 개수 결정 (서버측 확정 랜덤)**:
+    - **Deterministic Count**: `ImageUnderstandingService.analyze()` 호출 시 서버에서 먼저 가중치 랜덤을 통해 발견될 아이템 수(1~3개)를 확정함.
+    - **Probability Distribution**: 1개(60%), 2개(30%), 3개(10%)의 가중치를 적용하여 다중 아이템 발견의 희소성을 보장함.
+2. **동적 프롬프트 지시 (U-095)**:
+    - **Strict Instruction**: 프롬프트의 `{count}` 플레이스홀더를 확정된 숫자로 치환하여 모델이 정확히 지시된 개수의 아이템을 추출하도록 강제함.
+3. **결과 보정 및 정제 (Post-processing)**:
+    - **Adjust Item Count**: 모델이 지시보다 많은 아이템을 반환할 경우 앞에서부터 슬라이싱하며, 중복된 이름(`label`)을 가진 아이템은 자동 제거하여 결과 품질을 유지함.
+4. **발견 개수별 피드백 UX**:
+    - **Dynamic Discovery Message**: 발견된 아이템 수에 따라 프론트엔드에서 "아이템을 발견했습니다!", "두 가지를 발견했습니다!", "세 가지를 발견했습니다! 대단한 발견이네요!" 등 차별화된 피드백을 제공하여 게임플레이 재미를 강화함.
 1. **프리셋 아이콘 레지스트리 (Static Assets)**:
     - **Asset Library**: 데모 프로필 초기 아이템 및 자주 등장하는 공통 아이템 30종에 대해 사전 제작된 64x64 픽셀 아트 아이콘을 `frontend/public/ui/items/`에 배치함.
     - **Registry Mapping**: 아이템 ID와 에셋 경로를 1:1로 매핑하는 `itemIconPresets.ts`를 통해 클라이언트 사이드에서 즉시 조회 가능하도록 함.

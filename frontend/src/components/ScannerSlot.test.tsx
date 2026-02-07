@@ -196,6 +196,64 @@ describe('ScannerSlot Component', () => {
     expect(screen.getByText('scanner.dropzone_text')).toBeInTheDocument();
   });
 
+  it('displays correct discovery message based on item count (U-095)', async () => {
+    localStorage.setItem('uw_scanner_onboarding_done', 'true'); // 온보딩 비활성화
+    render(<ScannerSlot language={mockLanguage} />);
+
+    // 1개 발견
+    const singleResponse = {
+      ...mockScanResponse,
+      item_candidates: [mockScanResponse.item_candidates[0]],
+    };
+    vi.spyOn(scannerApi, 'scanImage').mockResolvedValueOnce({
+      success: true,
+      data: singleResponse,
+    });
+
+    let dropzone = screen.getByRole('button', { name: /scanner.dropzone_label/i });
+    fireEvent.drop(dropzone, {
+      dataTransfer: { files: [new File(['content'], 'test.png', { type: 'image/png' })] },
+    });
+    await waitFor(() =>
+      expect(screen.getByText('scanner.discovery_message.one')).toBeInTheDocument(),
+    );
+
+    // 2개 발견
+    fireEvent.click(screen.getByText('scanner.cancel'));
+    vi.spyOn(scannerApi, 'scanImage').mockResolvedValueOnce({
+      success: true,
+      data: mockScanResponse,
+    });
+    dropzone = screen.getByRole('button', { name: /scanner.dropzone_label/i });
+    fireEvent.drop(dropzone, {
+      dataTransfer: { files: [new File(['content'], 'test.png', { type: 'image/png' })] },
+    });
+    await waitFor(() =>
+      expect(screen.getByText('scanner.discovery_message.two')).toBeInTheDocument(),
+    );
+
+    // 3개 발견
+    fireEvent.click(screen.getByText('scanner.cancel'));
+    const tripleResponse = {
+      ...mockScanResponse,
+      item_candidates: [
+        ...mockScanResponse.item_candidates,
+        { id: 'item-3', label: 'Extra Item', description: 'Desc', item_type: 'tool' },
+      ],
+    };
+    vi.spyOn(scannerApi, 'scanImage').mockResolvedValueOnce({
+      success: true,
+      data: tripleResponse,
+    });
+    dropzone = screen.getByRole('button', { name: /scanner.dropzone_label/i });
+    fireEvent.drop(dropzone, {
+      dataTransfer: { files: [new File(['content'], 'test.png', { type: 'image/png' })] },
+    });
+    await waitFor(() =>
+      expect(screen.getByText('scanner.discovery_message.three')).toBeInTheDocument(),
+    );
+  });
+
   it('is disabled when isStreaming is true', () => {
     useAgentStore.setState({ isStreaming: true });
     render(<ScannerSlot language={mockLanguage} />);

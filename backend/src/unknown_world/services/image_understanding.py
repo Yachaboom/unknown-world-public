@@ -23,6 +23,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import time
 import uuid
 from typing import TYPE_CHECKING, Any, cast
@@ -35,6 +36,7 @@ from unknown_world.models.scanner import (
     ScanStatus,
 )
 from unknown_world.models.turn import Box2D, Language
+from unknown_world.orchestrator.prompt_loader import load_prompt
 from unknown_world.services.genai_client import ENV_UW_MODE, GenAIMode
 from unknown_world.storage.validation import (
     ALLOWED_IMAGE_MIME_TYPES,
@@ -64,110 +66,6 @@ MAX_FILE_SIZE_BYTES = MAX_IMAGE_FILE_SIZE_BYTES
 """최대 이미지 파일 크기 (호환성 별칭)."""
 
 # =============================================================================
-# 프롬프트 템플릿 (언어별)
-# =============================================================================
-
-SCAN_PROMPT_KO = """당신은 이미지 분석 전문가입니다. 주어진 이미지를 분석하여 다음 정보를 JSON 형식으로 추출하세요.
-
-## 작업 지시
-
-1. **캡션 (caption)**: 이미지 전체를 설명하는 한국어 문장 (1-2문장)
-2. **오브젝트 (objects)**: 이미지에서 발견된 주요 오브젝트 목록
-   - label: 오브젝트 이름 (한국어)
-   - box_2d: 바운딩 박스 좌표 [ymin, xmin, ymax, xmax] (0~1000 정규화)
-   - suggested_item_type: 게임 아이템으로 변환 시 적합한 유형 (key, weapon, tool, clue, material, container 등)
-3. **아이템 후보 (item_candidates)**: 게임에서 사용 가능한 아이템으로 변환된 목록
-   - id: 고유 ID (예: "item_001")
-   - label: 아이템 이름 (한국어)
-   - description: 아이템 설명 (한국어, 1문장)
-   - item_type: 아이템 유형
-   - source_object_index: 원본 오브젝트 인덱스
-
-## 출력 형식 (JSON)
-
-```json
-{
-  "caption": "이미지 설명...",
-  "objects": [
-    {
-      "label": "오브젝트명",
-      "box_2d": {"ymin": 100, "xmin": 200, "ymax": 400, "xmax": 500},
-      "suggested_item_type": "key"
-    }
-  ],
-  "item_candidates": [
-    {
-      "id": "item_001",
-      "label": "아이템명",
-      "description": "아이템 설명",
-      "item_type": "key",
-      "source_object_index": 0
-    }
-  ]
-}
-```
-
-## 주의사항
-
-- bbox 좌표는 반드시 0~1000 범위 내에서 정규화하세요.
-- 게임에 적합하지 않은 오브젝트(사람 얼굴, 민감한 콘텐츠 등)는 제외하세요.
-- 최대 10개의 오브젝트와 아이템 후보를 추출하세요.
-"""
-
-SCAN_PROMPT_EN = """You are an image analysis expert. Analyze the given image and extract the following information in JSON format.
-
-## Task Instructions
-
-1. **Caption**: A description of the entire image in English (1-2 sentences)
-2. **Objects**: List of main objects found in the image
-   - label: Object name (English)
-   - box_2d: Bounding box coordinates [ymin, xmin, ymax, xmax] (0~1000 normalized)
-   - suggested_item_type: Suitable type for game item conversion (key, weapon, tool, clue, material, container, etc.)
-3. **Item Candidates**: List of items converted for game use
-   - id: Unique ID (e.g., "item_001")
-   - label: Item name (English)
-   - description: Item description (English, 1 sentence)
-   - item_type: Item type
-   - source_object_index: Original object index
-
-## Output Format (JSON)
-
-```json
-{
-  "caption": "Image description...",
-  "objects": [
-    {
-      "label": "object_name",
-      "box_2d": {"ymin": 100, "xmin": 200, "ymax": 400, "xmax": 500},
-      "suggested_item_type": "key"
-    }
-  ],
-  "item_candidates": [
-    {
-      "id": "item_001",
-      "label": "item_name",
-      "description": "Item description",
-      "item_type": "key",
-      "source_object_index": 0
-    }
-  ]
-}
-```
-
-## Notes
-
-- bbox coordinates must be normalized within 0~1000 range.
-- Exclude objects not suitable for games (human faces, sensitive content, etc.).
-- Extract up to 10 objects and item candidates.
-"""
-
-SCAN_PROMPTS: dict[Language, str] = {
-    Language.KO: SCAN_PROMPT_KO,
-    Language.EN: SCAN_PROMPT_EN,
-}
-
-
-# =============================================================================
 # 재시도 설정 (U-094: ImageUnderstanding 응답 파싱 예외 시 자동 재시도)
 # =============================================================================
 
@@ -189,6 +87,35 @@ SCAN_RETRY_REINFORCEMENT: dict[Language, str] = {
 }
 """재시도 시 추가되는 JSON 형식 강조 지시 (U-094 Q1: Option B)."""
 
+# =============================================================================
+# 아이템 수 랜덤화 설정 (U-095: Scanner 아이템 생성 개수 랜덤화)
+# =============================================================================
+
+SCAN_ITEM_COUNT_POPULATION: list[int] = [1, 2, 3]
+"""생성 가능한 아이템 개수."""
+
+SCAN_ITEM_COUNT_WEIGHTS: list[int] = [60, 30, 10]
+"""아이템 개수별 가중치 (1개=60%, 2개=30%, 3개=10%)."""
+
+
+def determine_item_count() -> int:
+    """Scanner 아이템 생성 개수를 가중치 랜덤으로 결정합니다 (U-095).
+
+    확률 분포:
+        - 1개: 60%
+        - 2개: 30%
+        - 3개: 10%
+
+    Returns:
+        1~3 사이의 정수
+    """
+    return random.choices(
+        population=SCAN_ITEM_COUNT_POPULATION,
+        weights=SCAN_ITEM_COUNT_WEIGHTS,
+        k=1,
+    )[0]
+
+
 _NON_RETRYABLE_ERROR_NAMES: frozenset[str] = frozenset(
     {
         "Unauthenticated",
@@ -206,89 +133,74 @@ _NON_RETRYABLE_ERROR_NAMES: frozenset[str] = frozenset(
 # =============================================================================
 
 
-def _create_mock_scan_result(language: Language) -> ScanResult:
+def _create_mock_scan_result(language: Language, item_count: int = 2) -> ScanResult:
     """Mock 스캔 결과를 생성합니다.
+
+    U-095: item_count에 따라 1~3개의 아이템을 반환합니다.
 
     Args:
         language: 응답 언어
+        item_count: 생성할 아이템 수 (1~3)
 
     Returns:
-        고정된 Mock 스캔 결과
+        Mock 스캔 결과 (item_count에 맞춘 아이템 목록)
     """
-    if language == Language.KO:
-        return ScanResult(
-            status=ScanStatus.COMPLETED,
-            caption="[Mock] 테스트 이미지입니다. 여러 오브젝트가 감지되었습니다.",
-            objects=[
-                DetectedObject(
-                    label="열쇠",
-                    box_2d=Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
-                    confidence=0.95,
-                    suggested_item_type="key",
-                ),
-                DetectedObject(
-                    label="상자",
-                    box_2d=Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
-                    confidence=0.88,
-                    suggested_item_type="container",
-                ),
-            ],
-            item_candidates=[
-                ItemCandidate(
-                    id="item_001",
-                    label="녹슨 열쇠",
-                    description="오래된 자물쇠를 열 수 있을 것 같은 열쇠입니다.",
-                    item_type="key",
-                    source_object_index=0,
-                ),
-                ItemCandidate(
-                    id="item_002",
-                    label="나무 상자",
-                    description="무언가 들어있을 것 같은 작은 상자입니다.",
-                    item_type="container",
-                    source_object_index=1,
-                ),
-            ],
-            message=None,
-            analysis_time_ms=150,
+    # Mock 아이템 풀 (최대 3개) - 언어별
+    _MOCK_ITEMS_KO: list[tuple[str, str, str, str]] = [
+        ("녹슨 열쇠", "오래된 자물쇠를 열 수 있을 것 같은 열쇠입니다.", "key", "열쇠"),
+        ("나무 상자", "무언가 들어있을 것 같은 작은 상자입니다.", "container", "상자"),
+        ("깨진 수정", "희미하게 빛나는 수정 조각입니다.", "material", "수정"),
+    ]
+    _MOCK_ITEMS_EN: list[tuple[str, str, str, str]] = [
+        ("Rusty Key", "An old key that might open an ancient lock.", "key", "Key"),
+        ("Wooden Box", "A small box that might contain something.", "container", "Box"),
+        ("Broken Crystal", "A faintly glowing crystal shard.", "material", "Crystal"),
+    ]
+
+    # Mock bbox 풀
+    _MOCK_BBOXES: list[Box2D] = [
+        Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
+        Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
+        Box2D(ymin=200, xmin=500, ymax=450, xmax=750),
+    ]
+    _MOCK_CONFIDENCES: list[float] = [0.95, 0.88, 0.82]
+
+    items_pool = _MOCK_ITEMS_KO if language == Language.KO else _MOCK_ITEMS_EN
+    count = max(1, min(3, item_count))  # 1~3 클램핑
+
+    objects: list[DetectedObject] = []
+    candidates: list[ItemCandidate] = []
+    for i in range(count):
+        label, desc, item_type, obj_label = items_pool[i]
+        objects.append(
+            DetectedObject(
+                label=obj_label,
+                box_2d=_MOCK_BBOXES[i],
+                confidence=_MOCK_CONFIDENCES[i],
+                suggested_item_type=item_type,
+            ),
         )
-    else:
-        return ScanResult(
-            status=ScanStatus.COMPLETED,
-            caption="[Mock] Test image. Multiple objects detected.",
-            objects=[
-                DetectedObject(
-                    label="Key",
-                    box_2d=Box2D(ymin=100, xmin=200, ymax=300, xmax=400),
-                    confidence=0.95,
-                    suggested_item_type="key",
-                ),
-                DetectedObject(
-                    label="Box",
-                    box_2d=Box2D(ymin=400, xmin=100, ymax=700, xmax=500),
-                    confidence=0.88,
-                    suggested_item_type="container",
-                ),
-            ],
-            item_candidates=[
-                ItemCandidate(
-                    id="item_001",
-                    label="Rusty Key",
-                    description="An old key that might open an ancient lock.",
-                    item_type="key",
-                    source_object_index=0,
-                ),
-                ItemCandidate(
-                    id="item_002",
-                    label="Wooden Box",
-                    description="A small box that might contain something.",
-                    item_type="container",
-                    source_object_index=1,
-                ),
-            ],
-            message=None,
-            analysis_time_ms=150,
+        candidates.append(
+            ItemCandidate(
+                id=f"item_{uuid.uuid4().hex[:8]}",
+                label=label,
+                description=desc,
+                item_type=item_type,
+                source_object_index=i,
+            ),
         )
+
+    caption_ko = "[Mock] 테스트 이미지입니다. 여러 오브젝트가 감지되었습니다."
+    caption_en = "[Mock] Test image. Multiple objects detected."
+
+    return ScanResult(
+        status=ScanStatus.COMPLETED,
+        caption=caption_ko if language == Language.KO else caption_en,
+        objects=objects,
+        item_candidates=candidates,
+        message=None,
+        analysis_time_ms=150,
+    )
 
 
 # =============================================================================
@@ -485,6 +397,54 @@ def _parse_vision_response(
             extra={"error_type": type(e).__name__},
         )
         return _create_fallback_result(f"응답 처리 중 오류: {type(e).__name__}")
+
+
+# =============================================================================
+# 아이템 개수 검증/조정 (U-095)
+# =============================================================================
+
+
+def _adjust_item_count(result: ScanResult, target_count: int) -> ScanResult:
+    """모델이 반환한 아이템 수를 target_count에 맞게 조정합니다 (U-095).
+
+    - 아이템이 target_count보다 많으면 → 앞에서부터 target_count개만 유지
+    - 아이템이 target_count보다 적으면 → 있는 만큼만 유지 (강제 생성 X)
+    - 중복 이름 아이템 제거 (동일 label 금지)
+
+    Args:
+        result: 파싱된 ScanResult
+        target_count: 목표 아이템 수
+
+    Returns:
+        조정된 ScanResult
+    """
+    if result.status not in (ScanStatus.COMPLETED, ScanStatus.PARTIAL):
+        return result
+
+    candidates = result.item_candidates
+
+    # 중복 이름 제거 (첫 등장 유지)
+    seen_labels: set[str] = set()
+    unique_candidates: list[ItemCandidate] = []
+    for c in candidates:
+        label_lower = c.label.strip().lower()
+        if label_lower not in seen_labels:
+            seen_labels.add(label_lower)
+            unique_candidates.append(c)
+
+    # target_count 이하로 잘라내기
+    adjusted = unique_candidates[:target_count]
+
+    if len(adjusted) != len(candidates):
+        logger.info(
+            "[Scan] 아이템 수 조정: %d → %d (목표: %d)",
+            len(candidates),
+            len(adjusted),
+            target_count,
+        )
+
+    result.item_candidates = adjusted
+    return result
 
 
 # =============================================================================
@@ -689,10 +649,17 @@ class ImageUnderstandingService:
                     extra={"error_type": type(e).__name__},
                 )
 
+        # U-095: 아이템 생성 개수 랜덤 결정 (서버에서 확정적으로 결정)
+        item_count = determine_item_count()
+        logger.info(
+            "[ImageUnderstanding] 아이템 생성 개수 결정",
+            extra={"item_count": item_count},
+        )
+
         # Mock 모드 처리
         if self._is_mock:
             logger.debug("[ImageUnderstanding] Mock 분석 수행")
-            result = _create_mock_scan_result(language)
+            result = _create_mock_scan_result(language, item_count=item_count)
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
             result.original_image_key = original_image_key
             result.original_image_url = original_image_url
@@ -704,6 +671,7 @@ class ImageUnderstandingService:
                 image_content,
                 content_type,
                 language,
+                item_count=item_count,
             )
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
             result.original_image_key = original_image_key
@@ -724,10 +692,14 @@ class ImageUnderstandingService:
         image_content: bytes,
         content_type: str,
         language: Language,
+        *,
+        item_count: int = 1,
     ) -> ScanResult:
         """비전 모델을 호출합니다 (파싱 실패 시 자동 재시도 포함).
 
         U-094: ImageUnderstanding 응답 파싱 예외 시 자동 재시도.
+        U-095: item_count에 따라 프롬프트에 아이템 수 지시 추가.
+
         - 최대 2회 재시도 (총 3회 시도)
         - 재시도 시 JSON 형식 강조 지시 추가 (Q1: Option B)
         - 백오프: 1초, 2초
@@ -737,6 +709,7 @@ class ImageUnderstandingService:
             image_content: 이미지 바이트 데이터
             content_type: MIME 타입
             language: 응답 언어
+            item_count: 생성할 아이템 수 (1~3, U-095)
 
         Returns:
             ScanResult: 분석 결과 (성공 또는 폴백)
@@ -766,9 +739,10 @@ class ImageUnderstandingService:
                     content_type,
                     language,
                     is_retry=is_retry,
+                    item_count=item_count,
                 )
 
-                # 완전 성공 → 즉시 반환
+                # 완전 성공 → 아이템 수 조정 후 반환 (U-095)
                 if result.status == ScanStatus.COMPLETED:
                     if is_retry:
                         logger.info(
@@ -776,7 +750,7 @@ class ImageUnderstandingService:
                             attempt + 1,
                             SCAN_MAX_RETRIES + 1,
                         )
-                    return result
+                    return _adjust_item_count(result, item_count)
 
                 # 안전 차단 → 재시도 불가, 즉시 반환
                 if result.status == ScanStatus.BLOCKED:
@@ -837,16 +811,19 @@ class ImageUnderstandingService:
         language: Language,
         *,
         is_retry: bool = False,
+        item_count: int = 1,
     ) -> ScanResult:
         """단일 비전 모델 API 호출을 실행합니다.
 
         U-094: 재시도 시 JSON 형식 강조 지시를 프롬프트에 추가합니다.
+        U-095: item_count에 따라 아이템 수 지시를 프롬프트에 추가합니다.
 
         Args:
             image_content: 이미지 바이트 데이터
             content_type: MIME 타입
             language: 응답 언어
             is_retry: 재시도 여부 (True면 JSON 강조 지시 추가)
+            item_count: 생성할 아이템 수 (1~3, U-095)
 
         Returns:
             ScanResult: 파싱된 분석 결과
@@ -854,8 +831,11 @@ class ImageUnderstandingService:
         Raises:
             Exception: API 호출 중 발생한 예외 (호출자에서 재시도/폴백 처리)
         """
-        # 프롬프트 선택 (U-094: 재시도 시 JSON 형식 강조 추가)
-        prompt_text = SCAN_PROMPTS.get(language, SCAN_PROMPT_KO)
+        # 프롬프트 로드 (U-095: 아이템 수 지시 포함)
+        prompt_text = load_prompt("scan", "scan_instructions", language).replace(
+            "{count}", str(item_count)
+        )
+
         if is_retry:
             reinforcement = SCAN_RETRY_REINFORCEMENT.get(
                 language,
