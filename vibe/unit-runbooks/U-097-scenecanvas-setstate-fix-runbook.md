@@ -168,5 +168,5 @@ uv run uvicorn unknown_world.main:app --reload --port 8011
 
 ## 6. 다음 단계
 
-- U-084: 이미지 사이즈 최적화에서 `sceneCanvasSize` store 값을 안전하게 참조 가능
+- ~~U-084~~ (취소됨): 이미지 사이즈 최적화에서 `sceneCanvasSize` store 값을 안전하게 참조 가능
 - U-087: 입력 잠금 유닛에서 SceneCanvas 렌더 안정성이 전제됨

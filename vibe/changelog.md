@@ -1,5 +1,50 @@
 # 로드맵 변경 이력
 
+## 2026-02-08 - cancel/u-084-pixel-art-style
+
+### 변경 요약
+
+**U-084[Mvp] 취소**: 이미지 생성 최적화(픽셀 아트 스타일 + 사이즈 축소 + Scene 높이 조정)를 검토했으나, 기존 Gemini 기본 아트 스타일이 게임 분위기에 더 적합하다고 판단하여 취소. 이미지 사이즈 최적화(1K 프리셋)는 U-085에서 이미 완료되어 별도 작업 불필요. U-124(프로필 씬 이미지)의 U-084 의존성 제거 및 픽셀 아트 전제를 Gemini 기본 스타일로 변경.
+
+### 영향받은 문서
+
+- ✏️ vibe/unit-plans/U-084[Mvp].md: 취소 표기
+- ✏️ vibe/unit-plans/U-124[Mvp].md: Depends에서 U-084 제거, 픽셀 아트 → Gemini 기본 스타일로 변경
+- ✏️ vibe/unit-plans/U-085[Mvp].md: U-084 후속 참조 취소 표기
+- ✏️ vibe/unit-plans/U-097[Mvp].md: U-084 후속 참조 취소 표기
+- ✏️ vibe/unit-results/U-085[Mvp].md: U-084 후속 참조 취소 표기
+- ✏️ vibe/unit-results/U-086[Mvp].md: U-084 후속 참조 제거
+- ✏️ vibe/unit-results/U-097[Mvp].md: U-084 후속 참조 취소 표기
+- ✏️ vibe/unit-runbooks/U-097-scenecanvas-setstate-fix-runbook.md: U-084 참조 취소 표기
+- ✏️ vibe/roadmap.md: U-084 취소, U-124 의존성 갱신, 진행률 재계산(분모 -1)
+- ✏️ vibe/progress.md: U-084 취소 표기
+- ✏️ vibe/changelog.md: 본 변경 이력 추가
+
+### 백로그 변경
+
+**취소**:
+
+- U-084[Mvp]: 이미지 픽셀 스타일 + 사이즈 축소 + Scene 높이 조정 — 기존 아트 스타일 유지 결정
+
+**수정**:
+
+- U-124[Mvp]: Depends 변경 (이전: U-084,U-116 → 이후: U-116), 스타일 지침 변경 (픽셀 아트 → Gemini 기본 스타일)
+
+### 의존성 변경
+
+- U-124[Mvp]: Depends 변경 (이전: U-084,U-116 → 이후: U-116)
+
+### 진행률 변화
+
+- 전체: 119/133 (89.5%) → 119/132 (90.2%)
+- MVP: 119/128 (93.0%) → 119/127 (93.7%)
+
+### 리스크 변경
+
+- 없음
+
+---
+
 ## 2026-02-08 - roadmap-update/mvp-reinforce-m6-skip
 
 ### 변경 요약

@@ -7,23 +7,23 @@
 | Unit ID   | U-124[Mvp]                                     |
 | Phase     | MVP                                            |
 | 예상 소요 | 45분                                           |
-| 의존성    | U-084[Mvp], U-116[Mvp]                         |
+| 의존성    | U-116[Mvp]                                     |
 | 우선순위  | Medium (데모 첫인상 / 이미지 로딩 대기 제거)   |
 
 ## 작업 목표
 
-데모 프로필 3종(Narrator, Explorer, Tech)의 **첫 번째 씬 이미지를 nanobanana-mcp로 사전 생성**하여, 프로필 시작 직후 Scene Canvas에 **즉시 표시**되도록 한다. U-084에서 정의하는 **픽셀 아트 스타일**을 적용하여 CRT 테마와 조화를 이룬다.
+데모 프로필 3종(Narrator, Explorer, Tech)의 **첫 번째 씬 이미지를 nanobanana-mcp로 사전 생성**하여, 프로필 시작 직후 Scene Canvas에 **즉시 표시**되도록 한다. Gemini 이미지 생성의 **기본 아트 스타일**(다크 판타지/로그라이크 분위기)과 CRT 테마에 조화를 이룬다.
 
 **배경**: 현재 프로필 시작 시 Scene Canvas는 placeholder(기본) 상태로 시작하고, 첫 턴을 진행해야 이미지가 생성된다. 이 과정에서 10~20초의 대기가 발생하여 첫인상이 약해진다. 사전 생성 이미지를 프로필에 포함하면 (1) 시작 즉시 "게임 화면"이 보이고, (2) 심사자에게 "채팅 앱이 아닌 게임"이라는 첫인상을 강화하며, (3) 첫 턴 이미지 생성 지연을 완전히 흡수할 수 있다.
 
 **완료 기준**:
 
 - 3종 프로필 각각에 **고유한 첫 번째 씬 이미지**가 `frontend/public/ui/scenes/` 에 저장됨
-- 이미지 스타일: **16비트 픽셀 아트** (U-084 기준, 제한 팔레트, 레트로 RPG 분위기)
+- 이미지 스타일: Gemini 기본 아트 스타일 (다크 판타지, 로그라이크 분위기, CRT 테마 조화)
 - 이미지 크기: Scene Canvas에 맞는 프리셋 (예: 1024x1024 또는 1280x768)
 - 프로필 시작 시 Scene Canvas에 **사전 생성 이미지가 즉시 표시**됨 (placeholder 대신)
 - 이미지 파일 크기: 각 200KB 이하 권장 (PRD 9.7 성능 예산)
-- `image-rendering: pixelated` CSS가 적용되어 픽셀이 선명하게 표시됨
+- Scene Canvas에 이미지가 자연스럽게 표시됨
 
 ## 영향받는 파일
 
@@ -41,7 +41,6 @@
 
 **참조**:
 
-- `vibe/unit-plans/U-084[Mvp].md` - 픽셀 아트 스타일 정의
 - `vibe/unit-plans/U-116[Mvp].md` - 프로필 초기 상태 정리
 - `vibe/prd.md` 9.7절 - UI 이미지 에셋 파이프라인
 - `frontend/public/ui/README.md` - 에셋 SSOT (네이밍/크기/예산)
@@ -51,23 +50,23 @@
 ### 1단계: 씬 이미지 사전 생성 (nanobanana-mcp)
 
 - 각 프로필의 세계관/분위기에 맞는 첫 장면을 nanobanana-mcp로 생성
-- 스타일 지시: U-084의 픽셀 아트 프롬프트 기준 적용
+- 스타일 지시: 다크 판타지/로그라이크 분위기, CRT 테마와 조화
 
 ```
 // Narrator 프로필: 고풍스러운 서재
-"16-bit pixel art style, limited 32-color palette, retro RPG style.
-A mysterious old study room with ancient books, flickering candles,
-a large wooden desk with scrolls, gothic window with moonlight."
+"A mysterious old study room with ancient books, flickering candles,
+a large wooden desk with scrolls, gothic window with moonlight,
+dark fantasy style, atmospheric lighting, cinematic composition."
 
 // Explorer 프로필: 미지의 동굴 입구
-"16-bit pixel art style, limited 32-color palette, retro RPG style.
-Entrance of an unknown cave with torchlight, mist flowing out,
-stone pillars with mysterious symbols, adventurer's equipment nearby."
+"Entrance of an unknown cave with torchlight, mist flowing out,
+stone pillars with mysterious symbols, adventurer's equipment nearby,
+dark fantasy style, dramatic lighting, wide shot."
 
 // Tech 프로필: 미래 실험실
-"16-bit pixel art style, limited 32-color palette, retro RPG style.
-A high-tech laboratory with holographic displays, circuit boards,
-glowing tubes and machines, a futuristic control panel."
+"A high-tech laboratory with holographic displays, circuit boards,
+glowing tubes and machines, a futuristic control panel,
+dark sci-fi style, neon cyan accents, atmospheric fog."
 ```
 
 ### 2단계: 이미지 최적화 및 저장
@@ -100,7 +99,7 @@ const PROFILE_NARRATOR: DemoProfile = {
 
 - `sessionLifecycle.ts`의 `startSessionFromProfile()`에서 프로필의 `initialSceneImageUrl`을 `worldStore.sceneState.imageUrl`에 설정
 - `SceneImage.tsx`에서 `imageUrl`이 있으면 placeholder 대신 해당 이미지 표시 (기존 로직 활용)
-- `image-rendering: pixelated` CSS가 적용되어 픽셀 아트가 선명하게 표시
+- 이미지 스타일이 CRT 테마와 조화 확인
 
 ### 5단계: 검증
 
@@ -112,8 +111,8 @@ const PROFILE_NARRATOR: DemoProfile = {
 
 **이전 작업에서 가져올 것**:
 
-- **계획서**: [U-084[Mvp]](U-084[Mvp].md) - 픽셀 아트 스타일 정의 + Scene Canvas 높이 조정
 - **결과물**: [U-116[Mvp]](../unit-results/U-116[Mvp].md) - 프로필 초기 상태 정리 (sceneObjectDefs=[] 등)
+- ~~**계획서**: [U-084[Mvp]](U-084[Mvp].md) - 픽셀 아트 스타일~~ (취소됨, Gemini 기본 스타일 사용)
 
 **다음 작업에 전달할 것**:
 
@@ -127,13 +126,12 @@ const PROFILE_NARRATOR: DemoProfile = {
 - (PRD 9.7) `frontend/public/ui/` SSOT 경로에 저장하여 정적 서빙/캐싱 단순화
 - (PRD 9.7) 에셋 네이밍 규칙: `kebab-case` + 용도 (예: `scene-narrator-start.png`)
 - (PRD 9.7) 전체 에셋 예산 1MB 이하 → 3개 이미지 합산 600KB 이하 목표
-- U-084의 픽셀 아트 스타일과 일관성 유지 → 동일한 팔레트/해상도 기준 적용
+- Gemini 기본 아트 스타일(다크 판타지)과 일관성 유지 → scene_prompt 기준 적용
 - nanobanana-mcp는 Dev-only 도구 → 런타임 의존 없음
 
 **잠재적 리스크**:
 
-- nanobanana-mcp가 픽셀 아트 스타일을 정확히 재현하지 못할 수 있음 → 여러 번 생성 후 최적 결과 선택, 필요 시 스타일 프롬프트 조정
-- 사전 생성 이미지가 첫 턴 GM 생성 이미지와 스타일이 다를 수 있음 → 동일 프롬프트 지침(U-084)을 기준으로 통일
+- nanobanana-mcp 생성 이미지가 Gemini 생성 이미지와 스타일이 다를 수 있음 → scene_prompt 기준으로 프롬프트 통일, 여러 번 생성 후 최적 결과 선택
 - 이미지 크기가 예산을 초과할 수 있음 → PNG 최적화 도구 또는 WebP 변환 고려
 
 ## 페어링 질문 (결정 필요)
@@ -141,7 +139,7 @@ const PROFILE_NARRATOR: DemoProfile = {
 - [ ] **Q1**: 이미지 크기/비율은?
   - Option A: **1024x1024** (1:1, 안정적)
   - Option B: **1280x768** (16:9, Scene Canvas 매칭)
-  - Option C: U-084/U-085의 최종 프리셋에 맞춤
+  - Option C: U-085의 최종 프리셋에 맞춤
 
 - [ ] **Q2**: 각 프로필의 첫 씬 테마는?
   - Option A: 위 제안 (서재/동굴/실험실)
@@ -150,7 +148,6 @@ const PROFILE_NARRATOR: DemoProfile = {
 
 ## 참고 자료
 
-- `vibe/unit-plans/U-084[Mvp].md` - 픽셀 아트 스타일 + Scene 높이
 - `vibe/unit-results/U-116[Mvp].md` - 프로필 초기 상태
 - `vibe/unit-results/U-092[Mvp].md` - 초기 아이템 프리셋 아이콘 (nanobanana-mcp 활용 사례)
 - `vibe/prd.md` 9.7절 - UI 이미지 에셋 파이프라인
