@@ -4,15 +4,15 @@
 
 ## 진행 현황
 
-**전체**: 112/137 (81.8%) | **MVP**: 112/119 (94.1%) | **MMP**: 0/18 (0%)
+**전체**: 113/137 (82.5%) | **MVP**: 113/119 (95.0%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-1 | MMP D-7
+**예상 완료(가정)**: MVP D-0 | MMP D-7
 _U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가)_
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-086[Mvp]](unit-plans/U-086[Mvp].md) 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) / **최근 완료**: [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-087[Mvp]](unit-plans/U-087[Mvp].md) 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 / **최근 완료**: [U-086[Mvp]](vibe/unit-results/U-086[Mvp].md) (2026-02-08)
 
 **블로커**: 없음
 
@@ -168,7 +168,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-086[Mvp]](unit-plans/U-086[Mvp].md) | 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) | Depends=U-066,U-071 | ⏸️
 ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
 ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 생성 최적화 - 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
@@ -202,6 +201,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-086[Mvp]](vibe/unit-results/U-086[Mvp].md): 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) (2026-02-08)
 - ✅ [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md): ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 (2026-02-08)
 - ✅ [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md): UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 (2026-02-08)
 - ✅ [U-082[Mvp]](vibe/unit-results/U-082.md): UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 (2026-02-08)

@@ -91,36 +91,97 @@ describe('NarrativeFeed (U-066: Typewriter Effect)', () => {
     expect(screen.getByText('Current streaming text')).toBeDefined();
   });
 
-  it('isImageLoading일 때 더 느리게 타이핑되어야 한다 (shouldBuyTime)', () => {
-    // 매우 긴 텍스트 사용 (IDLE 모드에서 charsPerTick > 1이 되도록)
-    const longText = 'This is a very long narrative text. '.repeat(20); // 약 720자
-    const entries = [{ turn: 1, text: longText }];
+  it('isImageLoading 상태에 따라 타이핑 완료 시점이 달라져야 한다 (U-086)', () => {
+    // 약 100자 정도의 텍스트 (CPS 계산을 위해)
+    const text =
+      'This is a test narrative text that should take some time to type out completely for testing.'.repeat(
+        2,
+      );
+    const entries = [{ turn: 1, text }];
 
-    // 1. 일반 상태 (IDLE: TARGET_DURATION_MS_IDLE = 8000ms)
-    // CPS = 720 / 8 = 90. MAX_CPS = 80으로 클램핑됨.
-    // charsPerTick = round(80 * 0.032) = round(2.56) = 3.
+    // 1. 이미지 로딩 중 (느린 모드: ~12초 목표)
     const { unmount } = render(
-      <NarrativeFeed entries={entries} streamingText="" isImageLoading={false} />,
+      <NarrativeFeed entries={entries} streamingText="" isImageLoading={true} />,
     );
 
+    // 5초 경과 시점 - 아직 완료되지 않아야 함 (12초 목표이므로)
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(5000);
     });
-    const len1 = screen.getByText(new RegExp(longText.slice(0, 5))).textContent?.length || 0;
+    expect(screen.queryByText(text)).toBeNull();
+
+    // 13초 경과 시점 - 완료되어야 함
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.getByText(text)).toBeDefined();
     unmount();
 
-    // 2. 이미지 로딩 중 (shouldBuyTime: TARGET_DURATION_MS_WHILE_STREAMING = 30000ms)
-    // CPS = 720 / 30 = 24.
-    // charsPerTick = round(24 * 0.032) = round(0.768) = 1.
-    render(<NarrativeFeed entries={entries} streamingText="" isImageLoading={true} />);
+    // 2. 이미지 완료/없음 상태 (빠른 모드: ~2.5초 목표)
+    render(<NarrativeFeed entries={entries} streamingText="" isImageLoading={false} />);
+
+    // 1초 경과 시점 - 아직 미완료
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    const len2 = screen.getByText(new RegExp(longText.slice(0, 5))).textContent?.length || 0;
+    expect(screen.queryByText(text)).toBeNull();
 
-    // 현재 상수 설정(TYPING_TICK_MS=90, MAX_CPS=10)에서는 charsPerTick이 항상 1이 됨.
-    // 따라서 len1과 len2가 같을 수 있음. (U-066 속도 조절 로직 개선 필요)
-    expect(len2).toBeLessThanOrEqual(len1);
+    // 3초 경과 시점 - 완료되어야 함
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByText(text)).toBeDefined();
+  });
+
+  it('타이핑 완료 후 이미지 로딩 중이면 상태 라벨이 표시되고, 로딩 완료 시 사라져야 한다 (U-086)', () => {
+    const text = 'Short text';
+    const entries = [{ turn: 1, text }];
+    const { rerender } = render(
+      <NarrativeFeed entries={entries} streamingText="" isImageLoading={true} />,
+    );
+
+    // 1. 타이핑 완료 전 - 라벨 없음
+    expect(screen.queryByText('narrative.image_pending_label')).toBeNull();
+
+    // 2. 타이핑 완료 - 라벨 노출
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText(text)).toBeDefined();
+    expect(screen.getByText('narrative.image_pending_label')).toBeDefined();
+
+    // 3. 이미지 로딩 완료 - 라벨 제거
+    rerender(<NarrativeFeed entries={entries} streamingText="" isImageLoading={false} />);
+    expect(screen.queryByText('narrative.image_pending_label')).toBeNull();
+  });
+
+  it('타이핑 중 이미지가 도착하면 속도가 빨라져야 한다 (U-086)', () => {
+    const longText = 'Very long text... '.repeat(30);
+    const entries = [{ turn: 1, text: longText }];
+    const { rerender } = render(
+      <NarrativeFeed entries={entries} streamingText="" isImageLoading={true} />,
+    );
+
+    // 2초 경과 (느린 모드)
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    const lenAt2s = screen.queryByText(/Very long/)?.textContent?.length || 0;
+
+    // 이미지가 도중에 도착함
+    rerender(<NarrativeFeed entries={entries} streamingText="" isImageLoading={false} />);
+
+    // 1초 더 경과 (이제 빠른 모드이므로 훨씬 더 많이 출력되어야 함)
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    const lenAt3s = screen.queryByText(/Very long/)?.textContent?.length || 0;
+
+    const progressAfterImage = lenAt3s - lenAt2s;
+    const progressBeforeImage = lenAt2s;
+
+    // 1초(빠른 모드) 진행분이 2초(느린 모드) 진행분보다 많아야 함 (12s vs 2.5s 비율상)
+    expect(progressAfterImage).toBeGreaterThan(progressBeforeImage / 2);
   });
 
   it('action_log 타입의 엔트리는 ▶ 아이콘과 함께 표시되어야 한다 (U-070)', () => {

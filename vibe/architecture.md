@@ -665,3 +665,21 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
     - **Request Injection**: `turnRunner.ts`에서 비동기 이미지 잡 실행 시점에 스토어의 현재 캔버스 크기를 읽어 최적화된 `aspectRatio`와 `imageSize`를 주입함.
     - **Gemini Config Integration**: 백엔드 `image_generation.py`에서 전달받은 옵션을 `GenerateContentConfig`의 `image_config`로 매핑하여 호출함으로써 모델의 출력이 UI 레이아웃에 밀착되도록 강제함.
     - **SDK Schema Migration**: 이미지 크기 단위를 픽셀 기반 문자열에서 SDK 표준인 `1K/2K/4K` 체계로 마이그레이션하여 모델 호환성과 생성 효율을 극대화함.
+
+---
+
+## 54. 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력 (U-086[Mvp])
+
+1. **텍스트 우선 출력 흐름 (Text-first Delivery)**:
+    - **Non-blocking Flow**: 텍스트 생성 완료(`onFinal`) 즉시 이미지 생성 완료를 기다리지 않고 NarrativeFeed 타이핑을 트리거함. 
+    - **TTFB 최적화**: 사용자는 턴 실행 후 1~2초 내에 첫 텍스트 피드백을 수신하게 되어, 이미지 생성 지연(10~15초)을 인지하지 못하도록 설계함.
+2. **동적 가변 속도 타이핑 엔진 (Adaptive Typewriter)**:
+    - **isImageLoading 구독**: 이미지 생성 진행 여부에 따라 타이핑 속도를 실시간으로 조정함.
+    - **Time-buying 모드**: 이미지 생성 중에는 `TARGET_DURATION_MS_WHILE_STREAMING`(12s)을 목표로 아주 느리게 출력하여 지연을 자연스럽게 흡수함.
+    - **Catch-up 모드**: 이미지가 도착하면 남은 텍스트를 `TARGET_DURATION_MS_IDLE`(2.5s) 기반의 빠른 속도로 전환하여 흐름을 즉시 종결함.
+3. **이미지 Pending 상태 라벨 및 커서**:
+    - **Status Feedback**: 텍스트 타이핑이 끝났음에도 이미지가 미도착 상태인 경우, 피드 하단에 "이미지 형성 중…▌" 시스템 메시지를 노출함.
+    - **Blink Cursor**: 마젠타 색상의 블링크 커서를 통해 시스템이 멈춘 것이 아니라 "처리 중"임을 시각적으로 증명함.
+4. **접근성 및 일관성 가드 (A11y & Consistency)**:
+    - **Reduced Motion**: `prefers-reduced-motion` 감지 시 모든 타이핑 및 커서 애니메이션을 정적 상태로 전환함.
+    - **Late-binding Guard**: 텍스트 우선 출력 시 발생할 수 있는 턴 아이디 불일치 문제를 `sceneRevision` 가드로 방어하여 장면 오염 방지.

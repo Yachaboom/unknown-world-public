@@ -1,41 +1,38 @@
 # 프로젝트 진행 상황
 
-## [2026-02-08 22:45] U-085[Mvp]: ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 완료
+## [2026-02-08 23:30] U-086[Mvp]: 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) 완료
 
 ### 구현 완료 항목
 
-- **핵심 기능**: Scene Canvas 표시 크기(px) 기반 `aspect_ratio` 및 `image_size` 자동 선택, Gemini `image_config` 연동, 이미지 크기 규격 마이그레이션(1K/2K/4K).
-- **추가 컴포넌트**: `vibe/unit-results/U-085[Mvp].md` (보고서), `vibe/unit-runbooks/U-085-image-size-layout-fit-runbook.md` (런북), `frontend/src/utils/imageSizing.ts` (유틸리티).
-- **달성 요구사항**: [PRD 6.3] 멀티모달 게이트, [RULE-002] 게임 UI 고정 레이아웃 강화, [RULE-011] UI 오버레이 정합성 확보.
+- **핵심 기능**: 텍스트 생성 즉시 타이핑 시작(이미지 대기 제거), 동적 타이핑 속도(12s/2.5s) 전환, 이미지 미도착 시 "이미지 형성 중…" 상태 라인 및 깜빡이는 커서 피드백.
+- **추가 컴포넌트**: `vibe/unit-results/U-086[Mvp].md` (보고서), `vibe/unit-runbooks/U-086-text-first-typing-runbook.md` (런북).
+- **달성 요구사항**: [RULE-008] 텍스트 우선 + Lazy 이미지 원칙 고도화, [R-013] 이미지 생성 지연 흡수 및 late-binding 정합성 확보, [NFR-UX-01] 접근성(prefers-reduced-motion) 준수.
 
 ### 기술적 구현 세부사항
 
-**이미지-레이아웃 정합 전략**:
-- **Dynamic Sizing SSOT**: `worldStore`에 `sceneCanvasSize` 상태를 도입하고 `ResizeObserver`를 통해 실시간 UI 크기 변화를 스토어에 동기화.
-- **Aspect Ratio Snapping**: 21:9부터 9:16까지 10종의 지원 비율 맵을 구성하여, 측정된 캔버스 비율과 가장 근접한 생성 옵션을 자동 선택하도록 설계.
-- **SDK Protocol Alignment**: 이미지 크기 단위를 픽셀 문자열에서 SDK 규격(1K)으로 전환하고, 백엔드에서 `GenerateContentConfig`를 통해 모델 출력 비율을 강제함으로써 레터박싱 최소화.
-- **Graceful Normalization**: 프론트/백엔드 양측에 정규화 로직을 배치하여 레거시 요청과의 호환성을 유지하면서 점진적 마이그레이션 수행.
+**Text-first Delivery 전략**:
+- **Non-blocking Flow**: 텍스트 생성(onFinal) 즉시 UI 갱신을 트리거하여 타이핑을 시작하고, 이미지는 백그라운드에서 별도 잡으로 진행함으로써 TTFB 체감 지연 최소화.
+- **Adaptive Typing Engine**: `isImageLoading` 상태를 실시간 구독하여, 이미지가 처리 중일 때는 CPS를 낮춰 출력 시간을 늘리고(지연 흡수), 도착 시 즉시 빠른 모드로 전환하여 흐름 연결.
+- **Visual Feedback Invariant**: 타이핑 완료 후에도 이미지가 펜딩 상태이면 `narrative.image_pending_label`과 블링크 커서를 노출하여 시스템의 진행 상태를 명확히 전달.
+- **A11y Guard**: `prefers-reduced-motion` 미디어 쿼리를 감지하여 타이핑 효과와 커서 애니메이션을 정적 표시로 대체, 접근성 보장.
 
 **코드 구조**:
 repo-root/
-├── frontend/src/
-│   ├── utils/imageSizing.ts (비율/크기 선택 알고리즘)
-│   ├── stores/worldStore.ts (Canvas 크기 상태 관리)
-│   ├── components/SceneCanvas.tsx (크기 측정 및 동기화)
-│   └── turn/turnRunner.ts (이미지 잡 실행 시 최적화 값 주입)
-└── backend/src/unknown_world/
-    ├── services/image_generation.py (Gemini Config 연동)
-    └── storage/validation.py (SDK 규격 정규화 헬퍼)
+└── frontend/src/
+    ├── components/NarrativeFeed.tsx (가변 속도 타이핑 및 상태 라벨 엔진)
+    ├── App.tsx (이미지 로딩 상태 prop 주입)
+    ├── turn/turnRunner.ts (텍스트 우선 UI 갱신 로직)
+    └── style.css (Pending 라인 및 커서 애니메이션)
 
 ### 성능 및 품질 지표
 
-- **UI 정합성**: 장면 전환 시 Scene Canvas 영역에 여백 없이 꽉 찬 이미지가 생성되어 시각적 일관성 향상.
-- **안정성**: 0x0 크기 측정 등 예외 상황 시 16:9 기본값 폴백으로 크래시 방지.
+- **체감 지연**: 이미지 생성 대기(10~15초) 동안 텍스트가 꾸준히 출력되어 "시스템 멈춤" 오해 100% 방지.
+- **정합성**: late-binding 가드를 통해 이미지가 타이핑 도중 또는 완료 후에 자연스럽게 안착.
 
 ### 다음 단계
 
-- **U-086[Mvp]**: 턴 진행 피드백 보강 - 타이핑 효과와 이미지 생성 지연 동기화
 - **U-087[Mvp]**: 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금
+- **U-084[Mvp]**: 이미지 생성 최적화 (픽셀 스타일/사이즈/영역 조정)
 - **CP-MVP-03**: 10분 데모 루프 통합 검증
 
 ---

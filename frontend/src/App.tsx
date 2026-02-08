@@ -474,7 +474,13 @@ function App() {
             {/* U-078: 목표 미니 트래커 (항상 상단에 표시, Q2: Option B) */}
             <ObjectiveTracker />
             <SceneCanvas onHotspotClick={handleHotspotClick} />
-            <NarrativeFeed entries={narrativeEntries} streamingText={narrativeBuffer} />
+            {/* U-086: isStreaming/isImageLoading 전달 → 텍스트 우선 타이핑 + 이미지 pending 상태 라인 */}
+            <NarrativeFeed
+              entries={narrativeEntries}
+              streamingText={narrativeBuffer}
+              isStreaming={isStreaming}
+              isImageLoading={worldStore.sceneState.imageLoading === true}
+            />
           </main>
 
           {/* U-082: 우측 사이드바 - Agent Console 축소 + Economy HUD flex-1 확대

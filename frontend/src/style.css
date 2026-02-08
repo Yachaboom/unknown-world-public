@@ -2710,6 +2710,33 @@ button:disabled,
 }
 
 /* ============================================
+   17.2 U-086: 이미지 pending 상태 라인
+   - 타이핑 완료 후 이미지 생성 대기 중 표시
+   - RULE-002: 게임 로그 시스템 메시지 (채팅 버블 아님)
+   - 단순 DOM 1개 (성능)
+   ============================================ */
+
+.image-pending-line {
+  padding: var(--spacing-xs) 0;
+  border-bottom: none;
+  opacity: 0.8;
+}
+
+.image-pending-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-style: italic;
+  text-shadow: 0 0 4px var(--text-dim);
+}
+
+.image-pending-cursor {
+  animation: blink 1s infinite;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-left: 2px;
+}
+
+/* ============================================
    18. 액션 카드 비활성화 상태
    ============================================ */
 
@@ -3121,6 +3148,12 @@ button:disabled,
   .cursor-blink {
     animation: none;
     opacity: 1;
+  }
+
+  /* U-086: 이미지 pending 커서 애니메이션 비활성화 */
+  .image-pending-cursor {
+    animation: none;
+    opacity: 0.7;
   }
 
   /* 스핀 애니메이션 비활성화 */

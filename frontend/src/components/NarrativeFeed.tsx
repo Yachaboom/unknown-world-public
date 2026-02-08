@@ -1,12 +1,13 @@
 /**
- * Unknown World - NarrativeFeed 컴포넌트 (U-066: 타이핑 효과)
+ * Unknown World - NarrativeFeed 컴포넌트 (U-066 + U-086: 텍스트 우선 타이핑 출력)
  *
  * 내러티브 텍스트에 타이핑(Typewriter) 효과를 적용하여,
  * 이미지 생성 지연을 자연스럽게 흡수합니다.
  *
- * 설계 원칙:
- *   - 스트리밍/로딩 중: 느린 타이핑 속도 (TARGET_DURATION ~12초)
- *   - 유휴 상태: 빠른 타이핑 속도 (TARGET_DURATION ~2.5초)
+ * 설계 원칙 (U-086):
+ *   - 이미지 생성 중(isImageLoading): 느린 타이핑 속도 (~12초에 걸쳐 출력)
+ *   - 이미지 완료/없음: 빠른 타이핑 속도 (~2.5초)
+ *   - 타이핑 완료 후에도 이미지 미도착 시: "이미지 형성 중…" 상태 라인 표시
  *   - Fast-forward: 클릭/Enter/Space로 즉시 전체 표시
  *   - 접근성: prefers-reduced-motion 설정 존중
  *
@@ -18,23 +19,29 @@ import { useTranslation } from 'react-i18next';
 import type { NarrativeEntry } from '../stores/worldStore';
 
 // =============================================================================
-// 상수 정의 (U-066)
+// 상수 정의 (U-066 + U-086)
 // =============================================================================
 
-/** 타이핑 인터벌 (ms) - 타자기 리듬감을 위해 90ms */
-const TYPING_TICK_MS = 90;
+/** 타이핑 인터벌 (ms) - ~30fps로 부드러운 타이핑 연출 */
+const TYPING_TICK_MS = 32;
 
-/** 스트리밍/로딩 중 느린 모드 목표 시간 (ms) - 이미지 생성 대기 중 천천히 */
-const TARGET_DURATION_MS_WHILE_STREAMING = 30000;
+/**
+ * 이미지 생성 중 느린 모드 목표 시간 (ms)
+ * U-086 Q1 Option A: isImageLoading이면 무조건 느린 모드 (~12초 목표, 체감 우선)
+ */
+const TARGET_DURATION_MS_WHILE_STREAMING = 12000;
 
-/** 유휴 상태 목표 시간 (ms) - 타자기 느낌 유지 */
-const TARGET_DURATION_MS_IDLE = 20000;
+/**
+ * 유휴 상태(이미지 완료/없음) 빠른 모드 목표 시간 (ms)
+ * 이미지가 도착하면 남은 텍스트를 빠르게 출력
+ */
+const TARGET_DURATION_MS_IDLE = 2500;
 
-/** 최소 CPS (characters per second) - 매우 느린 타이핑 허용 */
-const MIN_CPS = 3;
+/** 최소 CPS (characters per second) - 매우 긴 텍스트에서도 최소 속도 보장 */
+const MIN_CPS = 10;
 
-/** 최대 CPS - 타자기 속도 (초당 10글자, 타닥타닥 느낌) */
-const MAX_CPS = 10;
+/** 최대 CPS - 짧은 텍스트도 빠르게 표시 가능 */
+const MAX_CPS = 400;
 
 // =============================================================================
 // 유틸리티 함수
@@ -282,6 +289,23 @@ export function NarrativeFeed({
           </span>
           <span className="narrative-text">{visibleText}</span>
           {isTyping && <span className="cursor-blink">▌</span>}
+        </div>
+      )}
+
+      {/* U-086: 이미지 pending 상태 라인
+          타이핑이 완료된 후에도 이미지가 아직 생성 중이면 대기 이유를 명확히 표시.
+          RULE-002: 게임 로그 시스템 메시지 스타일 (채팅 버블 아님)
+          RULE-006: i18n 키 기반 메시지 */}
+      {!isTyping && !streamingText && isImageLoading && (
+        <div
+          className="narrative-entry system-entry image-pending-line"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="image-pending-label">{t('narrative.image_pending_label')}</span>
+          <span className="image-pending-cursor" aria-hidden="true">
+            ▌
+          </span>
         </div>
       )}
     </div>

@@ -449,7 +449,8 @@
     "turn_label": "[TURN {{turn}}]",
     "streaming_label": "[STREAMING]",
     "fast_forward_title": "Click to fast-forward",
-    "fast_forward_aria": "Click or press Enter/Space to display text instantly"
+    "fast_forward_aria": "Click or press Enter/Space to display text instantly",
+    "image_pending_label": "Forming image…"
   },
   "action_log": {
     "use_item_on_hotspot": "Action: Use {{item}} on {{hotspot}}",
