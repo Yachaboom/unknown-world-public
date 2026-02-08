@@ -1,5 +1,38 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 23:55] U-097[Mvp]: ⚡핫픽스 - SceneCanvas 렌더 중 Zustand setState 호출 분리 (첫 요청 차단 해소) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: `SceneCanvas` 컴포넌트의 렌더링 중 상태 업데이트 오류(React Warning) 수정, 프로필 선택 후 첫 턴 요청 차단 현상 해소.
+- **추가 컴포넌트**: `vibe/unit-results/U-097[Mvp].md` (보고서).
+- **달성 요구사항**: [RULE-002] 게임 UI 레이아웃 안정성 확보, [U-097] 렌더링 사이클 무결성 준수.
+
+### 기술적 구현 세부사항
+
+**Side-Effect Isolation (렌더링 안정화)**:
+- **State Update Decoupling**: `ResizeObserver` 콜백 내에서 `setCanvasSize`(로컬 상태)와 `setSceneCanvasSize`(Zustand store)를 동시에 업데이트하던 구조를 분리.
+- **Sequential Sync Pipeline**: 로컬 상태 변경을 감지하는 별도의 `useEffect`를 통해 store 업데이트를 수행함으로써, React의 "Cannot update a component while rendering" 금지 패턴을 원천 차단.
+- **Initial Mount Invariant**: 컴포넌트 마운트 시의 초기 크기 측정 로직에서도 동일한 순차적 동기화 방식을 적용하여 부팅 시점의 안정성 확보.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    └── components/SceneCanvas.tsx (ResizeObserver 콜백 및 useEffect 동기화 로직 수정)
+
+### 성능 및 품질 지표
+
+- **런타임 안정성**: 브라우저 콘솔의 React 렌더링 경고 0건 달성.
+- **UX**: 프로필 선택 직후 첫 번째 액션이 차단 없이 즉시 실행됨을 확인.
+
+### 다음 단계
+
+- **U-087[Mvp]**: 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금
+- **U-084[Mvp]**: 이미지 생성 최적화 (픽셀 스타일/사이즈/영역 조정)
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-08 23:30] U-086[Mvp]: 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) 완료
 
 ### 구현 완료 항목

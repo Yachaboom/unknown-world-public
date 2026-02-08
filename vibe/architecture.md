@@ -100,6 +100,7 @@ vibe/unit-results/U-088[Mvp].md
 vibe/unit-results/U-094[Mvp].md
 vibe/unit-results/U-095[Mvp].md
 vibe/unit-results/U-096[Mvp].md
+vibe/unit-results/U-097[Mvp].md
 ```
 
 ### 주요 디렉토리 설명
@@ -683,3 +684,17 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 4. **접근성 및 일관성 가드 (A11y & Consistency)**:
     - **Reduced Motion**: `prefers-reduced-motion` 감지 시 모든 타이핑 및 커서 애니메이션을 정적 상태로 전환함.
     - **Late-binding Guard**: 텍스트 우선 출력 시 발생할 수 있는 턴 아이디 불일치 문제를 `sceneRevision` 가드로 방어하여 장면 오염 방지.
+
+---
+
+## 55. SceneCanvas 렌더 중 Zustand setState 호출 분리 (U-097[Mvp])
+
+1. **렌더링 안정성 확보 (Side-Effect Isolation)**:
+    - **Problem**: `ResizeObserver` 콜백 내에서 `setCanvasSize`(useState) 업데이터 함수를 실행하고, 그 내부에서 `setSceneCanvasSize`(Zustand)를 호출함으로써 React의 렌더링 중 상태 업데이트 금지 원칙을 위반함.
+    - **Solution**: 로컬 상태 업데이트와 글로벌 스토어 동기화 사이클을 물리적으로 분리함.
+2. **순차적 상태 동기화 파이프라인**:
+    - **Local First**: `ResizeObserver`는 캔버스의 크기 변화를 감지하여 오직 로컬 `canvasSize` 상태만을 갱신함.
+    - **Global Sync**: 별도의 `useEffect`가 `canvasSize`의 변경을 구독(Subscribe)하고, 렌더링이 완료된 후 다음 사이클에서 `setSceneCanvasSize`를 호출하여 Zustand 스토어에 전파함.
+3. **첫 요청 차단 버그 해소**:
+    - **Initial Mount Stability**: 프로필 선택 직후 초기 크기를 측정하는 로직에서도 동일한 분리 패턴을 적용하여, 부팅 시점에 발생하던 React 경고와 이로 인한 마이크로태스크 차단 현상을 원천 해결함.
+    - **Invariant Compliance**: 1프레임의 지연이 발생하지만, `ResizeObserver`에 이미 100ms 디바운스가 적용되어 있어 실질적인 게임플레이 정합성에는 영향이 없음.

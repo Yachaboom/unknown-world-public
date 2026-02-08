@@ -4,17 +4,18 @@
  * 내러티브 텍스트에 타이핑(Typewriter) 효과를 적용하여,
  * 이미지 생성 지연을 자연스럽게 흡수합니다.
  *
- * 설계 원칙 (U-086):
- *   - 이미지 생성 중(isImageLoading): 느린 타이핑 속도 (~12초에 걸쳐 출력)
- *   - 이미지 완료/없음: 빠른 타이핑 속도 (~2.5초)
+ * 설계 원칙 (U-086 + streaming buffering):
+ *   - 스트리밍 중: useStreamingTypewriter로 서버 속도와 무관하게 ~12초에 걸쳐 점진 출력
+ *   - 스트리밍 종료 후: useTypewriter로 entries 텍스트 이어서 타이핑
+ *   - 이미지 생성 중(isImageLoading): 느린 타이핑 속도
  *   - 타이핑 완료 후에도 이미지 미도착 시: "이미지 형성 중…" 상태 라인 표시
- *   - Fast-forward: 클릭/Enter/Space로 즉시 전체 표시
+ *   - fast-forward 없음: 항상 점진 출력
  *   - 접근성: prefers-reduced-motion 설정 존중
  *
  * @module components/NarrativeFeed
  */
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NarrativeEntry } from '../stores/worldStore';
 
@@ -66,6 +67,83 @@ interface NarrativeFeedProps {
 }
 
 // =============================================================================
+// 커스텀 훅: useStreamingTypewriter (스트리밍 텍스트 버퍼링)
+// =============================================================================
+
+/**
+ * 스트리밍 중인 텍스트를 점진적으로 표시하는 훅.
+ *
+ * 서버에서 narrative_delta가 빠르게 도착해도 화면에는 CPS 제한에 따라
+ * 천천히 표시되어 이미지 생성 시간(~10초)을 자연스럽게 흡수합니다.
+ * fast-forward 기능 없음 — 항상 점진 출력.
+ *
+ * @param streamingText - 서버에서 누적된 스트리밍 텍스트 (빈 문자열이면 비활성)
+ * @returns displayedText, displayedLen, isTyping
+ */
+function useStreamingTypewriter(streamingText: string) {
+  const [displayedLen, setDisplayedLen] = useState(0);
+
+  // prefers-reduced-motion 감지
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  // 새로운 스트리밍이 시작될 때만 displayedLen 리셋
+  const [prevStreaming, setPrevStreaming] = useState(streamingText);
+  if (streamingText && !prevStreaming) {
+    setPrevStreaming(streamingText);
+    setDisplayedLen(0);
+  } else if (streamingText !== prevStreaming) {
+    setPrevStreaming(streamingText);
+  }
+
+  // CPS 계산: 현재 버퍼 길이 기준으로 목표 시간에 맞춤
+  const charsPerTick = useMemo(() => {
+    if (!streamingText || streamingText.length === 0) return 1;
+    const cps = clamp(
+      streamingText.length / (TARGET_DURATION_MS_WHILE_STREAMING / 1000),
+      MIN_CPS,
+      MAX_CPS,
+    );
+    return Math.max(1, Math.round((cps * TYPING_TICK_MS) / 1000));
+  }, [streamingText]);
+
+  // 타이핑 루프
+  useEffect(() => {
+    if (!streamingText || prefersReducedMotion) return;
+    if (displayedLen >= streamingText.length) return;
+
+    const intervalId = setInterval(() => {
+      setDisplayedLen((prev) => {
+        const next = prev + charsPerTick;
+        return next >= streamingText.length ? streamingText.length : next;
+      });
+    }, TYPING_TICK_MS);
+
+    return () => clearInterval(intervalId);
+  }, [streamingText, displayedLen, charsPerTick, prefersReducedMotion]);
+
+  const displayedText = useMemo(() => {
+    if (!streamingText) return '';
+    if (prefersReducedMotion) return streamingText;
+    return streamingText.slice(0, displayedLen);
+  }, [streamingText, displayedLen, prefersReducedMotion]);
+
+  const isTyping = !!streamingText && displayedLen < streamingText.length && !prefersReducedMotion;
+
+  return { displayedText, displayedLen, isTyping };
+}
+
+// =============================================================================
 // 커스텀 훅: useTypewriter (U-066)
 // =============================================================================
 
@@ -74,12 +152,12 @@ interface NarrativeFeedProps {
  *
  * @param targetText - 타이핑 대상 텍스트
  * @param shouldBuyTime - 느린 타이핑 모드 사용 여부
+ * @param initialLength - 이미 표시된 문자 수 (스트리밍 후 전환 시 재타이핑 방지, U-097)
  * @returns 타이핑 상태 및 제어 함수
  */
-function useTypewriter(targetText: string, shouldBuyTime: boolean) {
+function useTypewriter(targetText: string, shouldBuyTime: boolean, initialLength: number = 0) {
   const [typedLen, setTypedLen] = useState(0);
-  const [fastForward, setFastForward] = useState(false);
-  const [lastTargetText, setLastTargetText] = useState('');
+  const [lastTargetText, setLastTargetText] = useState(targetText);
 
   // prefers-reduced-motion 감지
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
@@ -114,29 +192,22 @@ function useTypewriter(targetText: string, shouldBuyTime: boolean) {
   }, []);
 
   // 타이핑 대상 텍스트가 변경되면 상태 초기화
-  // 외부 데이터(targetText) 변경에 대한 동기화이므로 eslint 규칙 예외 적용
-  useEffect(() => {
-    if (targetText !== lastTargetText) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 외부 데이터 동기화
-      setLastTargetText(targetText);
-      setTypedLen(0);
-      setFastForward(false);
-    }
-  }, [targetText, lastTargetText]);
+  // U-097: initialLength가 있으면 이미 표시된 위치부터 시작 (스트리밍→entries 전환 시 플래시 방지)
+  if (targetText !== lastTargetText) {
+    setLastTargetText(targetText);
+    const startPos = initialLength > 0 ? Math.min(initialLength, targetText.length) : 0;
+    setTypedLen(startPos);
+  }
 
   // 타이핑 루프
   useEffect(() => {
-    // reduced-motion이거나 fastForward면 즉시 전체 표시
-    const shouldSkipTyping = prefersReducedMotion || fastForward;
-
     // 이미 완료된 경우
     if (typedLen >= targetText.length) {
       return;
     }
 
-    // 애니메이션 비활성화 시 즉시 완료
-    if (shouldSkipTyping) {
-      // 다음 프레임에서 상태 업데이트 (렌더링 중 setState 방지)
+    // reduced-motion이면 즉시 완료
+    if (prefersReducedMotion) {
       const rafId = requestAnimationFrame(() => {
         setTypedLen(targetText.length);
       });
@@ -151,23 +222,22 @@ function useTypewriter(targetText: string, shouldBuyTime: boolean) {
     }, TYPING_TICK_MS);
 
     return () => clearInterval(intervalId);
-  }, [targetText, typedLen, charsPerTick, prefersReducedMotion, fastForward]);
+  }, [targetText, typedLen, charsPerTick, prefersReducedMotion]);
 
   // 표시할 텍스트 계산
   const visibleText = useMemo(() => {
-    if (prefersReducedMotion || fastForward) {
+    if (prefersReducedMotion) {
       return targetText;
     }
     return targetText.slice(0, typedLen);
-  }, [targetText, typedLen, prefersReducedMotion, fastForward]);
+  }, [targetText, typedLen, prefersReducedMotion]);
 
   // 타이핑 진행 중인지 여부
-  const isTyping = typedLen < targetText.length && !prefersReducedMotion && !fastForward;
+  const isTyping = typedLen < targetText.length && !prefersReducedMotion;
 
   return {
     visibleText,
     isTyping,
-    fastForward: () => setFastForward(true),
   };
 }
 
@@ -178,71 +248,71 @@ function useTypewriter(targetText: string, shouldBuyTime: boolean) {
 export function NarrativeFeed({
   entries,
   streamingText,
-  isStreaming = false,
+  isStreaming: _isStreaming = false, // U-097: prop 유지 (향후 사용 가능, API 호환성)
   isImageLoading = false,
 }: NarrativeFeedProps) {
   const { t } = useTranslation();
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // U-066: 타이핑 대상 텍스트 결정
-  // 스트리밍 중이면 streamingText, 아니면 마지막 entries의 텍스트
-  const targetText = useMemo(() => {
-    if (streamingText) {
-      return streamingText;
+  // 스트리밍 텍스트 버퍼링 타이프라이터
+  const {
+    displayedText: streamingDisplayedText,
+    displayedLen: streamingDisplayedLen,
+    isTyping: isStreamTyping,
+  } = useStreamingTypewriter(streamingText);
+
+  // U-097: 스트리밍에서 실제 화면에 표시된 길이를 추적 (스트리밍→entries 전환 시 재타이핑 방지)
+  const [initialLength, setInitialLength] = useState(0);
+
+  // 스트리밍 종료 감지 및 initialLength 설정
+  const [prevStreamingForInit, setPrevStreamingForInit] = useState(streamingText);
+  if (streamingText !== prevStreamingForInit) {
+    setPrevStreamingForInit(streamingText);
+    if (!streamingText && streamingDisplayedLen > 0) {
+      setInitialLength(streamingDisplayedLen);
     }
-    if (entries.length > 0) {
-      return entries[entries.length - 1].text;
-    }
+  }
+
+  // U-097: typewriter 대상 텍스트 결정
+  // 스트리밍 중: typewriter 사용하지 않음 (streamingText를 직접 표시)
+  // 스트리밍 종료 후: entries의 마지막 텍스트를 typewriter 대상으로 설정
+  const typewriterTarget = useMemo(() => {
+    if (streamingText) return ''; // 스트리밍 중엔 typewriter 불필요
+    if (entries.length > 0) return entries[entries.length - 1].text;
     return '';
   }, [streamingText, entries]);
 
-  // U-066: 시간을 벌어야 하는지 여부 (느린 타이핑)
-  const shouldBuyTime = isStreaming || isImageLoading;
-
-  // U-066: 타이핑 효과 훅 사용
-  const { visibleText, isTyping, fastForward } = useTypewriter(targetText, shouldBuyTime);
-
-  // U-066: Fast-forward 핸들러
-  const handleFastForward = useCallback(() => {
-    if (isTyping) {
-      fastForward();
+  // U-097: initialLength가 사용된 후 리셋 (다음 턴에 영향 방지)
+  useEffect(() => {
+    if (initialLength > 0 && typewriterTarget) {
+      // typewriter가 initialLength를 참조한 후 다음 렌더에서 리셋
+      const raf = requestAnimationFrame(() => setInitialLength(0));
+      return () => cancelAnimationFrame(raf);
     }
-  }, [isTyping, fastForward]);
+  }, [initialLength, typewriterTarget]);
 
-  // U-066: 키보드 이벤트 핸들러
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if ((e.key === 'Enter' || e.key === ' ') && isTyping) {
-        e.preventDefault();
-        fastForward();
-      }
-    },
-    [isTyping, fastForward],
-  );
+  // U-066: 시간을 벌어야 하는지 여부 (느린 타이핑)
+  const shouldBuyTime = isImageLoading;
 
-  // 새 엔트리 추가 시 스크롤
+  // U-066: 타이핑 효과 훅 (스트리밍 중에는 빈 문자열이므로 비활성)
+  const { visibleText, isTyping } = useTypewriter(typewriterTarget, shouldBuyTime, initialLength);
+
+  // 새 엔트리 추가 시 스크롤 (스트리밍 표시 텍스트 변경 시에도 스크롤)
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight;
     }
-  }, [entries, visibleText]);
+  }, [entries, visibleText, streamingDisplayedText]);
 
   // U-066: 마지막 엔트리 타이핑 중 중복 표시 방지
-  // 스트리밍 중이 아닐 때, 마지막 entries와 타이핑 텍스트가 같으면 entries에서 마지막 항목 숨김
   const shouldHideLastEntry = !streamingText && entries.length > 0 && isTyping;
 
+  // U-097: 활성 텍스트 영역 표시 여부
+  // 스트리밍 중이거나 타이핑 중일 때 활성 텍스트 영역을 표시
+  const showActiveTextArea = !!streamingText || shouldHideLastEntry;
+
   return (
-    <div
-      className="narrative-feed"
-      ref={feedRef}
-      onClick={handleFastForward}
-      onKeyDown={handleKeyDown}
-      role="log"
-      aria-live="polite"
-      tabIndex={0}
-      title={isTyping ? t('narrative.fast_forward_title') : undefined}
-      aria-label={isTyping ? t('narrative.fast_forward_aria') : undefined}
-    >
+    <div className="narrative-feed" ref={feedRef} role="log" aria-live="polite">
       {entries.map((entry, index) => {
         // U-066: 마지막 엔트리 타이핑 중 숨김 처리
         const isLastEntry = index === entries.length - 1;
@@ -279,16 +349,17 @@ export function NarrativeFeed({
         );
       })}
 
-      {/* U-066: 타이핑 효과가 적용된 현재 텍스트 */}
-      {(streamingText || shouldHideLastEntry) && (
+      {/* U-097: 활성 텍스트 영역 - 스트리밍 실시간 출력 또는 타이핑 효과 */}
+      {showActiveTextArea && (
         <div className={`narrative-entry ${streamingText ? 'streaming' : 'typing'}`}>
           <span className="narrative-timestamp">
             {streamingText
               ? t('narrative.streaming_label')
               : t('narrative.turn_label', { turn: entries[entries.length - 1]?.turn ?? 0 })}
           </span>
-          <span className="narrative-text">{visibleText}</span>
-          {isTyping && <span className="cursor-blink">▌</span>}
+          {/* 스트리밍 중 → 버퍼링된 텍스트 점진 표시, 아니면 → typewriter 결과 */}
+          <span className="narrative-text">{streamingDisplayedText || visibleText}</span>
+          {(isStreamTyping || isTyping) && <span className="cursor-blink">▌</span>}
         </div>
       )}
 
@@ -296,7 +367,7 @@ export function NarrativeFeed({
           타이핑이 완료된 후에도 이미지가 아직 생성 중이면 대기 이유를 명확히 표시.
           RULE-002: 게임 로그 시스템 메시지 스타일 (채팅 버블 아님)
           RULE-006: i18n 키 기반 메시지 */}
-      {!isTyping && !streamingText && isImageLoading && (
+      {!isTyping && !isStreamTyping && !streamingText && isImageLoading && (
         <div
           className="narrative-entry system-entry image-pending-line"
           role="status"

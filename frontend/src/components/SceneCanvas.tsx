@@ -87,7 +87,8 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 
   // RU-003-S2 Step 3: ResizeObserver에 디바운스 적용
   // 드래그 중 핫스팟 영역이 과도하게 흔들리는 것을 방지
-  // U-085: 측정된 크기를 Store에도 반영 (이미지 사이징 SSOT)
+  // U-097: ResizeObserver 콜백에서는 로컬 상태(setCanvasSize)만 갱신한다.
+  //        Zustand store 갱신(setSceneCanvasSize)은 아래 별도 useEffect로 분리.
   useEffect(() => {
     const element = canvasRef.current;
     if (!element) return;
@@ -106,10 +107,7 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
           // 의미 있는 크기 변화만 적용 (5px 이상 차이)
           setCanvasSize((prev) => {
             if (Math.abs(prev.width - width) > 5 || Math.abs(prev.height - height) > 5) {
-              const newSize = { width, height };
-              // U-085: Store에도 반영 (이미지 잡 실행 시 참조)
-              setSceneCanvasSize(newSize);
-              return newSize;
+              return { width, height };
             }
             return prev;
           });
@@ -119,12 +117,9 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
 
     resizeObserver.observe(element);
 
-    // 초기 크기 설정
+    // 초기 크기 설정 (로컬 상태만)
     const rect = element.getBoundingClientRect();
-    const initialSize = { width: rect.width, height: rect.height };
-    setCanvasSize(initialSize);
-    // U-085: 초기 크기도 Store에 반영
-    setSceneCanvasSize(initialSize);
+    setCanvasSize({ width: rect.width, height: rect.height });
 
     return () => {
       if (resizeTimeout) {
@@ -132,7 +127,16 @@ export function SceneCanvas({ onHotspotClick, disabled: propsDisabled }: SceneCa
       }
       resizeObserver.disconnect();
     };
-  }, [setSceneCanvasSize]);
+  }, []);
+
+  // U-097: canvasSize → Zustand store 동기화 (별도 렌더 사이클)
+  // Q1 Option A: setSceneCanvasSize를 의존성 배열에 포함 (Zustand의 set은 안정 참조, lint 경고 방지)
+  // 이로써 useState 업데이터 내부에서 외부 store를 갱신하는 React 금지 패턴을 회피한다.
+  useEffect(() => {
+    if (canvasSize.width > 0 && canvasSize.height > 0) {
+      setSceneCanvasSize(canvasSize);
+    }
+  }, [canvasSize, setSceneCanvasSize]);
 
   // 핫스팟 클릭 핸들러
   const handleHotspotClick = useCallback(

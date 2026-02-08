@@ -196,6 +196,10 @@ export function createTurnRunner(deps: {
   // U-080: 이미지 생성 요청 중복 방지 (StrictMode 대응)
   let imageJobPending = false;
 
+  // U-097: onFinal에서 보관한 이미지 잡 (onComplete에서 실행)
+  let pendingImageJob: { should_generate: boolean; prompt: string; model_label?: string } | null =
+    null;
+
   // U-089: 정밀분석 오버레이 최소 표시 시간 관리
   let analyzingStartTime = 0;
 
@@ -231,7 +235,10 @@ export function createTurnRunner(deps: {
     };
 
     // 재화 스냅샷 가져오기
-    const economySnapshot = worldStore.economy;
+    // U-097: credit 필드는 EconomyOutput 전용이므로 입력 스냅샷에서 제외
+    // (백엔드 EconomySnapshot은 extra="forbid"로 설정됨)
+    const { signal, memory_shard } = worldStore.economy;
+    const economySnapshot = { signal, memory_shard };
 
     // U-068: 이전 이미지 URL 가져오기 (참조 이미지로 사용)
     const previousImageUrl =
@@ -282,8 +289,16 @@ export function createTurnRunner(deps: {
       onNarrativeDelta: (event) => {
         useAgentStore.getState().handleNarrativeDelta(event);
       },
-      // Final → agentStore.handleFinal + worldStore.applyTurnOutput + U-066 이미지 잡
+      // Final → agentStore.handleFinal + worldStore.applyTurnOutput
+      // U-097: onFinal에서는 텍스트/상태만 반영. 이미지 생성은 onComplete 이후에 시작.
+      //   스트리밍 순서: narrative_delta × N → final → (스트림 종료) → onComplete
+      //   onComplete에서 narrativeBuffer 초기화 후, 이미지 생성을 별도 시작.
+      //   이렇게 하면 사용자가 narrative_delta를 실시간으로 본 후, final로 entries에 확정,
+      //   그 다음에 이미지 생성이 시작되므로 text-first delivery가 보장됨.
       onFinal: (event) => {
+        // U-097: 이미지 잡 정보를 보관 (onComplete에서 사용)
+        pendingImageJob = event.data.render?.image_job ?? null;
+
         useAgentStore.getState().handleFinal(event);
         // U-071: 결과 렌더링 단계로 전환
         useWorldStore.getState().setProcessingPhase('rendering');
@@ -291,77 +306,6 @@ export function createTurnRunner(deps: {
         useWorldStore.getState().applyTurnOutput(event.data);
         // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
         useWorldStore.getState().setConnected(true);
-
-        // U-066: 이미지 잡 비동기 실행 (턴과 분리)
-        // U-080: StrictMode 대응 - 중복 요청 방지
-        const imageJob = event.data.render?.image_job;
-        if (imageJob?.should_generate && imageJob.prompt) {
-          // U-071: 이미지 생성 대기 단계로 전환
-          useWorldStore.getState().setProcessingPhase('image_pending');
-          // 이미 이미지 생성 요청이 진행 중이면 무시 (StrictMode 중복 방지)
-          if (imageJobPending) {
-            return;
-          }
-          imageJobPending = true;
-
-          const worldStore = useWorldStore.getState();
-          const currentTurnId = worldStore.turnCount;
-
-          // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
-          // Q1 결정: 항상 이전 이미지를 참조로 사용 (연속성 최대화)
-          const previousImageUrl =
-            worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
-
-          // 이전 이미지 잡 취소
-          imageJobController?.abort();
-
-          // 이미지 로딩 상태로 전환
-          worldStore.setImageLoading(currentTurnId);
-
-          // 모델 라벨 결정 (U-066 Q2/Q3: time budget 기반 + 프리뷰→최종 업그레이드)
-          // TODO: Key scene 판별 로직 추가 (현재는 기본 QUALITY)
-          const modelLabel: ImageModelLabel = imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
-
-          // U-085: Scene Canvas 크기 기반 aspect_ratio/image_size 선택
-          // Q1 결정: UI 레이아웃 우선 (image_job.aspect_ratio보다 우선)
-          // Q2 결정: image_size는 SDK 값 (1K/2K/4K) 사용
-          const { width: cw, height: ch } = worldStore.sceneCanvasSize;
-          const sizing = selectImageSizing(cw, ch);
-
-          // 이미지 생성 시작
-          // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
-          imageJobController = startImageGeneration(
-            {
-              prompt: imageJob.prompt,
-              language,
-              aspectRatio: sizing.aspectRatio,
-              imageSize: sizing.imageSize,
-              modelLabel,
-              turnId: currentTurnId,
-              referenceImageUrl: previousImageUrl,
-            },
-            (response) => {
-              imageJobPending = false; // 완료 시 플래그 해제
-              // 성공/실패 모두 처리
-              if (response.success && response.imageUrl && response.turnId !== undefined) {
-                // late-binding 가드: turnId가 일치할 때만 적용
-                useWorldStore.getState().applyLateBindingImage(response.imageUrl, response.turnId);
-              } else {
-                // 실패 시 로딩 취소 (이전 이미지 유지)
-                useWorldStore.getState().cancelImageLoading();
-              }
-              // U-071: 이미지 생성 완료 후 idle로 전환
-              useWorldStore.getState().setProcessingPhase('idle');
-            },
-            () => {
-              imageJobPending = false; // 에러 시 플래그 해제
-              // 에러 시 로딩 취소
-              useWorldStore.getState().cancelImageLoading();
-              // U-071: 에러 시에도 idle로 전환
-              useWorldStore.getState().setProcessingPhase('idle');
-            },
-          );
-        }
       },
       // Error → agentStore.handleError + worldStore 상태 복구
       onError: (event) => {
@@ -383,24 +327,83 @@ export function createTurnRunner(deps: {
           useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
         }
       },
-      // Complete → agentStore.completeStream
-      // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
-      // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
-      // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
+      // Complete → agentStore.completeStream + U-097: 이미지 생성 시작
+      // 이 시점에서 narrative_delta 스트리밍이 모두 끝나고 final이 처리된 상태.
+      // narrativeBuffer가 비워지고, entries에 텍스트가 확정된 이후에 이미지 생성을 시작한다.
       onComplete: () => {
         useAgentStore.getState().completeStream();
-        // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
-        // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
-
-        // U-071: 이미지 잡이 없는 경우에만 idle로 전환
-        // 이미지 잡이 있으면 이미지 생성 완료/실패 시 idle로 전환됨
-        if (!imageJobPending) {
-          useWorldStore.getState().setProcessingPhase('idle');
-        }
 
         // U-089: 턴 완료 시 분석 상태 해제 (최소 표시 시간 적용)
         if (visionAnalysis) {
           finishAnalyzing();
+        }
+
+        // U-097: 이미지 잡이 있으면 이 시점에서 비동기 생성 시작 (text-first delivery)
+        // completeStream()으로 narrativeBuffer 초기화 + isStreaming=false 처리 완료 후,
+        // entries에 확정된 텍스트가 NarrativeFeed에 표시된 상태에서 이미지 생성 요청.
+        const job = pendingImageJob;
+        pendingImageJob = null;
+
+        if (job?.should_generate && job.prompt) {
+          // U-080: StrictMode 대응 - 중복 요청 방지
+          if (imageJobPending) {
+            useWorldStore.getState().setProcessingPhase('idle');
+            return;
+          }
+          imageJobPending = true;
+
+          // U-071: 이미지 생성 대기 단계로 전환
+          useWorldStore.getState().setProcessingPhase('image_pending');
+
+          const worldStore = useWorldStore.getState();
+          const currentTurnId = worldStore.turnCount;
+
+          // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
+          const previousImageUrl =
+            worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
+          // 이전 이미지 잡 취소
+          imageJobController?.abort();
+
+          // 이미지 로딩 상태로 전환
+          worldStore.setImageLoading(currentTurnId);
+
+          // 모델 라벨 결정
+          const modelLabel: ImageModelLabel = job.model_label === 'FAST' ? 'FAST' : 'QUALITY';
+
+          // U-085: Scene Canvas 크기 기반 aspect_ratio/image_size 선택
+          const { width: cw, height: ch } = worldStore.sceneCanvasSize;
+          const sizing = selectImageSizing(cw, ch);
+
+          // 이미지 생성 시작
+          imageJobController = startImageGeneration(
+            {
+              prompt: job.prompt,
+              language,
+              aspectRatio: sizing.aspectRatio,
+              imageSize: sizing.imageSize,
+              modelLabel,
+              turnId: currentTurnId,
+              referenceImageUrl: previousImageUrl,
+            },
+            (response) => {
+              imageJobPending = false;
+              if (response.success && response.imageUrl && response.turnId !== undefined) {
+                useWorldStore.getState().applyLateBindingImage(response.imageUrl, response.turnId);
+              } else {
+                useWorldStore.getState().cancelImageLoading();
+              }
+              useWorldStore.getState().setProcessingPhase('idle');
+            },
+            () => {
+              imageJobPending = false;
+              useWorldStore.getState().cancelImageLoading();
+              useWorldStore.getState().setProcessingPhase('idle');
+            },
+          );
+        } else {
+          // 이미지 잡이 없으면 idle로 전환
+          useWorldStore.getState().setProcessingPhase('idle');
         }
       },
     };
@@ -467,6 +470,13 @@ export function useTurnRunner(deps: {
   // U-080: 이미지 생성 요청 중복 방지 (StrictMode 대응)
   const imageJobPendingRef = useRef<boolean>(false);
 
+  // U-097: text-first delivery - 이미지 잡을 onFinal에서 보관, onComplete에서 실행
+  const pendingImageJobRef = useRef<{
+    should_generate: boolean;
+    prompt: string;
+    model_label?: string;
+  } | null>(null);
+
   // U-089: 정밀분석 오버레이 최소 표시 시간 관리
   const analyzingStartTimeRef = useRef<number>(0);
 
@@ -501,7 +511,10 @@ export function useTurnRunner(deps: {
       };
 
       // 재화 스냅샷 가져오기
-      const economySnapshot = worldStore.economy;
+      // U-097: credit 필드는 EconomyOutput 전용이므로 입력 스냅샷에서 제외
+      // (백엔드 EconomySnapshot은 extra="forbid"로 설정됨)
+      const { signal, memory_shard } = worldStore.economy;
+      const economySnapshot = { signal, memory_shard };
 
       // U-068: 이전 이미지 URL 가져오기 (참조 이미지로 사용)
       const previousImageUrl =
@@ -551,94 +564,22 @@ export function useTurnRunner(deps: {
         onNarrativeDelta: (event) => {
           useAgentStore.getState().handleNarrativeDelta(event);
         },
+        // U-097: onFinal에서는 텍스트/상태만 반영. 이미지 생성은 onComplete에서 시작.
         onFinal: (event) => {
+          pendingImageJobRef.current = event.data.render?.image_job ?? null;
+
           useAgentStore.getState().handleFinal(event);
-          // U-071: 결과 렌더링 단계로 전환
           useWorldStore.getState().setProcessingPhase('rendering');
           useWorldStore.getState().applyTurnOutput(event.data);
-          // RU-003-S1: 성공적인 final 수신 시 연결 상태 낙관적 복구
           useWorldStore.getState().setConnected(true);
-
-          // U-066: 이미지 잡 비동기 실행 (턴과 분리)
-          // U-080: StrictMode 대응 - 중복 요청 방지
-          const imageJob = event.data.render?.image_job;
-          if (imageJob?.should_generate && imageJob.prompt) {
-            // 이미 이미지 생성 요청이 진행 중이면 무시 (StrictMode 중복 방지)
-            if (imageJobPendingRef.current) {
-              return;
-            }
-            imageJobPendingRef.current = true;
-
-            // U-071: 이미지 생성 대기 단계로 전환
-            useWorldStore.getState().setProcessingPhase('image_pending');
-
-            const worldStore = useWorldStore.getState();
-            const currentTurnId = worldStore.turnCount;
-
-            // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
-            // Q1 결정: 항상 이전 이미지를 참조로 사용 (연속성 최대화)
-            const previousImageUrl =
-              worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
-
-            // 이전 이미지 잡 취소
-            imageJobControllerRef.current?.abort();
-
-            // 이미지 로딩 상태로 전환
-            worldStore.setImageLoading(currentTurnId);
-
-            // 모델 라벨 결정
-            const modelLabel: ImageModelLabel =
-              imageJob.model_label === 'FAST' ? 'FAST' : 'QUALITY';
-
-            // U-085: Scene Canvas 크기 기반 aspect_ratio/image_size 선택
-            // Q1 결정: UI 레이아웃 우선 (image_job.aspect_ratio보다 우선)
-            // Q2 결정: image_size는 SDK 값 (1K/2K/4K) 사용
-            const { width: cw, height: ch } = worldStore.sceneCanvasSize;
-            const sizing = selectImageSizing(cw, ch);
-
-            // 이미지 생성 시작
-            // U-068: Q2 결정 - FAST 모델에서도 1장 제한으로 참조 이미지 사용
-            imageJobControllerRef.current = startImageGeneration(
-              {
-                prompt: imageJob.prompt,
-                language,
-                aspectRatio: sizing.aspectRatio,
-                imageSize: sizing.imageSize,
-                modelLabel,
-                turnId: currentTurnId,
-                referenceImageUrl: previousImageUrl,
-              },
-              (response) => {
-                imageJobPendingRef.current = false; // 완료 시 플래그 해제
-                if (response.success && response.imageUrl && response.turnId !== undefined) {
-                  useWorldStore
-                    .getState()
-                    .applyLateBindingImage(response.imageUrl, response.turnId);
-                } else {
-                  useWorldStore.getState().cancelImageLoading();
-                }
-                // U-071: 이미지 생성 완료 후 idle로 전환
-                useWorldStore.getState().setProcessingPhase('idle');
-              },
-              () => {
-                imageJobPendingRef.current = false; // 에러 시 플래그 해제
-                useWorldStore.getState().cancelImageLoading();
-                // U-071: 에러 시에도 idle로 전환
-                useWorldStore.getState().setProcessingPhase('idle');
-              },
-            );
-          }
         },
         onError: (event) => {
           useAgentStore.getState().handleError(event);
           useWorldStore.getState().setConnected(false);
-          // U-071: 에러 시 idle로 전환
           useWorldStore.getState().setProcessingPhase('idle');
-          // U-089: 에러 시 분석 상태 해제 (최소 표시 시간 적용)
           if (visionAnalysis) {
             finishAnalyzing();
           }
-          // Scene Canvas를 오프라인/에러 상태로 전환 (U-031)
           const errorCode = event.code;
           if (errorCode === 'SAFETY_BLOCKED') {
             useWorldStore.getState().setSceneState({ status: 'blocked', message: event.message });
@@ -650,24 +591,69 @@ export function useTurnRunner(deps: {
             useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
           }
         },
-        // Complete → agentStore.completeStream
-        // RU-003-T1: sceneState 전이는 worldStore.applyTurnOutput에서 SSOT로 처리
-        // - 성공 시: onFinal → applyTurnOutput에서 ui.scene.image_url 기반으로 설정
-        // - 에러 시: onError에서 이미 offline/blocked/low_signal으로 설정됨
+        // U-097: onComplete에서 이미지 생성 시작 (text-first delivery)
+        // 이 시점에서 narrative_delta 스트리밍 + final 처리가 모두 완료된 상태.
         onComplete: () => {
           useAgentStore.getState().completeStream();
-          // RU-003-T1: sceneState는 applyTurnOutput(성공) 또는 onError(실패)에서 이미 설정됨
-          // 여기서 추가로 설정하면 applyTurnOutput의 설정을 덮어쓰게 되므로 제거
 
-          // U-071: 이미지 잡이 없는 경우에만 idle로 전환
-          // 이미지 잡이 있으면 이미지 생성 완료/실패 시 idle로 전환됨
-          if (!imageJobPendingRef.current) {
-            useWorldStore.getState().setProcessingPhase('idle');
-          }
-
-          // U-089: 턴 완료 시 분석 상태 해제 (최소 표시 시간 적용)
           if (visionAnalysis) {
             finishAnalyzing();
+          }
+
+          // U-097: 이미지 잡이 있으면 이 시점에서 비동기 생성 시작
+          const job = pendingImageJobRef.current;
+          pendingImageJobRef.current = null;
+
+          if (job?.should_generate && job.prompt) {
+            if (imageJobPendingRef.current) {
+              useWorldStore.getState().setProcessingPhase('idle');
+              return;
+            }
+            imageJobPendingRef.current = true;
+
+            useWorldStore.getState().setProcessingPhase('image_pending');
+
+            const worldStore = useWorldStore.getState();
+            const currentTurnId = worldStore.turnCount;
+            const previousImageUrl =
+              worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+
+            imageJobControllerRef.current?.abort();
+            worldStore.setImageLoading(currentTurnId);
+
+            const modelLabel: ImageModelLabel = job.model_label === 'FAST' ? 'FAST' : 'QUALITY';
+            const { width: cw, height: ch } = worldStore.sceneCanvasSize;
+            const sizing = selectImageSizing(cw, ch);
+
+            imageJobControllerRef.current = startImageGeneration(
+              {
+                prompt: job.prompt,
+                language,
+                aspectRatio: sizing.aspectRatio,
+                imageSize: sizing.imageSize,
+                modelLabel,
+                turnId: currentTurnId,
+                referenceImageUrl: previousImageUrl,
+              },
+              (response) => {
+                imageJobPendingRef.current = false;
+                if (response.success && response.imageUrl && response.turnId !== undefined) {
+                  useWorldStore
+                    .getState()
+                    .applyLateBindingImage(response.imageUrl, response.turnId);
+                } else {
+                  useWorldStore.getState().cancelImageLoading();
+                }
+                useWorldStore.getState().setProcessingPhase('idle');
+              },
+              () => {
+                imageJobPendingRef.current = false;
+                useWorldStore.getState().cancelImageLoading();
+                useWorldStore.getState().setProcessingPhase('idle');
+              },
+            );
+          } else {
+            useWorldStore.getState().setProcessingPhase('idle');
           }
         },
       };

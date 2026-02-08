@@ -370,6 +370,7 @@ class ItemIconGenerator:
         self._cache = cache or IconCache()
         self._pending_generations: dict[str, asyncio.Task[IconGenerationResponse]] = {}
         self._completed_urls: dict[str, str] = {}  # item_id -> icon_url (최근 완료된 항목)
+        self._failed_generations: dict[str, str] = {}  # U-097: item_id -> error_message
 
         logger.info("[ItemIconGenerator] 초기화 완료")
 
@@ -478,10 +479,27 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
                 )
                 self._pending_generations[request.item_id] = task
 
-                # 태스크 완료 시 정리 콜백
-                task.add_done_callback(
-                    lambda t, item_id=request.item_id: self._pending_generations.pop(item_id, None)
-                )
+                # U-097: 태스크 완료 시 결과 확인 및 상태 추적
+                def _on_task_done(
+                    t: asyncio.Task[IconGenerationResponse], item_id: str = request.item_id
+                ) -> None:
+                    self._pending_generations.pop(item_id, None)
+                    try:
+                        result = t.result()
+                        if result.status == IconGenerationStatus.FAILED:
+                            self._failed_generations[item_id] = result.message or "생성 실패"
+                            logger.warning(
+                                "[ItemIconGenerator] 백그라운드 아이콘 생성 실패",
+                                extra={"item_id": item_id, "message": result.message},
+                            )
+                    except Exception as exc:
+                        self._failed_generations[item_id] = str(exc)
+                        logger.exception(
+                            "[ItemIconGenerator] 백그라운드 태스크 예외",
+                            extra={"item_id": item_id},
+                        )
+
+                task.add_done_callback(_on_task_done)
 
             elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
             return IconGenerationResponse(
@@ -693,6 +711,10 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
         # 최근 완료된 항목 확인
         if item_id in self._completed_urls:
             return IconGenerationStatus.COMPLETED
+
+        # U-097: 실패한 생성 확인 (백그라운드 태스크 완료 후 실패 추적)
+        if item_id in self._failed_generations:
+            return IconGenerationStatus.FAILED
 
         # 캐시 확인 (request가 있는 경우)
         if request and self._cache.get(request.item_description):

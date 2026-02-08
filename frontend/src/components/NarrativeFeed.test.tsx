@@ -61,17 +61,23 @@ describe('NarrativeFeed (U-066: Typewriter Effect)', () => {
     expect(screen.getByText('Hello World')).toBeDefined();
   });
 
-  it('클릭 시 Fast-forward가 동작하여 즉시 전체 텍스트가 표시되어야 한다', () => {
-    const entries = [{ turn: 1, text: 'This is a long text to test fast forward' }];
+  it('클릭해도 fast-forward 없이 점진적으로 표시되어야 한다', () => {
+    const entries = [{ turn: 1, text: 'This is a long text to test no fast forward' }];
     render(<NarrativeFeed entries={entries} streamingText="" />);
 
     expect(screen.queryByText(entries[0].text)).toBeNull();
 
-    // 클릭 이벤트 발생
+    // 클릭 이벤트 발생 — fast-forward가 제거되었으므로 즉시 표시되지 않아야 함
     const feed = screen.getByRole('log');
     fireEvent.click(feed);
 
-    // 즉시 전체 표시됨
+    // 여전히 전체 텍스트는 표시되지 않음
+    expect(screen.queryByText(entries[0].text)).toBeNull();
+
+    // 충분한 시간 경과 후 전체 표시됨
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
     expect(screen.getByText(entries[0].text)).toBeDefined();
   });
 
@@ -188,8 +194,10 @@ describe('NarrativeFeed (U-066: Typewriter Effect)', () => {
     const entries = [{ turn: 1, text: 'Action log message', type: 'action_log' as const }];
     render(<NarrativeFeed entries={entries} streamingText="" />);
 
-    // Fast-forward로 즉시 표시
-    fireEvent.click(screen.getByRole('log'));
+    // 충분한 시간 경과하여 타이핑 완료
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
 
     expect(screen.getByText('Action log message')).toBeDefined();
     expect(screen.getByText('▶')).toBeDefined();

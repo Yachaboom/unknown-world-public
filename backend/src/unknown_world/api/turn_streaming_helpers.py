@@ -38,8 +38,8 @@ from unknown_world.orchestrator.fallback import create_safe_fallback
 DEFAULT_CHUNK_SIZE = 20
 """내러티브 델타 청크 크기 (문자 수)."""
 
-DEFAULT_TYPING_DELAY_SEC = 0.02
-"""타자 효과 딜레이 (초)."""
+DEFAULT_TYPING_DELAY_SEC = 0.08
+"""타자 효과 딜레이 (초). U-097: 체감 가능한 스트리밍을 위해 0.02→0.08로 조정."""
 
 # =============================================================================
 # 에러 메시지 (i18n)

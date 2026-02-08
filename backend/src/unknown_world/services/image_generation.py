@@ -535,18 +535,30 @@ class ImageGenerator:
                 contents = request.prompt
 
             # U-085: image_config 구성 (aspect_ratio + image_size)
-            # image_size를 SDK 값으로 정규화 (레거시 픽셀 값 호환)
+            # U-097: image_size는 gemini-3-pro-image-preview (Pro) 전용 파라미터.
+            # gemini-2.5-flash-image (Flash)에 전달하면 400 INVALID_ARGUMENT 발생.
+            # 참조: vibe/ref/image-generate-guide.md §"Aspect ratios and image size"
+            #   - Flash: aspect_ratio만 지원, 1024px 고정 해상도
+            #   - Pro: aspect_ratio + image_size(1K/2K/4K) 지원
             sdk_image_size = normalize_image_size(request.image_size)
-            image_config = ImageConfig(
-                aspect_ratio=request.aspect_ratio,
-                image_size=sdk_image_size,
-            )
+            is_pro_model = selected_model_label == ModelLabel.IMAGE
+
+            if is_pro_model:
+                image_config = ImageConfig(
+                    aspect_ratio=request.aspect_ratio,
+                    image_size=sdk_image_size,
+                )
+            else:
+                # Flash 모델: aspect_ratio만 전달
+                image_config = ImageConfig(
+                    aspect_ratio=request.aspect_ratio,
+                )
 
             logger.debug(
                 "[ImageGen] image_config 적용",
                 extra={
                     "aspect_ratio": request.aspect_ratio,
-                    "image_size": sdk_image_size,
+                    "image_size": sdk_image_size if is_pro_model else "(Flash: 고정 1024px)",
                     "model": selected_model_id,
                 },
             )
@@ -637,11 +649,14 @@ class ImageGenerator:
         except Exception as e:
             elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
             error_type = type(e).__name__
+            # U-097: ClientError 등의 상세 원인을 캡처하여 디버깅 지원
+            error_detail = str(e)[:200] if str(e) else "상세 정보 없음"
 
             logger.error(
                 "[ImageGen] 이미지 생성 실패",
                 extra={
                     "error_type": error_type,
+                    "error_detail": error_detail,
                     "elapsed_ms": elapsed_ms,
                 },
             )

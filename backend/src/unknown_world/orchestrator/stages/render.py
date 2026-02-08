@@ -65,12 +65,16 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-async def _execute_image_generation(
+async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUnusedFunction]
     ctx: PipelineContext,
     image_decision: ImageGenerationDecision,
     emit: EmitFn,
 ) -> PipelineContext:
     """이미지 생성을 실행하고 결과를 TurnOutput에 반영합니다.
+
+    U-097: 현재 render_stage에서는 text-first delivery를 위해 이 함수를 호출하지 않음.
+    프론트엔드가 /api/image/generate로 비동기 생성을 수행함.
+    향후 백엔드 사이드 이미지 생성이 필요한 경우(MMP 등) 재활용 가능.
 
     Args:
         ctx: 파이프라인 컨텍스트
@@ -454,18 +458,31 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
                 },
             )
 
-            # U-053: 이미지 생성이 필요한 경우 비동기 호출
-            # U-079: FAST 폴백 포함 (잔액 부족이어도 should_generate=True)
+            # U-097: 이미지 생성은 프론트엔드에서 비동기로 실행 (text-first delivery)
+            # 백엔드에서는 판정 결과(should_generate=True)만 image_job에 유지하고,
+            # 실제 생성은 프론트엔드가 /api/image/generate로 별도 요청한다.
+            # 이를 통해 텍스트 스트리밍이 이미지 생성 완료를 기다리지 않고 즉시 전달된다.
             if image_decision.should_generate:
-                ctx = await _execute_image_generation(
-                    ctx=ctx,
-                    image_decision=image_decision,
-                    emit=emit,
-                )
+                # U-079: 잔액 부족 FAST 폴백 시 model_label 오버라이드를 image_job에 반영
+                if image_decision.model_override and ctx.output.render.image_job is not None:
+                    updated_job = ctx.output.render.image_job.model_copy(
+                        update={"model_label": image_decision.model_override}
+                    )
+                    new_render = ctx.output.render.model_copy(update={"image_job": updated_job})
+                    ctx.output = ctx.output.model_copy(update={"render": new_render})
 
                 # U-079: 잔액 부족 폴백 발생 시 경제 정보 사후 조정
                 if image_decision.is_low_balance_fallback:
                     ctx = _adjust_economy_for_fallback(ctx, image_decision)
+
+                logger.info(
+                    "[Render] U-097: 이미지 생성을 프론트엔드에 위임 (text-first delivery)",
+                    extra={
+                        "should_generate": True,
+                        "model_override": image_decision.model_override,
+                        "is_low_balance_fallback": image_decision.is_low_balance_fallback,
+                    },
+                )
         else:
             logger.debug("[Render] TurnOutput 없음, 이미지 판정 건너뜀")
     else:

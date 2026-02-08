@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 113/140 (80.7%) | **MVP**: 113/122 (92.6%) | **MMP**: 0/18 (0%)
+**전체**: 114/141 (80.9%) | **MVP**: 114/123 (92.7%) | **MMP**: 0/18 (0%)
 
 **예상 완료(가정)**: MVP D-1 | MMP D-7
 _U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가), U-097~U-099 신규 추가(핫픽스/리셋/거래장부)_
@@ -12,9 +12,9 @@ _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포�
 
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-097[Mvp]](unit-plans/U-097[Mvp].md) ⚡핫픽스 - SceneCanvas 렌더 중 setState 호출 분리 (첫 요청 차단 해소) / **최근 완료**: [U-086[Mvp]](vibe/unit-results/U-086[Mvp].md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-098[Mvp]](unit-plans/U-098[Mvp].md) 새로고침 시 완전 리셋 + 프로필 시작 초기 핫스팟/데모 텍스트 제거 / **최근 완료**: [U-097[Mvp]](vibe/unit-results/U-097[Mvp].md) (2026-02-08)
 
-**블로커**: ⚡U-097[Mvp] - SceneCanvas setState 오류로 프로필 시작 후 첫 요청 진행 불가
+**블로커**: 없음
 
 **추가 메모**:
 - 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
@@ -171,7 +171,6 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP
-ID=[U-097[Mvp]](unit-plans/U-097[Mvp].md) | ⚡핫픽스 - SceneCanvas 렌더 중 Zustand setState 호출 분리 (첫 요청 차단 해소) | Depends=U-085 | 🚧
 ID=[U-098[Mvp]](unit-plans/U-098[Mvp].md) | 새로고침 시 완전 리셋 + 프로필 시작 초기 핫스팟/데모 텍스트 제거 | Depends=U-015,U-090 | ⏸️
 ID=[U-099[Mvp]](unit-plans/U-099[Mvp].md) | 거래 장부(Resource Log) i18n 혼합 출력 수정 + 하단 여백 과다 해소 | Depends=U-042,U-044 | ⏸️
 ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
@@ -207,6 +206,7 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ### 완료
 
+- ✅ [U-097[Mvp]](vibe/unit-results/U-097[Mvp].md): ⚡핫픽스 - SceneCanvas 렌더 중 Zustand setState 호출 분리 (첫 요청 차단 해소) (2026-02-08)
 - ✅ [U-086[Mvp]](vibe/unit-results/U-086[Mvp].md): 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) (2026-02-08)
 - ✅ [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md): ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 (2026-02-08)
 - ✅ [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md): UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 (2026-02-08)
