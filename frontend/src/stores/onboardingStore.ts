@@ -1,10 +1,13 @@
 /**
- * Unknown World - 온보딩/인터랙션 힌트 상태 관리 스토어
+ * Unknown World - 인터랙션 힌트 상태 관리 스토어
  *
  * U-074[Mvp]: 핫스팟/아이템 인터랙션 안내 UX
  * - Q1 Option B: 첫 N번만 hover 힌트 표시 후 숨김 (학습 후 사라짐)
- * - Q2 Option B: 화면 코너에 작은 팝업 가이드
- * - Q3 Option B: 데모 프로필도 첫 접속 시 온보딩 표시
+ *
+ * U-117[Mvp]: 온보딩 가이드 팝업 제거
+ * - showOnboarding, onboardingStep, onboardingComplete 상태 제거
+ * - 관련 액션/셀렉터/initializeOnboarding 함수 제거
+ * - hover 힌트 시스템(첫 N회 노출 후 숨김)만 유지
  *
  * RULE-006 준수: i18n 키 기반 텍스트
  *
@@ -29,20 +32,11 @@ const STORAGE_KEY = 'unknown-world-onboarding';
 // =============================================================================
 
 interface OnboardingState {
-  /** 온보딩 가이드 완료 여부 */
-  onboardingComplete: boolean;
-
   /** 핫스팟 hover 횟수 (첫 N번 후 힌트 숨김) */
   hotspotHintCount: number;
 
   /** 아이템 hover 횟수 (첫 N번 후 힌트 숨김) */
   itemHintCount: number;
-
-  /** 온보딩 가이드 표시 여부 (세션 중 상태) */
-  showOnboarding: boolean;
-
-  /** 온보딩 현재 단계 (0-based) */
-  onboardingStep: number;
 }
 
 interface OnboardingActions {
@@ -52,19 +46,7 @@ interface OnboardingActions {
   /** 아이템 힌트 표시 횟수 증가 */
   incrementItemHint: () => void;
 
-  /** 온보딩 완료 처리 */
-  completeOnboarding: () => void;
-
-  /** 온보딩 가이드 닫기 (스킵 또는 완료) */
-  dismissOnboarding: () => void;
-
-  /** 온보딩 가이드 표시 (세션 시작 시 호출) */
-  showOnboardingGuide: () => void;
-
-  /** 온보딩 다음 단계로 이동 */
-  nextOnboardingStep: () => void;
-
-  /** 온보딩 상태 초기화 (개발/테스트용) */
+  /** 힌트 상태 초기화 (개발/테스트용) */
   resetOnboarding: () => void;
 }
 
@@ -75,11 +57,8 @@ type OnboardingStore = OnboardingState & OnboardingActions;
 // =============================================================================
 
 const initialState: OnboardingState = {
-  onboardingComplete: false,
   hotspotHintCount: 0,
   itemHintCount: 0,
-  showOnboarding: false,
-  onboardingStep: 0,
 };
 
 // =============================================================================
@@ -97,23 +76,6 @@ export const selectShouldShowHotspotHint = (state: OnboardingState): boolean =>
  */
 export const selectShouldShowItemHint = (state: OnboardingState): boolean =>
   state.itemHintCount < HINT_THRESHOLD;
-
-/**
- * 온보딩 가이드 표시 여부
- */
-export const selectShowOnboarding = (state: OnboardingState): boolean =>
-  state.showOnboarding && !state.onboardingComplete;
-
-/**
- * 온보딩 현재 단계
- */
-export const selectOnboardingStep = (state: OnboardingState): number => state.onboardingStep;
-
-/**
- * 온보딩 완료 여부
- */
-export const selectOnboardingComplete = (state: OnboardingState): boolean =>
-  state.onboardingComplete;
 
 // =============================================================================
 // Zustand Store
@@ -138,38 +100,6 @@ export const useOnboardingStore = create<OnboardingStore>()(
         }
       },
 
-      completeOnboarding: () => {
-        set({
-          onboardingComplete: true,
-          showOnboarding: false,
-          onboardingStep: 0,
-        });
-      },
-
-      dismissOnboarding: () => {
-        set({
-          showOnboarding: false,
-          onboardingStep: 0,
-        });
-      },
-
-      showOnboardingGuide: () => {
-        const { onboardingComplete } = get();
-        // 온보딩 미완료 시에만 표시
-        if (!onboardingComplete) {
-          set({
-            showOnboarding: true,
-            onboardingStep: 0,
-          });
-        }
-      },
-
-      nextOnboardingStep: () => {
-        set((state) => ({
-          onboardingStep: state.onboardingStep + 1,
-        }));
-      },
-
       resetOnboarding: () => {
         set(initialState);
       },
@@ -177,9 +107,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
-      // 세션 중 상태(showOnboarding, onboardingStep)는 저장하지 않음
       partialize: (state) => ({
-        onboardingComplete: state.onboardingComplete,
         hotspotHintCount: state.hotspotHintCount,
         itemHintCount: state.itemHintCount,
       }),
@@ -188,20 +116,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
 );
 
 // =============================================================================
-// 헬퍼 함수 (컴포넌트 외부에서 사용)
+// 상수 노출 (테스트용)
 // =============================================================================
-
-/**
- * 온보딩 상태 초기화 (세션 시작 시 호출)
- *
- * Q3 Option B: 데모 프로필도 첫 접속 시 온보딩 표시
- */
-export function initializeOnboarding(): void {
-  const store = useOnboardingStore.getState();
-  if (!store.onboardingComplete) {
-    store.showOnboardingGuide();
-  }
-}
 
 /**
  * 힌트 임계값 상수 노출 (테스트용)

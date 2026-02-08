@@ -12,7 +12,13 @@
  *   - Q1: Row 48px, 아이콘 32px (컴팩트)
  *   - Q2: 구분선 + 줄무늬 조합
  *   - Q3: Hover 툴팁만 (U-056 유지)
- *   - Q4: 아이콘 영역만 드래그 가능, 아이콘만 드래그 이미지
+ *   - Q4: (U-117에서 변경) Row 전체 드래그 가능, 고스트는 아이콘만
+ *
+ * U-117[Mvp]: 드래그 영역 Row 전체로 확장
+ *   - Q1 Option A: distance 5px (마우스 이동 후 시작)
+ *   - Row 전체에 listeners/attributes 적용
+ *   - 고스트(DragOverlay)는 아이콘만 (U-088에서 이미 구현)
+ *   - 드래그 중 Row opacity:0.4 + dashed border
  *
  * U-074[Mvp]: 아이템 인터랙션 안내 UX
  *   - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
@@ -27,7 +33,7 @@
  */
 
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { useDraggable, DragOverlay } from '@dnd-kit/core';
+import { useDraggable, DragOverlay, type Modifier } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,6 +51,39 @@ import { useEconomyStore } from '../stores/economyStore';
 import { ITEM_SELL_PRICE_SIGNAL } from '../save/constants';
 import { InteractionHint } from './InteractionHint';
 import { DND_TYPE, type InventoryDragData } from '../dnd/types';
+
+// =============================================================================
+// U-117: DragOverlay 커서 스냅 modifier
+// Row 전체가 드래그 영역이므로, 아이콘 고스트(40x40)의 중심이
+// 항상 마우스 커서에 위치하도록 transform을 보정합니다.
+// =============================================================================
+
+/** 고스트 아이콘 크기의 절반 (40px / 2) */
+const OVERLAY_HALF_SIZE = 20;
+
+/**
+ * DragOverlay의 아이콘 중심을 커서에 스냅하는 modifier.
+ *
+ * 기본 동작: DragOverlay는 드래그 시작 시 grab 지점 기준으로 오프셋을 유지
+ * → Row 우측에서 grab하면 아이콘이 커서에서 멀리 떨어짐
+ *
+ * 이 modifier: grab 오프셋을 무시하고 아이콘 중심(20,20)이 커서에 오도록 보정
+ */
+const snapOverlayCenterToCursor: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
+  if (!activeNodeRect || !activatorEvent) return transform;
+
+  const event = activatorEvent as PointerEvent;
+
+  // grab 시점의 커서 위치와 Row 좌상단 사이의 오프셋
+  const grabOffsetX = event.clientX - activeNodeRect.left;
+  const grabOffsetY = event.clientY - activeNodeRect.top;
+
+  return {
+    ...transform,
+    x: transform.x + grabOffsetX - OVERLAY_HALF_SIZE,
+    y: transform.y + grabOffsetY - OVERLAY_HALF_SIZE,
+  };
+};
 
 // =============================================================================
 // 드래그 가능한 아이템 컴포넌트
@@ -168,11 +207,12 @@ function DraggableItem({
       aria-selected={isSelected}
       // U-056: 네이티브 툴팁 (단수는 이름만, 복수는 "이름 x 갯수")
       title={item.quantity > 1 ? `${item.name} x ${item.quantity}` : item.name}
+      // U-117: Row 전체를 드래그 핸들로 확장 (Q1: Option A, distance 5px)
+      {...attributes}
+      {...listeners}
     >
-      {/* U-088 Q4: 아이콘 영역만 드래그 핸들 */}
-      <div className="inventory-item-icon" {...attributes} {...listeners}>
-        {renderIcon()}
-      </div>
+      {/* U-117: 아이콘은 표시 전용 (드래그 핸들은 Row 전체) */}
+      <div className="inventory-item-icon">{renderIcon()}</div>
       <div className="inventory-item-info">
         <span className="inventory-item-name">{item.name}</span>
         {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
@@ -397,8 +437,8 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
         ))}
       </div>
 
-      {/* 드래그 오버레이 */}
-      <DragOverlay dropAnimation={null}>
+      {/* U-117: 드래그 오버레이 (아이콘 중심을 커서에 스냅) */}
+      <DragOverlay dropAnimation={null} modifiers={[snapOverlayCenterToCursor]}>
         {draggingItem ? <ItemOverlay item={draggingItem} /> : null}
       </DragOverlay>
     </div>

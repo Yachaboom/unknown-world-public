@@ -1,5 +1,45 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 17:15] U-117[Mvp]: 인벤토리 드래그 영역 Row 확장 + 스캐너 온보딩 팝업 제거 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 인벤토리 드래그 영역 Row 전체로 확장, 드래그 중 고스트(아이콘만) 표시 커스텀, 온보딩 가이드 팝업 제거 및 hover 힌트 유지.
+- **추가 컴포넌트**: `vibe/unit-results/U-117[Mvp].md` (보고서), `vibe/unit-runbooks/U-117-inventory-drag-row-extension-runbook.md` (런북).
+- **달성 요구사항**: [PRD 6.7] 인벤토리 조작성 개선, [RULE-002] 게임 UI 레이아웃 안정성 확보.
+
+### 기술적 구현 세부사항
+
+**인벤토리 DnD 조작성 고도화**:
+- **Expanded Drag Handle**: 아이콘 영역으로 제한되었던 드래그 핸들을 Row 전체 div에 적용하여 조작 편의성 극대화.
+- **Icon-only Ghost Overlay**: 드래그 중 `DragOverlay`를 통해 아이템 아이콘(40px)만 노출함으로써 시각적 가독성 확보 및 화면 가림 최소화.
+- **Interaction Constraint**: 5px 이동 임계값을 설정하여 단순 클릭(선택)과 드래그를 명확히 구분, 의도치 않은 조작 방지.
+- **Visual Feedback**: 드래그 중인 원본 Row에 `opacity: 0.4` 및 `border-style: dashed`를 적용하여 상태 변화 인지 강화.
+
+**UI 온보딩 정제**:
+- **Onboarding Pop-up Removal**: 화면을 가리던 정적 온보딩 가이드 팝업을 제거하여 게임 화면 몰입도 향상.
+- **Hint System Retention**: `InteractionHint` 기반의 상황별 hover 힌트 시스템은 유지하여 최소한의 기능 안내 보장.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/InventoryPanel.tsx (드래그 핸들 및 Overlay 커스텀)
+    ├── App.tsx (DnD 센서 제약 추가 및 온보딩 제거)
+    ├── stores/onboardingStore.ts (상태 정리)
+    └── style.css (드래그 피드백 스타일)
+
+### 성능 및 품질 지표
+
+- **조작성**: 인벤토리 Row 어느 지점에서나 즉각적인 드래그 시작 가능.
+- **UI 일관성**: 온보딩 제거로 인한 사이드바 및 하단 영역 시각적 노이즈 제거.
+
+### 다음 단계
+
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+- **U-087**: 입력 잠금 시 드래그 비활성화 통합 확인
+
+---
+
 ## [2026-02-08 22:00] U-114[Mvp]: Agent Console 레이아웃 변경 - 검증배지 접기 + 대기열(Queue) 상시 노출 완료
 
 ### 구현 완료 항목

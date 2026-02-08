@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 117/145 (80.7%) | **MVP**: 117/124 (94.4%) | **MMP**: 0/21 (0%)
+**전체**: 118/145 (81.4%) | **MVP**: 118/124 (95.2%) | **MMP**: 0/21 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2 | MMP(M6 후속): D-7+
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-117[Mvp]](unit-plans/U-117[Mvp].md) 인벤토리 드래그 영역 Row 확장 / **최근 완료**: [U-114[Mvp]](vibe/unit-results/U-114.md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-087[Mvp]](unit-plans/U-087[Mvp].md) 턴 처리 중 모든 사용자 입력 잠금 / **최근 완료**: [U-117[Mvp]](vibe/unit-results/U-117[Mvp].md) (2026-02-08)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
 
@@ -75,8 +75,8 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
-- **완료 기준**: Action Deck / Inventory(DnD Row) / Scene Canvas(Hotspots) / Economy HUD / Agent Console 상시 노출, 클릭+드래그 동작, 가독성 확보 _(✅ 레이아웃/스크롤/Row 전환/아이콘/소비 로직/디자인 개선 완료)_
-- **잔여**: Agent Console 배지 접기(U-114), 핫스팟 원형 1~3개(U-115), 드래그+온보딩(U-117), 입력 잠금(U-087), 이미지 최적화(U-084)
+- **완료 기준**: Action Deck / Inventory(DnD Row) / Scene Canvas(Hotspots) / Economy HUD / Agent Console 상시 노출, 클릭+드래그 동작, 가독성 확보 _(✅ 레이아웃/스크롤/Row 전환/아이콘/소비 로직/디자인 개선/드래그 확장 및 온보딩 제거 완료)_
+- **잔여**: Agent Console 배지 접기(U-114), 핫스팟 원형 1~3개(U-115), 입력 잠금(U-087), 이미지 최적화(U-084)
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋) + 엔딩 아티팩트
@@ -151,7 +151,6 @@ _마감: 2026-02-09 5:00 PM PST | 심사: Technical Execution(40%), Innovation/W
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP (8개)
-ID=[U-117[Mvp]](unit-plans/U-117[Mvp].md) | 인벤토리 드래그 영역 Row 확장 + 온보딩 팝업 제거 **(U-118 흡수)** | Depends=U-088,U-074 | ⏸️
 ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 턴 처리 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
 ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 픽셀 스타일 + 사이즈 축소 + Scene 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
 ID=[U-115[Mvp]](unit-plans/U-115[Mvp].md) | 핫스팟 컴팩트 원형 1~3개 + 우선순위/겹침 방지 | Depends=U-090,U-087,U-116 | ⏸️
@@ -189,8 +188,9 @@ ID=[U-110~112[Mmp]] | 디버깅 모드/스토리지 TTL/Panel Corner 수정 | De
 ID=[U-113[Mmp]](unit-plans/U-113[Mmp].md) | 세션 상태 영속성(SaveGame 제거 후 재설계) | Depends=U-116,CP-MMP-01 | ⏸️
 ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=U-108,U-107,U-110~112 | ⏸️
 
-### 완료 (117개)
+### 완료 (118개)
 
+- ✅ [U-117[Mvp]](vibe/unit-results/U-117[Mvp].md): 인벤토리 드래그 영역 Row 확장 + 스캐너 온보딩 팝업 제거 (2026-02-08)
 - ✅ [U-114[Mvp]](vibe/unit-results/U-114.md): Agent Console 검증배지 접기 + 대기열 상시 노출 (2026-02-08)
 - ✅ U-099[Mvp]: 거래 장부 i18n 혼합 출력 + 하단 여백 수정 (2026-02-08)
 - ✅ U-116[Mvp]: SaveGame 제거 + 프로필 초기 상태 정리 (2026-02-08)

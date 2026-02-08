@@ -135,8 +135,8 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 드래그 시작 조건(activationConstraint)?
-  - Option A: distance 5px (마우스 이동 후 시작)
+- [x] **Q1**: 드래그 시작 조건(activationConstraint)?
+  - ✅ Option A: distance 5px (마우스 이동 후 시작)
   - Option B: delay 200ms + tolerance 5px (터치 우선)
   - Option C: 환경 감지하여 자동 선택
 

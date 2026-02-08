@@ -55,8 +55,7 @@ import { ScannerSlot } from './components/ScannerSlot';
 // U-015: SaveGame + Demo Profiles
 import { DemoProfileSelect } from './components/DemoProfileSelect';
 import { ResetButton, ChangeProfileButton } from './components/ResetButton';
-// U-074: 온보딩 가이드
-import { OnboardingGuide } from './components/OnboardingGuide';
+// U-117: OnboardingGuide 제거 (온보딩 팝업 삭제, hover 힌트는 유지)
 import { useAgentStore } from './stores/agentStore';
 import { useInventoryStore, selectItemCount } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
@@ -65,8 +64,7 @@ import { useTurnRunner } from './turn/turnRunner';
 import type { ActionCard, DropInput } from './schemas/turn';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
-// U-074: 온보딩 상태
-import { initializeOnboarding } from './stores/onboardingStore';
+// U-117: initializeOnboarding 제거 (온보딩 가이드 삭제)
 // U-116: 세션 라이프사이클 SSOT (SaveGame 제거)
 import {
   bootstrapSession,
@@ -181,12 +179,7 @@ function App() {
     setGamePhase('profile_select');
   }, []);
 
-  // U-074: 게임 시작 시 온보딩 가이드 초기화 (Q3 Option B: 데모 프로필도 표시)
-  useEffect(() => {
-    if (gamePhase === 'playing') {
-      initializeOnboarding();
-    }
-  }, [gamePhase]);
+  // U-117: 온보딩 가이드 초기화 제거 (팝업 삭제, hover 힌트만 유지)
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
   // U-044: 세션 언어를 SSOT로 주입하여 드리프트 방지
@@ -335,11 +328,11 @@ function App() {
     [endDrag, executeTurn, appendSystemNarrative, appendActionLog, t],
   );
 
-  // dnd-kit 센서 설정
+  // dnd-kit 센서 설정 (U-117: distance 5px로 클릭/드래그 구분)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor),
@@ -458,8 +451,7 @@ function App() {
         </div>
       </DndContext>
 
-      {/* U-074: 온보딩 가이드 (화면 우하단 팝업) */}
-      <OnboardingGuide />
+      {/* U-117: 온보딩 가이드 팝업 제거 (hover 힌트는 InteractionHint로 유지) */}
 
       {/* U-079: 재화 획득 토스트 알림 */}
       <CurrencyToastUI />

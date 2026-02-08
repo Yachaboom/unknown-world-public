@@ -337,12 +337,7 @@
     "hotspot_click": "클릭하여 조사",
     "item_drag": "드래그하여 사용",
     "drop_here": "여기에 놓기",
-    "onboarding_title": "조작 안내",
-    "onboarding_hotspot": "화면의 반짝이는 영역을 클릭하면 조사할 수 있습니다",
-    "onboarding_item": "인벤토리 아이템을 화면의 오브젝트로 드래그하면 사용할 수 있습니다",
-    "onboarding_scanner": "Scanner에 이미지를 업로드하면 아이템으로 변환됩니다",
-    "onboarding_skip": "건너뛰기",
-    "onboarding_start": "시작하기"
+    "_u117_removed": "온보딩 가이드 키 제거됨 (U-117)"
   },
   "common": {
     "next": "다음"

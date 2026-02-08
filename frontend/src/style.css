@@ -4613,7 +4613,7 @@ button:disabled,
   font-style: italic;
 }
 
-/* U-088: 인벤토리 아이템 (Row 형태) */
+/* U-088+U-117: 인벤토리 아이템 (Row 형태, Row 전체 드래그 가능) */
 .inventory-item {
   display: flex;
   flex-direction: row;
@@ -4623,7 +4623,7 @@ button:disabled,
   min-height: 48px; /* Q1: Row 48px */
   border-bottom: 1px solid rgba(51, 255, 0, 0.15); /* Q2: 구분선 */
   background: transparent;
-  cursor: default; /* Q4: Row 자체는 드래그 불가, 아이콘만 드래그 */
+  cursor: grab; /* U-117: Row 전체 드래그 가능 */
   transition:
     background-color 0.2s,
     box-shadow 0.2s,
@@ -4656,11 +4656,12 @@ button:disabled,
   box-shadow: inset 3px 0 0 var(--accent-color);
 }
 
-/* 아이템 드래그 중 */
+/* U-117: 아이템 드래그 중 (Row 전체) */
 .inventory-item.dragging {
-  opacity: 0.3;
+  opacity: 0.4;
   border-bottom-style: dashed;
   box-shadow: none;
+  cursor: grabbing;
 }
 
 /* 아이템 비활성화 */
@@ -4728,7 +4729,7 @@ button:disabled,
   font-size: 1.5rem;
 }
 
-/* U-088: 아이콘 (32px, 드래그 핸들 — Q1/Q4) */
+/* U-088+U-117: 아이콘 (32px, 표시 전용 — 드래그 핸들은 Row 전체) */
 .inventory-item-icon {
   display: flex;
   align-items: center;
@@ -4739,13 +4740,11 @@ button:disabled,
   border: 1px solid var(--text-dim);
   border-radius: 2px;
   background-color: rgba(0, 0, 0, 0.4);
-  cursor: grab; /* Q4: 아이콘이 드래그 핸들 */
+  /* U-117: cursor는 Row(.inventory-item)에서 관리 */
   touch-action: none;
 }
 
-.inventory-item-icon:active {
-  cursor: grabbing;
-}
+/* U-117: active cursor는 Row(.inventory-item.dragging)에서 관리 */
 
 .inventory-item-icon-img {
   width: 26px;

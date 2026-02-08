@@ -73,7 +73,6 @@ frontend/src/components/SceneCanvas.tsx
 frontend/src/components/SceneImage.tsx
 frontend/src/components/Hotspot.tsx
 frontend/src/components/InteractionHint.tsx
-frontend/src/components/OnboardingGuide.tsx
 frontend/src/locales/ko-KR/translation.json
 frontend/src/locales/en-US/translation.json
 frontend/src/data/demoProfiles.ts
@@ -92,6 +91,7 @@ frontend/src/turn/turnRunner.ts
 frontend/src/utils/imageSizing.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
+vibe/unit-results/U-117[Mvp].md
 vibe/unit-results/U-114.md
 vibe/unit-results/U-099[Mvp].md
 ```
@@ -105,6 +105,20 @@ vibe/unit-results/U-099[Mvp].md
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 58. 인벤토리 드래그 영역 Row 확장 및 온보딩 제거 (U-117[Mvp])
+
+1. **드래그 조작 편의성 극대화 (Row-wide Handle)**:
+    - **Interaction Policy**: 인벤토리 아이템의 드래그 핸들을 기존 아이콘 영역에서 Row 전체(`.inventory-item`)로 확장함. 사용자는 아이콘뿐 아니라 이름이나 수량 영역 어디에서든 즉시 드래그를 시작할 수 있음.
+    - **Click-Drag Differentiation**: 드래그 핸들 확장으로 인한 단순 클릭(선택)과의 충돌을 방지하기 위해 `PointerSensor`에 `distance: 5` (5px 이동 제약)를 적용하여 조작 의도를 명확히 구분함.
+2. **시각적 가독성 최적화 (Icon-only Ghost)**:
+    - **Compact Drag Overlay**: 드래그 중인 아이템의 미리보기(고스트) 이미지는 Row 전체가 아닌 40x40px의 **아이콘만** 표시함. 이는 아이템을 핫스팟으로 드롭할 때 장면(Scene) 가림을 최소화하고 조작의 정확도를 높이기 위함임.
+    - **Visual Feedback**: 드래그가 시작되면 원래 위치의 Row는 `opacity: 0.4` 및 `dashed border` 상태로 전이되어 "이동 중"임을 직관적으로 전달함.
+3. **UI 온보딩 시스템 정제 (Onboarding Purge)**:
+    - **Pop-up Removal**: 화면 우하단의 거대했던 정적 온보딩 가이드 팝업(`OnboardingGuide.tsx`)을 완전히 제거하여 게임 화면의 시각적 개방감을 확보함.
+    - **Contextual Learning**: 명시적인 가이드를 대신하여, 상황에 따라 노출되는 hover 힌트(`InteractionHint`) 시스템만 유지함. 플레이어가 조작을 인지하면(3회 노출 후) 힌트도 자동으로 사라지도록 설계됨.
 
 ---
 
