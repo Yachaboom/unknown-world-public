@@ -32,8 +32,8 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,json,py,toml,yaml}
-- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, backend/prompts/**, frontend/public/**
+- Only files matching these patterns are included: **/*.{ts,tsx,js,jsx,py,toml,json,yaml}
+- Files matching these patterns are excluded: .claude/**, .cursor/**, .gemini/**, .vscode/**, vibe/**, node_modules/**, dist/**, backend/.venv/**, frontend/dist/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -151,6 +151,8 @@ frontend/coverage/coverage-final.json
 frontend/coverage/prettify.js
 frontend/coverage/sorter.js
 frontend/package.json
+frontend/public/ui/manifest.json
+frontend/public/ui/manifest.schema.json
 frontend/src/api/image.ts
 frontend/src/api/scanner.test.ts
 frontend/src/api/scanner.ts
@@ -4982,6 +4984,224 @@ async def run_pipeline(
     return ctx
 </file>
 
+<file path="backend/src/unknown_world/orchestrator/stages/validate.py">
+"""Unknown World - Validate Stage.
+
+비즈니스 룰 검증 + Repair loop 단계입니다.
+U-018의 run_repair_loop()를 호출해 output/badges/repair_count를 결정합니다.
+
+설계 원칙:
+    - RULE-003: 구조화 출력(JSON Schema) + 이중 검증
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
+    - RULE-008: 단계/배지 가시화
+
+참조:
+    - vibe/refactors/RU-005-Q4.md
+    - vibe/unit-plans/U-018[Mvp].md
+"""
+
+from __future__ import annotations
+
+from unknown_world.models.turn import AgentPhase, Language, ValidationBadge
+from unknown_world.orchestrator.fallback import create_safe_fallback
+from unknown_world.orchestrator.mock import MockOrchestrator
+from unknown_world.orchestrator.repair_loop import (
+    MAX_REPAIR_ATTEMPTS,
+    add_business_badges,
+    run_repair_loop,
+)
+from unknown_world.orchestrator.stages.types import (
+    EmitFn,
+    PipelineContext,
+    PipelineEvent,
+    PipelineEventType,
+)
+from unknown_world.validation.business_rules import validate_business_rules
+
+
+async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
+    """Validate 단계를 실행합니다.
+
+    Mock 모드와 Real 모드를 구분하여 처리합니다.
+    - Mock: MockOrchestrator로 생성 + 비즈니스 룰 검증
+    - Real: run_repair_loop() 호출 (Gemini API + Repair loop)
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+        emit: 이벤트 emit 콜백
+
+    Returns:
+        업데이트된 컨텍스트 (output, badges, repair_attempts 포함)
+    """
+    ctx.current_phase = AgentPhase.VALIDATE
+
+    # Stage 시작 이벤트
+    await emit(
+        PipelineEvent(
+            event_type=PipelineEventType.STAGE_START,
+            phase=AgentPhase.VALIDATE,
+        )
+    )
+
+    try:
+        if ctx.is_mock:
+            await _validate_mock(ctx, emit)
+        else:
+            await _validate_real(ctx, emit)
+    except Exception:
+        # 예외 발생 시 폴백 (RULE-004, RU-005-S1)
+        ctx.output = create_safe_fallback(
+            language=ctx.turn_input.language,
+            economy_snapshot=ctx.economy_snapshot,
+            repair_count=ctx.repair_attempts,
+        )
+        ctx.is_fallback = True
+        # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+        ctx.badges = list(ctx.output.agent_console.badges)
+
+    # Stage 완료 이벤트
+    await emit(
+        PipelineEvent(
+            event_type=PipelineEventType.STAGE_COMPLETE,
+            phase=AgentPhase.VALIDATE,
+        )
+    )
+
+    # 배지 이벤트 전송
+    if ctx.badges:
+        await emit(
+            PipelineEvent(
+                event_type=PipelineEventType.BADGES,
+                badges=ctx.badges,
+            )
+        )
+
+    return ctx
+
+
+async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
+    """Mock 모드 검증을 수행합니다."""
+    orchestrator = MockOrchestrator(seed=ctx.seed)
+    repair_attempt = 0
+
+    while repair_attempt <= MAX_REPAIR_ATTEMPTS:
+        # 0회차는 정상 시도, 1회차부터는 repair
+        if repair_attempt > 0:
+            await emit(
+                PipelineEvent(
+                    event_type=PipelineEventType.REPAIR,
+                    repair_attempt=repair_attempt,
+                    repair_message=(
+                        "검증 실패로 인해 다시 시도 중입니다..."
+                        if ctx.turn_input.language == Language.KO
+                        else "Retrying due to validation failure..."
+                    ),
+                )
+            )
+            ctx.repair_messages.append(
+                "검증 실패로 인해 다시 시도 중입니다..."
+                if ctx.turn_input.language == Language.KO
+                else "Retrying due to validation failure..."
+            )
+
+        try:
+            # Mock 생성
+            turn_output = orchestrator.generate_turn_output(ctx.turn_input)
+
+            # 비즈니스 룰 검증 (U-018)
+            biz_result = validate_business_rules(ctx.turn_input, turn_output)
+            if not biz_result.is_valid:
+                # 비즈니스 룰 실패 → 재시도
+                repair_attempt += 1
+                ctx.repair_attempts = repair_attempt
+                if repair_attempt > MAX_REPAIR_ATTEMPTS:
+                    # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
+                    ctx.output = create_safe_fallback(
+                        language=ctx.turn_input.language,
+                        economy_snapshot=ctx.economy_snapshot,
+                        repair_count=repair_attempt,
+                    )
+                    ctx.is_fallback = True
+                    # RU-005-S1: 비즈니스 룰 실패 배지를 정확히 설정하고
+                    # output과 ctx 배지를 동기화
+                    failure_badges: list[ValidationBadge] = [ValidationBadge.SCHEMA_OK]
+                    add_business_badges(biz_result, failure_badges)
+                    ctx.output.agent_console.badges = failure_badges
+                    ctx.badges = list(failure_badges)
+                    return
+                continue
+
+            # 모든 검증 통과
+            ctx.output = turn_output
+            ctx.badges = [
+                ValidationBadge.SCHEMA_OK,
+                ValidationBadge.ECONOMY_OK,
+                ValidationBadge.SAFETY_OK,
+                ValidationBadge.CONSISTENCY_OK,
+            ]
+            ctx.repair_attempts = repair_attempt
+            return
+
+        except Exception:
+            repair_attempt += 1
+            ctx.repair_attempts = repair_attempt
+            if repair_attempt > MAX_REPAIR_ATTEMPTS:
+                # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
+                ctx.output = create_safe_fallback(
+                    language=ctx.turn_input.language,
+                    economy_snapshot=ctx.economy_snapshot,
+                    repair_count=repair_attempt,
+                )
+                ctx.is_fallback = True
+                # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+                ctx.badges = list(ctx.output.agent_console.badges)
+                return
+            continue
+
+    # 루프 종료 시에도 폴백 (RU-005-S1)
+    ctx.output = create_safe_fallback(
+        language=ctx.turn_input.language,
+        economy_snapshot=ctx.economy_snapshot,
+        repair_count=repair_attempt,
+    )
+    ctx.is_fallback = True
+    # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
+    ctx.badges = list(ctx.output.agent_console.badges)
+
+
+async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
+    """Real 모드 검증을 수행합니다 (Gemini API + Repair loop)."""
+    result = await run_repair_loop(ctx.turn_input)
+
+    # Repair 이벤트 송출 (시도가 있었다면)
+    for i in range(result.repair_attempts):
+        message = result.error_messages[i] if i < len(result.error_messages) else ""
+        await emit(
+            PipelineEvent(
+                event_type=PipelineEventType.REPAIR,
+                repair_attempt=i + 1,
+                repair_message=message[:100] if message else None,
+            )
+        )
+        if message:
+            ctx.repair_messages.append(message[:100])
+
+    ctx.output = result.output
+    ctx.badges = list(result.badges)
+    ctx.repair_attempts = result.repair_attempts
+    ctx.is_fallback = result.is_fallback
+
+    # U-069: 모델 티어링 정보 전달 (PipelineContext + TurnOutput)
+    # config.models.ModelLabel을 models.turn.ModelLabel로 변환하여 할당 (Pyright 대응)
+    from unknown_world.models.turn import ModelLabel as TurnModelLabel
+
+    ctx.model_label = TurnModelLabel(result.model_label.value)
+    ctx.cost_multiplier = result.cost_multiplier
+    if ctx.output:
+        ctx.output.agent_console.model_label = TurnModelLabel(result.model_label.value)
+</file>
+
 <file path="backend/src/unknown_world/orchestrator/stages/verify.py">
 """Unknown World - Verify Stage.
 
@@ -9291,6 +9511,627 @@ def test_turn_output_with_consumption():
     output = TurnOutput(**output_data)
     assert "iron_key_01" in output.world.inventory_removed
     assert output.narrative == "열쇠를 사용했습니다. 열쇠가 사라졌습니다."
+</file>
+
+<file path="frontend/public/ui/manifest.json">
+{
+  "$schema": "./manifest.schema.json",
+  "version": "1.5.0",
+  "generatedAt": "2026-02-07T21:00:00Z",
+  "totalBytes": 775899,
+  "budgetBytes": 1572864,
+  "assets": [
+    {
+      "id": "signal-24",
+      "path": "icons/signal-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚡",
+      "usedIn": ["EconomyHUD"],
+      "bytes": 1573,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "signal-16",
+      "path": "icons/signal-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚡",
+      "usedIn": ["ActionDeck"],
+      "bytes": 1012,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "shard-24",
+      "path": "icons/shard-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "💎",
+      "usedIn": ["EconomyHUD"],
+      "bytes": 1362,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "shard-16",
+      "path": "icons/shard-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "💎",
+      "usedIn": ["ActionDeck"],
+      "bytes": 1147,
+      "notes": "U-038: shard-24에서 리사이즈, 16px 최적화"
+    },
+    {
+      "id": "badge-ok-24",
+      "path": "icons/badge-ok-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✓",
+      "usedIn": ["AgentConsole"],
+      "bytes": 1461,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "badge-ok-16",
+      "path": "icons/badge-ok-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "✓",
+      "usedIn": [],
+      "bytes": 1096,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "badge-fail-24",
+      "path": "icons/badge-fail-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✗",
+      "usedIn": ["AgentConsole"],
+      "bytes": 2006,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "risk-medium-24",
+      "path": "icons/risk-medium-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚠",
+      "usedIn": [],
+      "bytes": 1594,
+      "notes": "U-038: 24px 페어 보강, nanobanana mcp 생성"
+    },
+    {
+      "id": "risk-medium-16",
+      "path": "icons/risk-medium-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚠",
+      "usedIn": ["ActionDeck"],
+      "bytes": 1256,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "risk-low-24",
+      "path": "icons/risk-low-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "✓",
+      "usedIn": [],
+      "bytes": 1838,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "risk-low-16",
+      "path": "icons/risk-low-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "✓",
+      "usedIn": ["ActionDeck"],
+      "bytes": 1331,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "risk-high-24",
+      "path": "icons/risk-high-24.png",
+      "type": "icon",
+      "size": 24,
+      "fallback": "⚠",
+      "usedIn": [],
+      "bytes": 1737,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "risk-high-16",
+      "path": "icons/risk-high-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "⚠",
+      "usedIn": ["ActionDeck"],
+      "bytes": 1227,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "status-online-16",
+      "path": "icons/status-online-16.png",
+      "type": "icon",
+      "size": 16,
+      "fallback": "●",
+      "usedIn": [],
+      "bytes": 1375,
+      "notes": "U-038: v2 재생성, nanobanana mcp(픽셀아트), rembg(birefnet-general), ImageMagick 최적화"
+    },
+    {
+      "id": "scene-placeholder-default",
+      "path": "placeholders/scene-placeholder-default.png",
+      "type": "placeholder",
+      "fallback": "[SCENE]",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 261407,
+      "notes": "nanobanana mcp 생성, 레트로 터미널 스타일"
+    },
+    {
+      "id": "scene-loading",
+      "path": "placeholders/scene-loading.webp",
+      "type": "placeholder",
+      "fallback": "⏳",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 47850,
+      "notes": "U-031: 로딩 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-offline",
+      "path": "placeholders/scene-offline.webp",
+      "type": "placeholder",
+      "fallback": "🔌",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 44658,
+      "notes": "U-031: 오프라인 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-blocked",
+      "path": "placeholders/scene-blocked.webp",
+      "type": "placeholder",
+      "fallback": "🚫",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 17318,
+      "notes": "U-031: 차단 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "scene-low-signal",
+      "path": "placeholders/scene-low-signal.webp",
+      "type": "placeholder",
+      "fallback": "📉",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 68454,
+      "notes": "U-031: 저신호 상태 placeholder, nanobanana mcp 생성, ImageMagick(magick) 최적화"
+    },
+    {
+      "id": "panel-corner-br",
+      "path": "chrome/panel-corner-br.png",
+      "type": "chrome",
+      "fallback": "",
+      "usedIn": ["PanelHeader"],
+      "bytes": 1899,
+      "notes": "U-032: 패널 코너 장식, nanobanana mcp 생성, rembg 배경 제거, ImageMagick 최적화(48x48), CSS transform으로 4방향 적용"
+    },
+    {
+      "id": "card-frame",
+      "path": "chrome/card-frame.png",
+      "type": "chrome",
+      "fallback": "",
+      "usedIn": ["ActionCard"],
+      "bytes": 9101,
+      "notes": "U-032: 액션 카드 프레임, nanobanana mcp 생성, rembg 배경 제거, ImageMagick 최적화(160x80)"
+    },
+    {
+      "id": "scanner-frame",
+      "path": "chrome/scanner-frame.png",
+      "type": "chrome",
+      "fallback": "",
+      "usedIn": ["Scanner"],
+      "bytes": 100165,
+      "notes": "U-032: 스캐너 슬롯 프레임, nanobanana mcp 생성, rembg(birefnet-general) 배경 제거, ImageMagick 최적화(346x200) 완료"
+    },
+    {
+      "id": "item-ancient-tome-64",
+      "path": "items/ancient-tome-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "📕",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7166,
+      "notes": "U-092: Narrator 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-quill-pen-64",
+      "path": "items/quill-pen-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🖋️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6474,
+      "notes": "U-092: Narrator 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-memory-fragment-64",
+      "path": "items/memory-fragment-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💠",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6977,
+      "notes": "U-092: Narrator 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-compass-64",
+      "path": "items/compass-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🧭",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9515,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-rope-64",
+      "path": "items/rope-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🪢",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 10713,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-lantern-64",
+      "path": "items/lantern-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🏮",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8054,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-map-fragment-64",
+      "path": "items/map-fragment-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🗺️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9705,
+      "notes": "U-092: Explorer 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-data-core-64",
+      "path": "items/data-core-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💿",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 10949,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-circuit-board-64",
+      "path": "items/circuit-board-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔌",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8062,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-energy-cell-64",
+      "path": "items/energy-cell-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔋",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7394,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-scanner-device-64",
+      "path": "items/scanner-device-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "📡",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 4436,
+      "notes": "U-092: Tech 초기 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-sword-64",
+      "path": "items/sword-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "⚔️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 5748,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-shield-64",
+      "path": "items/shield-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🛡️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 10313,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-potion-64",
+      "path": "items/potion-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🧪",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6083,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-key-64",
+      "path": "items/key-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔑",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8703,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-gem-64",
+      "path": "items/gem-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💎",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6681,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-scroll-64",
+      "path": "items/scroll-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "📜",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9741,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-torch-64",
+      "path": "items/torch-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔥",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 5029,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-herb-64",
+      "path": "items/herb-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🌿",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7688,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-coin-64",
+      "path": "items/coin-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🪙",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9757,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-ring-64",
+      "path": "items/ring-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "💍",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7854,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-amulet-64",
+      "path": "items/amulet-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔮",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 8599,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-dagger-64",
+      "path": "items/dagger-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🗡️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6623,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-flask-64",
+      "path": "items/flask-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "⚗️",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 7141,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-crystal-64",
+      "path": "items/crystal-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔷",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 9259,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "item-lockpick-64",
+      "path": "items/lockpick-64.png",
+      "type": "item-icon",
+      "size": 64,
+      "fallback": "🔧",
+      "usedIn": ["InventoryPanel"],
+      "bytes": 6368,
+      "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    }
+  ]
+}
+</file>
+
+<file path="frontend/public/ui/manifest.schema.json">
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unknown-world.dev/schemas/ui-asset-manifest.json",
+  "title": "UI Asset Manifest",
+  "description": "nanobanana mcp로 제작된 UI 에셋의 매니페스트 스키마",
+  "type": "object",
+  "required": ["version", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema 참조"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "매니페스트 버전 (SemVer)",
+      "examples": ["1.0.0"]
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "매니페스트 생성 시각 (ISO 8601)"
+    },
+    "totalBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "모든 에셋의 총 바이트 수"
+    },
+    "budgetBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1572864,
+      "description": "성능 예산 상한 (기본: 1.5MB = 1572864 bytes)"
+    },
+    "assets": {
+      "type": "array",
+      "description": "에셋 목록",
+      "items": {
+        "$ref": "#/$defs/Asset"
+      }
+    }
+  },
+  "$defs": {
+    "Asset": {
+      "type": "object",
+      "required": ["id", "path", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "에셋 고유 ID (kebab-case)",
+          "examples": ["signal-24", "badge-ok-16", "scene-loading"]
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^[a-z0-9-/]+\\.(png|webp|svg)$",
+          "description": "ui/ 디렉토리 기준 상대 경로",
+          "examples": ["icons/signal-24.png", "placeholders/scene-loading.webp"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["icon", "placeholder", "chrome", "item-icon"],
+          "description": "에셋 유형"
+        },
+        "size": {
+          "type": "integer",
+          "enum": [16, 24, 32, 64, 128, 256, 512],
+          "description": "픽셀 사이즈 (아이콘용)"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "가로 픽셀 (placeholder/chrome용)"
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "세로 픽셀 (placeholder/chrome용)"
+        },
+        "fallback": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "로딩 실패 시 대체 이모지/텍스트",
+          "examples": ["📡", "⚠️", "OK"]
+        },
+        "usedIn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "사용처 컴포넌트 목록",
+          "examples": [["EconomyHUD", "AgentConsole"]]
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "파일 크기 (bytes)"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["png", "webp", "svg"],
+          "description": "파일 포맷"
+        },
+        "retina": {
+          "type": "boolean",
+          "default": false,
+          "description": "@2x Retina 버전 존재 여부"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "에셋 설명"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "생성 시각 (ISO 8601)"
+        },
+        "promptHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}$",
+          "description": "생성 프롬프트 해시 (재현성, 8자)"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "에셋 관련 메모 (생성 도구, 배경 제거, 최적화 등 QA 관련 기록)"
+        }
+      }
+    }
+  }
+}
 </file>
 
 <file path="frontend/src/api/turnStream.test.ts">
@@ -14064,6 +14905,165 @@ class ScanResponse(BaseModel):
     language: Language = Field(description="응답 언어")
 </file>
 
+<file path="backend/src/unknown_world/orchestrator/fallback.py">
+"""Unknown World - 안전한 폴백 TurnOutput 생성기.
+
+최종 복구 실패 시에도 UI가 빈 화면이 되지 않도록
+스키마를 만족하는 안전한 TurnOutput을 생성합니다.
+
+설계 원칙:
+    - RULE-004: 검증 실패 시 안전한 폴백 제공
+    - RULE-005: 재화 인바리언트 (비용 0, 잔액 유지)
+    - RULE-006: ko/en 언어 정책 준수
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/prd.md 8.7 (TurnOutput 스키마)
+"""
+
+from __future__ import annotations
+
+from unknown_world.config.economy import LOW_BALANCE_THRESHOLD
+from unknown_world.models.turn import (
+    ActionCard,
+    ActionDeck,
+    AgentConsole,
+    AgentPhase,
+    CurrencyAmount,
+    EconomyOutput,
+    Language,
+    RenderOutput,
+    RiskLevel,
+    SafetyOutput,
+    TurnOutput,
+    UIOutput,
+    ValidationBadge,
+    WorldDelta,
+)
+
+# =============================================================================
+# 폴백 메시지 (i18n)
+# =============================================================================
+
+FALLBACK_MESSAGES = {
+    Language.KO: {
+        "narrative": "잠시 혼란스러운 순간이 지나갑니다. 다시 집중해봅시다.",
+        "narrative_blocked": "안전 정책에 따라 이 요청을 처리할 수 없습니다. 다른 행동을 시도해보세요.",
+        "alternative_label": "텍스트로 진행하기",
+        "alternative_desc": "이미지 생성 없이 저비용으로 진행합니다",
+    },
+    Language.EN: {
+        "narrative": "A moment of confusion passes. Let's focus again.",
+        "narrative_blocked": "This request cannot be processed due to safety policies. Please try a different action.",
+        "alternative_label": "Continue with text",
+        "alternative_desc": "Proceed at low cost without image generation",
+    },
+}
+
+
+# =============================================================================
+# 폴백 생성 함수
+# =============================================================================
+
+
+def create_safe_fallback(
+    language: Language,
+    economy_snapshot: CurrencyAmount | None = None,
+    repair_count: int = 0,
+    is_blocked: bool = False,
+) -> TurnOutput:
+    """안전한 폴백 TurnOutput을 생성합니다.
+
+    최종 복구 실패 시 사용합니다.
+    스키마를 만족하고, 비용 0으로 잔액을 유지합니다.
+
+    Args:
+        language: 응답 언어
+        economy_snapshot: 현재 재화 상태 (비용 0으로 유지)
+        repair_count: 복구 시도 횟수
+        is_blocked: 안전 정책에 의해 차단되었는지
+
+    Returns:
+        안전한 폴백 TurnOutput
+
+    Example:
+        >>> fallback = create_safe_fallback(
+        ...     language=Language.KO,
+        ...     economy_snapshot=CurrencyAmount(signal=50, memory_shard=3),
+        ...     repair_count=2,
+        ... )
+        >>> print(fallback.narrative)
+    """
+    messages = FALLBACK_MESSAGES[language]
+
+    # 내러티브 선택
+    narrative = messages["narrative_blocked"] if is_blocked else messages["narrative"]
+
+    # 재화 유지 (비용 0)
+    balance = economy_snapshot or CurrencyAmount(signal=100, memory_shard=5)
+
+    # 저비용 대안 카드 제공 (RULE-005)
+    # U-065: description 필드 제거됨 (narrative에서 자연어로 표현)
+    alternative_card = ActionCard(
+        id="fallback_text_only",
+        label=messages["alternative_label"],
+        cost=CurrencyAmount(signal=1, memory_shard=0),
+        risk=RiskLevel.LOW,
+        enabled=True,
+        is_alternative=True,
+    )
+
+    # 배지 결정 (RU-005-S1: 폴백에서도 모든 카테고리의 배지를 일관되게 설정)
+    badges: list[ValidationBadge] = []
+
+    # Schema: 폴백이므로 SCHEMA_FAIL (단, 안전 차단은 스키마 문제가 아님)
+    if not is_blocked:
+        badges.append(ValidationBadge.SCHEMA_FAIL)
+    else:
+        badges.append(ValidationBadge.SCHEMA_OK)
+
+    # Economy: 폴백에서는 비용 0이므로 ECONOMY_OK
+    badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety: is_blocked에 따라 결정
+    if is_blocked:
+        badges.append(ValidationBadge.SAFETY_BLOCKED)
+    else:
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency: 폴백에서는 언어/좌표 문제가 없으므로 CONSISTENCY_OK
+    badges.append(ValidationBadge.CONSISTENCY_OK)
+
+    # U-079: 잔액 부족 경고 여부 결정
+    is_low = balance.signal < LOW_BALANCE_THRESHOLD
+
+    return TurnOutput(
+        language=language,
+        narrative=narrative,
+        ui=UIOutput(
+            action_deck=ActionDeck(cards=[alternative_card]),
+            objects=[],
+        ),
+        world=WorldDelta(),
+        render=RenderOutput(image_job=None),  # 이미지 생성 안 함
+        economy=EconomyOutput(
+            cost=CurrencyAmount(signal=0, memory_shard=0),
+            balance_after=balance,
+            credit=0,
+            low_balance_warning=is_low,
+        ),
+        safety=SafetyOutput(
+            blocked=is_blocked,
+            message=messages["narrative_blocked"] if is_blocked else None,
+        ),
+        agent_console=AgentConsole(
+            current_phase=AgentPhase.COMMIT,
+            badges=badges,
+            repair_count=repair_count,
+        ),
+    )
+</file>
+
 <file path="backend/src/unknown_world/orchestrator/stages/types.py">
 """Unknown World - Pipeline Stage 타입 정의.
 
@@ -14208,224 +15208,6 @@ class StageFn(Protocol):
     """
 
     async def __call__(self, ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext: ...
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/stages/validate.py">
-"""Unknown World - Validate Stage.
-
-비즈니스 룰 검증 + Repair loop 단계입니다.
-U-018의 run_repair_loop()를 호출해 output/badges/repair_count를 결정합니다.
-
-설계 원칙:
-    - RULE-003: 구조화 출력(JSON Schema) + 이중 검증
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-005: 재화 인바리언트 (잔액 음수 금지)
-    - RULE-008: 단계/배지 가시화
-
-참조:
-    - vibe/refactors/RU-005-Q4.md
-    - vibe/unit-plans/U-018[Mvp].md
-"""
-
-from __future__ import annotations
-
-from unknown_world.models.turn import AgentPhase, Language, ValidationBadge
-from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.mock import MockOrchestrator
-from unknown_world.orchestrator.repair_loop import (
-    MAX_REPAIR_ATTEMPTS,
-    add_business_badges,
-    run_repair_loop,
-)
-from unknown_world.orchestrator.stages.types import (
-    EmitFn,
-    PipelineContext,
-    PipelineEvent,
-    PipelineEventType,
-)
-from unknown_world.validation.business_rules import validate_business_rules
-
-
-async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
-    """Validate 단계를 실행합니다.
-
-    Mock 모드와 Real 모드를 구분하여 처리합니다.
-    - Mock: MockOrchestrator로 생성 + 비즈니스 룰 검증
-    - Real: run_repair_loop() 호출 (Gemini API + Repair loop)
-
-    Args:
-        ctx: 파이프라인 컨텍스트
-        emit: 이벤트 emit 콜백
-
-    Returns:
-        업데이트된 컨텍스트 (output, badges, repair_attempts 포함)
-    """
-    ctx.current_phase = AgentPhase.VALIDATE
-
-    # Stage 시작 이벤트
-    await emit(
-        PipelineEvent(
-            event_type=PipelineEventType.STAGE_START,
-            phase=AgentPhase.VALIDATE,
-        )
-    )
-
-    try:
-        if ctx.is_mock:
-            await _validate_mock(ctx, emit)
-        else:
-            await _validate_real(ctx, emit)
-    except Exception:
-        # 예외 발생 시 폴백 (RULE-004, RU-005-S1)
-        ctx.output = create_safe_fallback(
-            language=ctx.turn_input.language,
-            economy_snapshot=ctx.economy_snapshot,
-            repair_count=ctx.repair_attempts,
-        )
-        ctx.is_fallback = True
-        # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
-        ctx.badges = list(ctx.output.agent_console.badges)
-
-    # Stage 완료 이벤트
-    await emit(
-        PipelineEvent(
-            event_type=PipelineEventType.STAGE_COMPLETE,
-            phase=AgentPhase.VALIDATE,
-        )
-    )
-
-    # 배지 이벤트 전송
-    if ctx.badges:
-        await emit(
-            PipelineEvent(
-                event_type=PipelineEventType.BADGES,
-                badges=ctx.badges,
-            )
-        )
-
-    return ctx
-
-
-async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
-    """Mock 모드 검증을 수행합니다."""
-    orchestrator = MockOrchestrator(seed=ctx.seed)
-    repair_attempt = 0
-
-    while repair_attempt <= MAX_REPAIR_ATTEMPTS:
-        # 0회차는 정상 시도, 1회차부터는 repair
-        if repair_attempt > 0:
-            await emit(
-                PipelineEvent(
-                    event_type=PipelineEventType.REPAIR,
-                    repair_attempt=repair_attempt,
-                    repair_message=(
-                        "검증 실패로 인해 다시 시도 중입니다..."
-                        if ctx.turn_input.language == Language.KO
-                        else "Retrying due to validation failure..."
-                    ),
-                )
-            )
-            ctx.repair_messages.append(
-                "검증 실패로 인해 다시 시도 중입니다..."
-                if ctx.turn_input.language == Language.KO
-                else "Retrying due to validation failure..."
-            )
-
-        try:
-            # Mock 생성
-            turn_output = orchestrator.generate_turn_output(ctx.turn_input)
-
-            # 비즈니스 룰 검증 (U-018)
-            biz_result = validate_business_rules(ctx.turn_input, turn_output)
-            if not biz_result.is_valid:
-                # 비즈니스 룰 실패 → 재시도
-                repair_attempt += 1
-                ctx.repair_attempts = repair_attempt
-                if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                    # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
-                    ctx.output = create_safe_fallback(
-                        language=ctx.turn_input.language,
-                        economy_snapshot=ctx.economy_snapshot,
-                        repair_count=repair_attempt,
-                    )
-                    ctx.is_fallback = True
-                    # RU-005-S1: 비즈니스 룰 실패 배지를 정확히 설정하고
-                    # output과 ctx 배지를 동기화
-                    failure_badges: list[ValidationBadge] = [ValidationBadge.SCHEMA_OK]
-                    add_business_badges(biz_result, failure_badges)
-                    ctx.output.agent_console.badges = failure_badges
-                    ctx.badges = list(failure_badges)
-                    return
-                continue
-
-            # 모든 검증 통과
-            ctx.output = turn_output
-            ctx.badges = [
-                ValidationBadge.SCHEMA_OK,
-                ValidationBadge.ECONOMY_OK,
-                ValidationBadge.SAFETY_OK,
-                ValidationBadge.CONSISTENCY_OK,
-            ]
-            ctx.repair_attempts = repair_attempt
-            return
-
-        except Exception:
-            repair_attempt += 1
-            ctx.repair_attempts = repair_attempt
-            if repair_attempt > MAX_REPAIR_ATTEMPTS:
-                # 최종 실패 시 폴백 (RULE-004, RU-005-S1)
-                ctx.output = create_safe_fallback(
-                    language=ctx.turn_input.language,
-                    economy_snapshot=ctx.economy_snapshot,
-                    repair_count=repair_attempt,
-                )
-                ctx.is_fallback = True
-                # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
-                ctx.badges = list(ctx.output.agent_console.badges)
-                return
-            continue
-
-    # 루프 종료 시에도 폴백 (RU-005-S1)
-    ctx.output = create_safe_fallback(
-        language=ctx.turn_input.language,
-        economy_snapshot=ctx.economy_snapshot,
-        repair_count=repair_attempt,
-    )
-    ctx.is_fallback = True
-    # RU-005-S1: 폴백의 배지를 스트림 이벤트와 동기화
-    ctx.badges = list(ctx.output.agent_console.badges)
-
-
-async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
-    """Real 모드 검증을 수행합니다 (Gemini API + Repair loop)."""
-    result = await run_repair_loop(ctx.turn_input)
-
-    # Repair 이벤트 송출 (시도가 있었다면)
-    for i in range(result.repair_attempts):
-        message = result.error_messages[i] if i < len(result.error_messages) else ""
-        await emit(
-            PipelineEvent(
-                event_type=PipelineEventType.REPAIR,
-                repair_attempt=i + 1,
-                repair_message=message[:100] if message else None,
-            )
-        )
-        if message:
-            ctx.repair_messages.append(message[:100])
-
-    ctx.output = result.output
-    ctx.badges = list(result.badges)
-    ctx.repair_attempts = result.repair_attempts
-    ctx.is_fallback = result.is_fallback
-
-    # U-069: 모델 티어링 정보 전달 (PipelineContext + TurnOutput)
-    # config.models.ModelLabel을 models.turn.ModelLabel로 변환하여 할당 (Pyright 대응)
-    from unknown_world.models.turn import ModelLabel as TurnModelLabel
-
-    ctx.model_label = TurnModelLabel(result.model_label.value)
-    ctx.cost_multiplier = result.cost_multiplier
-    if ctx.output:
-        ctx.output.agent_console.model_label = TurnModelLabel(result.model_label.value)
 </file>
 
 <file path="backend/src/unknown_world/services/__init__.py">
@@ -19052,401 +19834,6 @@ describe('U-063: Economy Balance Preservation in executeTurnStream', () => {
 });
 </file>
 
-<file path="frontend/src/components/AgentConsole.test.tsx">
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { AgentConsole } from './AgentConsole';
-
-// Mock i18n
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock dependencies
-type MockSelector<T> = (state: unknown) => T;
-
-vi.mock('../stores/agentStore', () => ({
-  useAgentStore: <T,>(selector: MockSelector<T>) =>
-    selector({
-      phases: [],
-      badges: [],
-      repairCount: 0,
-      error: null,
-      isStreaming: false,
-      modelLabel: 'FAST',
-    }),
-  selectIsStreaming: (state: { isStreaming: boolean }) => state.isStreaming,
-  selectPhases: (state: { phases: unknown[] }) => state.phases,
-  selectBadges: (state: { badges: unknown[] }) => state.badges,
-  selectRepairCount: (state: { repairCount: number }) => state.repairCount,
-  selectError: (state: { error: unknown }) => state.error,
-  selectModelLabel: (state: { modelLabel: string }) => state.modelLabel,
-}));
-
-describe('AgentConsole (U-082)', () => {
-  it('should start in collapsed state by default', () => {
-    render(<AgentConsole />);
-
-    // Badges panel (always visible) should be present
-    expect(screen.getByText('agent.console.badges')).toBeInTheDocument();
-
-    // Toggle button should show expand text
-    expect(screen.getByText('agent.console.expand')).toBeInTheDocument();
-
-    // Phase queue (expanded only) should NOT be present
-    expect(screen.queryByText('agent.console.queue')).not.toBeInTheDocument();
-  });
-
-  it('should expand and show details when toggle button is clicked', () => {
-    render(<AgentConsole />);
-
-    const toggleButton = screen.getByRole('button', { name: /agent\.console\.expand/i });
-
-    // Click to expand
-    fireEvent.click(toggleButton);
-
-    // Now phase queue should be present
-    expect(screen.getByText('agent.console.queue')).toBeInTheDocument();
-    // Toggle button should show collapse text
-    expect(screen.getByText('agent.console.collapse')).toBeInTheDocument();
-
-    // Click to collapse
-    fireEvent.click(toggleButton);
-
-    // Phase queue should be gone again
-    expect(screen.queryByText('agent.console.queue')).not.toBeInTheDocument();
-  });
-});
-</file>
-
-<file path="frontend/src/components/AgentConsole.tsx">
-/**
- * Unknown World - Agent Console 컴포넌트.
- *
- * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
- * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
- *
- * U-082: Agent Console 축소/확장 토글
- *   - 기본 접힘(collapsed): Badges + StreamingStatus + ModelLabel만 compact 표시
- *   - 확장(expanded): Plan/Queue/RepairTrace 등 상세 정보 표시
- *   - Q1: Option A (기본 접힘), Q3: Option A (상태 저장하지 않음)
- *
- * 설계 원칙:
- *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
- *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
- *
- * @module components/AgentConsole
- */
-
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  useAgentStore,
-  selectIsStreaming,
-  selectPhases,
-  selectBadges,
-  selectRepairCount,
-  selectError,
-  selectModelLabel,
-  type PhaseInfo,
-} from '../stores/agentStore';
-import type { ValidationBadge, ModelLabel } from '../schemas/turn';
-
-// =============================================================================
-// 상수 정의
-// =============================================================================
-
-/** 단계 표시 이름 i18n 키 */
-const PHASE_KEYS: Record<string, string> = {
-  parse: 'agent.console.phase.parse',
-  validate: 'agent.console.phase.validate',
-  plan: 'agent.console.phase.plan',
-  resolve: 'agent.console.phase.resolve',
-  render: 'agent.console.phase.render',
-  verify: 'agent.console.phase.verify',
-  commit: 'agent.console.phase.commit',
-};
-
-/** 배지 표시 정보 (i18n 키 기반) */
-const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> = {
-  schema_ok: { labelKey: 'agent.console.badge.schema', isOk: true },
-  schema_fail: { labelKey: 'agent.console.badge.schema', isOk: false },
-  economy_ok: { labelKey: 'agent.console.badge.economy', isOk: true },
-  economy_fail: { labelKey: 'agent.console.badge.economy', isOk: false },
-  safety_ok: { labelKey: 'agent.console.badge.safety', isOk: true },
-  safety_blocked: { labelKey: 'agent.console.badge.safety', isOk: false },
-  consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
-  consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
-};
-
-/** 모델 라벨 표시 정보 (U-069: FAST/QUALITY) */
-const MODEL_LABEL_INFO: Record<ModelLabel, { labelKey: string; icon: string; colorClass: string }> =
-  {
-    FAST: { labelKey: 'agent.console.model.fast', icon: '\u26A1', colorClass: 'model-fast' },
-    QUALITY: {
-      labelKey: 'agent.console.model.quality',
-      icon: '\u2605',
-      colorClass: 'model-quality',
-    },
-    CHEAP: { labelKey: 'agent.console.model.cheap', icon: '\u{1F4B0}', colorClass: 'model-cheap' },
-    REF: { labelKey: 'agent.console.model.ref', icon: '\u{1F4F7}', colorClass: 'model-ref' },
-  };
-
-// =============================================================================
-// 하위 컴포넌트
-// =============================================================================
-
-/** 단계 상태 아이콘 */
-function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
-  switch (status) {
-    case 'pending':
-      return <span className="phase-icon pending">○</span>;
-    case 'in_progress':
-      return <span className="phase-icon in-progress">◎</span>;
-    case 'completed':
-      return <span className="phase-icon completed">●</span>;
-    case 'failed':
-      return <span className="phase-icon failed">✕</span>;
-    default:
-      return <span className="phase-icon">○</span>;
-  }
-}
-
-/** 단계 큐 항목 */
-function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
-  const { t } = useTranslation();
-  const key = PHASE_KEYS[phase.name];
-  const label = key ? t(key) : phase.name;
-  const statusClass = `phase-item ${phase.status}`;
-
-  return (
-    <div className={statusClass}>
-      <PhaseIcon status={phase.status} />
-      <span className="phase-label">{label}</span>
-    </div>
-  );
-}
-
-/** 단계 큐 */
-function PhaseQueue() {
-  const { t } = useTranslation();
-  const phases = useAgentStore(selectPhases);
-
-  return (
-    <div className="phase-queue">
-      <div className="queue-label">{t('agent.console.queue')}</div>
-      <div className="queue-items">
-        {phases.map((phase) => (
-          <PhaseQueueItem key={phase.name} phase={phase} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** 배지 아이템 */
-function BadgeItem({ badge }: { badge: ValidationBadge }) {
-  const { t } = useTranslation();
-  const info = BADGE_INFO[badge];
-  if (!info) return null;
-
-  const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
-  const statusText = info.isOk ? t('agent.console.badge.ok') : t('agent.console.badge.fail');
-  const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
-  const fallbackIcon = info.isOk ? '✓' : '✗';
-
-  return (
-    <div className={`badge-item ${statusClass}`}>
-      <span className="badge-label">{t(info.labelKey)}</span>
-      <span className="badge-status">
-        <span className="icon-wrapper">
-          <img
-            src={`/ui/icons/${iconName}`}
-            alt=""
-            aria-hidden="true"
-            className="badge-icon-img"
-            onError={(e) => e.currentTarget.classList.add('hidden')}
-          />
-          <span className="icon-fallback" style={{ fontSize: '0.625rem' }}>
-            {fallbackIcon}
-          </span>
-        </span>
-        {statusText}
-      </span>
-    </div>
-  );
-}
-
-/** 배지 패널 */
-function BadgesPanel() {
-  const { t } = useTranslation();
-  const badges = useAgentStore(selectBadges);
-
-  if (badges.length === 0) {
-    return (
-      <div className="badges-panel">
-        <div className="badges-label">{t('agent.console.badges')}</div>
-        <div className="badges-empty">{t('agent.console.badges_empty')}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="badges-panel">
-      <div className="badges-label">{t('agent.console.badges')}</div>
-      <div className="badges-grid">
-        {badges.map((badge, index) => (
-          <BadgeItem key={`${badge}-${index}`} badge={badge} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Auto-repair 트레이스 */
-function RepairTrace() {
-  const { t } = useTranslation();
-  const repairCount = useAgentStore(selectRepairCount);
-  const isStreaming = useAgentStore(selectIsStreaming);
-
-  if (repairCount === 0 && !isStreaming) {
-    return null;
-  }
-
-  return (
-    <div className="repair-trace">
-      <span className="repair-label">{t('agent.console.repair')}</span>
-      <span className="repair-count">#{repairCount}</span>
-      {repairCount > 0 && (
-        <span className="repair-status text-warning"> {t('agent.console.repaired')}</span>
-      )}
-    </div>
-  );
-}
-
-/**
- * 모델 라벨 배지 (U-069: FAST/QUALITY 표시)
- *
- * 현재 텍스트 생성에 사용된 모델을 시각적으로 표시합니다.
- * - FAST: 빠른 응답, 기본 비용 (⚡)
- * - QUALITY: 고품질 응답, 2배 비용 (★)
- */
-function ModelLabelBadge() {
-  const { t } = useTranslation();
-  const modelLabel = useAgentStore(selectModelLabel);
-  const info = MODEL_LABEL_INFO[modelLabel];
-
-  if (!info) return null;
-
-  // i18n 키가 없으면 폴백 텍스트 사용
-  const label = t(info.labelKey, { defaultValue: modelLabel });
-
-  return (
-    <div className={`model-label-badge ${info.colorClass}`}>
-      <span className="model-icon">{info.icon}</span>
-      <span className="model-text">{label}</span>
-    </div>
-  );
-}
-
-/** 에러 표시 */
-function ErrorDisplay() {
-  const error = useAgentStore(selectError);
-
-  if (!error) return null;
-
-  return (
-    <div className="agent-error">
-      <span className="error-icon">⚠</span>
-      <span className="error-message">{error.message}</span>
-      {error.code && <span className="error-code">[{error.code}]</span>}
-    </div>
-  );
-}
-
-/** 스트리밍 상태 표시 */
-function StreamingStatus() {
-  const { t } = useTranslation();
-  const isStreaming = useAgentStore(selectIsStreaming);
-
-  return (
-    <div className="streaming-status">
-      <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
-      <span className="status-text">
-        {isStreaming ? t('agent.console.status.processing') : t('agent.console.status.idle')}
-      </span>
-    </div>
-  );
-}
-
-// =============================================================================
-// 메인 컴포넌트
-// =============================================================================
-
-/**
- * Agent Console 컴포넌트.
- *
- * U-082: 기본 접힘(collapsed)으로 시작하며, Badges + StreamingStatus만 compact 표시.
- * 토글 버튼으로 Plan/Queue/RepairTrace 등 상세 정보를 펼칠 수 있습니다.
- *
- * Q1: Option A - 기본 접힘
- * Q3: Option A - 상태 저장하지 않음 (매번 기본 상태로 시작)
- *
- * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
- * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
- * U-069: 현재 사용 중인 모델 라벨(FAST/QUALITY) 표시 추가
- */
-export function AgentConsole() {
-  const { t } = useTranslation();
-  // U-082 Q1 Option A: 기본 접힘, Q3 Option A: 저장하지 않음
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <div
-      className={`agent-console-content ${isExpanded ? 'agent-console-expanded' : 'agent-console-collapsed'}`}
-      data-ui-importance="critical"
-    >
-      {/* U-082: 항상 표시 영역 - StreamingStatus + Badges + ModelLabel + 토글 */}
-      <div className="agent-console-always">
-        <div className="agent-console-summary">
-          <StreamingStatus />
-          <ModelLabelBadge />
-        </div>
-        <BadgesPanel />
-        <button
-          type="button"
-          className="agent-console-toggle"
-          onClick={() => setIsExpanded(!isExpanded)}
-          aria-expanded={isExpanded}
-          aria-label={isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
-          title={isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
-        >
-          <span className="toggle-icon">{isExpanded ? '▲' : '▼'}</span>
-          <span className="toggle-text">
-            {isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
-          </span>
-        </button>
-      </div>
-
-      {/* U-082: 확장 시에만 표시 - Plan/Queue/RepairTrace */}
-      {isExpanded && (
-        <div className="agent-console-details">
-          <PhaseQueue />
-          <RepairTrace />
-        </div>
-      )}
-
-      {/* 에러는 항상 표시 */}
-      <ErrorDisplay />
-    </div>
-  );
-}
-
-export default AgentConsole;
-</file>
-
 <file path="frontend/src/components/DemoProfileSelect.tsx">
 /**
  * Unknown World - 데모 프로필 선택 컴포넌트 (U-015[Mvp], U-116[Mvp]).
@@ -20872,165 +21259,6 @@ def get_model_id(label: ModelLabel) -> str:
         'gemini-3-flash-preview'
     """
     return _MODEL_MAP[label]
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/fallback.py">
-"""Unknown World - 안전한 폴백 TurnOutput 생성기.
-
-최종 복구 실패 시에도 UI가 빈 화면이 되지 않도록
-스키마를 만족하는 안전한 TurnOutput을 생성합니다.
-
-설계 원칙:
-    - RULE-004: 검증 실패 시 안전한 폴백 제공
-    - RULE-005: 재화 인바리언트 (비용 0, 잔액 유지)
-    - RULE-006: ko/en 언어 정책 준수
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/prd.md 8.7 (TurnOutput 스키마)
-"""
-
-from __future__ import annotations
-
-from unknown_world.config.economy import LOW_BALANCE_THRESHOLD
-from unknown_world.models.turn import (
-    ActionCard,
-    ActionDeck,
-    AgentConsole,
-    AgentPhase,
-    CurrencyAmount,
-    EconomyOutput,
-    Language,
-    RenderOutput,
-    RiskLevel,
-    SafetyOutput,
-    TurnOutput,
-    UIOutput,
-    ValidationBadge,
-    WorldDelta,
-)
-
-# =============================================================================
-# 폴백 메시지 (i18n)
-# =============================================================================
-
-FALLBACK_MESSAGES = {
-    Language.KO: {
-        "narrative": "잠시 혼란스러운 순간이 지나갑니다. 다시 집중해봅시다.",
-        "narrative_blocked": "안전 정책에 따라 이 요청을 처리할 수 없습니다. 다른 행동을 시도해보세요.",
-        "alternative_label": "텍스트로 진행하기",
-        "alternative_desc": "이미지 생성 없이 저비용으로 진행합니다",
-    },
-    Language.EN: {
-        "narrative": "A moment of confusion passes. Let's focus again.",
-        "narrative_blocked": "This request cannot be processed due to safety policies. Please try a different action.",
-        "alternative_label": "Continue with text",
-        "alternative_desc": "Proceed at low cost without image generation",
-    },
-}
-
-
-# =============================================================================
-# 폴백 생성 함수
-# =============================================================================
-
-
-def create_safe_fallback(
-    language: Language,
-    economy_snapshot: CurrencyAmount | None = None,
-    repair_count: int = 0,
-    is_blocked: bool = False,
-) -> TurnOutput:
-    """안전한 폴백 TurnOutput을 생성합니다.
-
-    최종 복구 실패 시 사용합니다.
-    스키마를 만족하고, 비용 0으로 잔액을 유지합니다.
-
-    Args:
-        language: 응답 언어
-        economy_snapshot: 현재 재화 상태 (비용 0으로 유지)
-        repair_count: 복구 시도 횟수
-        is_blocked: 안전 정책에 의해 차단되었는지
-
-    Returns:
-        안전한 폴백 TurnOutput
-
-    Example:
-        >>> fallback = create_safe_fallback(
-        ...     language=Language.KO,
-        ...     economy_snapshot=CurrencyAmount(signal=50, memory_shard=3),
-        ...     repair_count=2,
-        ... )
-        >>> print(fallback.narrative)
-    """
-    messages = FALLBACK_MESSAGES[language]
-
-    # 내러티브 선택
-    narrative = messages["narrative_blocked"] if is_blocked else messages["narrative"]
-
-    # 재화 유지 (비용 0)
-    balance = economy_snapshot or CurrencyAmount(signal=100, memory_shard=5)
-
-    # 저비용 대안 카드 제공 (RULE-005)
-    # U-065: description 필드 제거됨 (narrative에서 자연어로 표현)
-    alternative_card = ActionCard(
-        id="fallback_text_only",
-        label=messages["alternative_label"],
-        cost=CurrencyAmount(signal=1, memory_shard=0),
-        risk=RiskLevel.LOW,
-        enabled=True,
-        is_alternative=True,
-    )
-
-    # 배지 결정 (RU-005-S1: 폴백에서도 모든 카테고리의 배지를 일관되게 설정)
-    badges: list[ValidationBadge] = []
-
-    # Schema: 폴백이므로 SCHEMA_FAIL (단, 안전 차단은 스키마 문제가 아님)
-    if not is_blocked:
-        badges.append(ValidationBadge.SCHEMA_FAIL)
-    else:
-        badges.append(ValidationBadge.SCHEMA_OK)
-
-    # Economy: 폴백에서는 비용 0이므로 ECONOMY_OK
-    badges.append(ValidationBadge.ECONOMY_OK)
-
-    # Safety: is_blocked에 따라 결정
-    if is_blocked:
-        badges.append(ValidationBadge.SAFETY_BLOCKED)
-    else:
-        badges.append(ValidationBadge.SAFETY_OK)
-
-    # Consistency: 폴백에서는 언어/좌표 문제가 없으므로 CONSISTENCY_OK
-    badges.append(ValidationBadge.CONSISTENCY_OK)
-
-    # U-079: 잔액 부족 경고 여부 결정
-    is_low = balance.signal < LOW_BALANCE_THRESHOLD
-
-    return TurnOutput(
-        language=language,
-        narrative=narrative,
-        ui=UIOutput(
-            action_deck=ActionDeck(cards=[alternative_card]),
-            objects=[],
-        ),
-        world=WorldDelta(),
-        render=RenderOutput(image_job=None),  # 이미지 생성 안 함
-        economy=EconomyOutput(
-            cost=CurrencyAmount(signal=0, memory_shard=0),
-            balance_after=balance,
-            credit=0,
-            low_balance_warning=is_low,
-        ),
-        safety=SafetyOutput(
-            blocked=is_blocked,
-            message=messages["narrative_blocked"] if is_blocked else None,
-        ),
-        agent_console=AgentConsole(
-            current_phase=AgentPhase.COMMIT,
-            badges=badges,
-            repair_count=repair_count,
-        ),
-    )
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/prompt_loader.py">
@@ -24130,6 +24358,543 @@ describe('App Layout - Inventory Count', () => {
 });
 </file>
 
+<file path="frontend/src/components/AgentConsole.test.tsx">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { AgentConsole } from './AgentConsole';
+import type { ValidationBadge, TurnOutput } from '../schemas/turn';
+import type { PhaseInfo, AgentError } from '../stores/agentStore';
+
+// Mock i18n
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { ok?: number; total?: number; count?: number }) => {
+      if (options?.ok !== undefined && options?.total !== undefined) {
+        return `${key}:${options.ok}/${options.total}`;
+      }
+      if (options?.count !== undefined) {
+        return `${key}:${options.count}`;
+      }
+      return key;
+    },
+  }),
+}));
+
+// Mock store state
+interface MockState {
+  phases: PhaseInfo[];
+  badges: ValidationBadge[];
+  repairCount: number;
+  error: AgentError | null;
+  isStreaming: boolean;
+  finalOutput: Partial<TurnOutput> | null;
+}
+
+const mockState: MockState = {
+  phases: [],
+  badges: [],
+  repairCount: 0,
+  error: null,
+  isStreaming: false,
+  finalOutput: {
+    agent_console: {
+      model_label: 'FAST',
+      repair_count: 0,
+    },
+  } as Partial<TurnOutput>,
+};
+
+// Mock dependencies
+vi.mock('../stores/agentStore', () => ({
+  useAgentStore: (selector: (state: MockState) => unknown) => selector(mockState),
+  selectIsStreaming: (state: MockState) => state.isStreaming,
+  selectPhases: (state: MockState) => state.phases,
+  selectBadges: (state: MockState) => state.badges,
+  selectRepairCount: (state: MockState) => state.repairCount,
+  selectError: (state: MockState) => state.error,
+  selectModelLabel: (state: MockState) => state.finalOutput?.agent_console?.model_label ?? 'FAST',
+}));
+
+describe('AgentConsole (U-114)', () => {
+  beforeEach(() => {
+    // Reset mock state
+    mockState.phases = [];
+    mockState.badges = [];
+    mockState.repairCount = 0;
+    mockState.error = null;
+    mockState.isStreaming = false;
+    mockState.finalOutput = {
+      agent_console: {
+        model_label: 'FAST',
+        repair_count: 0,
+      },
+    } as Partial<TurnOutput>;
+  });
+
+  it('should always show queue and have badges collapsed by default', () => {
+    render(<AgentConsole />);
+
+    // U-114: Queue should always be visible
+    expect(screen.getByText('agent.console.queue')).toBeInTheDocument();
+
+    // U-114: Idle state should show "대기 중..." text
+    expect(screen.getByText('agent.console.queue_idle')).toBeInTheDocument();
+
+    // U-114: Badges toggle button should be present
+    const toggleButton = screen.getByRole('button', {
+      name: /agent\.console\.badges_toggle/i,
+    });
+    expect(toggleButton).toBeInTheDocument();
+
+    // U-114: Badges panel details should NOT be visible (collapsed)
+    expect(screen.queryByText('agent.console.badges_empty')).not.toBeInTheDocument();
+  });
+
+  it('should expand badges when toggle button is clicked', () => {
+    render(<AgentConsole />);
+
+    const toggleButton = screen.getByRole('button', {
+      name: /agent\.console\.badges_toggle/i,
+    });
+
+    // Click to expand badges
+    fireEvent.click(toggleButton);
+
+    // Badges empty state should now be visible
+    expect(screen.getByText('agent.console.badges_empty')).toBeInTheDocument();
+
+    // Click to collapse badges
+    fireEvent.click(toggleButton);
+
+    // Badges empty state should be hidden
+    expect(screen.queryByText('agent.console.badges_empty')).not.toBeInTheDocument();
+  });
+
+  it('should show "N/N OK" summary when all badges are OK and collapsed', () => {
+    mockState.badges = ['schema_ok', 'economy_ok', 'safety_ok', 'consistency_ok'];
+
+    render(<AgentConsole />);
+
+    // Q2: Option C - show "4/4 OK" summary
+    expect(screen.getByText('agent.console.badges_summary_ok:4/4')).toBeInTheDocument();
+    expect(screen.queryByText('⚠')).not.toBeInTheDocument();
+  });
+
+  it('should show warning icon and fail count when at least one badge fails and collapsed', () => {
+    mockState.badges = ['schema_fail', 'economy_ok', 'safety_ok', 'consistency_ok'];
+
+    render(<AgentConsole />);
+
+    // Fail indicator should be visible
+    const failIndicator = screen.getByLabelText('agent.console.badge_fail_warning:1');
+    expect(failIndicator).toBeInTheDocument();
+    expect(failIndicator.textContent).toContain('⚠');
+    expect(failIndicator.textContent).toContain('1');
+
+    // "N/N OK" summary should NOT be visible when there are failures
+    expect(screen.queryByText(/badges_summary_ok/)).not.toBeInTheDocument();
+  });
+
+  it('should show both badges panel and summary info when expanded (summary info hidden)', () => {
+    mockState.badges = ['schema_ok', 'economy_ok'];
+
+    render(<AgentConsole />);
+
+    const toggleButton = screen.getByRole('button', {
+      name: /agent\.console\.badges_toggle/i,
+    });
+
+    // Initially collapsed, summary visible
+    expect(screen.getByText('agent.console.badges_summary_ok:2/2')).toBeInTheDocument();
+
+    // Click to expand
+    fireEvent.click(toggleButton);
+
+    // Now badges panel is visible, summary in button should NOT be there
+    expect(screen.queryByText('agent.console.badges_summary_ok:2/2')).not.toBeInTheDocument();
+
+    // Detailed badge labels should be visible
+    expect(screen.getByText('agent.console.badge.schema')).toBeInTheDocument();
+    expect(screen.getByText('agent.console.badge.economy')).toBeInTheDocument();
+  });
+});
+</file>
+
+<file path="frontend/src/components/AgentConsole.tsx">
+/**
+ * Unknown World - Agent Console 컴포넌트.
+ *
+ * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
+ * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
+ *
+ * U-114: 검증배지 기본 접힘 + 대기열(Queue) 상시 노출
+ *   - Queue(대기열): 항상 노출, idle 시 "대기 중..." 표시 (Q1: Option A)
+ *   - Badges(검증배지): 기본 접힘, 축약 요약 "4/4 OK" 또는 "⚠ N FAIL" (Q2: Option C)
+ *   - 토글 버튼(▼/▲)으로 배지 펼침/접힘 전환
+ *
+ * U-082: Agent Console 축소 기반 (레이아웃 축소 범위 유지)
+ *
+ * 설계 원칙:
+ *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
+ *   - RULE-002: 게임 UI로 표현 (채팅 버블 금지)
+ *
+ * @module components/AgentConsole
+ */
+
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  useAgentStore,
+  selectIsStreaming,
+  selectPhases,
+  selectBadges,
+  selectRepairCount,
+  selectError,
+  selectModelLabel,
+  type PhaseInfo,
+} from '../stores/agentStore';
+import type { ValidationBadge, ModelLabel } from '../schemas/turn';
+
+// =============================================================================
+// 상수 정의
+// =============================================================================
+
+/** 단계 표시 이름 i18n 키 */
+const PHASE_KEYS: Record<string, string> = {
+  parse: 'agent.console.phase.parse',
+  validate: 'agent.console.phase.validate',
+  plan: 'agent.console.phase.plan',
+  resolve: 'agent.console.phase.resolve',
+  render: 'agent.console.phase.render',
+  verify: 'agent.console.phase.verify',
+  commit: 'agent.console.phase.commit',
+};
+
+/** 배지 표시 정보 (i18n 키 기반) */
+const BADGE_INFO: Record<ValidationBadge, { labelKey: string; isOk: boolean }> = {
+  schema_ok: { labelKey: 'agent.console.badge.schema', isOk: true },
+  schema_fail: { labelKey: 'agent.console.badge.schema', isOk: false },
+  economy_ok: { labelKey: 'agent.console.badge.economy', isOk: true },
+  economy_fail: { labelKey: 'agent.console.badge.economy', isOk: false },
+  safety_ok: { labelKey: 'agent.console.badge.safety', isOk: true },
+  safety_blocked: { labelKey: 'agent.console.badge.safety', isOk: false },
+  consistency_ok: { labelKey: 'agent.console.badge.consistency', isOk: true },
+  consistency_fail: { labelKey: 'agent.console.badge.consistency', isOk: false },
+};
+
+/** 모델 라벨 표시 정보 (U-069: FAST/QUALITY) */
+const MODEL_LABEL_INFO: Record<ModelLabel, { labelKey: string; icon: string; colorClass: string }> =
+  {
+    FAST: { labelKey: 'agent.console.model.fast', icon: '\u26A1', colorClass: 'model-fast' },
+    QUALITY: {
+      labelKey: 'agent.console.model.quality',
+      icon: '\u2605',
+      colorClass: 'model-quality',
+    },
+    CHEAP: { labelKey: 'agent.console.model.cheap', icon: '\u{1F4B0}', colorClass: 'model-cheap' },
+    REF: { labelKey: 'agent.console.model.ref', icon: '\u{1F4F7}', colorClass: 'model-ref' },
+  };
+
+// =============================================================================
+// 하위 컴포넌트
+// =============================================================================
+
+/** 단계 상태 아이콘 */
+function PhaseIcon({ status }: { status: PhaseInfo['status'] }) {
+  switch (status) {
+    case 'pending':
+      return <span className="phase-icon pending">○</span>;
+    case 'in_progress':
+      return <span className="phase-icon in-progress">◎</span>;
+    case 'completed':
+      return <span className="phase-icon completed">●</span>;
+    case 'failed':
+      return <span className="phase-icon failed">✕</span>;
+    default:
+      return <span className="phase-icon">○</span>;
+  }
+}
+
+/** 단계 큐 항목 */
+function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
+  const { t } = useTranslation();
+  const key = PHASE_KEYS[phase.name];
+  const label = key ? t(key) : phase.name;
+  const statusClass = `phase-item ${phase.status}`;
+
+  return (
+    <div className={statusClass}>
+      <PhaseIcon status={phase.status} />
+      <span className="phase-label">{label}</span>
+    </div>
+  );
+}
+
+/**
+ * 대기열(Queue): 항상 노출 - U-114
+ *
+ * 스트리밍 중이거나 단계가 진행된 경우 7단계 큐를 표시하고,
+ * idle 상태(턴 미처리)에서는 "대기 중..." 텍스트를 표시합니다.
+ * Q1: Option A - idle 시 "대기 중..." 텍스트
+ */
+function AlwaysVisibleQueue() {
+  const { t } = useTranslation();
+  const isStreaming = useAgentStore(selectIsStreaming);
+  const phases = useAgentStore(selectPhases);
+
+  const hasActivity = phases.some((p) => p.status !== 'pending');
+
+  return (
+    <div className="agent-queue-always">
+      <div className="queue-label">{t('agent.console.queue')}</div>
+      {!isStreaming && !hasActivity ? (
+        <div className="queue-idle">{t('agent.console.queue_idle')}</div>
+      ) : (
+        <div className="queue-items">
+          {phases.map((phase) => (
+            <PhaseQueueItem key={phase.name} phase={phase} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 배지 아이템 */
+function BadgeItem({ badge }: { badge: ValidationBadge }) {
+  const { t } = useTranslation();
+  const info = BADGE_INFO[badge];
+  if (!info) return null;
+
+  const statusClass = info.isOk ? 'badge-ok' : 'badge-fail';
+  const statusText = info.isOk ? t('agent.console.badge.ok') : t('agent.console.badge.fail');
+  const iconName = info.isOk ? 'badge-ok-24.png' : 'badge-fail-24.png';
+  const fallbackIcon = info.isOk ? '✓' : '✗';
+
+  return (
+    <div className={`badge-item ${statusClass}`}>
+      <span className="badge-label">{t(info.labelKey)}</span>
+      <span className="badge-status">
+        <span className="icon-wrapper">
+          <img
+            src={`/ui/icons/${iconName}`}
+            alt=""
+            aria-hidden="true"
+            className="badge-icon-img"
+            onError={(e) => e.currentTarget.classList.add('hidden')}
+          />
+          <span className="icon-fallback" style={{ fontSize: '0.625rem' }}>
+            {fallbackIcon}
+          </span>
+        </span>
+        {statusText}
+      </span>
+    </div>
+  );
+}
+
+/** 배지 패널 */
+function BadgesPanel() {
+  const { t } = useTranslation();
+  const badges = useAgentStore(selectBadges);
+
+  if (badges.length === 0) {
+    return (
+      <div className="badges-panel">
+        <div className="badges-label">{t('agent.console.badges')}</div>
+        <div className="badges-empty">{t('agent.console.badges_empty')}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="badges-panel">
+      <div className="badges-label">{t('agent.console.badges')}</div>
+      <div className="badges-grid">
+        {badges.map((badge, index) => (
+          <BadgeItem key={`${badge}-${index}`} badge={badge} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 배지 축약 요약 (접힌 상태) - U-114 Q2: Option C
+ *
+ * 접힌 상태에서:
+ *   - 모두 OK → "4/4 OK" 축약 텍스트
+ *   - 실패 있음 → "⚠ N" 경고 아이콘 + 실패 개수
+ *   - 배지 없음 → 표시하지 않음
+ */
+function BadgesSummary() {
+  const { t } = useTranslation();
+  const badges = useAgentStore(selectBadges);
+
+  if (badges.length === 0) return null;
+
+  const failBadges = badges.filter((b) => BADGE_INFO[b] && !BADGE_INFO[b].isOk);
+  const okBadges = badges.filter((b) => BADGE_INFO[b]?.isOk);
+
+  if (failBadges.length > 0) {
+    return (
+      <span
+        className="badge-fail-indicator"
+        aria-label={t('agent.console.badge_fail_warning', { count: failBadges.length })}
+      >
+        <span className="fail-warning-icon">⚠</span>
+        <span className="fail-count">{failBadges.length}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="badge-ok-summary">
+      {t('agent.console.badges_summary_ok', { ok: okBadges.length, total: badges.length })}
+    </span>
+  );
+}
+
+/** Auto-repair 트레이스 */
+function RepairTrace() {
+  const { t } = useTranslation();
+  const repairCount = useAgentStore(selectRepairCount);
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  if (repairCount === 0 && !isStreaming) {
+    return null;
+  }
+
+  return (
+    <div className="repair-trace">
+      <span className="repair-label">{t('agent.console.repair')}</span>
+      <span className="repair-count">#{repairCount}</span>
+      {repairCount > 0 && (
+        <span className="repair-status text-warning"> {t('agent.console.repaired')}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 모델 라벨 배지 (U-069: FAST/QUALITY 표시)
+ *
+ * 현재 텍스트 생성에 사용된 모델을 시각적으로 표시합니다.
+ * - FAST: 빠른 응답, 기본 비용 (⚡)
+ * - QUALITY: 고품질 응답, 2배 비용 (★)
+ */
+function ModelLabelBadge() {
+  const { t } = useTranslation();
+  const modelLabel = useAgentStore(selectModelLabel);
+  const info = MODEL_LABEL_INFO[modelLabel];
+
+  if (!info) return null;
+
+  // i18n 키가 없으면 폴백 텍스트 사용
+  const label = t(info.labelKey, { defaultValue: modelLabel });
+
+  return (
+    <div className={`model-label-badge ${info.colorClass}`}>
+      <span className="model-icon">{info.icon}</span>
+      <span className="model-text">{label}</span>
+    </div>
+  );
+}
+
+/** 에러 표시 */
+function ErrorDisplay() {
+  const error = useAgentStore(selectError);
+
+  if (!error) return null;
+
+  return (
+    <div className="agent-error">
+      <span className="error-icon">⚠</span>
+      <span className="error-message">{error.message}</span>
+      {error.code && <span className="error-code">[{error.code}]</span>}
+    </div>
+  );
+}
+
+/** 스트리밍 상태 표시 */
+function StreamingStatus() {
+  const { t } = useTranslation();
+  const isStreaming = useAgentStore(selectIsStreaming);
+
+  return (
+    <div className="streaming-status">
+      <span className={`status-dot ${isStreaming ? 'active' : ''}`} />
+      <span className="status-text">
+        {isStreaming ? t('agent.console.status.processing') : t('agent.console.status.idle')}
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
+
+/**
+ * Agent Console 컴포넌트.
+ *
+ * U-114: Queue(대기열) 상시 노출 + Badges(검증배지) 기본 접힘.
+ *   - Queue: 항상 표시 (idle 시 "대기 중..." 텍스트)
+ *   - Badges: 기본 접힘 → 축약 요약 "4/4 OK" 또는 "⚠ N" 표시
+ *   - 토글 버튼으로 배지 펼침 → 전체 배지 + RepairTrace 표시
+ *   - Q1: Option A - idle 시 "대기 중..." 텍스트
+ *   - Q2: Option C - 접힌 상태에서 "4/4 OK" 축약 텍스트
+ *
+ * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
+ * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
+ * U-069: 현재 사용 중인 모델 라벨(FAST/QUALITY) 표시 추가
+ */
+export function AgentConsole() {
+  const { t } = useTranslation();
+  // U-114: 배지 기본 접힘 상태 (Queue는 항상 노출)
+  const [badgesExpanded, setBadgesExpanded] = useState(false);
+
+  return (
+    <div className="agent-console-content" data-ui-importance="critical">
+      {/* U-114: 항상 표시 영역 - StreamingStatus + ModelLabel + Queue */}
+      <div className="agent-console-always">
+        <div className="agent-console-summary">
+          <StreamingStatus />
+          <ModelLabelBadge />
+        </div>
+        <AlwaysVisibleQueue />
+      </div>
+
+      {/* U-114: 배지 섹션 (기본 접힘) */}
+      <div className="agent-badges-section">
+        <button
+          type="button"
+          className="agent-badges-toggle"
+          onClick={() => setBadgesExpanded(!badgesExpanded)}
+          aria-expanded={badgesExpanded}
+          aria-label={t('agent.console.badges_toggle')}
+        >
+          <span className="toggle-icon">{badgesExpanded ? '▲' : '▼'}</span>
+          <span className="toggle-text">{t('agent.console.badges')}</span>
+          {!badgesExpanded && <BadgesSummary />}
+        </button>
+        {badgesExpanded && (
+          <div className="agent-badges-expanded">
+            <BadgesPanel />
+            <RepairTrace />
+          </div>
+        )}
+      </div>
+
+      {/* 에러는 항상 표시 */}
+      <ErrorDisplay />
+    </div>
+  );
+}
+
+export default AgentConsole;
+</file>
+
 <file path="frontend/src/components/Hotspot.tsx">
 /**
  * Unknown World - Hotspot 컴포넌트
@@ -25713,6 +26478,431 @@ export interface PlaceholderInfo {
   fallbackEmoji: string;
   labelKey: string;
 }
+</file>
+
+<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
+"""Unknown World - Repair Loop (제한된 재시도).
+
+스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
+max_repair_attempts 내에서 repair 재요청을 수행하고,
+최종 실패 시 안전한 폴백으로 종료합니다.
+
+설계 원칙:
+    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
+    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
+
+페어링 결정:
+    - Q1: max_repair_attempts = 2 (Option A)
+
+참조:
+    - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-results/U-017[Mvp].md
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from unknown_world.config.models import ModelLabel
+from unknown_world.models.turn import (
+    CurrencyAmount,
+    Language,
+    TurnInput,
+    TurnOutput,
+    ValidationBadge,
+)
+from unknown_world.orchestrator.fallback import create_safe_fallback
+from unknown_world.orchestrator.generate_turn_output import (
+    GenerationResult,
+    GenerationStatus,
+    get_turn_output_generator,
+)
+from unknown_world.validation.business_rules import (
+    BusinessRuleValidationResult,
+    validate_business_rules,
+)
+
+if TYPE_CHECKING:
+    pass
+
+# =============================================================================
+# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
+# =============================================================================
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# 설정 상수
+# =============================================================================
+
+# 페어링 결정: Q1 = Option A (2회)
+MAX_REPAIR_ATTEMPTS = 2
+"""최대 복구 시도 횟수."""
+
+
+# =============================================================================
+# i18n Repair 컨텍스트 메시지 (RULE-006, RU-005-S2)
+# =============================================================================
+
+REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
+    Language.KO: {
+        "schema_header": "## 이전 시도 결과",
+        "schema_error": "응답 형식이 올바르지 않았습니다.",
+        "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
+        "business_header": "## 이전 시도 결과",
+        "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
+        # U-043: 언어 교정 전용 피드백
+        "language_header": "## 언어 혼합 오류",
+        "language_instruction": (
+            "사용자 노출 텍스트에 영어가 섞여 있습니다. "
+            "모든 텍스트를 한국어(ko-KR)로만 작성하세요. "
+            "스키마 구조는 유지하고 텍스트 값만 한국어로 수정합니다. "
+            "예외: Signal, Shard 등 재화 이름은 영어로 유지 가능합니다."
+        ),
+    },
+    Language.EN: {
+        "schema_header": "## Previous Attempt Result",
+        "schema_error": "The response format was invalid.",
+        "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
+        "business_header": "## Previous Attempt Result",
+        "business_instruction": "Please regenerate following the rules above.",
+        # U-043: 언어 교정 전용 피드백
+        "language_header": "## Language Mixing Error",
+        "language_instruction": (
+            "User-facing text contains Korean characters. "
+            "Rewrite all text in English (en-US) only. "
+            "Keep the schema structure intact and only modify text values to English. "
+            "Exception: Currency names like Signal, Shard may remain in English."
+        ),
+    },
+}
+
+
+# =============================================================================
+# Repair Loop 결과 타입
+# =============================================================================
+
+
+@dataclass
+class RepairLoopResult:
+    """Repair Loop 결과.
+
+    Attributes:
+        output: 최종 TurnOutput (성공 또는 폴백)
+        total_attempts: 총 시도 횟수 (초기 시도 포함)
+        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
+        is_fallback: 폴백으로 종료되었는지
+        badges: 검증 배지 목록
+        error_messages: 각 시도의 에러 메시지 (UI 노출용)
+        model_label: 사용된 텍스트 모델 라벨 (U-069: FAST/QUALITY)
+        cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
+    """
+
+    output: TurnOutput
+    total_attempts: int = 1
+    repair_attempts: int = 0
+    is_fallback: bool = False
+    badges: list[ValidationBadge] = field(default_factory=lambda: [])
+    error_messages: list[str] = field(default_factory=lambda: [])
+    model_label: ModelLabel = ModelLabel.FAST
+    cost_multiplier: float = 1.0
+
+
+# =============================================================================
+# Repair Loop 함수
+# =============================================================================
+
+
+async def run_repair_loop(
+    turn_input: TurnInput,
+    *,
+    world_context: str = "",
+    force_mock: bool = False,
+    max_attempts: int = MAX_REPAIR_ATTEMPTS,
+) -> RepairLoopResult:
+    """Repair Loop를 실행합니다.
+
+    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
+    최종 실패 시 안전한 폴백을 반환합니다.
+
+    U-069: 모델 티어링
+        - 기본: FAST 모델 (gemini-3-flash-preview)
+        - 트리거: action_id 또는 키워드 매칭 시 QUALITY 모델 (gemini-3-pro-preview)
+        - 비용 배수: FAST=1.0, QUALITY=2.0
+
+    Args:
+        turn_input: 사용자 턴 입력
+        world_context: 현재 세계 상태 요약 (선택)
+        force_mock: Mock 클라이언트 강제 사용 여부
+        max_attempts: 최대 복구 시도 횟수
+
+    Returns:
+        RepairLoopResult: 최종 결과 (성공 또는 폴백, 모델 라벨/비용 배수 포함)
+
+    Example:
+        >>> result = await run_repair_loop(turn_input)
+        >>> if result.is_fallback:
+        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
+        >>> print(f"사용 모델: {result.model_label}, 비용 배수: {result.cost_multiplier}")
+        >>> print(result.output.narrative)
+    """
+    generator = get_turn_output_generator(force_mock=force_mock)
+    economy_snapshot = CurrencyAmount(
+        signal=turn_input.economy_snapshot.signal,
+        memory_shard=turn_input.economy_snapshot.memory_shard,
+    )
+
+    error_messages: list[str] = []
+    badges: list[ValidationBadge] = []
+    repair_context = ""  # 재시도 시 추가할 컨텍스트
+
+    # U-069: 모델 티어링 - 최초 시도에서 결정된 모델 정보 저장
+    selected_model_label: ModelLabel = ModelLabel.FAST
+    selected_cost_multiplier: float = 1.0
+
+    last_attempt = 0
+    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
+        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
+        last_attempt = attempt
+        is_repair = attempt > 0
+
+        # 로그 기록 (프롬프트 노출 금지)
+        logger.info(
+            "[RepairLoop] 시도",
+            extra={
+                "attempt": attempt,
+                "is_repair": is_repair,
+                "language": turn_input.language.value,
+            },
+        )
+
+        # 컨텍스트 구성 (복구 시 에러 요약 추가)
+        current_context = world_context
+        if is_repair and repair_context:
+            current_context = f"{world_context}\n\n{repair_context}"
+
+        # 생성 시도
+        gen_result = await generator.generate(
+            turn_input,
+            world_context=current_context,
+        )
+
+        # U-069: 모델 티어링 - 생성 결과에서 모델 정보 저장 (매 시도 동일하나 명시적으로 갱신)
+        selected_model_label = gen_result.model_label
+        selected_cost_multiplier = gen_result.cost_multiplier
+
+        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
+        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_schema(gen_result, turn_input.language)
+            continue
+
+        # 2. API 에러
+        if gen_result.status == GenerationStatus.API_ERROR:
+            badges.append(ValidationBadge.SCHEMA_FAIL)
+            error_messages.append(gen_result.error_message)
+            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
+            # 하지만 일시적 오류일 수 있으므로 재시도 허용
+            repair_context = ""
+            continue
+
+        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
+        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
+            badges.append(ValidationBadge.SCHEMA_OK)
+
+            # 비즈니스 룰 검증
+            biz_result = validate_business_rules(turn_input, gen_result.output)
+
+            if biz_result.is_valid:
+                # 모든 검증 통과
+                badges.extend(
+                    [
+                        ValidationBadge.ECONOMY_OK,
+                        ValidationBadge.SAFETY_OK,
+                        ValidationBadge.CONSISTENCY_OK,
+                    ]
+                )
+
+                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
+                gen_result.output.agent_console.badges = badges
+                gen_result.output.agent_console.repair_count = attempt
+
+                logger.info(
+                    "[RepairLoop] 성공",
+                    extra={
+                        "total_attempts": attempt + 1,
+                        "repair_attempts": attempt,
+                    },
+                )
+
+                return RepairLoopResult(
+                    output=gen_result.output,
+                    total_attempts=attempt + 1,
+                    repair_attempts=attempt,
+                    is_fallback=False,
+                    badges=badges,
+                    error_messages=error_messages,
+                    model_label=selected_model_label,
+                    cost_multiplier=selected_cost_multiplier,
+                )
+
+            # 비즈니스 룰 실패
+            add_business_badges(biz_result, badges)
+            error_messages.append(biz_result.error_summary)
+            # RU-005-S2: language에 따라 repair 메시지 분기
+            repair_context = _build_repair_context_business(biz_result, turn_input.language)
+            continue
+
+        # 4. 안전 차단
+        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
+            badges.append(ValidationBadge.SAFETY_BLOCKED)
+            # 안전 차단은 재시도 불가 → 즉시 폴백
+            logger.warning(
+                "[RepairLoop] 안전 차단으로 폴백",
+                extra={"attempt": attempt},
+            )
+            break
+
+    # 최종 실패 → 안전한 폴백 반환
+    logger.warning(
+        "[RepairLoop] 최종 폴백 반환",
+        extra={
+            "max_attempts": max_attempts,
+            "actual_attempts": last_attempt,
+        },
+    )
+
+    fallback = create_safe_fallback(
+        language=turn_input.language,
+        economy_snapshot=economy_snapshot,
+        repair_count=last_attempt,
+        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
+    )
+
+    return RepairLoopResult(
+        output=fallback,
+        total_attempts=last_attempt + 1,
+        repair_attempts=last_attempt,
+        is_fallback=True,
+        badges=badges,
+        error_messages=error_messages,
+        model_label=selected_model_label,
+        cost_multiplier=selected_cost_multiplier,
+    )
+
+
+# =============================================================================
+# 헬퍼 함수
+# =============================================================================
+
+
+def _build_repair_context_schema(gen_result: GenerationResult, language: Language) -> str:
+    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+
+    Args:
+        gen_result: 생성 결과
+        language: 응답 언어
+    """
+    # 짧은 요약만 포함 (RULE-007/008)
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+    return f"""
+{messages["schema_header"]}
+
+{messages["schema_error"]}
+{messages["schema_instruction"]}
+"""
+
+
+def _build_repair_context_business(
+    biz_result: BusinessRuleValidationResult, language: Language
+) -> str:
+    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
+
+    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
+    언어 혼합 에러가 있으면 특별한 지시를 추가합니다 (U-043).
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        language: 응답 언어
+    """
+    messages = REPAIR_CONTEXT_MESSAGES[language]
+
+    # U-043: 언어 혼합 에러가 있는지 확인
+    has_language_content_error = any(
+        "language_content_mixed" in err["type"] for err in biz_result.errors
+    )
+
+    # 언어 혼합 에러가 있으면 특별한 지시 추가
+    if has_language_content_error:
+        return f"""
+{messages["language_header"]}
+
+{biz_result.error_summary}
+
+{messages["language_instruction"]}
+"""
+
+    # 일반 비즈니스 룰 에러
+    return f"""
+{messages["business_header"]}
+
+{biz_result.error_summary}
+
+{messages["business_instruction"]}
+"""
+
+
+def add_business_badges(
+    biz_result: BusinessRuleValidationResult,
+    badges: list[ValidationBadge],
+) -> None:
+    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
+
+    에러 타입 접두어 → 배지 매핑:
+        - economy_* → ECONOMY_FAIL
+        - safety_* → SAFETY_BLOCKED
+        - language_* (mismatch/content_mixed) 또는 box2d_* → CONSISTENCY_FAIL
+
+    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
+    U-043: language_content_mixed도 CONSISTENCY_FAIL로 매핑.
+
+    Args:
+        biz_result: 비즈니스 룰 검증 결과
+        badges: 배지 목록 (in-place 수정)
+    """
+    # 에러 타입별 배지 매핑 (RU-005-S1, U-043)
+    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
+    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
+    # U-043: language_mismatch, language_content_mixed, box2d_* 모두 consistency로 매핑
+    has_consistency_error = any(
+        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
+    )
+
+    # Economy 배지
+    if has_economy_error:
+        badges.append(ValidationBadge.ECONOMY_FAIL)
+    else:
+        badges.append(ValidationBadge.ECONOMY_OK)
+
+    # Safety 배지
+    if has_safety_error:
+        badges.append(ValidationBadge.SAFETY_BLOCKED)
+    else:
+        badges.append(ValidationBadge.SAFETY_OK)
+
+    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
+    if has_consistency_error:
+        badges.append(ValidationBadge.CONSISTENCY_FAIL)
+    else:
+        badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
 <file path="frontend/src/components/ActionDeck.test.tsx">
@@ -29650,431 +30840,6 @@ class MockOrchestrator:
             repair_count=1,  # Mock에서는 기본 복구 시도 1회로 표시
             is_blocked=False,
         )
-</file>
-
-<file path="backend/src/unknown_world/orchestrator/repair_loop.py">
-"""Unknown World - Repair Loop (제한된 재시도).
-
-스키마/비즈니스 룰 검증 실패 시 자동으로 재시도하는 루프입니다.
-max_repair_attempts 내에서 repair 재요청을 수행하고,
-최종 실패 시 안전한 폴백으로 종료합니다.
-
-설계 원칙:
-    - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
-    - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
-
-페어링 결정:
-    - Q1: max_repair_attempts = 2 (Option A)
-
-참조:
-    - vibe/unit-plans/U-018[Mvp].md
-    - vibe/unit-results/U-017[Mvp].md
-"""
-
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-from unknown_world.config.models import ModelLabel
-from unknown_world.models.turn import (
-    CurrencyAmount,
-    Language,
-    TurnInput,
-    TurnOutput,
-    ValidationBadge,
-)
-from unknown_world.orchestrator.fallback import create_safe_fallback
-from unknown_world.orchestrator.generate_turn_output import (
-    GenerationResult,
-    GenerationStatus,
-    get_turn_output_generator,
-)
-from unknown_world.validation.business_rules import (
-    BusinessRuleValidationResult,
-    validate_business_rules,
-)
-
-if TYPE_CHECKING:
-    pass
-
-# =============================================================================
-# 로거 설정 (프롬프트/내부 추론 노출 금지 - RULE-007/008)
-# =============================================================================
-
-logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# 설정 상수
-# =============================================================================
-
-# 페어링 결정: Q1 = Option A (2회)
-MAX_REPAIR_ATTEMPTS = 2
-"""최대 복구 시도 횟수."""
-
-
-# =============================================================================
-# i18n Repair 컨텍스트 메시지 (RULE-006, RU-005-S2)
-# =============================================================================
-
-REPAIR_CONTEXT_MESSAGES: dict[Language, dict[str, str]] = {
-    Language.KO: {
-        "schema_header": "## 이전 시도 결과",
-        "schema_error": "응답 형식이 올바르지 않았습니다.",
-        "schema_instruction": "TurnOutput JSON Schema를 정확히 준수하여 다시 생성하세요.",
-        "business_header": "## 이전 시도 결과",
-        "business_instruction": "위 규칙을 준수하여 다시 생성하세요.",
-        # U-043: 언어 교정 전용 피드백
-        "language_header": "## 언어 혼합 오류",
-        "language_instruction": (
-            "사용자 노출 텍스트에 영어가 섞여 있습니다. "
-            "모든 텍스트를 한국어(ko-KR)로만 작성하세요. "
-            "스키마 구조는 유지하고 텍스트 값만 한국어로 수정합니다. "
-            "예외: Signal, Shard 등 재화 이름은 영어로 유지 가능합니다."
-        ),
-    },
-    Language.EN: {
-        "schema_header": "## Previous Attempt Result",
-        "schema_error": "The response format was invalid.",
-        "schema_instruction": "Please regenerate following the TurnOutput JSON Schema exactly.",
-        "business_header": "## Previous Attempt Result",
-        "business_instruction": "Please regenerate following the rules above.",
-        # U-043: 언어 교정 전용 피드백
-        "language_header": "## Language Mixing Error",
-        "language_instruction": (
-            "User-facing text contains Korean characters. "
-            "Rewrite all text in English (en-US) only. "
-            "Keep the schema structure intact and only modify text values to English. "
-            "Exception: Currency names like Signal, Shard may remain in English."
-        ),
-    },
-}
-
-
-# =============================================================================
-# Repair Loop 결과 타입
-# =============================================================================
-
-
-@dataclass
-class RepairLoopResult:
-    """Repair Loop 결과.
-
-    Attributes:
-        output: 최종 TurnOutput (성공 또는 폴백)
-        total_attempts: 총 시도 횟수 (초기 시도 포함)
-        repair_attempts: 복구 시도 횟수 (초기 시도 제외)
-        is_fallback: 폴백으로 종료되었는지
-        badges: 검증 배지 목록
-        error_messages: 각 시도의 에러 메시지 (UI 노출용)
-        model_label: 사용된 텍스트 모델 라벨 (U-069: FAST/QUALITY)
-        cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
-    """
-
-    output: TurnOutput
-    total_attempts: int = 1
-    repair_attempts: int = 0
-    is_fallback: bool = False
-    badges: list[ValidationBadge] = field(default_factory=lambda: [])
-    error_messages: list[str] = field(default_factory=lambda: [])
-    model_label: ModelLabel = ModelLabel.FAST
-    cost_multiplier: float = 1.0
-
-
-# =============================================================================
-# Repair Loop 함수
-# =============================================================================
-
-
-async def run_repair_loop(
-    turn_input: TurnInput,
-    *,
-    world_context: str = "",
-    force_mock: bool = False,
-    max_attempts: int = MAX_REPAIR_ATTEMPTS,
-) -> RepairLoopResult:
-    """Repair Loop를 실행합니다.
-
-    초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
-    최종 실패 시 안전한 폴백을 반환합니다.
-
-    U-069: 모델 티어링
-        - 기본: FAST 모델 (gemini-3-flash-preview)
-        - 트리거: action_id 또는 키워드 매칭 시 QUALITY 모델 (gemini-3-pro-preview)
-        - 비용 배수: FAST=1.0, QUALITY=2.0
-
-    Args:
-        turn_input: 사용자 턴 입력
-        world_context: 현재 세계 상태 요약 (선택)
-        force_mock: Mock 클라이언트 강제 사용 여부
-        max_attempts: 최대 복구 시도 횟수
-
-    Returns:
-        RepairLoopResult: 최종 결과 (성공 또는 폴백, 모델 라벨/비용 배수 포함)
-
-    Example:
-        >>> result = await run_repair_loop(turn_input)
-        >>> if result.is_fallback:
-        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
-        >>> print(f"사용 모델: {result.model_label}, 비용 배수: {result.cost_multiplier}")
-        >>> print(result.output.narrative)
-    """
-    generator = get_turn_output_generator(force_mock=force_mock)
-    economy_snapshot = CurrencyAmount(
-        signal=turn_input.economy_snapshot.signal,
-        memory_shard=turn_input.economy_snapshot.memory_shard,
-    )
-
-    error_messages: list[str] = []
-    badges: list[ValidationBadge] = []
-    repair_context = ""  # 재시도 시 추가할 컨텍스트
-
-    # U-069: 모델 티어링 - 최초 시도에서 결정된 모델 정보 저장
-    selected_model_label: ModelLabel = ModelLabel.FAST
-    selected_cost_multiplier: float = 1.0
-
-    last_attempt = 0
-    for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
-        badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
-        last_attempt = attempt
-        is_repair = attempt > 0
-
-        # 로그 기록 (프롬프트 노출 금지)
-        logger.info(
-            "[RepairLoop] 시도",
-            extra={
-                "attempt": attempt,
-                "is_repair": is_repair,
-                "language": turn_input.language.value,
-            },
-        )
-
-        # 컨텍스트 구성 (복구 시 에러 요약 추가)
-        current_context = world_context
-        if is_repair and repair_context:
-            current_context = f"{world_context}\n\n{repair_context}"
-
-        # 생성 시도
-        gen_result = await generator.generate(
-            turn_input,
-            world_context=current_context,
-        )
-
-        # U-069: 모델 티어링 - 생성 결과에서 모델 정보 저장 (매 시도 동일하나 명시적으로 갱신)
-        selected_model_label = gen_result.model_label
-        selected_cost_multiplier = gen_result.cost_multiplier
-
-        # 1. 스키마 검증 실패 (JSON 파싱/Pydantic 실패)
-        if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            # RU-005-S2: language에 따라 repair 메시지 분기
-            repair_context = _build_repair_context_schema(gen_result, turn_input.language)
-            continue
-
-        # 2. API 에러
-        if gen_result.status == GenerationStatus.API_ERROR:
-            badges.append(ValidationBadge.SCHEMA_FAIL)
-            error_messages.append(gen_result.error_message)
-            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
-            # 하지만 일시적 오류일 수 있으므로 재시도 허용
-            repair_context = ""
-            continue
-
-        # 3. 스키마 검증 성공 → 비즈니스 룰 검증
-        if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
-            badges.append(ValidationBadge.SCHEMA_OK)
-
-            # 비즈니스 룰 검증
-            biz_result = validate_business_rules(turn_input, gen_result.output)
-
-            if biz_result.is_valid:
-                # 모든 검증 통과
-                badges.extend(
-                    [
-                        ValidationBadge.ECONOMY_OK,
-                        ValidationBadge.SAFETY_OK,
-                        ValidationBadge.CONSISTENCY_OK,
-                    ]
-                )
-
-                # 서버 검증 결과로 업데이트 (RULE-003/004/008)
-                gen_result.output.agent_console.badges = badges
-                gen_result.output.agent_console.repair_count = attempt
-
-                logger.info(
-                    "[RepairLoop] 성공",
-                    extra={
-                        "total_attempts": attempt + 1,
-                        "repair_attempts": attempt,
-                    },
-                )
-
-                return RepairLoopResult(
-                    output=gen_result.output,
-                    total_attempts=attempt + 1,
-                    repair_attempts=attempt,
-                    is_fallback=False,
-                    badges=badges,
-                    error_messages=error_messages,
-                    model_label=selected_model_label,
-                    cost_multiplier=selected_cost_multiplier,
-                )
-
-            # 비즈니스 룰 실패
-            add_business_badges(biz_result, badges)
-            error_messages.append(biz_result.error_summary)
-            # RU-005-S2: language에 따라 repair 메시지 분기
-            repair_context = _build_repair_context_business(biz_result, turn_input.language)
-            continue
-
-        # 4. 안전 차단
-        if gen_result.status == GenerationStatus.SAFETY_BLOCKED:
-            badges.append(ValidationBadge.SAFETY_BLOCKED)
-            # 안전 차단은 재시도 불가 → 즉시 폴백
-            logger.warning(
-                "[RepairLoop] 안전 차단으로 폴백",
-                extra={"attempt": attempt},
-            )
-            break
-
-    # 최종 실패 → 안전한 폴백 반환
-    logger.warning(
-        "[RepairLoop] 최종 폴백 반환",
-        extra={
-            "max_attempts": max_attempts,
-            "actual_attempts": last_attempt,
-        },
-    )
-
-    fallback = create_safe_fallback(
-        language=turn_input.language,
-        economy_snapshot=economy_snapshot,
-        repair_count=last_attempt,
-        is_blocked=ValidationBadge.SAFETY_BLOCKED in badges,
-    )
-
-    return RepairLoopResult(
-        output=fallback,
-        total_attempts=last_attempt + 1,
-        repair_attempts=last_attempt,
-        is_fallback=True,
-        badges=badges,
-        error_messages=error_messages,
-        model_label=selected_model_label,
-        cost_multiplier=selected_cost_multiplier,
-    )
-
-
-# =============================================================================
-# 헬퍼 함수
-# =============================================================================
-
-
-def _build_repair_context_schema(gen_result: GenerationResult, language: Language) -> str:
-    """스키마 실패에 대한 Repair 컨텍스트를 구성합니다.
-
-    프롬프트 원문/상세 오류는 노출하지 않고, 간단한 지시만 포함합니다.
-    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
-
-    Args:
-        gen_result: 생성 결과
-        language: 응답 언어
-    """
-    # 짧은 요약만 포함 (RULE-007/008)
-    messages = REPAIR_CONTEXT_MESSAGES[language]
-    return f"""
-{messages["schema_header"]}
-
-{messages["schema_error"]}
-{messages["schema_instruction"]}
-"""
-
-
-def _build_repair_context_business(
-    biz_result: BusinessRuleValidationResult, language: Language
-) -> str:
-    """비즈니스 룰 실패에 대한 Repair 컨텍스트를 구성합니다.
-
-    언어에 따라 메시지를 분기합니다 (RULE-006, RU-005-S2).
-    언어 혼합 에러가 있으면 특별한 지시를 추가합니다 (U-043).
-
-    Args:
-        biz_result: 비즈니스 룰 검증 결과
-        language: 응답 언어
-    """
-    messages = REPAIR_CONTEXT_MESSAGES[language]
-
-    # U-043: 언어 혼합 에러가 있는지 확인
-    has_language_content_error = any(
-        "language_content_mixed" in err["type"] for err in biz_result.errors
-    )
-
-    # 언어 혼합 에러가 있으면 특별한 지시 추가
-    if has_language_content_error:
-        return f"""
-{messages["language_header"]}
-
-{biz_result.error_summary}
-
-{messages["language_instruction"]}
-"""
-
-    # 일반 비즈니스 룰 에러
-    return f"""
-{messages["business_header"]}
-
-{biz_result.error_summary}
-
-{messages["business_instruction"]}
-"""
-
-
-def add_business_badges(
-    biz_result: BusinessRuleValidationResult,
-    badges: list[ValidationBadge],
-) -> None:
-    """비즈니스 룰 검증 결과에 따라 배지를 추가합니다.
-
-    에러 타입 접두어 → 배지 매핑:
-        - economy_* → ECONOMY_FAIL
-        - safety_* → SAFETY_BLOCKED
-        - language_* (mismatch/content_mixed) 또는 box2d_* → CONSISTENCY_FAIL
-
-    RU-005-S1: consistency 에러가 누락되지 않도록 매핑을 완전하게 구현.
-    U-043: language_content_mixed도 CONSISTENCY_FAIL로 매핑.
-
-    Args:
-        biz_result: 비즈니스 룰 검증 결과
-        badges: 배지 목록 (in-place 수정)
-    """
-    # 에러 타입별 배지 매핑 (RU-005-S1, U-043)
-    has_economy_error = any("economy" in err["type"] for err in biz_result.errors)
-    has_safety_error = any("safety" in err["type"] for err in biz_result.errors)
-    # U-043: language_mismatch, language_content_mixed, box2d_* 모두 consistency로 매핑
-    has_consistency_error = any(
-        "language" in err["type"] or "box2d" in err["type"] for err in biz_result.errors
-    )
-
-    # Economy 배지
-    if has_economy_error:
-        badges.append(ValidationBadge.ECONOMY_FAIL)
-    else:
-        badges.append(ValidationBadge.ECONOMY_OK)
-
-    # Safety 배지
-    if has_safety_error:
-        badges.append(ValidationBadge.SAFETY_BLOCKED)
-    else:
-        badges.append(ValidationBadge.SAFETY_OK)
-
-    # Consistency 배지 (RU-005-S1: 언어/좌표 규약 위반 표시)
-    if has_consistency_error:
-        badges.append(ValidationBadge.CONSISTENCY_FAIL)
-    else:
-        badges.append(ValidationBadge.CONSISTENCY_OK)
 </file>
 
 <file path="backend/src/unknown_world/orchestrator/stages/render_helpers.py">
@@ -41933,7 +42698,11 @@ def validate_image_request(request: ImageGenerationRequest) -> str | None:
         "ref": "Reference"
       },
       "expand": "Details",
-      "collapse": "Collapse"
+      "collapse": "Collapse",
+      "badges_toggle": "Toggle validation badges",
+      "badge_fail_warning": "{{count}} validation failures",
+      "badges_summary_ok": "{{ok}}/{{total}} OK",
+      "queue_idle": "Waiting..."
     }
   },
   "ui": {
@@ -42399,7 +43168,11 @@ def validate_image_request(request: ImageGenerationRequest) -> str | None:
         "ref": "참조"
       },
       "expand": "상세 보기",
-      "collapse": "접기"
+      "collapse": "접기",
+      "badges_toggle": "검증 배지 접기/펼치기",
+      "badge_fail_warning": "검증 실패 {{count}}건",
+      "badges_summary_ok": "{{ok}}/{{total}} OK",
+      "queue_idle": "대기 중..."
     }
   },
   "ui": {

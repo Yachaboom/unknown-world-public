@@ -263,7 +263,11 @@
         "ref": "Reference"
       },
       "expand": "Details",
-      "collapse": "Collapse"
+      "collapse": "Collapse",
+      "badges_toggle": "Toggle validation badges",
+      "badge_fail_warning": "{{count}} validation failures",
+      "badges_summary_ok": "{{ok}}/{{total}} OK",
+      "queue_idle": "Waiting..."
     }
   },
   "ui": {

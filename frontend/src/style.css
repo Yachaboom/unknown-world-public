@@ -2304,7 +2304,7 @@ button:disabled,
   font-size: 0.75rem;
 }
 
-/* U-082: Agent Console 접힘/펼침 토글 구조 */
+/* U-114: Agent Console 항상 표시 영역 (Queue 상시 노출) */
 .agent-console-always {
   display: flex;
   flex-direction: column;
@@ -2318,7 +2318,36 @@ button:disabled,
   flex-wrap: wrap;
 }
 
-.agent-console-toggle {
+/* U-114: 대기열(Queue) 상시 노출 */
+.agent-queue-always {
+  padding: var(--spacing-xs);
+}
+
+.agent-queue-always .queue-items {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+/* U-114 Q1 Option A: idle 시 "대기 중..." 텍스트 */
+.queue-idle {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-align: center;
+  padding: var(--spacing-xs) 0;
+  font-family: var(--font-micro-en);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* U-114: 배지 섹션 (기본 접힘) */
+.agent-badges-section {
+  border-top: 1px solid var(--text-dim);
+}
+
+/* U-114: 배지 토글 버튼 */
+.agent-badges-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2326,8 +2355,8 @@ button:disabled,
   width: 100%;
   padding: 3px var(--spacing-xs);
   background: rgba(0, 20, 0, 0.6);
-  border: 1px solid var(--text-dim);
-  border-radius: 2px;
+  border: none;
+  border-bottom: 1px solid transparent;
   color: var(--text-dim);
   font-family: var(--font-micro-en);
   font-size: 0.625rem;
@@ -2340,13 +2369,12 @@ button:disabled,
     background-color 0.2s;
 }
 
-.agent-console-toggle:hover {
+.agent-badges-toggle:hover {
   color: var(--accent-color);
-  border-color: var(--accent-color);
   background: rgba(255, 0, 255, 0.05);
 }
 
-.agent-console-toggle:focus-visible {
+.agent-badges-toggle:focus-visible {
   outline: 1px solid var(--accent-color);
   outline-offset: 1px;
 }
@@ -2359,23 +2387,50 @@ button:disabled,
   font-size: 0.5625rem;
 }
 
-/* U-082: 접힌 상태에서 더 컴팩트한 레이아웃 */
-.agent-console-collapsed .badges-panel {
-  padding: var(--spacing-xs) 0 0;
-  border-top: none;
+/* U-114 Q2 Option C: 배지 접힌 상태 축약 요약 */
+.badge-ok-summary {
+  color: var(--text-color);
+  font-family: var(--font-micro-en);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-left: auto;
 }
 
-.agent-console-collapsed .badges-panel .badges-grid {
+/* U-114: 실패 배지 경고 아이콘 */
+.badge-fail-indicator {
+  display: inline-flex;
+  align-items: center;
   gap: 2px;
+  margin-left: auto;
 }
 
-/* U-082: 확장 시 상세 정보 영역 */
-.agent-console-details {
-  border-top: 1px solid var(--text-dim);
-  padding-top: var(--spacing-xs);
+.badge-fail-indicator .fail-warning-icon {
+  color: var(--error-color, #ff3333);
+  font-size: 0.625rem;
+}
+
+.badge-fail-indicator .fail-count {
+  color: var(--error-color, #ff3333);
+  font-family: var(--font-micro-en);
+  font-size: 0.5625rem;
+  font-weight: 700;
+}
+
+/* U-114: 배지 펼침 영역 */
+.agent-badges-expanded {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+}
+
+.agent-badges-expanded .badges-panel {
+  padding: var(--spacing-xs) var(--spacing-xs) 0;
+  border-top: none;
+}
+
+.agent-badges-expanded .badges-panel .badges-grid {
+  gap: 2px;
 }
 
 /* 스트리밍 상태 */
@@ -2416,6 +2471,7 @@ button:disabled,
 }
 
 .phase-queue .queue-label,
+.agent-queue-always .queue-label,
 .badges-panel .badges-label,
 .repair-trace .repair-label {
   font-size: 0.75rem; /* 12px로 상향 */
@@ -2437,7 +2493,8 @@ button:disabled,
   width: 100%;
 }
 
-.phase-queue .queue-items {
+.phase-queue .queue-items,
+.agent-queue-always .queue-items {
   display: grid;
   grid-template-columns: repeat(4, 1fr); /* 4열 배치 강제 */
   gap: 6px;
@@ -2885,6 +2942,7 @@ button:disabled,
 .card-disabled-overlay .disabled-reason,
 .narrative-timestamp,
 .phase-queue .queue-label,
+.agent-queue-always .queue-label,
 .badges-panel .badges-label,
 .repair-trace .repair-label,
 .repair-trace .repair-status,
@@ -3037,7 +3095,8 @@ button:disabled,
 }
 
 /* 큐 라벨 폰트 상향 */
-.phase-queue .queue-label {
+.phase-queue .queue-label,
+.agent-queue-always .queue-label {
   font-size: calc(var(--font-size-xs) * 0.85);
 }
 

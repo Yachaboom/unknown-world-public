@@ -4,10 +4,12 @@
  * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
  * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
  *
- * U-082: Agent Console 축소/확장 토글
- *   - 기본 접힘(collapsed): Badges + StreamingStatus + ModelLabel만 compact 표시
- *   - 확장(expanded): Plan/Queue/RepairTrace 등 상세 정보 표시
- *   - Q1: Option A (기본 접힘), Q3: Option A (상태 저장하지 않음)
+ * U-114: 검증배지 기본 접힘 + 대기열(Queue) 상시 노출
+ *   - Queue(대기열): 항상 노출, idle 시 "대기 중..." 표시 (Q1: Option A)
+ *   - Badges(검증배지): 기본 접힘, 축약 요약 "4/4 OK" 또는 "⚠ N FAIL" (Q2: Option C)
+ *   - 토글 버튼(▼/▲)으로 배지 펼침/접힘 전환
+ *
+ * U-082: Agent Console 축소 기반 (레이아웃 축소 범위 유지)
  *
  * 설계 원칙:
  *   - RULE-008: 단계/배지/복구만 보여줌 (프롬프트/내부 추론 노출 금지)
@@ -105,19 +107,32 @@ function PhaseQueueItem({ phase }: { phase: PhaseInfo }) {
   );
 }
 
-/** 단계 큐 */
-function PhaseQueue() {
+/**
+ * 대기열(Queue): 항상 노출 - U-114
+ *
+ * 스트리밍 중이거나 단계가 진행된 경우 7단계 큐를 표시하고,
+ * idle 상태(턴 미처리)에서는 "대기 중..." 텍스트를 표시합니다.
+ * Q1: Option A - idle 시 "대기 중..." 텍스트
+ */
+function AlwaysVisibleQueue() {
   const { t } = useTranslation();
+  const isStreaming = useAgentStore(selectIsStreaming);
   const phases = useAgentStore(selectPhases);
 
+  const hasActivity = phases.some((p) => p.status !== 'pending');
+
   return (
-    <div className="phase-queue">
+    <div className="agent-queue-always">
       <div className="queue-label">{t('agent.console.queue')}</div>
-      <div className="queue-items">
-        {phases.map((phase) => (
-          <PhaseQueueItem key={phase.name} phase={phase} />
-        ))}
-      </div>
+      {!isStreaming && !hasActivity ? (
+        <div className="queue-idle">{t('agent.console.queue_idle')}</div>
+      ) : (
+        <div className="queue-items">
+          {phases.map((phase) => (
+            <PhaseQueueItem key={phase.name} phase={phase} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -178,6 +193,42 @@ function BadgesPanel() {
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * 배지 축약 요약 (접힌 상태) - U-114 Q2: Option C
+ *
+ * 접힌 상태에서:
+ *   - 모두 OK → "4/4 OK" 축약 텍스트
+ *   - 실패 있음 → "⚠ N" 경고 아이콘 + 실패 개수
+ *   - 배지 없음 → 표시하지 않음
+ */
+function BadgesSummary() {
+  const { t } = useTranslation();
+  const badges = useAgentStore(selectBadges);
+
+  if (badges.length === 0) return null;
+
+  const failBadges = badges.filter((b) => BADGE_INFO[b] && !BADGE_INFO[b].isOk);
+  const okBadges = badges.filter((b) => BADGE_INFO[b]?.isOk);
+
+  if (failBadges.length > 0) {
+    return (
+      <span
+        className="badge-fail-indicator"
+        aria-label={t('agent.console.badge_fail_warning', { count: failBadges.length })}
+      >
+        <span className="fail-warning-icon">⚠</span>
+        <span className="fail-count">{failBadges.length}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="badge-ok-summary">
+      {t('agent.console.badges_summary_ok', { ok: okBadges.length, total: badges.length })}
+    </span>
   );
 }
 
@@ -264,11 +315,12 @@ function StreamingStatus() {
 /**
  * Agent Console 컴포넌트.
  *
- * U-082: 기본 접힘(collapsed)으로 시작하며, Badges + StreamingStatus만 compact 표시.
- * 토글 버튼으로 Plan/Queue/RepairTrace 등 상세 정보를 펼칠 수 있습니다.
- *
- * Q1: Option A - 기본 접힘
- * Q3: Option A - 상태 저장하지 않음 (매번 기본 상태로 시작)
+ * U-114: Queue(대기열) 상시 노출 + Badges(검증배지) 기본 접힘.
+ *   - Queue: 항상 표시 (idle 시 "대기 중..." 텍스트)
+ *   - Badges: 기본 접힘 → 축약 요약 "4/4 OK" 또는 "⚠ N" 표시
+ *   - 토글 버튼으로 배지 펼침 → 전체 배지 + RepairTrace 표시
+ *   - Q1: Option A - idle 시 "대기 중..." 텍스트
+ *   - Q2: Option C - 접힌 상태에서 "4/4 OK" 축약 텍스트
  *
  * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
  * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
@@ -276,43 +328,40 @@ function StreamingStatus() {
  */
 export function AgentConsole() {
   const { t } = useTranslation();
-  // U-082 Q1 Option A: 기본 접힘, Q3 Option A: 저장하지 않음
-  const [isExpanded, setIsExpanded] = useState(false);
+  // U-114: 배지 기본 접힘 상태 (Queue는 항상 노출)
+  const [badgesExpanded, setBadgesExpanded] = useState(false);
 
   return (
-    <div
-      className={`agent-console-content ${isExpanded ? 'agent-console-expanded' : 'agent-console-collapsed'}`}
-      data-ui-importance="critical"
-    >
-      {/* U-082: 항상 표시 영역 - StreamingStatus + Badges + ModelLabel + 토글 */}
+    <div className="agent-console-content" data-ui-importance="critical">
+      {/* U-114: 항상 표시 영역 - StreamingStatus + ModelLabel + Queue */}
       <div className="agent-console-always">
         <div className="agent-console-summary">
           <StreamingStatus />
           <ModelLabelBadge />
         </div>
-        <BadgesPanel />
-        <button
-          type="button"
-          className="agent-console-toggle"
-          onClick={() => setIsExpanded(!isExpanded)}
-          aria-expanded={isExpanded}
-          aria-label={isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
-          title={isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
-        >
-          <span className="toggle-icon">{isExpanded ? '▲' : '▼'}</span>
-          <span className="toggle-text">
-            {isExpanded ? t('agent.console.collapse') : t('agent.console.expand')}
-          </span>
-        </button>
+        <AlwaysVisibleQueue />
       </div>
 
-      {/* U-082: 확장 시에만 표시 - Plan/Queue/RepairTrace */}
-      {isExpanded && (
-        <div className="agent-console-details">
-          <PhaseQueue />
-          <RepairTrace />
-        </div>
-      )}
+      {/* U-114: 배지 섹션 (기본 접힘) */}
+      <div className="agent-badges-section">
+        <button
+          type="button"
+          className="agent-badges-toggle"
+          onClick={() => setBadgesExpanded(!badgesExpanded)}
+          aria-expanded={badgesExpanded}
+          aria-label={t('agent.console.badges_toggle')}
+        >
+          <span className="toggle-icon">{badgesExpanded ? '▲' : '▼'}</span>
+          <span className="toggle-text">{t('agent.console.badges')}</span>
+          {!badgesExpanded && <BadgesSummary />}
+        </button>
+        {badgesExpanded && (
+          <div className="agent-badges-expanded">
+            <BadgesPanel />
+            <RepairTrace />
+          </div>
+        )}
+      </div>
 
       {/* 에러는 항상 표시 */}
       <ErrorDisplay />

@@ -61,7 +61,7 @@ frontend/src/App.tsx (사이드바 패널 flex-1 레이아웃 적용)
 frontend/src/main.tsx
 frontend/src/api/turnStream.ts
 frontend/src/components/ActionDeck.tsx
-frontend/src/components/AgentConsole.tsx (접힘/펼침 토글 구현)
+frontend/src/components/AgentConsole.tsx (대기열 상시 노출 및 배지 접힘 토글 구현)
 frontend/src/components/EconomyHud.tsx (거래 장부 i18n 번역 및 여백 수정 반영)
 frontend/src/components/InventoryPanel.tsx
 frontend/src/components/NarrativeFeed.tsx
@@ -90,16 +90,9 @@ frontend/src/stores/inventoryStore.ts
 frontend/src/stores/onboardingStore.ts
 frontend/src/turn/turnRunner.ts
 frontend/src/utils/imageSizing.ts
-frontend/src/utils/imageSizing.test.ts
 shared/schemas/turn/turn_output.schema.json
 scripts/process_item_icons.py
-vibe/unit-results/U-082.md
-vibe/unit-results/U-083[Mvp].md
-vibe/unit-results/U-088[Mvp].md
-vibe/unit-results/U-094[Mvp].md
-vibe/unit-results/U-095[Mvp].md
-vibe/unit-results/U-096[Mvp].md
-vibe/unit-results/U-097[Mvp].md
+vibe/unit-results/U-114.md
 vibe/unit-results/U-099[Mvp].md
 ```
 
@@ -112,6 +105,20 @@ vibe/unit-results/U-099[Mvp].md
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 57. Agent Console 레이아웃 변경 - 배지 접기 + 대기열 상시 노출 (U-114[Mvp])
+
+1. **정보 계층 재구조화 (Visibility Hierarchy)**:
+    - **Active Information**: 턴 처리의 생동감을 위해 대기열(Action Queue)을 최상위 계층으로 격상하고 상시 노출함. 유휴 상태에서는 "대기 중..." 텍스트(Q1: Option A)를 제공하여 시스템의 안정감을 전달함.
+    - **Static Evidence**: 이미 확정된 검증 결과인 배지(Badges) 섹션을 기본 접힌 상태로 변경하여 시각적 노이즈를 축소하고 정보 밀도를 최적화함.
+2. **배지 요약 및 경고 시스템 (Compact Feedback)**:
+    - **Summary Label**: 접힌 상태에서도 "4/4 OK"와 같은 축약 텍스트(Q2: Option C)를 노출하여 전체 상태를 즉시 파악 가능하게 함.
+    - **Exception Highlight**: 검증 실패 배지 발생 시 붉은색 경고 아이콘(⚠)과 실패 개수를 강조 표시하여 "Hard Gate" 위반 상황에 대한 인지성을 확보함.
+3. **토글 및 상태 제어 (Interactive Console)**:
+    - **Unified Toggle**: 배지 상세 정보와 Auto-repair 트레이스를 하나의 토글 버튼으로 묶어 조작 단계를 단순화함.
+    - **Layout Persistence**: 배지를 접음으로써 확보된 공간을 사이드바의 다른 HUD 요소(`Economy HUD`, `Quest`)들이 유연하게 활용할 수 있도록 Flex 레이아웃 정책을 고도화함.
 
 ---
 

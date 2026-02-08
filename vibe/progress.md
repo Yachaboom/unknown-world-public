@@ -1,5 +1,43 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 22:00] U-114[Mvp]: Agent Console 레이아웃 변경 - 검증배지 접기 + 대기열(Queue) 상시 노출 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Agent Console 정보 계층 재구조화, 대기열(Action Queue) 상시 노출(유휴 시 "대기 중..." 표시), 검증 배지(Badges) 기본 접힘 및 토글 버튼 구현, 접힌 상태의 배지 요약(Summary) 노출.
+- **추가 컴포넌트**: `vibe/unit-results/U-114.md` (보고서), `frontend/src/components/AgentConsole.tsx` (수정).
+- **달성 요구사항**: [PRD 6.8] 에이전트 동작 가시화 강화, [RULE-002] 게임 UI 레이아웃 고정 및 최적화.
+
+### 기술적 구현 세부사항
+
+**에이전트 동작 가시화 (Queue Always-On)**:
+- **Always-Visible Queue**: `isStreaming`과 관계없이 7단계 처리 과정(`Parse`→...→`Commit`)을 상시 노출하여 시스템의 역동성 확보.
+- **Idle State Feedback**: 턴 미처리 상태에서 "대기 중..." 텍스트를 출력(Q1: Option A)하여 시스템 상태를 명확히 전달.
+
+**정보 밀도 최적화 (Collapsible Badges)**:
+- **Default Collapsed Policy**: 이미 검증 완료된 정적 정보인 배지 영역을 기본 접음으로써 사이드바의 시각적 노이즈를 줄임.
+- **Dynamic Badge Summary**: 접힌 상태에서도 "4/4 OK" 또는 실패 시 "⚠ N" 경고를 노출(Q2: Option C)하여 상태 인지성 유지.
+- **Toggle Transition**: 배지 상세 정보와 `RepairTrace`를 토글 버튼 하나로 통합 제어하여 조작 편의성 증대.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/AgentConsole.tsx (레이아웃 재구성 및 컴포넌트 추출)
+    ├── locales/ (ko-KR/en-US translation.json 키 추가)
+    └── style.css (배지 요약 및 토글 애니메이션 스타일)
+
+### 성능 및 품질 지표
+
+- **UX**: 에이전트 동작 상태를 확인하기 위해 매번 패널을 조작할 필요가 없어짐.
+- **가시성**: 실패 배지 발생 시 즉각적인 ⚠ 경고 아이콘 노출로 Hard Gate 위반 감지 속도 향상.
+
+### 다음 단계
+
+- **U-117[Mvp]**: 인벤토리 드래그 영역 Row 확장 + 온보딩 팝업 제거
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-08 21:00] U-099[Mvp]: 거래 장부(Resource Log) 버그 수정 - i18n 언어 혼합 + 하단 여백 과다 완료
 
 ### 구현 완료 항목
