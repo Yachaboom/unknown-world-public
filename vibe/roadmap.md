@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 115/145 (79.3%) | **MVP**: 115/124 (92.7%) | **MMP**: 0/21 (0%)
+**전체**: 116/145 (80%) | **MVP**: 116/124 (93.5%) | **MMP**: 0/21 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2 | MMP(M6 후속): D-7+
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-099[Mvp]](unit-plans/U-099[Mvp].md) 거래 장부 i18n 혼합 출력 + 하단 여백 수정 / **최근 완료**: [U-116[Mvp]](vibe/unit-results/U-116.md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-114[Mvp]](unit-plans/U-114[Mvp].md) Agent Console 검증배지 접기 / **최근 완료**: [U-099[Mvp]](vibe/unit-results/U-099[Mvp].md) (2026-02-08)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
 
@@ -150,8 +150,7 @@ _마감: 2026-02-09 5:00 PM PST | 심사: Technical Execution(40%), Innovation/W
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP (10개)
-ID=[U-099[Mvp]](unit-plans/U-099[Mvp].md) | 거래 장부 i18n 혼합 출력 + 하단 여백 수정 | Depends=U-042,U-044 | ⏸️
+### MVP (9개)
 ID=[U-114[Mvp]](unit-plans/U-114[Mvp].md) | Agent Console 검증배지 접기 + 대기열 상시 노출 | Depends=U-082 | ⏸️
 ID=[U-117[Mvp]](unit-plans/U-117[Mvp].md) | 인벤토리 드래그 영역 Row 확장 + 온보딩 팝업 제거 **(U-118 흡수)** | Depends=U-088,U-074 | ⏸️
 ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 턴 처리 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
@@ -191,10 +190,11 @@ ID=[U-110~112[Mmp]] | 디버깅 모드/스토리지 TTL/Panel Corner 수정 | De
 ID=[U-113[Mmp]](unit-plans/U-113[Mmp].md) | 세션 상태 영속성(SaveGame 제거 후 재설계) | Depends=U-116,CP-MMP-01 | ⏸️
 ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=U-108,U-107,U-110~112 | ⏸️
 
-### 완료 (115개)
+### 완료 (116개)
 
 _최근 10개만 표시. 전체 목록: `vibe/unit-results/` 및 `vibe/progress.md` 참조._
 
+- ✅ U-099[Mvp]: 거래 장부 i18n 혼합 출력 + 하단 여백 수정 (2026-02-08)
 - ✅ U-116[Mvp]: SaveGame 제거 + 프로필 초기 상태 정리 (2026-02-08)
 - ✅ U-097[Mvp]: ⚡SceneCanvas 렌더 중 Zustand setState 분리 (2026-02-08)
 - ✅ U-086[Mvp]: 텍스트 우선 타이핑 출력 + 지연 흡수 (2026-02-08)
@@ -205,14 +205,13 @@ _최근 10개만 표시. 전체 목록: `vibe/unit-results/` 및 `vibe/progress.
 - ✅ U-078[Mvp]: 게임 목표 시스템 강화 (2026-02-08)
 - ✅ U-088[Mvp]: 인벤토리 Row 형태 전환 (2026-02-07)
 - ✅ U-096[Mvp]: 아이템 소비(삭제) 로직 (2026-02-07)
-- ✅ U-095[Mvp]: Scanner 아이템 생성 1~3개 랜덤화 (2026-02-07)
-- _... 104개 추가 완료 유닛 (2026-01-03 ~ 2026-02-07)_
+- _... 105개 추가 완료 유닛 (2026-01-03 ~ 2026-02-07)_
 
 ---
 
 ## 빠른 실행
 
-**현재 작업**: [U-099[Mvp]](unit-plans/U-099[Mvp].md) - 거래 장부 i18n 혼합 출력 + 하단 여백 수정
+**현재 작업**: [U-114[Mvp]](unit-plans/U-114[Mvp].md) - Agent Console 검증배지 접기
 **다음 작업(MVP 완료 후)**: [U-119[Mmp]](unit-plans/U-119[Mmp].md) - Frontend Layout WIG 폴리시 → [U-120[Mmp]](unit-plans/U-120[Mmp].md) - 배포
 
 ```bash
@@ -237,9 +236,9 @@ pnpm kill
 
 ## 일일 스탠드업 (2026-02-08)
 
-**완료**: U-116[Mvp] - SaveGame 제거 + 프로필 초기 상태 정리
-**진행중**: U-099[Mvp] - 거래 장부 i18n 혼합 출력 + 하단 여백 수정
+**완료**: U-116[Mvp] - SaveGame 제거 + 프로필 초기 상태 정리, U-099[Mvp] - 거래 장부 버그 수정
+**진행중**: U-114[Mvp] - Agent Console 검증배지 접기
 **블로커**: 없음
 **마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
 **MMP 재편**: M5 "해커톤 제출 준비"로 전면 재편 (U-119 WIG 폴리시, U-120 배포, U-121 문서, U-122 영상, CP-SUB-01). U-100+U-101→U-120 흡수.
-**제출 크리티컬 패스**: MVP 잔여(U-099 등) → U-119(폴리시) + U-120(배포) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)
+**제출 크리티컬 패스**: MVP 잔여(U-114 등) → U-119(폴리시) + U-120(배포) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)

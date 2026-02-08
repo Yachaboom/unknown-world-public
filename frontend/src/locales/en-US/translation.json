@@ -305,6 +305,9 @@
       "QUALITY": "Quality",
       "CHEAP": "Cheap",
       "REF": "Ref"
+    },
+    "ledger_reason": {
+      "turn_cost": "Turn Cost"
     }
   },
   "connection": {

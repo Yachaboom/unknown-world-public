@@ -198,11 +198,24 @@ function CostDisplay({ type, min, max, cost, affordable, label }: CostDisplayPro
 function LedgerItem({ entry }: { entry: LedgerEntry }) {
   const { t } = useTranslation();
 
+  // U-099: i18n 언어 혼합 방지 - 키 기반 번역
+  // "key|param" 형식이면 파라미터와 함께 번역, 아니면 단순 번역
+  const translatedReason = useMemo(() => {
+    if (entry.reason.includes('|')) {
+      const [key, param] = entry.reason.split('|');
+      return `${t(key)}: ${param}`;
+    }
+    // 키가 존재하지 않으면 t()는 입력된 문자열을 그대로 반환하므로 하드코딩된 텍스트와 호환됨
+    return t(entry.reason);
+  }, [entry.reason, t]);
+
   return (
     <div className="ledger-item">
       <div className="ledger-info">
         <span className="ledger-turn">T{entry.turnId}</span>
-        <span className="ledger-reason">{entry.reason}</span>
+        <span className="ledger-reason" title={translatedReason}>
+          {translatedReason}
+        </span>
       </div>
       <div className="ledger-values">
         <span className="ledger-cost">

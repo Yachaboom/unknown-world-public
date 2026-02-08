@@ -1993,27 +1993,20 @@ body {
    - Economy HUD: 유연 확장으로 재화 현황 가시성 강화
    =========================================== */
 
-/* Agent Console: 콘텐츠 기반 높이 (U-082: flex-1 제거)
-   - 접힘 시: flex-shrink: 0 (축소 금지)
-   - 확장 시: max-height 제한 + 내부 스크롤로 overflow 방지 */
+/* Agent Console: flex 1.2 (U-099: Economy와 1.2:1.8 비율) */
 .panel-agent-console {
-  flex-shrink: 0; /* U-082: 접힘 시 다른 패널에 밀려 축소되지 않음 */
+  flex: 1.2;
+  min-height: 0; /* flex 자식 축소 허용 */
 }
 
-/* U-082 fix: 확장 시 max-height 제한으로 sidebar overflow 방지 */
-.panel-agent-console:has(.agent-console-expanded) {
-  flex-shrink: 1; /* 확장 시에는 축소 허용 */
-  max-height: 40%; /* sidebar 높이의 40%까지만 */
+.panel-agent-console .panel-content {
+  overflow-y: auto; /* 콘텐츠가 넘칠 경우 내부 스크롤 */
 }
 
-.panel-agent-console:has(.agent-console-expanded) .panel-content {
-  overflow-y: auto; /* 확장 콘텐츠가 넘칠 경우 내부 스크롤 */
-}
-
-/* Economy HUD: 유연 확장 (U-082: flex-1 부여) */
+/* Economy HUD: flex 1.8 (U-099: Agent Console 대비 1.5배 공간) */
 .panel-economy {
-  /* flex-1은 className으로 받음 - 별도 설정 불필요 */
-  min-height: 120px; /* U-082: 최소 가시성 보장 */
+  flex: 1.8;
+  min-height: 0; /* flex 자식 축소 허용 */
 }
 
 .panel-economy .panel-content {
@@ -3207,12 +3200,13 @@ button:disabled,
 }
 
 .economy-hud-full {
+  flex: 1; /* U-099: 가용 공간을 채워 하단 여백 과다 해소 */
+  display: flex;
   flex-direction: column;
   align-items: stretch;
   padding: var(--spacing-sm);
   gap: var(--spacing-sm);
   min-height: 0; /* U-049: flex 자식 축소 허용 */
-  flex: 1; /* U-049: panel-content 내에서 확장 */
 }
 
 /* 잔액 부족 시 경고 스타일 */
@@ -3459,10 +3453,12 @@ button:disabled,
   display: flex;
   flex-direction: column;
   min-height: 0; /* U-049: flex 자식 축소 허용 (필수) */
-  flex: 1; /* 남은 공간 차지 */
+  /* U-099: flex: 1 적용 → 가용 공간을 채워 하단 여백 과다 해소 */
+  flex: 1;
   border-top: 1px solid var(--text-dim);
   margin-top: var(--spacing-sm);
   padding-top: var(--spacing-sm);
+  overflow: hidden; /* 자식인 ledger-list의 스크롤 보장 */
 }
 
 .ledger-header {
@@ -3489,7 +3485,8 @@ button:disabled,
   overflow-x: hidden; /* U-049: 불필요한 가로 스크롤 방지 */
   scrollbar-width: thin; /* Firefox: 얇은 스크롤바 */
   min-height: 0; /* U-049: flex 자식 축소 허용 */
-  max-height: 120px; /* U-049: 최대 높이 제한하여 스크롤 유도 */
+  /* U-099: flex: 1로 확장 허용 + max-height 제거 (부모 패널 크기에 맞춤) */
+  flex: 1;
   padding-right: var(--spacing-xs); /* 스크롤바 공간 */
 }
 

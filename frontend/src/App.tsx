@@ -428,7 +428,7 @@ function App() {
             <Panel title={t('panel.agent_console.title')} className="panel-agent-console" hasChrome>
               <AgentConsole />
             </Panel>
-            <Panel title={t('economy.hud_label')} className="panel-economy flex-1" hasChrome>
+            <Panel title={t('economy.hud_label')} className="panel-economy" hasChrome>
               <EconomyHud />
             </Panel>
             <Panel title={t('panel.scanner.title')} className="panel-scanner" hasChrome>

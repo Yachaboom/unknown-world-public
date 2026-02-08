@@ -305,6 +305,9 @@
       "QUALITY": "고품질",
       "CHEAP": "저비용",
       "REF": "참조"
+    },
+    "ledger_reason": {
+      "turn_cost": "턴 진행 비용"
     }
   },
   "connection": {

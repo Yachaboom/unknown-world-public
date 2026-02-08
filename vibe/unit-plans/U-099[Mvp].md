@@ -95,8 +95,8 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: ledger entry의 `description`을 i18n 키 기반으로 전환할까, 아니면 서버 응답 텍스트를 그대로 사용할까?
-  - Option A: 프론트에서 action type별 i18n 키 매핑 (예: `economy.cost.turn` → "턴 진행 비용" / "Turn cost")
+- [x] **Q1**: ledger entry의 `description`을 i18n 키 기반으로 전환할까, 아니면 서버 응답 텍스트를 그대로 사용할까?
+  - ✅Option A: 프론트에서 action type별 i18n 키 매핑 (예: `economy.cost.turn` → "턴 진행 비용" / "Turn cost")
   - Option B: 서버 응답의 description을 세션 언어에 맞게 생성하도록 백엔드 수정
   - Option C: 혼합 방식 - 프론트에서 i18n 키를 우선 시도하고, 매핑 실패 시 서버 텍스트 폴백
 

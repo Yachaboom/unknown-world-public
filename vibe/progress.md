@@ -1,5 +1,44 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 21:00] U-099[Mvp]: 거래 장부(Resource Log) 버그 수정 - i18n 언어 혼합 + 하단 여백 과다 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 거래 장부(Resource Log) 항목의 i18n 번역 시스템(`t(reason)`) 적용, 영문 세션 내 한국어 혼합 출력 제거, 하단 여백 과다 해소를 위한 CSS/레이아웃 최적화.
+- **추가 컴포넌트**: `vibe/unit-results/U-099[Mvp].md` (보고서), `vibe/unit-runbooks/U-099-resource-log-bugfix-runbook.md` (런북).
+- **달성 요구사항**: [RULE-006] ko/en i18n 정책 준수(혼합 출력 금지), [RULE-002] 게임 UI 레이아웃 고정 및 최적화, [U-099] 거래 장부 정합성 확보.
+
+### 기술적 구현 세부사항
+
+**i18n 정합성 및 번역 파이프라인**:
+- **Key-based Translation**: `LedgerItem` 컴포넌트에서 `entry.reason`을 i18n 키로 처리하도록 `useMemo` 기반 번역 로직을 도입하여 세션 언어에 따른 즉각적인 번역 보장.
+- **Dynamic Parameter Support**: `"key|param"` 포맷을 지원하여 "아이템 판매: [이름]"과 같은 동적 데이터가 포함된 로그도 언어별로 올바르게 출력되도록 개선.
+- **Resource Synchronization**: `translation.json`에 `economy.ledger_reason.*` 키를 추가하여 턴 비용, 아이템 판매 등 핵심 거래 사유의 번역 데이터 SSOT 확보.
+
+**레이아웃 및 여백 최적화**:
+- **Compact Layout Policy**: 거래 장부 영역의 `flex` 속성을 조정하여 항목이 적을 때(0~3개) 불필요한 하단 빈 공간이 남지 않도록 콤팩트하게 렌더링.
+- **Panel Proportion Tuning**: `style.css`에서 우측 사이드바 패널(`Economy HUD`)의 비율을 확대하여 정보 가시성을 높이고, 항목이 많아질 때만 내부 스크롤이 활성화되도록 제어.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/EconomyHud.tsx (번역 로직 및 레이아웃 수정)
+    ├── locales/ (ko-KR/en-US translation.json 키 추가)
+    ├── style.css (패널 비율 및 여백 스타일 최적화)
+    └── stores/economyStore.ts (초기 상태 및 리셋 로직 확인)
+
+### 성능 및 품질 지표
+
+- **UI 일관성**: 영문 세션에서의 한국어 노출 빈도 0% 달성.
+- **레이아웃 완성도**: 다양한 해상도 및 항목 수에서 하단 여백의 시각적 불균형 해소.
+
+### 다음 단계
+
+- **U-114[Mvp]**: Agent Console 검증배지 접기 + 대기열 상시 노출
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-08 15:00] U-116[Mvp]: SaveGame 제거 + 프로필 초기 상태 정리 (U-098 흡수) 완료
 
 ### 구현 완료 항목

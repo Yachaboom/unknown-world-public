@@ -62,7 +62,7 @@ frontend/src/main.tsx
 frontend/src/api/turnStream.ts
 frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.tsx (접힘/펼침 토글 구현)
-frontend/src/components/EconomyHud.tsx (재화 잔액/아이콘 확대 반영)
+frontend/src/components/EconomyHud.tsx (거래 장부 i18n 번역 및 여백 수정 반영)
 frontend/src/components/InventoryPanel.tsx
 frontend/src/components/NarrativeFeed.tsx
 frontend/src/components/ObjectiveTracker.tsx
@@ -100,6 +100,7 @@ vibe/unit-results/U-094[Mvp].md
 vibe/unit-results/U-095[Mvp].md
 vibe/unit-results/U-096[Mvp].md
 vibe/unit-results/U-097[Mvp].md
+vibe/unit-results/U-099[Mvp].md
 ```
 
 ### 주요 디렉토리 설명
@@ -469,17 +470,16 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ---
 
-## 56. SaveGame 제거 및 세션 단순화 (U-116[Mvp])
+## 56. 거래 장부 버그 수정 및 i18n 정합성 (U-099[Mvp])
 
-1. **SaveGame 시스템 완전 제거**:
-    - **Logic Removal**: `migrations.ts`, `saveGame.test.ts` 등 영속성 관련 코드 및 테스트를 대거 삭제하여 유지보수 부채를 해결함.
-    - **Bootstrap Simplification**: `sessionLifecycle.ts`의 부팅 로직을 단순화하여 항상 프로필 선택 화면에서 시작하도록 강제함.
-2. **프로필 초기 상태 정리 (U-098 통합)**:
-    - **Hotspot Neutralization**: 모든 프로필의 초기 핫스팟(`sceneObjectDefs`)을 빈 배열로 초기화하여, 턴 진행 전 임의의 핫스팟 노출을 방지하고 U-090 정책을 준수함.
-3. **레거시 데이터 자동 정리 (Purge)**:
-    - **Safety Guard**: `saveGame.ts`의 `clearLegacySaveData()`를 통해 기존 브라우저에 남은 구버전 데이터를 부팅 시 자동 정리하여 상태 충돌을 방지함.
-4. **Clean Reset 정책**:
-    - **Store Reset**: 리셋 시 단순히 UI만 새로고침하는 것이 아니라 모든 Zustand store를 초기값으로 강제 리셋하여 어떠한 상태 잔재도 남지 않는 무결성을 달성함.
+1. **거래 장부 i18n 번역 파이프라인**:
+    - **Key-based Rendering**: `EconomyHud` 컴포넌트 내 `LedgerItem`에서 거래 사유(`reason`)를 i18n 키로 처리하도록 구조를 변경함. `t(entry.reason)`을 통해 세션 언어와 100% 일치하는 로그 출력을 보장함.
+    - **Dynamic Parameter Mapping**: `"key|param"` 포맷 지원 로직을 도입하여, "아이템 판매: [이름]"과 같이 동적 데이터가 포함된 거래 내역도 언어별 템플릿에 맞춰 정확히 렌더링되도록 개선함.
+    - **Session Reset Sync**: 언어 전환 시 `sessionLifecycle`을 통해 `economyStore`를 포함한 모든 세션 상태를 초기화함으로써, 이전 언어로 기록된 로그 잔재가 새 세션에 노출되는 문제를 원천 차단함.
+2. **하단 여백 및 패널 레이아웃 최적화**:
+    - **Flexible Space Allocation**: `style.css`에서 우측 사이드바 패널의 `flex` 비율을 재조정하여 `Economy HUD`가 필요에 따라 유연하게 공간을 점유하되, 항목이 적을 때는 콤팩트하게 유지되도록 설계함.
+    - **Min-height & Overflow Management**: 거래 장부 컨테이너의 `min-height`를 제거하고 `flex: none` 속성을 적용하여, 로그 항목이 0~3개일 때 발생하던 불필요한 빈 공간(여백 과다) 문제를 해결함.
+    - **Internal Scroll Consistency**: 항목이 일정 높이(`max-height`)를 초과할 경우에만 내부 스크롤이 활성화되도록 하여 PRD 9.3의 카드 내부 스크롤 원칙을 고도화함.
 
 ---
 

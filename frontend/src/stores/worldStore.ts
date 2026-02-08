@@ -459,7 +459,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     const economyStore = useEconomyStore.getState();
     economyStore.addLedgerEntry({
       turnId: newTurnCount,
-      reason: output.narrative.slice(0, 50), // 내러티브 앞 50자를 사유로 사용
+      reason: 'economy.ledger_reason.turn_cost', // U-099: i18n 키 기반 사유 (언어 혼합 방지)
       cost: output.economy.cost,
       balanceAfter: output.economy.balance_after,
       modelLabel: output.agent_console.model_label ?? 'FAST',
@@ -730,7 +730,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     const economyStore = useEconomyStore.getState();
     economyStore.addLedgerEntry({
       turnId: state.turnCount,
-      reason: `${i18n.t('inventory.sell_ledger_reason')}: ${itemName}`,
+      reason: `inventory.sell_ledger_reason|${itemName}`, // U-099: 키|파라미터 형식
       cost: { signal: -sellPrice, memory_shard: 0 }, // 음수 cost = 수입
       balanceAfter: newEconomy,
       modelLabel: 'FAST',
