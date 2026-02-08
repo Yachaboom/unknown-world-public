@@ -1,47 +1,29 @@
 # 📊 Unknown World 로드맵
 
-**핵심 가치**: 구조화 출력(JSON Schema) 기반의 에이전트형 Game Master가 **상태(WorldState)·규칙(Rule Board)·경제(Economy)** 를 갱신하며, 플레이어가 **클릭·드래그·업로드(Scanner)** 로 조작 가능한 “채팅이 아닌 게임 UI”를 웹에서 즉시 플레이하게 한다.
+**핵심 가치**: 구조화 출력(JSON Schema) 기반의 에이전트형 Game Master가 **상태(WorldState)·규칙(Rule Board)·경제(Economy)** 를 갱신하며, 플레이어가 **클릭·드래그·업로드(Scanner)** 로 조작 가능한 "채팅이 아닌 게임 UI"를 웹에서 즉시 플레이하게 한다.
 
 ## 진행 현황
 
-**전체**: 114/141 (80.9%) | **MVP**: 114/123 (92.7%) | **MMP**: 0/18 (0%)
+**전체**: 114/142 (80.3%) | **MVP**: 114/124 (91.9%) | **MMP**: 0/18 (0%)
 
-**예상 완료(가정)**: MVP D-1 | MMP D-7
-_U-081 skip 반영(U-077 흡수), U-109 의존성 수정(U-076 추가), U-097~U-099 신규 추가(핫픽스/리셋/거래장부)_
+**예상 완료(가정)**: MVP D-2 | MMP D-7
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
-
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-098[Mvp]](unit-plans/U-098[Mvp].md) 새로고침 시 완전 리셋 + 프로필 시작 초기 핫스팟/데모 텍스트 제거 / **최근 완료**: [U-097[Mvp]](vibe/unit-results/U-097[Mvp].md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-116[Mvp]](unit-plans/U-116[Mvp].md) SaveGame 제거 + 프로필 초기 상태 정리 / **최근 완료**: [U-097[Mvp]](vibe/unit-results/U-097[Mvp].md) (2026-02-08)
 
 **블로커**: 없음
 
-**추가 메모**:
-- 취소 UX(Cancel 버튼)는 현재 `frontend/src/turn/turnRunner.ts`의 `cancel()` 기본 골격만 구현되어 있으며, Abort 정책(Abort 시 `onComplete` 미호출) 때문에 취소 시 UI 복구가 미완성일 수 있다. 정책 SSOT: `vibe/refactors/RU-003-S1.md`.
-- M3 통합 구간에서 "나중에 한 번에 붙이기"로 인한 기술 부채/회귀를 줄이기 위해, 중간 체크포인트(CP-MVP-04~06)를 추가했다(실모델 Hard Gate / 멀티모달 이미지 게이트 / Scanner 업로드 게이트). **ID는 유지**하되, 목표일/Depends 기준으로 실행 순서를 정렬한다.
-- ko/en 혼합 출력 사례: `vibe/ref/en-ko-issue.png` (현상/원인 분류 및 수정 계획은 U-043/U-044에서 정리)
-- 로컬에서 `.env`가 자동 로딩되지 않으면 `UW_MODE`가 기본값(mock)으로 동작해 MockOrchestrator 템플릿("...라고 말했습니다", 고정 내러티브)이 반복 노출될 수 있다 → U-047(백엔드 `.env` 자동 로딩) + U-048(Mock 내러티브/액션 echo 개선)로 해결한다.
-- **[2026-02-01 추가]** MVP 품질 개선을 위한 신규 유닛 추가: UI 품질(U-056~U-058), 테스트 수정(U-060), 이미지 프롬프트 통합(U-061), 언어/재화/API 버그 수정(U-062~U-065). 프롬프트 ko/en 분리는 U-036에서 이미 완료됨.
-- **[2026-02-02 추가]** 이미지 생성 지연이 길어도 자연스러운 플로우(진행 연출/late binding/모델 티어링)를 위한 MVP 유닛 추가: U-066.
-- **[2026-02-03 추가]** MVP 품질/UX 강화를 위한 신규 유닛 9개 추가: Vertex AI Production 설정(U-067), 이미지 연결성(U-068), 텍스트 모델 티어링(U-069), 액션 로그(U-070), Scene 로딩 UI(U-071), Scanner 유도 UX(U-072), 레이아웃 확장(U-073), 인터랙션 안내(U-074), 아이템 아이콘 동적 생성(U-075).
-- **[2026-02-03 추가]** "정밀분석" 액션으로 기존 Scene 이미지에 대해 Agentic Vision 분석 및 핫스팟 추가 기능 계획(U-076). MMP U-109(자동 실행)의 MVP 선행 버전으로, 사용자 트리거 기반.
-- **[2026-02-03 추가]** MMP: 새로고침 시 날아가는 UI 상태(Scene 이미지, ActionDeck 등) 복원을 위한 세션 상태 영속성 유닛 추가(U-113).
-- **[2026-02-03 추가]** MVP 게임플레이 품질 강화: 인벤토리 스크롤(U-077), 명확한 목표 시스템(U-078), 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화(U-079).
-- **[2026-02-05 추가]** 핫픽스: Vertex AI 서비스계정 → API 키 인증 방식으로 전환(U-080). MVP UI 품질 강화: Quest/Rule 확장 시 Inventory 영역 침범 수정(U-081), Agent Console 축소 및 재화 현황 확대(U-082), 액션 카드 대안 뱃지 레이아웃 깨짐 수정(U-083), 이미지 생성 픽셀 스타일/사이즈 축소/Scene 영역 높이 조정(U-084).
-- **[2026-02-05 추가]** 핫픽스/UX 보강: **UI 레이아웃(Scene Canvas) 기반 이미지 비율/크기 정합(U-085)**, **턴 진행 피드백 보강(텍스트 우선 타이핑 출력 + 이미지 생성 중 지연 흡수, U-086)**, **처리 중 입력 잠금(허위 액션 로그/중복 입력 방지, U-087)**.
-- **[2026-02-05 추가]** 인벤토리 UX 개선: **인벤토리 UI Row 형태 전환(U-088)** - 그리드/타일에서 Row 형태로 변경하여 아이템 정보 가독성 및 DnD 조작성 향상.
-- **[2026-02-07 추가]** U-076 구현 후 핫픽스: **정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스(U-089)**, **핫스팟 생성을 정밀분석 전용으로 제한(U-090)**.
-- **[2026-02-07 추가]** 런타임 안정화/단순화: **런타임 rembg 파이프라인 일괄 제거(U-091)**, **기본 초기 아이템 프리셋 아이콘(nanobanana-mcp, U-092)**.
-- **[2026-02-07 추가]** 파이프라인 안정성: **ItemIconGenerator 타임아웃 수정(U-093)**, **ImageUnderstanding 응답 파싱 예외 시 자동 재시도(U-094)**.
-- **[2026-02-07 추가]** 게임플레이 개선: **Scanner 아이템 생성 1~3개 랜덤화(U-095)**, **아이템 사용 시 소비(삭제) 로직(U-096)**.
-- **[2026-02-07 추가]** 정밀 판독: **U-081 skip(U-077에 흡수)** - Quest/Rule 확장 시 Inventory 보호 범위를 U-077(인벤토리 스크롤)에 병합하여 중복 제거. **U-109[Mmp] 의존성에 U-076 추가** - MVP 선행(정밀분석) 완료 반영으로 범위 축소 및 재사용 명시.
-- **[2026-02-08 추가]** ⚡핫픽스: **SceneCanvas 렌더 중 Zustand setState 호출 분리(U-097)** - React "Cannot update a component while rendering" 오류로 프로필 시작 후 첫 요청 진행 불가. **새로고침 시 완전 리셋 + 프로필 시작 초기 핫스팟/데모 텍스트 제거(U-098)** - 프로필 초기화 미동작 및 U-090 정책(핫스팟 정밀분석 전용)과 초기 핫스팟 충돌 해소. **거래 장부 i18n 혼합 출력 + 하단 여백 과다 수정(U-099)** - 영문 모드에서 한국어 거래 장부 표시 및 CSS 여백 이슈.
+**메모**:
+- 취소 UX(Cancel 버튼) 미완성 → 정책 SSOT: `vibe/refactors/RU-003-S1.md`
+- U-081 skip(U-077에 흡수). U-116으로 SaveGame 완전 제거 → U-098/U-113 의존성 수정 완료.
+- **[2026-02-08 유닛 병합]** U-098→U-116 흡수, U-118→U-117 흡수, U-025+U-026 통합, RU-007→MMP 이동. 상세: `vibe/changelog.md`
 
 ## 맥락 요약 (SSOT 근거)
 
 ### 프로젝트 핵심 가치 (1문장)
 
-- “프롬프트 래퍼가 아닌” **상태 기반 게임 시스템**을, **구조화 출력 + 검증/복구 + 게임형 UI**로 증명한다.  
+- "프롬프트 래퍼가 아닌" **상태 기반 게임 시스템**을, **구조화 출력 + 검증/복구 + 게임형 UI**로 증명한다.  
   (근거: `vibe/prd.md`, `.cursor/rules/00-core-critical.mdc`)
 
 ### 반드시 지켜야 할 제약 (TOP 3)
@@ -56,7 +38,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | ----- | ---------------------------------------------------------------------- | ---- | ---- | ------------------------------------------------------------------------------------- |
 | R-001 | LLM 출력 불안정(스키마/의미 불일치)로 UI/상태/경제 인바리언트 붕괴     | High | 35%  | Structured Outputs + 서버/클라 검증 + Repair loop + Safe fallback + Mock 모드         |
 | R-002 | 지연/비용(특히 이미지/Thinking)으로 데모 체감 저하(TTFB>2s, 비용 폭증) | High | 30%  | HTTP Streaming 단계/배지 우선 스트리밍 + 경제(예상비용/대안) + Lazy 이미지 + 정책 프리셋 |
-| R-003 | “채팅 앱처럼 보임”으로 심사/사용자 오해                                | High | 25%  | 고정 HUD(액션덱/인벤토리DnD/씬캔버스/에이전트콘솔) + 데모프로필/리셋 + 10분 데모 루프 |
+| R-003 | "채팅 앱처럼 보임"으로 심사/사용자 오해                                | High | 25%  | 고정 HUD(액션덱/인벤토리DnD/씬캔버스/에이전트콘솔) + 데모프로필/리셋 + 10분 데모 루프 |
 
 ### MVP 완료 기준 (Definition of Done)
 
@@ -70,99 +52,78 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ## 마일스톤
 
-| 단계 | ID        | 이름                                   | 목표일     | 진행률 | 상태 |
-| ---- | --------- | -------------------------------------- | ---------- | ------ | ---- |
-| MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 2026-01-05 | 11/11  | ✅   |
-| MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | 2026-01-10 | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 2026-01-15 | 11/22  | 🚧   |
-| MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | 2026-01-15 | -      | ✅   |
-| MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 2026-01-24 | 10/10  | ✅   |
-| MVP  | CP-MVP-04 | **✓ 체크포인트: 실모델 Hard Gate**     | 2026-01-21 | -      | ✅   |
-| MVP  | CP-MVP-07 | **✓ 체크포인트: real 모드 로컬 실행 게이트(.env/Vertex)** | 2026-01-22 | -      | ✅   |
-| MVP  | CP-MVP-06 | **✓ 체크포인트: Scanner 업로드 게이트** | 2026-01-31 | -      | ✅   |
-| MVP  | CP-MVP-03 | **✓ 체크포인트: 10분 데모 루프**       | 2026-01-24 | -      | ⏸️   |
-| MMP  | M5        | 배포/스토리지/관측 강화                | 2026-02-01 | 0/8    | ⏸️   |
-| MMP  | CP-MMP-01 | **✓ 체크포인트: 배포/관측 게이트**     | 2026-02-01 | -      | ⏸️   |
-| MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 2026-02-12 | 0/8    | ⏸️   |
-| MMP  | CP-MMP-02 | **✓ 체크포인트: 시나리오 회귀 100%**   | 2026-02-12 | -      | ⏸️   |
+| 단계 | ID        | 이름                                   | 진행률 | 상태 |
+| ---- | --------- | -------------------------------------- | ------ | ---- |
+| MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 11/11  | ✅   |
+| MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | -      | ✅   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 11/22  | 🚧   |
+| MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | -      | ✅   |
+| MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 10/10  | ✅   |
+| MVP  | CP-MVP-04~07 | ✓ 실모델/이미지/Scanner/real모드 게이트 | -   | ✅   |
+| MVP  | CP-MVP-03 | **체크포인트: 10분 데모 루프**          | -      | ⏸️   |
+| MMP  | M5        | 배포/스토리지/관측 강화                | 0/8    | ⏸️   |
+| MMP  | M6        | 장기 세션/회귀 자동화/보안 하드닝      | 0/8    | ⏸️   |
 
 ## 핵심 기능 (MVP)
 
 ### Turn 계약 + 오케스트레이터 스트리밍
 
 - **완료 기준**: HTTP Streaming(POST)로 Queue/Badges/Auto-repair를 스트리밍하고, 최종 TurnOutput이 스키마/비즈니스 룰을 통과
-- **책임 Unit**: U-005 ~ CP-MVP-01, U-016 ~ U-018, CP-MVP-04, RU-005, U-047, U-048, CP-MVP-07
 - **상태**: ✅ (리팩토링 완료)
 
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
-- **완료 기준**: Action Deck / Inventory(DnD) / Scene Canvas(Hotspots) / Economy HUD / Agent Console이 상시 노출되고, 클릭+드래그가 동작하며, 기본 폰트/대비가 "읽을 수 있는" 수준으로 유지된다, **인벤토리 아이템 이름 툴팁 지원**, **텍스트 번짐 개선**, **핫스팟 디자인 품질 향상**, **아이템→핫스팟 사용 시 액션 로그 출력**, **처리중 Scene UI 로딩 인디케이터**, **레이아웃 확장(좌우 빈공간 활용) ✅**, **핫스팟/아이템 인터랙션 안내 UX**, **인벤토리 스크롤(아이템 많아질 때) ✅**, **인벤토리 Row 형태 전환(정보 가독성/DnD 조작성) ✅**, **Quest/Rule 확장 시 Inventory 영역 보호**, **Agent Console 축소 + 재화 현황 확대**, **액션 카드 대안 뱃지 레이아웃 안정화**, **아이템 사용 시 소비(삭제) 반영 ✅**
-- **책임 Unit**: U-004, U-009 ~ CP-MVP-02, U-014, U-028, U-029, U-030 ~ U-034, U-037, U-038, U-042, U-049, U-050, **U-056, U-057, U-058**, **U-070, U-071, U-073, U-074**, **U-077(+U-081 흡수), U-088**, **U-082, U-083**, **U-086, U-087**, **U-096**, **U-097**
+- **완료 기준**: Action Deck / Inventory(DnD Row) / Scene Canvas(Hotspots) / Economy HUD / Agent Console 상시 노출, 클릭+드래그 동작, 가독성 확보 _(✅ 레이아웃/스크롤/Row 전환/아이콘/소비 로직/디자인 개선 완료)_
+- **잔여**: Agent Console 배지 접기(U-114), 핫스팟 원형 1~3개(U-115), 드래그+온보딩(U-117), 입력 잠금(U-087), 이미지 최적화(U-084)
 - **상태**: 🚧
 
-### 데모 반복 가능(데모프로필/리셋/세이브) + 엔딩 아티팩트
+### 데모 반복 가능(데모프로필/리셋) + 엔딩 아티팩트
 
-- **완료 기준**: 데모프로필 3종 + 즉시 시작/리셋 + SaveGame + 엔딩 리포트 아티팩트 생성, **명확한 게임 목표 시스템**, **새로고침 시 완전 리셋 + 프로필 시작 초기 핫스팟/데모 텍스트 제거 ✅**
-- **책임 Unit**: U-015, U-041, U-025, **U-078**, **U-098**
+- **완료 기준**: 데모프로필 3종 + 리셋 + 새로고침 시 프로필 선택(SaveGame 제거: U-116) + 엔딩 리포트 + 목표 시스템
+- **잔여**: SaveGame 제거+프로필 정리(U-116), 거래 장부 버그(U-099)
 - **상태**: 🚧
 
 ### 게임 경제/재화 시스템
 
-- **완료 기준**: 예상 비용 노출, 잔액 부족 시 대안 제공(FAST 이미지/텍스트-only), 재화 획득 경로 다양화(액션 카드/아이템/목표 보상), 경제 루프 완성, **거래 장부 i18n 언어 혼합 수정 + 하단 여백 과다 해소**
-- **책임 Unit**: U-014, **U-079**, **U-099**
+- **완료 기준**: 예상 비용 노출, 잔액 부족 시 대안, 재화 획득 다양화, 거래 장부 i18n 정합
+- **잔여**: U-099
 - **상태**: 🚧
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
-- **완료 기준**: 텍스트 우선 + (조건부) 이미지 생성/표시, Scanner 업로드가 "아이템/단서"로 변환되어 인벤토리에 반영, 오브젝트 이미지 배경 제거(rembg) 지원, 프롬프트 파일 분리/핫리로드 지원, **분리 프롬프트(.md) 내 XML 태그 규격 통일**, **턴 파이프라인-이미지 생성 서비스 통합(Mock/Real 모두)**, **이미지 생성 지침(scene_prompt) 파이프라인 통합**, **Gemini 이미지 생성 API 호출 방식 수정**, **이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY)**, **이전 턴 이미지 참조로 연결성 강화**, **Scanner 의미론적 사용 유도 UX**, **인벤토리 아이템 아이콘 동적 생성(rembg/캐싱/i18n) ✅**, **"정밀분석" 액션으로 기존 이미지 Agentic Vision 분석 및 핫스팟 추가**, **API 키 인증 방식 전환**, **이미지 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정**
-- **책임 Unit**: U-019 ~ U-022, U-035, U-036, U-043, U-045, U-046, CP-MVP-05, CP-MVP-06, **U-051 ~ U-055**, **U-061**, **U-064**
-- **책임 Unit(보강)**: **U-066**, **U-067, U-068, U-069, U-072, U-075**, **U-076**, **U-080, U-084, U-085, U-086**, **U-089, U-090, U-091, U-092, U-093, U-094, U-095**
+- **완료 기준**: 텍스트 우선 + 조건부 이미지, Scanner→아이템화, 정밀분석(Agentic Vision), 지연 흡수/티어링 _(✅ 파이프라인 통합/API키 전환/rembg 제거/아이콘/연결성 완료)_
+- **잔여**: 이미지 픽셀 스타일(U-084 공유)
 - **상태**: 🚧
 
-### Autopilot + 리플레이/시나리오 하네스(데모 회귀)
+### Autopilot + 리플레이/엔딩(데모 회귀)
 
-- **완료 기준**: Manual/Assist/Autopilot 모드가 보이며, seed+actions 기반 리플레이로 Hard Gate 인바리언트를 점검 가능
-- **책임 Unit**: U-023 ~ U-026
+- **완료 기준**: Manual/Assist/Autopilot 모드, 엔딩 리포트, seed+actions 리플레이로 Hard Gate 점검
+- **잔여**: U-023, U-024, U-025(+U-026 흡수)
 - **상태**: ⏸️
 
-## 리스크
+## 리스크 (활성만)
 
-| ID    | 내용                                | 영향 | 확률 | 대응                                   |
-| ----- | ----------------------------------- | ---- | ---- | -------------------------------------- |
-| R-001 | 스키마/의미 불일치로 Hard Gate 실패 | High | 35%  | Repair loop + Safe fallback + Mock     |
-| R-002 | 이미지/Thinking로 지연/비용 폭발    | High | 30%  | Economy 정책 + Lazy 이미지 + 티어링    |
-| R-003 | UI가 채팅처럼 보여 제출/데모 실패   | High | 25%  | 고정 HUD + DnD/핫스팟/스캐너/콘솔 강조 |
-| R-004 | 작은 글씨/CRT 튜닝으로 가독성·정체성 균형 붕괴 | Medium | 25% | UI 스케일 + 중요도(critical/ambient) 기반 효과 분리 + 대비/라인하이트 가이드 + reduced-motion 가드 |
-| R-005 | 에셋 난립/용량 비대화/스타일 불일치  | Medium | 25% | nanobanana mcp 에셋 SSOT + 매니페스트/QA + 예산 상한 + (필요 시) rembg 배경 제거 |
-| R-006 | 통합 구간(M3)에서 체크포인트 부족으로 기술 부채/회귀 누적 | Medium | 30% | 중간 CP 추가(CP-MVP-04~06) + debt-log 기록 + 리플레이로 Hard Gate 회귀 확인 |
-| R-007 | ko/en 혼합 출력(내러티브/룰/퀘스트/UI)이 한 화면에 노출되어 데모 신뢰도 붕괴 | High | 20% | 세션 언어 SSOT(언어 전환=리셋) + 언어 게이트/Repair + i18n/폴백/하드코딩 정리 |
-| R-008 | 프롬프트 포맷 드리프트(프론트매터/태그 혼재)로 메타 추적/튜닝/검증이 흔들림 | Medium | 25% | 분리 프롬프트(.md) XML 태그 규격 통일 + (권장) 로더 파싱/검증 단일화(U-046) |
-| R-009 | Agentic Vision(코드 실행) 추가 호출로 비용/지연이 커져 UX가 악화되거나, 생성 이미지-행동/핫스팟 정합이 깨질 수 있음 | Medium | 20% | Key scene 제한 + Economy 게이트/예상비용 + 실패/차단 시 텍스트 폴백 + (Dev) 시각적 증거(annotated crop) 아티팩트로 디버그 |
-| R-010 | 로컬/데모에서 실모델(real) 모드 환경변수 로딩 누락으로 mock 출력(고정 내러티브) 또는 인증 실패로 데모가 흔들릴 수 있음 | Medium | 25% | 백엔드 `.env` 자동 로딩(U-047) + real 모드 스모크 체크포인트(CP-MVP-07) + 실패 시 안전 폴백 |
-| R-011 | 오버레이(핫스팟/CRT) 색이 콘텐츠를 과도하게 덮거나, 패널 스크롤 전략이 불편해 “게임 UI” 체감이 저하될 수 있음 | Medium | 30% | 오버레이 팔레트/강도 토큰 튜닝(U-050) + 레이아웃/스크롤 설계 개선(U-049) + 가이드 기반 점검 |
-| R-012 | Action 실행 시 템플릿 문장(“...라고 말했습니다”)이 반복되어 몰입/자연스러움이 깨질 수 있음(특히 mock 모드) | Low | 35% | MockOrchestrator 액션 타입별 로그/내러티브 개선(U-048) + real 모드 기본 동선(CP-MVP-07) |
-| R-013 | 이미지 생성 지연이 길 때 “장면 갱신” 타이밍이 어긋나 몰입이 깨질 수 있음(늦게 도착한 이미지가 새 장면을 덮는 문제 포함) | Medium | 25% | U-066: late-binding 가드(turn_id/scene revision) + 모델 티어링(FAST) + “형성 중” 연출 |
-| R-014 | 연속 장면 간 시각적 일관성 부족(동일 캐릭터/오브젝트가 다르게 그려짐)으로 몰입 저하 | Medium | 30% | U-068: 이전 턴 이미지를 참조이미지로 전달 + 장면 전환 시 초기화 정책 |
-| R-015 | 핵심 인터랙션(핫스팟 클릭/아이템 DnD) 발견성 부족으로 플레이어가 텍스트 입력만 시도 | Medium | 35% | U-074: 인터랙션 안내 UX + U-072: Scanner 유도 UX + 온보딩 가이드 |
-| R-016 | 새로고침/탭 종료 시 게임 진행 상태(Scene 이미지/ActionDeck)가 날아가 데모 중 치명적 손실 | Medium | 40% | U-113(MMP): 세션 상태 영속성 + SaveGame 기반 폴백 |
-| R-017 | 재화 부족으로 게임 진행이 막히거나, 이미지 생성이 완전 차단되어 데모 체감 급락 | High | 35% | U-079: 잔액 부족 시 FAST 폴백 + 재화 획득 경로 다양화 |
-| R-018 | 플레이어가 목표를 모르고 방황하여 "뭘 해야 하는지 모르겠다" 피드백 발생 | Medium | 40% | U-078: 명확한 목표 시스템 + 서브 목표 가이드 |
-| R-019 | 처리 중 입력이 허용되어 **허위 액션 로그**가 쌓이거나 요청 경합/상태 혼선이 발생 | Medium | 35% | U-087: 입력 잠금(완전 차단) + U-086: 텍스트 우선 출력으로 피드백 보강 |
-| R-020 | 런타임 rembg 제거 후 동적 생성 아이콘 배경이 깔끔하지 않을 수 있음 | Low | 20% | U-091: rembg 제거 + U-092: 프리셋 이미지로 초기 아이템 보완 + 프롬프트 조정 |
-| R-021 | 아이템 사용 후 인벤토리에서 미삭제 시 무한 사용으로 게임 메커닉 무력화 | Medium | 30% | U-096: 사용 시 소비 로직 + GM 프롬프트 규칙 강화 |
-| R-022 | SceneCanvas 렌더 중 Zustand setState 호출로 프로필 시작 후 첫 요청 진행 불가(React 금지 패턴) | Critical | 100% | U-097: useEffect 분리로 store 갱신을 렌더 사이클 밖으로 이동 |
-| R-023 | 새로고침/리셋 시 세션 상태 잔재(이전 이미지/핫스팟/ledger)가 남아 상태 불일치 발생 | Medium | 40% | U-098: 완전 리셋 보장 + 초기 핫스팟 제거, U-099: ledger i18n 정합 |
+_해소 완료: R-005~R-008, R-010~R-018, R-020~R-022 (대응 유닛 완료). 이력 → `vibe/changelog.md`_
+
+| ID    | 내용                                   | 영향 | 확률 | 대응                                      |
+| ----- | -------------------------------------- | ---- | ---- | ----------------------------------------- |
+| R-001 | 스키마/의미 불일치로 Hard Gate 실패    | High | 35%  | Repair loop + Safe fallback + Mock        |
+| R-002 | 이미지/Thinking로 지연/비용 폭발      | High | 30%  | Economy 정책 + Lazy 이미지 + 티어링       |
+| R-003 | UI가 채팅처럼 보여 제출/데모 실패      | High | 25%  | 고정 HUD + DnD/핫스팟/스캐너/콘솔 강조    |
+| R-004 | CRT 튜닝 ↔ 가독성 균형 붕괴           | Med  | 25%  | 중요도 기반 효과 분리 + 대비 가이드       |
+| R-009 | Agentic Vision 비용/지연 악화          | Med  | 20%  | Economy 게이트 + 텍스트 폴백              |
+| R-019 | 처리 중 입력 허용 → 허위 액션/경합     | Med  | 35%  | U-087 입력 잠금 + U-086 텍스트 우선       |
+| R-023 | 리셋 시 세션 상태 잔재                 | Med  | 40%  | U-116 완전 리셋 + U-099 ledger 정합       |
+| R-024 | 새로고침 시 진행 전량 소실(SaveGame 제거) | Med | 30% | MMP U-113 세션 영속성 재설계              |
 
 ## 메트릭
 
-| 지표                       | 현재 | 목표        |
-| -------------------------- | ---- | ----------- |
-| Streaming TTFB             | -    | < 2s        |
-| API 응답(p95, 텍스트)      | -    | < 200ms     |
-| 이미지 생성 시간(p95)      | -    | < 12s(선택) |
-| Hard Gate 통과율(리플레이) | -    | 100%        |
+| 지표              | 현재 | 목표        |
+| ----------------- | ---- | ----------- |
+| Streaming TTFB    | -    | < 2s        |
+| Hard Gate 통과율  | -    | 100%        |
 
-**기술 부채**: 0h(미추정 2건 있음: U-040, U-043/U-044로 해결 예정) / 한도 8h  \| SSOT: `vibe/debt-log.md`
+**기술 부채**: 0h / 한도 8h  | SSOT: `vibe/debt-log.md`
 
 ---
 
@@ -170,223 +131,83 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP
-ID=[U-098[Mvp]](unit-plans/U-098[Mvp].md) | 새로고침 시 완전 리셋 + 프로필 시작 초기 핫스팟/데모 텍스트 제거 | Depends=U-015,U-090 | ⏸️
-ID=[U-099[Mvp]](unit-plans/U-099[Mvp].md) | 거래 장부(Resource Log) i18n 혼합 출력 수정 + 하단 여백 과다 해소 | Depends=U-042,U-044 | ⏸️
-ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
-ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 생성 최적화 - 픽셀 스타일 + 사이즈 축소 + Scene 영역 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
+### MVP (10개)
+ID=[U-116[Mvp]](unit-plans/U-116[Mvp].md) | ⚡SaveGame 제거 + 프로필 초기 상태 정리 **(U-098 흡수)** | Depends=None | ⏸️
+ID=[U-099[Mvp]](unit-plans/U-099[Mvp].md) | 거래 장부 i18n 혼합 출력 + 하단 여백 수정 | Depends=U-042,U-044 | ⏸️
+ID=[U-114[Mvp]](unit-plans/U-114[Mvp].md) | Agent Console 검증배지 접기 + 대기열 상시 노출 | Depends=U-082 | ⏸️
+ID=[U-117[Mvp]](unit-plans/U-117[Mvp].md) | 인벤토리 드래그 영역 Row 확장 + 온보딩 팝업 제거 **(U-118 흡수)** | Depends=U-088,U-074 | ⏸️
+ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 턴 처리 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
+ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 픽셀 스타일 + 사이즈 축소 + Scene 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
+ID=[U-115[Mvp]](unit-plans/U-115[Mvp].md) | 핫스팟 컴팩트 원형 1~3개 + 우선순위/겹침 방지 | Depends=U-090,U-087,U-116 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
-ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 아티팩트 생성(요약/타임라인/결산) | Depends=U-018,U-015 | ⏸️
-ID=[U-026[Mvp]](unit-plans/U-026[Mvp].md) | 리플레이/시나리오 하네스(저장+수동 러너) | Depends=U-024,U-025 | ⏸️
-ID=[RU-007[Mvp]](unit-plans/RU-007[Mvp].md) | 리팩토링: artifacts 버전/경로/링크 정리 | Depends=U-026 | ⏸️
-ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** | Depends=RU-007,U-056,U-057,U-058,U-061 | ⏸️
+ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 + 리플레이/시나리오 하네스 **(U-026 흡수)** | Depends=U-018,U-024 | ⏸️
+ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** | Depends=U-025,U-056,U-057,U-058,U-061 | ⏸️
 
-### MMP
+### MMP (16개)
 
-ID=[U-100[Mmp]](unit-plans/U-100[Mmp].md) | ⚡Dockerfile/로컬 실행(프론트/백엔드) | Depends=CP-MVP-03 | ⏸️
-ID=[U-101[Mmp]](unit-plans/U-101[Mmp].md) | ⚡Cloud Run 배포 구성 + env/secret 가이드 | Depends=U-100 | ⏸️
-ID=[U-102[Mmp]](unit-plans/U-102[Mmp].md) | ⚡GCS 스토리지 어댑터(이미지/아티팩트) | Depends=U-100 | ⏸️
+ID=[U-100[Mmp]](unit-plans/U-100[Mmp].md) | ⚡Dockerfile/로컬 실행 | Depends=CP-MVP-03 | ⏸️
+ID=[U-101[Mmp]](unit-plans/U-101[Mmp].md) | ⚡Cloud Run 배포 + env/secret | Depends=U-100 | ⏸️
+ID=[U-102[Mmp]](unit-plans/U-102[Mmp].md) | ⚡GCS 스토리지 어댑터 | Depends=U-100 | ⏸️
 ID=[U-103[Mmp]](unit-plans/U-103[Mmp].md) | 이미지 편집(멀티턴, REF 유지) | Depends=U-019,U-102 | ⏸️
-ID=[U-109[Mmp]](unit-plans/U-109[Mmp].md) | Agentic Vision: 생성된 장면 이미지 기반 행동/핫스팟 근거화 **(U-076 재사용→자동 실행 확장)** | Depends=U-019,U-020,RU-005,U-076 | ⏸️
-ID=[U-104[Mmp]](unit-plans/U-104[Mmp].md) | 장기 세션 메모리 요약/핀 추천 고도화 | Depends=U-025 | ⏸️
-ID=[U-105[Mmp]](unit-plans/U-105[Mmp].md) | ⚡Scenario Library(5) + 자동 리플레이 확장 | Depends=U-026 | ⏸️
-ID=[RU-010[Mmp]](unit-plans/RU-010[Mmp].md) | 리팩토링: 스키마/상수 SSOT 강화 + 파일 분리 | Depends=U-105 | ⏸️
+ID=[U-109[Mmp]](unit-plans/U-109[Mmp].md) | Agentic Vision 자동 실행 확장(U-076 재사용) | Depends=U-019,U-020,RU-005,U-076 | ⏸️
+ID=[U-104[Mmp]](unit-plans/U-104[Mmp].md) | 장기 세션 메모리 요약/핀 고도화 | Depends=U-025 | ⏸️
+ID=[U-105[Mmp]](unit-plans/U-105[Mmp].md) | ⚡Scenario Library(5) + 자동 리플레이 | Depends=U-025 | ⏸️
+ID=[RU-007[Mmp]](unit-plans/RU-007[Mvp].md) | 리팩토링: artifacts 버전/경로/링크 정리 **(MVP→MMP 이동)** | Depends=U-025 | ⏸️
+ID=[RU-010[Mmp]](unit-plans/RU-010[Mmp].md) | 리팩토링: 스키마/상수 SSOT 강화 | Depends=U-105 | ⏸️
 ID=[CP-MMP-01](unit-plans/CP-MMP-01.md) | **체크포인트: 배포/관측 게이트** | Depends=U-101,RU-010 | ⏸️
+ID=[U-106[Mmp]](unit-plans/U-106[Mmp].md) | 관측 지표/대시보드 고도화 | Depends=CP-MMP-01 | ⏸️
+ID=[U-107[Mmp]](unit-plans/U-107[Mmp].md) | 접근성/단축키/모바일 UX | Depends=U-106 | ⏸️
+ID=[U-108[Mmp]](unit-plans/U-108[Mmp].md) | ⚡보안 하드닝 | Depends=CP-MMP-01 | ⏸️
+ID=[U-110~112[Mmp]] | 디버깅 모드/스토리지 TTL/Panel Corner 수정 | Depends=Various | ⏸️
+ID=[U-113[Mmp]](unit-plans/U-113[Mmp].md) | 세션 상태 영속성(SaveGame 제거 후 재설계) | Depends=U-116,CP-MMP-01 | ⏸️
+ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=U-108,U-107,U-110~112 | ⏸️
 
-ID=[U-106[Mmp]](unit-plans/U-106[Mmp].md) | 관측 지표/대시보드(Agent Console 메트릭) 고도화 | Depends=CP-MMP-01 | ⏸️
-ID=[U-107[Mmp]](unit-plans/U-107[Mmp].md) | 접근성/단축키/모바일 UX 개선 | Depends=U-106 | ⏸️
-ID=[U-108[Mmp]](unit-plans/U-108[Mmp].md) | ⚡보안 하드닝(인젝션 케이스/secret scan) | Depends=CP-MMP-01 | ⏸️
-ID=[U-110[Mmp]](unit-plans/U-110[Mmp].md) | 프론트엔드 디버깅 모드 토글 UI(스트림 로그/상태 diff/스토리지 사용량) | Depends=U-106 | ⏸️
-ID=[U-111[Mmp]](unit-plans/U-111[Mmp].md) | 스토리지 TTL/정리 정책 정의(로컬/GCS Lifecycle) | Depends=U-102 | ⏸️
-ID=[U-112[Mmp]](unit-plans/U-112[Mmp].md) | Panel Corner 이미지 방향 수정(panel-corner-br.png 식별성 개선) | Depends=U-032[Mvp] | ⏸️
-ID=[U-113[Mmp]](unit-plans/U-113[Mmp].md) | 세션 상태 영속성 - 새로고침 시 Scene/ActionDeck/상태 복원 | Depends=U-015,U-041 | ⏸️
-ID=[RU-011[Mmp]](unit-plans/RU-011[Mmp].md) | 리팩토링: Autopilot/Replay 모듈 정리 | Depends=U-108 | ⏸️
-ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=RU-011,U-107,U-110,U-111 | ⏸️
+### 완료 (114개)
 
-### 완료
+_최근 10개만 표시. 전체 목록: `vibe/unit-results/` 및 `vibe/progress.md` 참조._
 
-- ✅ [U-097[Mvp]](vibe/unit-results/U-097[Mvp].md): ⚡핫픽스 - SceneCanvas 렌더 중 Zustand setState 호출 분리 (첫 요청 차단 해소) (2026-02-08)
-- ✅ [U-086[Mvp]](vibe/unit-results/U-086[Mvp].md): 턴 진행 피드백 보강 - 텍스트 우선 타이핑 출력(이미지 생성 중 지연 흡수) (2026-02-08)
-- ✅ [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md): ⚡핫픽스 - 이미지 크기를 현재 UI 레이아웃(Scene Canvas)에 최대한 맞춤으로 생성 (2026-02-08)
-- ✅ [U-083[Mvp]](vibe/unit-results/U-083[Mvp].md): UI 레이아웃 - 액션 카드 대안 뱃지 레이아웃 깨짐 수정 (2026-02-08)
-- ✅ [U-082[Mvp]](vibe/unit-results/U-082.md): UI 레이아웃 - Agent Console 축소 및 재화 현황 영역 확대 (2026-02-08)
-- ✅ [U-079[Mvp]](unit-results/U-079[Mvp].md): 재화 부족 시 이미지 생성 허용 + 재화 획득 경로 다양화 (2026-02-08)
-- ✅ [U-078[Mvp]](unit-results/U-078[Mvp].md): 게임 목표 시스템 강화 (2026-02-08)
-- ✅ [U-088[Mvp]](unit-results/U-088[Mvp].md): 인벤토리 UI Row 형태 전환 (2026-02-07)
-- ✅ [U-096[Mvp]](unit-results/U-096[Mvp].md): 아이템 사용 시 소비(삭제) 로직 반영 (2026-02-07)
-- ✅ [U-095[Mvp]](unit-results/U-095[Mvp].md): Scanner 아이템 생성 개수 랜덤화 (1~3개, 가중치) (2026-02-07)
-- ✅ [U-094[Mvp]](unit-results/U-094[Mvp].md): ImageUnderstanding 응답 파싱 예외 시 자동 재시도 (2026-02-07)
-- ✅ [U-093[Mvp]](unit-results/U-093[Mvp].md): ⚡ItemIconGenerator 아이콘 생성 타임아웃 수정 (2026-02-07)
-- ✅ [U-092[Mvp]](unit-results/U-092[Mvp].md): 기본 초기 아이템 아이콘 프리셋 이미지 (nanobanana-mcp 활용) (2026-02-07)
-- ✅ [U-091[Mvp]](unit-results/U-091[Mvp].md): 런타임 rembg 파이프라인 일괄 제거 - 서버 단순화/안정화 (2026-02-07)
-- ✅ [U-090[Mvp]](unit-results/U-090[Mvp].md): ⚡핫스팟 생성을 정밀분석 전용으로 제한 (기본 턴 핫스팟 생성 금지) (2026-02-07)
-- ✅ [U-089[Mvp]](unit-results/U-089[Mvp].md): 핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX (2026-02-07)
-- ✅ [U-077[Mvp]](unit-results/U-077[Mvp].md): 인벤토리 패널 스크롤 및 아이템 관리 UX 개선 (+U-081 흡수) (2026-02-07)
-- ✅ [U-076[Mvp]](unit-results/U-076[Mvp].md): "정밀분석" 액션으로 기존 이미지 Agentic Vision 분석 및 핫스팟 추가 (2026-02-07)
-- ✅ [U-075[Mvp]](unit-results/U-075[Mvp].md): 인벤토리 아이템 아이콘 동적 생성(rembg/캐싱/i18n) (2026-02-06)
-- ✅ [U-074[Mvp]](unit-results/U-074[Mvp].md): 핫스팟/아이템 인터랙션 안내 UX (2026-02-05)
-- ✅ [U-073[Mvp]](unit-results/U-073[Mvp].md): 레이아웃 확장 - 좌우 빈공간 활용으로 덜 답답한 UI (2026-02-05)
-- ✅ [U-072[Mvp]](unit-results/U-072[Mvp].md): Scanner 의미론적 사용 유도 UX (2026-02-05)
-- ✅ [U-071[Mvp]](unit-results/U-071[Mvp].md): Scene 처리중 UI 로딩 인디케이터 강화 (2026-02-05)
-- ✅ [U-070[Mvp]](unit-results/U-070[Mvp].md): 아이템-핫스팟 사용 시 액션 로그 출력 (2026-02-05)
-- ✅ [U-069[Mvp]](unit-results/U-069[Mvp].md): 텍스트 생성 FAST 모델 기본 + "정밀조사" 트리거 Pro 모델 전환 (2026-02-05)
-- ✅ [U-068[Mvp]](unit-results/U-068[Mvp].md): 이전 턴 이미지를 참조이미지로 사용하여 이미지 연결성 강화 (2026-02-05)
-- ✅ [U-067[Mvp]](unit-results/U-067[Mvp].md): ⚡핫픽스 - Vertex AI Production 설정 수정 (2026-02-04)
-- ✅ [U-066[Mvp]](unit-results/U-066[Mvp].md): 이미지 생성 지연 흡수 플로우(진행 연출/late binding) + 모델 티어링(FAST/QUALITY) + 타이핑 효과 (2026-02-03)
-- ✅ [U-065[Mvp]](unit-results/U-065[Mvp].md): TurnOutput 스키마 단순화 (Gemini API 제한 대응) (2026-02-02)
-- ✅ [U-064[Mvp]](unit-results/U-064[Mvp].md): Gemini 이미지 생성 API 호출 방식 수정 (2026-02-02)
-- ✅ [U-063[Mvp]](unit-results/U-063[Mvp].md): 프론트엔드 턴 실행 후 재화 잔액 버그 수정 (2026-02-02)
-- ✅ [U-062[Mvp]](unit-results/U-062[Mvp].md): MockOrchestrator 영어 입력 시 LanguageGate 수정 (2026-02-01)
-- ✅ [U-061[Mvp]](unit-results/U-061[Mvp].md): 이미지 생성 지침(scene_prompt) 파이프라인 통합 및 i18n 정합성 강화 (2026-02-01)
-- ✅ [U-060[Mvp]](unit-results/U-060[Mvp].md): 테스트 코드 정합성 수정 (2026-02-01)
-- ✅ [U-058[Mvp]](unit-results/U-058[Mvp].md): 핫스팟 디자인 개선 (코너/스트로크/색상) (2026-02-01)
-- ✅ [U-057[Mvp]](unit-results/U-057[Mvp].md): 텍스트 번짐 식별성 개선 (2026-02-01)
-- ✅ [U-056[Mvp]](unit-results/U-056[Mvp].md): 인벤토리 아이템 이름 텍스트 잘림 최소화 + 툴팁 (2026-02-01)
-- ✅ [U-055[Mvp]](unit-results/U-055[Mvp].md): 이미지 파이프라인 Mock/Real 모드 통합 검증 (2026-02-01)
-- ✅ [U-054[Mvp]](unit-results/U-054[Mvp].md): 이미지 생성 폴백 및 실패 복구 체계 강화 (2026-02-01)
-- ✅ [U-053[Mvp]](unit-results/U-053[Mvp].md): 비동기 이미지 생성 및 결과 데이터 동기화 (2026-02-01)
-- ✅ [U-052[Mvp]](unit-results/U-052[Mvp].md): 조건부 이미지 생성 제어 로직(should_generate 판정) (2026-02-01)
-- ✅ [U-051[Mvp]](unit-results/U-051[Mvp].md): ⚡렌더링 단계-이미지 생성 서비스 브릿지 구축 (2026-02-01)
-- ✅ [U-050[Mvp]](unit-results/U-050[Mvp].md): UI/UX - 오버레이 팔레트/강도 튜닝 및 반응형 폴리시(가이드 준수) (2026-02-01)
-- ✅ [U-049[Mvp]](unit-results/U-049[Mvp].md): UI/UX - 레이아웃/스크롤 설계 개선(첫 화면 과도 스크롤 제거, 카드 내부 스크롤) (2026-02-01)
-- ✅ [U-042[Mvp]](unit-results/U-042[Mvp].md): 용어/카피 정리: 원장→거래 장부, Ledger→Resource Log 등 게임 친화 용어 통일 (2026-01-31)
-- ✅ [U-041[Mvp]](unit-results/U-041[Mvp].md): SaveGame 마이그레이션 - 버전별 변환 로직 구현 (2026-01-31)
-- ✅ [RU-006-S1](vibe/refactors/RU-006-S1.md): 리팩토링 - 업로드 이미지 임시 저장 정책 명확화 (2026-01-31)
-- ✅ [RU-006-Q5](vibe/refactors/RU-006-Q5.md): 리팩토링 - 저장 경로 및 URL 하드코딩 제거 (2026-01-31)
-- ✅ [RU-006-Q4](vibe/refactors/RU-006-Q4.md): 리팩토링 - 스토리지 인터페이스 추상화 도입 (2026-01-31)
-- ✅ [RU-006-Q1](vibe/refactors/RU-006-Q1.md): 리팩토링 - 파일 검증/제한 로직 중앙화(SSOT) (2026-01-31)
-- ✅ [CP-MVP-06](unit-results/CP-MVP-06.md): 체크포인트 - Scanner 업로드 게이트(안전/좌표/비용) (2026-01-31)
-- ✅ [U-022[Mvp]](unit-results/U-022[Mvp].md): Scanner 슬롯 UI + 업로드→아이템화(Option B) 반영 (2026-01-31)
-- ✅ [U-021[Mvp]](unit-results/U-021[Mvp].md): 이미지 이해(Scanner) 백엔드 엔드포인트(POST /api/scan) (2026-01-31)
-- ✅ [U-048[Mvp]](unit-results/U-048[Mvp].md): Mock Orchestrator: 액션 echo/내러티브 템플릿 개선(“말했습니다” 제거, 반복 완화) (2026-01-30)
-- ✅ [CP-MVP-07](unit-results/CP-MVP-07.md): 체크포인트: real 모드 로컬 실행 게이트(.env/Vertex/스트리밍) (2026-01-29)
-- ✅ [U-047[Mvp]](unit-results/U-047[Mvp].md): Backend `.env` 자동 로딩(로컬) + 모드/ENV 가드(프롬프트/Vertex) (2026-01-28)
-- ✅ [CP-MVP-05](unit-results/CP-MVP-05.md): 체크포인트: 멀티모달 이미지 게이트(텍스트 우선/폴백/비용) 검증 완료 (2026-01-28)
-- ✅ [U-040[Mvp]](unit-results/U-040[Mvp].md): 에셋 요청 스키마 정합(rembg_model 이슈) + 테스트/런북 복구 (2026-01-28)
-- ✅ [U-046[Mvp]](unit-results/U-046[Mvp].md): 분리 프롬프트(.md) XML 태그 규격 통일 + 로더 파싱 단일화 (2026-01-28)
-- ✅ [U-045[Mvp]](unit-results/U-045[Mvp].md): Backend 시작 시 rembg/모델 사전 점검 + 다운로드(preflight) (2026-01-28)
-- ✅ [U-044[Mvp]](unit-results/U-044[Mvp].md): 세션 언어 SSOT(토글=리셋) + 혼합 출력(상태/시스템) 제거 (2026-01-27)
-- ✅ [U-036[Mvp]](unit-results/U-036[Mvp].md): 스토리/이미지 프롬프트 파일 분리(ko/en) + 핫리로드 (2026-01-26)
-- ✅ [U-035[Mvp]](unit-results/U-035[Mvp].md): 실시간 이미지 생성 시 rembg 배경 제거 통합 (2026-01-25)
-- ✅ [U-020[Mvp]](unit-results/U-020[Mvp].md): ⚡프론트 이미지 Lazy Render(placeholder/폴백) (2026-01-25)
-- ✅ [U-019[Mvp]](unit-results/U-019[Mvp].md): ⚡이미지 생성 엔드포인트/잡(조건부) (2026-01-25)
-- ✅ [CP-MVP-04](unit-results/CP-MVP-04.md): 체크포인트 - 실모델 Hard Gate(스키마/경제/복구) (2026-01-25)
-- ✅ [RU-005[Mvp]](vibe/unit-results/RU-005[Mvp].md): 리팩토링 - orchestrator pipeline stages 정리 (2026-01-25)
-- ✅ [RU-005-S3](vibe/unit-runbooks/RU-005-S3-runbook.md): 수동 검증 시나리오: “/api/turn stage pipeline” 패키지 (2026-01-25)
-- ✅ [RU-005-S2](refactors/RU-005-S2.md): 엣지 케이스: Cancel/예외/언어(i18n) 경로 일관성 (2026-01-25)
-- ✅ [RU-005-Q1[Mvp]](refactors/RU-005-Q1.md): 리팩토링 - 폴백/단계/복구 로직 중복 제거(SSOT) (2026-01-25)
-- ✅ [RU-005-S1[Mvp]](unit-plans/RU-005[Mvp].md): 잠재적 오류 - badges/단계 이벤트 인바리언트 정합성 (2026-01-25)
-- ✅ [RU-005-Q3[Mvp]](unit-plans/RU-005[Mvp].md): 복잡도 - api/turn.py 스트리밍 오케스트레이션 축소 (2026-01-25)
-- ✅ [RU-005-Q4[Mvp]](unit-plans/RU-005[Mvp].md): 모듈 설계 - orchestrator pipeline stages 모듈화 (2026-01-25)
-- ✅ [U-018[Mvp]](unit-results/U-018[Mvp].md): ⚡비즈니스 룰 검증 + Repair loop + 안전 폴백 (2026-01-25)
-- ✅ [U-017[Mvp]](unit-results/U-017[Mvp].md): ⚡Structured Output TurnOutput 생성 + Pydantic 검증 (2026-01-24)
-- ✅ [U-016[Mvp]](unit-results/U-016[Mvp].md): ⚡Vertex 인증 + google-genai 클라이언트 + 모델 라벨 고정 (2026-01-24)
-- ✅ [RU-004[Mvp]](unit-results/RU-004[Mvp].md): 리팩토링 - SaveGame/초기상태/데모 프로필 정리 (2026-01-24)
-- ✅ [RU-004-S3](refactors/RU-004-S3.md): 수동 검증 시나리오: “SaveGame/프로필/리셋/복원” 패키지 (2026-01-24)
-- ✅ [RU-004-Q1](refactors/RU-004-Q1.md): 리팩토링 - SaveGame 생성 경로 단일화(SSOT) (2026-01-24)
-- ✅ [RU-004-Q4](save/sessionLifecycle.ts): 모듈 설계 - 세션 초기화/복원/리셋 SSOT 단일화 (2026-01-23)
-- ✅ [U-015[Mvp]](unit-results/U-015[Mvp].md): ⚡SaveGame(local) + Reset + Demo Profiles(3종) (2026-01-19)
-- ✅ [U-014[Mvp]](unit-results/U-014[Mvp].md): ⚡Economy HUD + Ledger(프론트) (2026-01-18)
-- ✅ [U-013[Mvp]](unit-results/U-013[Mvp].md): Quest + Rule Board/Timeline 패널 (2026-01-18)
-- ✅ [CP-MVP-02](unit-results/CP-MVP-02.md): 체크포인트 - 클릭+드래그 데모 (2026-01-18)
-- ✅ [RU-003[Mvp]](unit-results/RU-003[Mvp].md): 리팩토링: UI 상태 슬라이스/경계 정리 (2026-01-18)
-- ✅ [RU-003-S3](refactors/RU-003-S3.md): 수동 검증 시나리오: 카드/클릭/드롭/스트리밍 상태 경계 회귀 방지 (2026-01-18)
-- ✅ [RU-003-Q5](refactors/RU-003-Q5.md): 하드코딩/DEV 목 데이터 격리: i18n 혼합 출력 방지 + 데모 프로필 경계 확보 (2026-01-17)
-- ✅ [RU-003-S1](refactors/RU-003-S1.md): 잠재 버그: 연결 상태/Scene 상태 리셋/취소(Abort) 정책 정리 (2026-01-17)
-- ✅ [RU-003-Q3](refactors/RU-003-Q3.md): App.tsx 복잡도 축소: Turn Runner 모듈 분리 (2026-01-17)
-- ✅ [RU-003-Q4](stores/worldStore.ts): UI 상태 슬라이스/경계 재정의: worldStore 도입 (2026-01-17)
-- ✅ [RU-003[Mvp]](unit-plans/RU-003[Mvp].md): 리팩토링: UI 상태 슬라이스/경계 정리 (2026-01-17)
-- ✅ [U-012[Mvp]](unit-results/U-012[Mvp].md): ⚡DnD 드롭(아이템→핫스팟) TurnInput 이벤트 (2026-01-17)
-- ✅ [U-011[Mvp]](unit-results/U-011[Mvp].md): ⚡Inventory 패널(DnD) 기본 (2026-01-17)
-- ✅ [U-010[Mvp]](unit-results/U-010[Mvp].md): ⚡Scene Canvas + Hotspot Overlay(0~1000 bbox) (2026-01-17)
-- ✅ [U-009[Mvp]](unit-results/U-009[Mvp].md): ⚡Action Deck(카드+비용/대안) (2026-01-17)
-- ✅ [U-039[Mvp]](unit-results/U-039[Mvp].md): i18n 언어 리소스 JSON 구조 도입(ko-KR/en-US, 확장 가능) (2026-01-15)
-- ✅ [U-038[Mvp]](unit-results/U-038[Mvp].md): 핵심 UI 아이콘 12종 재생성(v2, 퀄리티/용량/사이즈/식별성) (2026-01-14)
-- ✅ [U-037[Mvp]](unit-results/U-037[Mvp].md): CRT/가독성 레이어링(Readable 모드 제거, 중요 영역 보호) (2026-01-14)
-- ✅ [U-033[Mvp]](unit-results/U-033[Mvp].md): nanobanana mcp 에셋 매니페스트 + QA(크기/대비/폴백) (2026-01-12)
-- ✅ [U-032[Mvp]](unit-results/U-032[Mvp].md): nanobanana mcp UI Chrome Pack(패널/카드 프레임/코너) (2026-01-12)
-- ✅ [U-031[Mvp]](unit-results/U-031[Mvp].md): nanobanana mcp 상태 Placeholder Pack(Scene/오프라인/에러/차단) (2026-01-11)
-- ✅ [U-029[Mvp]](unit-results/U-029[Mvp].md): nanobanana mcp 에셋 패스(UI 아이콘/프레임/placeholder) (2026-01-11)
-- ✅ [U-034[Mvp]](unit-results/U-034[Mvp].md): nanobanana mcp 에셋 요청 스키마 + 프롬프트 템플릿(재현성) (2026-01-11)
-- ✅ [U-030[Mvp]](unit-results/U-030[Mvp].md): nanobanana mcp 에셋 SSOT(폴더/네이밍/사이즈/폴백/라이선스) (2026-01-10)
-- ✅ [U-028[Mvp]](unit-results/U-028[Mvp].md): UI 가독성 패스(폰트 스케일/효과 토글/대비) (2026-01-10)
-- ✅ [CP-MVP-01](unit-results/CP-MVP-01.md): 체크포인트 - 스트리밍/스키마/폴백 (2026-01-10)
-- ✅ [RU-002[Mvp]](unit-results/RU-002[Mvp].md): 리팩토링: validation/폴백/이벤트 타입 통일 (2026-01-10)
-- ✅ [RU-002-S2](refactors/RU-002-S2.md): 스트림 이벤트 검증 강화(Zod) 및 Unknown 이벤트 폴백 처리 (2026-01-10)
-- ✅ [RU-002-S1](refactors/RU-002-S1.md): 스트리밍 안정화 및 종료 인바리언트(항상 final) 강제 (2026-01-08)
-- ✅ [RU-002-Q2](refactors/RU-002-Q2.md): PRD Turn Stream Protocol(SSOT) 정합성 확보 및 버전/별칭 도입 (2026-01-08)
-- ✅ [RU-002-Q4](refactors/RU-002-Q4.md): Turn Stream 이벤트 계약 모듈 분리 (2026-01-07)
-- ✅ [U-027[Mvp]](unit-results/U-027[Mvp].md): 개발 스크립트: pnpm kill 포트 제한(8001~8020) (2026-01-05)
-- ✅ [U-008[Mvp]](unit-results/U-008[Mvp].md): ⚡프론트 HTTP Streaming 클라이언트 + Agent Console/배지 (2026-01-05)
-- ✅ [U-007[Mvp]](unit-results/U-007[Mvp].md): ⚡모의 Orchestrator + /api/turn HTTP Streaming(POST) (2026-01-04)
-- ✅ [U-006[Mvp]](unit-results/U-006[Mvp].md): ⚡TurnInput/TurnOutput 스키마(Zod) (2026-01-04)
-- ✅ [U-005[Mvp]](unit-results/U-005[Mvp].md): ⚡TurnInput/TurnOutput 스키마(Pydantic) (2026-01-04)
-- ✅ [RU-001[Mvp]](unit-results/RU-001[Mvp].md): 리팩토링: 디렉토리/설정 정리 (2026-01-04)
-- ✅ [U-001[Mvp]](unit-results/U-001[Mvp].md): 프로젝트 스캐폴딩 생성 (2026-01-03)
-- ✅ [U-002[Mvp]](unit-results/U-002[Mvp].md): 프론트 Vite+React+TS 초기화 (2026-01-03)
-- ✅ [U-003[Mvp]](unit-results/U-003[Mvp].md): 백엔드 FastAPI 초기화 (2026-01-04)
-- ✅ [U-004[Mvp]](unit-results/U-004[Mvp].md): CRT 테마/고정 레이아웃 스켈레톤 (2026-01-04)
+- ✅ U-097[Mvp]: ⚡SceneCanvas 렌더 중 Zustand setState 분리 (2026-02-08)
+- ✅ U-086[Mvp]: 텍스트 우선 타이핑 출력 + 지연 흡수 (2026-02-08)
+- ✅ U-085[Mvp]: 이미지 크기 Scene Canvas 맞춤 생성 (2026-02-08)
+- ✅ U-083[Mvp]: 액션 카드 대안 뱃지 레이아웃 수정 (2026-02-08)
+- ✅ U-082[Mvp]: Agent Console 축소 + 재화 현황 확대 (2026-02-08)
+- ✅ U-079[Mvp]: 재화 부족 시 이미지 허용 + 획득 경로 다양화 (2026-02-08)
+- ✅ U-078[Mvp]: 게임 목표 시스템 강화 (2026-02-08)
+- ✅ U-088[Mvp]: 인벤토리 Row 형태 전환 (2026-02-07)
+- ✅ U-096[Mvp]: 아이템 소비(삭제) 로직 (2026-02-07)
+- ✅ U-095[Mvp]: Scanner 아이템 생성 1~3개 랜덤화 (2026-02-07)
+- _... 104개 추가 완료 유닛 (2026-01-03 ~ 2026-02-07)_
 
 ---
 
 ## 빠른 실행
 
-**현재 작업**: [U-065[Mvp]](unit-plans/U-065[Mvp].md) - TurnOutput 스키마 단순화 (Gemini API 제한 대응)
+**현재 작업**: [U-116[Mvp]](unit-plans/U-116[Mvp].md) - SaveGame 제거 + 프로필 초기 상태 정리
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
-pnpm -C frontend install
-pnpm -C frontend dev
-# → http://localhost:8001 에서 접근 가능
-# ⚠️ 포트 충돌 시 (strictPort: true로 fail-fast):
-#    pnpm -C frontend dev --port 8002  (8002~8010 중 선택)
+pnpm -C frontend install && pnpm -C frontend dev
+# → http://localhost:8001
 
 # Backend (uv 기반, RULE-011: 8011~8020)
-cd backend
-# (로컬) 환경변수 예시 파일 복사 후 값 입력
-cp .env.example .env
-uv sync
+cd backend && cp .env.example .env && uv sync
 uv run uvicorn unknown_world.main:app --reload --port 8011
-# → http://localhost:8011/health 로 확인
-# ⚠️ 포트 충돌 시: --port 8012 (8012~8020 중 선택)
+# → http://localhost:8011/health
 
-# 전체 포트 정리 (8001~8020)
+# 전체 포트 정리
 pnpm kill
-# → RULE-011에 정의된 포트 범위(8001~8020)의 프로세스만 안전하게 정리합니다.
 ```
 
 **완료 확인**:
-
-- [ ] 브라우저에서 고정 게임 UI 레이아웃이 렌더된다(채팅 버블 없음)
-- [ ] HTTP Streaming 연결이 되고 Agent Console에 단계/배지가 보인다(프롬프트 원문 노출 없음)
+- [ ] 고정 게임 UI 레이아웃 렌더(채팅 버블 없음)
+- [ ] HTTP Streaming + Agent Console 단계/배지 표시(프롬프트 비노출)
 
 ---
 
 ## 일일 스탠드업 (2026-02-08)
 
-**완료**: [U-085[Mvp]](vibe/unit-results/U-085[Mvp].md) - ⚡핫픽스 - 이미지 크기 UI 레이아웃 정합 (2026-02-08)
-
-**진행중**: [U-086[Mvp]](unit-plans/U-086[Mvp].md) - 턴 진행 피드백 보강 (텍스트 우선 타이핑 출력 + 이미지 지연 흡수)
-
+**완료**: U-097[Mvp] - ⚡SceneCanvas setState 분리
+**진행중**: U-116[Mvp] - SaveGame 제거 + 프로필 초기 상태 정리
 **블로커**: 없음
-
----
-
-## 일일 스탠드업 (2026-02-07)
-
-**완료**: [U-076[Mvp]](unit-results/U-076[Mvp].md) - "정밀분석" Agentic Vision 분석 및 핫스팟 추가 (2026-02-07)
-
-**진행중**: [U-080[Mvp]](unit-plans/U-080[Mvp].md) - ⚡**핫픽스(최우선)** - Vertex AI 제거 → API 키 인증 전용
-
-**블로커**: 없음
-
-**신규 유닛 추가 (8개)**:
-- [U-089[Mvp]](unit-plans/U-089[Mvp].md) - ⚡핫픽스 - 정밀분석 실행 시 기존 이미지 유지 + 분석 전용 로딩 프로그레스 UX
-- [U-090[Mvp]](unit-plans/U-090[Mvp].md) - ⚡핫스팟 생성을 정밀분석 전용으로 제한
-- [U-091[Mvp]](unit-plans/U-091[Mvp].md) - 런타임 rembg 파이프라인 일괄 제거
-- [U-092[Mvp]](unit-plans/U-092[Mvp].md) - 기본 초기 아이템 아이콘 프리셋 이미지 (nanobanana-mcp)
-- [U-093[Mvp]](unit-plans/U-093[Mvp].md) - ⚡ItemIconGenerator 아이콘 생성 타임아웃 수정
-- [U-094[Mvp]](unit-plans/U-094[Mvp].md) - ImageUnderstanding 응답 파싱 예외 시 자동 재시도
-- [U-095[Mvp]](unit-plans/U-095[Mvp].md) - Scanner 아이템 생성 1~3개 랜덤화
-- [U-096[Mvp]](unit-plans/U-096[Mvp].md) - 아이템 사용 시 소비(삭제) 로직
+**유닛 병합**: U-098→U-116 흡수, U-118→U-117 흡수, U-025+U-026 통합, RU-007→MMP 이동 (MVP 백로그 15→11개)

@@ -7,14 +7,14 @@
 | Unit ID   | U-113[Mmp]                                 |
 | Phase     | MMP                                        |
 | 예상 소요 | 60분                                       |
-| 의존성    | U-015[Mvp], U-041[Mvp]                     |
+| 의존성    | U-116[Mvp], CP-MMP-01                      |
 | 우선순위  | High (UX 연속성/데모 안정성)               |
 
 ## 작업 목표
 
 브라우저 새로고침 시에도 **게임 진행 상태가 유지**되도록 세션 상태 영속성을 구현한다. 현재 메모리에만 존재하는 **Scene 이미지 URL, ActionDeck 카드, 스트리밍 텍스트, Agent Console 상태** 등을 영속 저장소에 기록하여, 새로고침 후에도 직전 상태로 복원할 수 있게 한다.
 
-**배경**: 현재 SaveGame(U-015)은 WorldState/Inventory/Economy 등 핵심 게임 상태를 LocalStorage에 저장하지만, **UI 표시 상태**(Scene 이미지, ActionDeck 카드, NarrativeFeed 텍스트 등)는 메모리에만 존재한다. 브라우저 새로고침 시 이들이 초기화되어 "게임이 날아간 것처럼" 느껴지는 UX 문제가 있다. 특히 데모 중 실수로 새로고침하면 진행 상황이 손실되어 심사에 부정적 영향을 줄 수 있다.
+**배경**: MVP에서 SaveGame 시스템을 완전 제거(U-116)하여 새로고침 시 항상 프로필 선택 화면으로 복귀한다. MMP에서는 **UI 표시 상태**(Scene 이미지, ActionDeck 카드, NarrativeFeed 텍스트 등)를 포함한 세션 상태 영속성을 **처음부터 재설계**하여, 새로고침 후에도 직전 상태로 복원할 수 있게 한다. 기존 SaveGame의 상태 불일치 문제를 반복하지 않도록 **검증/복구 메커니즘을 우선으로 설계**한다.
 
 **완료 기준**:
 
@@ -27,7 +27,7 @@
 - 복원 시 "이전 세션 복원 중..." 로딩 표시 후 자연스럽게 게임 UI로 전환
 - 상태 저장은 **턴 완료 시점**에 자동으로 수행(수동 저장 불필요)
 - 저장 데이터 용량 제한: 권장 최대 1MB (이미지는 URL만 저장, 바이너리 제외)
-- 복원 불가/손상 시 SaveGame 기반 기본 복구 + 안내 메시지 표시
+- 복원 불가/손상 시 프로필 선택 화면 복귀 + 안내 메시지 표시 (MVP 정책과 일관)
 
 ## 영향받는 파일
 
@@ -163,9 +163,8 @@ useEffect(() => {
 
 **이전 작업에서 가져올 것**:
 
-- **계획서**: [U-015[Mvp]](U-015[Mvp].md) - SaveGame 구조 및 LocalStorage 패턴
-- **계획서**: [U-041[Mvp]](U-041[Mvp].md) - SaveGame 마이그레이션(버전 관리 패턴)
-- **참조**: `frontend/src/save/sessionLifecycle.ts` - 세션 초기화/복원 SSOT
+- **계획서**: [U-116[Mvp]](U-116[Mvp].md) - SaveGame 완전 제거 (MVP에서 SaveGame 없는 상태가 기준선)
+- **참조**: `frontend/src/save/sessionLifecycle.ts` - 세션 초기화/복원 SSOT (U-116 이후 단순화됨)
 
 **다음 작업에 전달할 것**:
 
@@ -179,7 +178,7 @@ useEffect(() => {
 - **SessionStorage vs LocalStorage**: SessionStorage는 탭 단위로 격리되어 다중 탭 간 충돌 방지. LocalStorage는 탭 간 공유되므로 주의 필요.
 - **저장 용량**: SessionStorage는 브라우저별 5~10MB 제한. 이미지 바이너리는 저장하지 않고 URL만 저장.
 - **이미지 URL 유효성**: 서버 재시작/정리 시 이미지 URL이 만료될 수 있음 → 복원 시 이미지 로드 실패하면 placeholder 표시
-- **SaveGame과의 정합성**: 세션 상태와 SaveGame의 timestamp/turnCount가 불일치하면 SaveGame을 우선(더 신뢰할 수 있는 소스)
+- **MVP SaveGame 제거 전제**: U-116에서 SaveGame을 제거했으므로, MMP에서 영속성을 **처음부터 재설계**해야 한다. 기존 SaveGame 코드를 재활용하지 않고, 상태 불일치 방지를 핵심으로 새로 설계한다.
 
 **잠재적 리스크**:
 

@@ -1,4 +1,4 @@
-# U-025[Mvp]: 엔딩 리포트 아티팩트 생성(요약/타임라인/결산)
+# U-025[Mvp]: 엔딩 리포트 + 리플레이/시나리오 하네스 (U-026 흡수)
 
 ## 메타데이터
 
@@ -6,8 +6,8 @@
 | --------- | ----------- |
 | Unit ID   | U-025[Mvp]  |
 | Phase     | MVP         |
-| 예상 소요 | 75분        |
-| 의존성    | U-018,U-015 |
+| 예상 소요 | 120분 (엔딩 75분 + 리플레이 45분) |
+| 의존성    | U-018,U-024 |
 | 우선순위  | High        |
 
 ## 작업 목표
@@ -91,7 +91,24 @@
   - Option A: 서버 생성(권장: 검증/정합성, 추후 저장 확장 용이)
   - Option B: 클라 생성(초기 단순, 하지만 기준선 흔들림)
 
+## 추가 작업: 리플레이/시나리오 하네스 (구 U-026)
+
+### 구현 흐름 (리플레이)
+
+1. **시나리오 저장 형식**: seed + 사용자 액션(TurnInput) 시퀀스를 JSON으로 직렬화
+2. **수동 러너**: 저장된 시나리오를 입력으로 받아 자동 재생, 각 턴의 Hard Gate(Schema/Economy/Safety/Consistency) 결과를 수집
+3. **결과 요약**: 턴별 게이트 통과/실패를 표시, 실패 시 diff/context 포함
+4. 데모프로필별 "기본 시나리오 1개" 번들 (CP-MVP-03에서 검증)
+
+**영향받는 파일**:
+- `backend/src/unknown_world/harness/replay_runner.py` - 리플레이 실행 엔진
+- `backend/src/unknown_world/harness/scenario.py` - 시나리오 스키마/직렬화
+- `frontend/src/components/ReplayPanel.tsx` - (선택) 리플레이 결과 표시 UI
+
+**참조**: `vibe/unit-plans/U-026[Mvp].md` (본 유닛에 흡수)
+
 ## 참고 자료
 
-- `vibe/prd.md` - 엔딩 리포트/아티팩트 요구
+- `vibe/prd.md` - 엔딩 리포트/아티팩트/리플레이 요구
+- `vibe/unit-plans/U-026[Mvp].md` - 리플레이 상세 (흡수됨)
 - `.cursor/rules/00-core-critical.mdc` - RULE-001/004/005/006
