@@ -1,12 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { InventoryPanel } from './InventoryPanel';
 import { useInventoryStore } from '../stores/inventoryStore';
+import { ITEM_SELL_PRICE_SIGNAL } from '../save/constants';
 
 // i18next 모킹
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (key === 'inventory.sell_tooltip' || key === 'inventory.sell_aria') {
+        return `${key} (price: ${params?.price})`;
+      }
+      return key;
+    },
     i18n: {
       language: 'ko',
     },
@@ -17,8 +23,18 @@ vi.mock('react-i18next', () => ({
   },
 }));
 
+// worldStore 모킹
+const mockSellItem = vi.fn();
+vi.mock('../stores/worldStore', () => ({
+  useWorldStore: <T,>(selector: (state: { sellItem: typeof mockSellItem }) => T) => {
+    const state = {
+      sellItem: mockSellItem,
+    };
+    return selector ? selector(state) : state;
+  },
+}));
+
 // dnd-kit 모킹
-// useDraggable이 반환하는 attributes, listeners가 최상위 div에 적용되는지 확인하기 위함
 vi.mock('@dnd-kit/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dnd-kit/core')>();
   return {
@@ -42,7 +58,6 @@ describe('InventoryPanel (U-117)', () => {
   });
 
   it('should apply drag listeners and attributes to the entire row div', () => {
-    // 테스트 아이템 추가
     useInventoryStore.getState().addItems([
       {
         id: 'test-item-1',
@@ -54,19 +69,13 @@ describe('InventoryPanel (U-117)', () => {
 
     render(<InventoryPanel />);
 
-    // 아이템 Row 찾기
     const itemRow = screen.getByRole('listbox').children[0];
-
-    // U-117: 최상위 div(itemRow)에 드래그 속성이 적용되어야 함
     expect(itemRow).toHaveAttribute('role', 'button');
     expect(itemRow).toHaveAttribute('aria-describedby', 'DndDescribedBy-test-item-1');
-
-    // 클래스 확인 (inventory-item 클래스가 있어야 함)
     expect(itemRow).toHaveClass('inventory-item');
   });
 
   it('should render only the icon in DragOverlay when dragging', () => {
-    // 1. 아이템 추가
     const testItem = {
       id: 'test-drag-item',
       name: 'Dragging Item',
@@ -74,21 +83,109 @@ describe('InventoryPanel (U-117)', () => {
       icon: '🔥',
     };
     useInventoryStore.getState().addItems([testItem]);
-
-    // 2. 드래그 상태로 설정
     useInventoryStore.getState().startDrag(testItem.id);
 
     render(<InventoryPanel />);
 
-    // 3. DragOverlay 내부 확인
     const overlay = screen.getByTestId('drag-overlay');
-
-    // U-117: 고스트 이미지는 아이콘만 표시되어야 함 (inventory-overlay-icon 클래스)
     const ghostIcon = overlay.querySelector('.inventory-overlay-icon');
     expect(ghostIcon).toBeInTheDocument();
     expect(ghostIcon).toHaveTextContent('🔥');
-
-    // 이름이나 다른 정보가 오버레이에 포함되지 않았는지 확인
     expect(ghostIcon).not.toHaveTextContent('Dragging Item');
+  });
+});
+
+describe('InventoryPanel (U-129: Sell UX)', () => {
+  beforeEach(() => {
+    useInventoryStore.getState().reset();
+    mockSellItem.mockClear();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('should always show sell button with correct price', () => {
+    useInventoryStore.getState().addItems([
+      {
+        id: 'test-item',
+        name: 'Sellable Item',
+        quantity: 1,
+        icon: '💎',
+      },
+    ]);
+
+    render(<InventoryPanel />);
+
+    const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
+    expect(sellBtn).toBeInTheDocument();
+    expect(sellBtn).toHaveTextContent(`+${ITEM_SELL_PRICE_SIGNAL}`);
+  });
+
+  it('should transition to confirm state on first click', () => {
+    useInventoryStore.getState().addItems([
+      {
+        id: 'test-item',
+        name: 'Sellable Item',
+        quantity: 1,
+        icon: '💎',
+      },
+    ]);
+
+    render(<InventoryPanel />);
+
+    const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
+    fireEvent.click(sellBtn);
+
+    expect(sellBtn).toHaveTextContent('inventory.sell_confirm');
+    expect(sellBtn).toHaveClass('confirming');
+    expect(mockSellItem).not.toHaveBeenCalled();
+  });
+
+  it('should execute sellItem on second click within 2 seconds', () => {
+    useInventoryStore.getState().addItems([
+      {
+        id: 'test-item',
+        name: 'Sellable Item',
+        quantity: 1,
+        icon: '💎',
+      },
+    ]);
+
+    render(<InventoryPanel />);
+
+    const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
+    fireEvent.click(sellBtn);
+    fireEvent.click(sellBtn);
+
+    expect(mockSellItem).toHaveBeenCalledWith('test-item', 'Sellable Item');
+    expect(sellBtn).not.toHaveClass('confirming');
+  });
+
+  it('should revert to normal state after 2 seconds without second click', () => {
+    useInventoryStore.getState().addItems([
+      {
+        id: 'test-item',
+        name: 'Sellable Item',
+        quantity: 1,
+        icon: '💎',
+      },
+    ]);
+
+    render(<InventoryPanel />);
+
+    const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
+    fireEvent.click(sellBtn);
+    expect(sellBtn).toHaveClass('confirming');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(sellBtn).not.toHaveClass('confirming');
+    expect(sellBtn).toHaveTextContent(`+${ITEM_SELL_PRICE_SIGNAL}`);
+    expect(mockSellItem).not.toHaveBeenCalled();
   });
 });

@@ -5841,6 +5841,35 @@ button:disabled,
   font-weight: 700;
 }
 
+/* U-129: 인라인 컨펌 상태 (2단계 클릭) */
+.inventory-sell-btn.confirming {
+  background: rgba(255, 60, 60, 0.25);
+  border-color: #ff4444;
+  color: #ff6666;
+  animation: sell-confirm-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.inventory-sell-btn.confirming:hover {
+  background: rgba(255, 60, 60, 0.4);
+  border-color: #ff6666;
+  box-shadow: 0 0 10px rgba(255, 60, 60, 0.4);
+}
+
+.inventory-sell-btn .sell-confirm-text {
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
+}
+
+@keyframes sell-confirm-pulse {
+  from {
+    box-shadow: 0 0 4px rgba(255, 60, 60, 0.2);
+  }
+  to {
+    box-shadow: 0 0 10px rgba(255, 60, 60, 0.5);
+  }
+}
+
 /* ---- 재화 획득 액션 카드 배지 ---- */
 /* U-083: .earn-badge → .action-card-badge.badge-earn 으로 통합됨.
    아래 glow 애니메이션은 badge-earn에 적용. */

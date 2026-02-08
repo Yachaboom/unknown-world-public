@@ -97,7 +97,9 @@ vibe/unit-results/U-114.md
 vibe/unit-results/U-099[Mvp].md
 vibe/unit-results/U-123[Mvp].md
 vibe/unit-results/U-128[Mvp].md
+vibe/unit-results/U-129[Mvp].md
 vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
+vibe/unit-runbooks/U-129-item-sell-ux-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -418,6 +420,22 @@ vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
 3. **자동 활성화 및 생명 주기 연동**:
     - **Zero-touch Reactivation**: U-090 정책(장면 전환 시 핫스팟 초기화)에 의존하여, 새 이미지가 생성되면 별도의 상태 조작 없이 정밀분석 카드가 자동으로 활성 상태로 복원됨.
     - **Consistency OK**: i18n 정책(RULE-006)을 준수하여 모든 세션 언어에서 일관된 비활성화 피드백을 보장함.
+
+---
+
+## 61. 아이템 판매 직관적 UX 개선 (U-129[Mvp])
+
+1. **상시 판매 접근성 보장 (Always-on Sell)**:
+    - **Availability**: 기존의 잔액 부족 시 노출 조건(`isBalanceLow`)을 제거하고, 모든 아이템 Row에 판매 버튼을 상시 배치함. 이를 통해 플레이어는 재화 부족 시뿐만 아니라 전략적인 인벤토리 정리 및 Signal 확보가 언제든 가능해짐.
+2. **인라인 컨펌 및 실수 방지 (Two-Step Inline Verification)**:
+    - **Confirmation Flow**: 판매 버튼 클릭 시 즉시 실행하지 않고 "확인?" 상태로 전환하는 2단계 프로세스를 도입함.
+    - **Auto-reset Timer**: 2초간 추가 입력이 없을 경우 자동으로 원래 상태로 복구되는 타이머 로직을 적용하여 모달 팝업 없이도 실수 판매를 효과적으로 방지함.
+    - **Visual Feedback**: 컨펌 대기 상태 시 레드 펄스 애니메이션과 텍스트 변경을 통해 현재 조작의 위험성을 경고함.
+3. **보상 예측성 강화 (Price Visibility)**:
+    - **Price Labeling**: 버튼 내에 `+5 Signal` 라벨과 번개 아이콘(⚡)을 상시 노출하여, 판매를 통해 획득할 보상을 플레이어가 직관적으로 예측할 수 있게 함.
+4. **조작 충돌 방지 및 안전성**:
+    - **Adaptive Hiding**: 아이템 드래그 중(`isDragging`)이거나 소비 중(`isConsuming`)일 때는 판매 버튼을 자동으로 숨겨 DnD 조작 및 애니메이션과의 시각적/기능적 충돌을 차단함.
+    - **State Synchronization**: `confirmingSellIdRef` (Ref)를 사용하여 React의 비동기 렌더링 사이클 내에서도 최신 컨펌 상태를 정확히 추적함.
 
     
     ---

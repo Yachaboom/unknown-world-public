@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 122/136 (89.7%) | **MVP**: 122/131 (93.1%) | **MMP**: 0/5 (0%)
+**전체**: 123/136 (90.4%) | **MVP**: 123/131 (93.9%) | **MMP**: 0/5 (0%)
 
-**예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2
+**예상 완료(가정)**: MVP D-1 | MMP(M5 제출): D-1
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**최근 완료**: [U-128[Mvp]](vibe/unit-results/U-128[Mvp].md) (2026-02-09) / **취소**: U-084[Mvp] (기존 아트 스타일 유지 결정)
+**최근 완료**: [U-129[Mvp]](vibe/unit-results/U-129[Mvp].md) (2026-02-09) / [U-128[Mvp]](vibe/unit-results/U-128[Mvp].md) (2026-02-09)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
 
@@ -152,8 +152,7 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP (12개)
-ID=[U-129[Mvp]](unit-plans/U-129[Mvp].md) | 아이템 판매 직관적 UX 개선 (항상 노출 + 확인 절차) | Depends=U-096,U-088 | ⏸️
+### MVP (11개)
 ID=[U-130[Mvp]](unit-plans/U-130[Mvp].md) | ⚡429 Rate Limit 에러 시 프론트엔드 재시도 안내 UI | Depends=U-087 | ⏸️
 ID=[U-124[Mvp]](unit-plans/U-124[Mvp].md) | 프로필별 첫 씬 이미지 사전 생성 (nanobanana-mcp) | Depends=U-116 | ⏸️
 ID=[U-125[Mvp]](unit-plans/U-125[Mvp].md) | 이전턴 텍스트 주목성 제거 - 색상 dim + 폰트 축소 | Depends=U-086 | ⏸️
@@ -179,8 +178,9 @@ ID=[CP-SUB-01](unit-plans/CP-SUB-01.md) | **⚡체크포인트: 해커톤 제출
 _**[2026-02-08] M6 전체 skip**: 해커톤 일정상 실행 불가. MVP에 U-126(성능/품질 최적화) 1개로 대체. 해커톤 이후 필요 시 재계획._
 _기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-106, U-107, U-108, U-110~112, U-113, CP-MMP-02 — 모두 skip._
 
-### 완료 (121개)
+### 완료 (122개)
 
+- ✅ [U-129[Mvp]](vibe/unit-results/U-129[Mvp].md): 아이템 판매 직관적 UX 개선 (2026-02-09)
 - ✅ [U-128[Mvp]](vibe/unit-results/U-128[Mvp].md): 정밀분석 카드 비활성화 로직 (2026-02-09)
 - ✅ [U-127[Mvp]](vibe/unit-results/U-127[Mvp].md): 멀티턴 히스토리 + Gemini 3 Pro 전환 (2026-02-08)
 - ✅ [U-123[Mvp]](vibe/unit-results/U-123[Mvp].md): Agent Console 배치 재조정 - 접기 제거 + 대기열 상단 (2026-02-08)

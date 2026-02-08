@@ -330,7 +330,8 @@
     "sell_aria": "Sell {{item}} (+{{price}} Signal)",
     "sell_narrative": "\uD83D\uDCB0 Sold {{item}} and earned {{signal}} Signal.",
     "sell_toast": "Sold {{item}}!",
-    "sell_ledger_reason": "Item sold"
+    "sell_ledger_reason": "Item sold",
+    "sell_confirm": "Confirm?"
   },
   "interaction": {
     "hotspot_click": "Click to investigate",

@@ -32,7 +32,7 @@
  * @module components/InventoryPanel
  */
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useDraggable, DragOverlay, type Modifier } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +47,7 @@ import {
 } from '../stores/inventoryStore';
 import { useOnboardingStore, selectShouldShowItemHint } from '../stores/onboardingStore';
 import { useWorldStore } from '../stores/worldStore';
-import { useEconomyStore } from '../stores/economyStore';
+
 import { ITEM_SELL_PRICE_SIGNAL } from '../save/constants';
 import { InteractionHint } from './InteractionHint';
 import { DND_TYPE, type InventoryDragData } from '../dnd/types';
@@ -98,10 +98,12 @@ interface DraggableItemProps {
   isSelected?: boolean;
   /** U-088: 선택 핸들러 */
   onSelect?: (itemId: string) => void;
-  /** U-079: 판매 가능 여부 (잔액 부족 시 표시) */
+  /** U-129: 판매 버튼 항상 표시 (드래그/소비 중 제외) */
   showSellButton?: boolean;
-  /** U-079: 판매 핸들러 */
-  onSell?: (itemId: string, itemName: string) => void;
+  /** U-129: 인라인 컨펌 중인 아이템 ID */
+  confirmingSellId?: string | null;
+  /** U-129: 판매 버튼 클릭 핸들러 (인라인 컨펌 처리) */
+  onSellClick?: (itemId: string, itemName: string) => void;
 }
 
 /**
@@ -117,7 +119,8 @@ function DraggableItem({
   isSelected = false,
   onSelect,
   showSellButton = false,
-  onSell,
+  confirmingSellId = null,
+  onSellClick,
 }: DraggableItemProps) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
@@ -218,22 +221,43 @@ function DraggableItem({
         {item.quantity > 1 && <span className="inventory-item-quantity">x{item.quantity}</span>}
       </div>
 
-      {/* U-079: 판매 버튼 (잔액 부족 시 표시) */}
-      {showSellButton && !disabled && !isDragging && !isConsuming && (
-        <button
-          type="button"
-          className="inventory-sell-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSell?.(item.id, item.name);
-          }}
-          title={t('inventory.sell_tooltip', { price: ITEM_SELL_PRICE_SIGNAL })}
-          aria-label={t('inventory.sell_aria', { item: item.name, price: ITEM_SELL_PRICE_SIGNAL })}
-        >
-          <span className="sell-icon">{'\u26A1'}</span>
-          <span className="sell-price">+{ITEM_SELL_PRICE_SIGNAL}</span>
-        </button>
-      )}
+      {/* U-129: 판매 버튼 (항상 노출, 인라인 컨펌) */}
+      {showSellButton &&
+        !disabled &&
+        !isDragging &&
+        !isConsuming &&
+        (() => {
+          const isConfirming = confirmingSellId === item.id;
+          return (
+            <button
+              type="button"
+              className={`inventory-sell-btn ${isConfirming ? 'confirming' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSellClick?.(item.id, item.name);
+              }}
+              title={
+                isConfirming
+                  ? t('inventory.sell_confirm')
+                  : t('inventory.sell_tooltip', { price: ITEM_SELL_PRICE_SIGNAL })
+              }
+              aria-label={
+                isConfirming
+                  ? t('inventory.sell_confirm')
+                  : t('inventory.sell_aria', { item: item.name, price: ITEM_SELL_PRICE_SIGNAL })
+              }
+            >
+              {isConfirming ? (
+                <span className="sell-confirm-text">{t('inventory.sell_confirm')}</span>
+              ) : (
+                <>
+                  <span className="sell-icon">{'\u26A1'}</span>
+                  <span className="sell-price">+{ITEM_SELL_PRICE_SIGNAL}</span>
+                </>
+              )}
+            </button>
+          );
+        })()}
 
       {/* U-074: 첫 N번만 표시되는 드래그 힌트 */}
       {isHovered && !disabled && !isDragging && shouldShowHint && !showSellButton && (
@@ -312,9 +336,61 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
   const updateItemIcon = useInventoryStore((state) => state.updateItemIcon);
   const setItemIconStatus = useInventoryStore((state) => state.setItemIconStatus);
 
-  // U-079: 잔액 부족 시 판매 버튼 표시
-  const isBalanceLow = useEconomyStore((state) => state.isBalanceLow);
+  // U-129: 판매 버튼 항상 표시 (isBalanceLow 조건 제거)
   const sellItem = useWorldStore((state) => state.sellItem);
+
+  // U-129: 인라인 컨펌 상태 (2단계 클릭으로 실수 판매 방지)
+  // ref + state 동기 방식: ref는 핸들러에서 즉시 최신 값을 읽고,
+  // state는 UI 리렌더 트리거용
+  const [confirmingSellId, setConfirmingSellId] = useState<string | null>(null);
+  const confirmingSellIdRef = useRef<string | null>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** 동기적으로 ref + state 모두 업데이트 */
+  const updateConfirmingSellId = useCallback((id: string | null) => {
+    confirmingSellIdRef.current = id;
+    setConfirmingSellId(id);
+  }, []);
+
+  /** U-129: 컨펌 타이머 초기화 */
+  const clearConfirmTimer = useCallback(() => {
+    if (confirmTimerRef.current) {
+      clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * U-129: 판매 버튼 클릭 핸들러 (인라인 컨펌).
+   * - 1차 클릭: "확인?" 상태로 전환, 2초 타이머 시작
+   * - 2차 클릭 (2초 이내): 판매 실행
+   * - 2초 경과: 원래 상태로 복귀
+   *
+   * ref를 사용하여 stale closure 문제를 방지합니다.
+   */
+  const handleSellClick = useCallback(
+    (itemId: string, itemName: string) => {
+      if (confirmingSellIdRef.current === itemId) {
+        // 2차 클릭: 판매 실행
+        clearConfirmTimer();
+        updateConfirmingSellId(null);
+        sellItem(itemId, itemName);
+      } else {
+        // 1차 클릭: 컨펌 상태 진입
+        clearConfirmTimer();
+        updateConfirmingSellId(itemId);
+        confirmTimerRef.current = setTimeout(() => {
+          updateConfirmingSellId(null);
+        }, 2000);
+      }
+    },
+    [sellItem, clearConfirmTimer, updateConfirmingSellId],
+  );
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => clearConfirmTimer();
+  }, [clearConfirmTimer]);
 
   // U-075: 아이콘 생성 요청 추적 (중복 요청 방지)
   const iconRequestedRef = useRef<Set<string>>(new Set());
@@ -431,8 +507,9 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
             isConsuming={consumingItemIds.includes(item.id)}
             isSelected={selectedItemId === item.id}
             onSelect={handleSelect}
-            showSellButton={isBalanceLow}
-            onSell={sellItem}
+            showSellButton
+            confirmingSellId={confirmingSellId}
+            onSellClick={handleSellClick}
           />
         ))}
       </div>

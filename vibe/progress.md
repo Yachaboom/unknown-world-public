@@ -1,5 +1,36 @@
 # 프로젝트 진행 상황
 
+## [2026-02-09 12:40] U-129[Mvp]: 아이템 판매 직관적 UX 개선 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 인벤토리 아이템 판매 버튼 상시 노출 및 인라인 컨펌(2단계 클릭) 시스템 구현. 판매 가격 미리보기(+5 Signal)와 자동 복구 타이머로 실수 방지 및 보상 예측성 강화.
+- **추가 컴포넌트**: `vibe/unit-results/U-129[Mvp].md` (보고서), `vibe/unit-runbooks/U-129-item-sell-ux-runbook.md` (런북).
+- **달성 요구사항**: [PRD 5.3] 재화 획득 경로 확장, [RULE-005] 경제 인바리언트 준수, [RULE-006] i18n 정책 준수.
+
+### 기술적 구현 세부사항
+
+**인라인 컨펌 및 상시 판매 시스템 (Inline Sell Confirmation)**:
+- **Always-on Accessibility**: `isBalanceLow` 조건부 노출을 제거하고 모든 아이템 Row에 판매 버튼을 상시 배치하여 사용자 주도의 경제 활동 보장.
+- **Two-Step Verification Flow**: 1차 클릭 시 버튼을 "확인?" 상태로 전환하고 2초 타이머를 시작. 2초 내 재클릭 시에만 `sellItem()` 호출. `confirmingSellIdRef` (Ref)와 `confirmingSellId` (State)를 병행하여 비동기 환경에서도 최신 상태 유지 및 렌더링 동기화.
+- **UI/UX Polishing**: 컨펌 상태 시 레드 펄스 애니메이션 적용. `isDragging`, `isConsuming` 상태 감지 시 판매 버튼을 자동 숨김 처리하여 DnD 조작 충돌 방지.
+- **Economic Visibility**: `ITEM_SELL_PRICE_SIGNAL` 상수를 참조하여 버튼 내에 획득 예정 Signal을 미리 노출함으로써 사용자 의사결정 지원.
+
+**코드 구조**:
+repo-root/
+├── frontend/src/components/InventoryPanel.tsx (판매 로직 및 컨펌 상태 관리)
+├── frontend/src/components/InventoryPanel.test.tsx (2단계 클릭 테스트 반영)
+├── frontend/src/style.css (판매 버튼 및 컨펌 애니메이션 스타일)
+├── frontend/src/locales/ (ko-KR, en-US 번역 키 추가)
+└── vibe/ (유닛 결과 보고서 및 런북 추가)
+
+### 다음 단계
+
+- **CP-MVP-03**: 10분 데모 루프에서 아이템 판매를 통한 경제 순환 구조 최종 검증.
+- **U-079 연계**: 재화 부족 가이드에서 아이템 판매 경로 안내 기능 추가.
+
+---
+
 ## [2026-02-09 11:35] U-128[Mvp]: 정밀분석 완료 상태에서 정밀분석 카드 비활성화 완료
 
 ### 구현 완료 항목

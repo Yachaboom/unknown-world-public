@@ -330,7 +330,8 @@
     "sell_aria": "{{item}} 판매 (+{{price}} Signal)",
     "sell_narrative": "💰 {{item}}을(를) 판매하여 {{signal}} Signal을 획득했습니다.",
     "sell_toast": "{{item}} 판매 완료!",
-    "sell_ledger_reason": "아이템 판매"
+    "sell_ledger_reason": "아이템 판매",
+    "sell_confirm": "확인?"
   },
   "interaction": {
     "hotspot_click": "클릭하여 조사",
