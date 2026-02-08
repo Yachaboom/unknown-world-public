@@ -1,6 +1,40 @@
 # 프로젝트 진행 상황
 
-## [2026-02-08 23:25] U-127[Mvp]: 멀티턴 대화 히스토리 맥락 유지 + 기본 텍스트 모델 gemini-3-pro-preview 전환 완료
+## [2026-02-09 11:35] U-128[Mvp]: 정밀분석 완료 상태에서 정밀분석 카드 비활성화 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 정밀분석으로 핫스팟이 생성된 장면에서 "정밀분석" 액션 카드를 비활성화하여 중복 호출 및 비용(1.5x) 낭비 방지. 새 장면 이미지 생성 시 핫스팟 초기화와 연동하여 자동 재활성화.
+- **추가 컴포넌트**: `vibe/unit-results/U-128[Mvp].md` (보고서), `vibe/unit-runbooks/U-128-vision-card-disable-runbook.md` (런북).
+- **달성 요구사항**: [PRD 6.2] 핫스팟 생성 제한 정책 준수, [RULE-005] 경제 인바리언트 준수(비용 최적화), [RULE-006] i18n 정책 준수.
+
+### 기술적 구현 세부사항
+
+**비전 액션 잠금 정책 (Vision Lock-on-Analysis)**:
+- **Hotspot Detection SSOT**: `worldStore.sceneObjects.length > 0`을 기준으로 현재 장면에 대한 분석 완료 여부를 실시간 감지.
+- **Contextual Disabling**: `VISION_TRIGGER_ACTION_IDS`에 해당하는 카드에 대해 `isDisabled` 조건을 확장하고, 비활성화 사유로 `action.vision_already_analyzed`를 표시.
+- **Visual Feedback Integration**: 비활성화된 비전 전용 스타일(opacity 0.4, dimmed border)을 적용하여 일반 비활성화와 차별화된 "수행 완료" 상태 전달.
+- **Auto-Reactivation Flow**: U-090 정책(이미지 갱신 시 핫스팟 초기화)에 의존하여 장면 전환 시 별도 조작 없이 카드가 다시 활성화되도록 연동.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── components/ActionDeck.tsx (비전 카드 비활성화 로직 및 사유 추가)
+    ├── style.css (비활성화된 비전 카드 전용 스타일)
+    └── locales/ (ko-KR/en-US vision_already_analyzed 번역 키 추가)
+
+### 성능 및 품질 지표
+
+- **비용 최적화**: 중복 정밀분석 호출 차단으로 턴당 1.5x 배수 비용 낭비 방지.
+- **사용자 경험**: 이미 분석된 장면에 대해 명확한 피드백을 제공하여 시스템 상태 인지성 향상.
+
+### 다음 단계
+
+- **U-115[Mvp]**: 핫스팟 컴팩트 원형 디자인 및 우선순위 조정
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 
 ### 구현 완료 항목
 

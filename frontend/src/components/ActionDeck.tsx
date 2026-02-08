@@ -474,6 +474,10 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
   const setCostEstimateFromCard = useEconomyStore((state) => state.setCostEstimateFromCard);
   const setCostEstimate = useEconomyStore((state) => state.setCostEstimate);
 
+  // U-128: 핫스팟 존재 여부 (정밀분석 완료 판정 SSOT)
+  // sceneObjects.length > 0이면 정밀분석이 수행된 장면 (U-090 정책)
+  const hasHotspots = useWorldStore((state) => state.sceneObjects.length > 0);
+
   // U-049: 드래그 스크롤
   const { containerRef, isDragging, handlers: dragHandlers } = useDragScroll();
 
@@ -539,12 +543,20 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
         currentBalance.signal >= costToCheck.signal &&
         currentBalance.memory_shard >= costToCheck.memory_shard;
 
+      // U-128: 정밀분석 완료 시 VISION 카드 비활성화
+      // sceneObjects(핫스팟)가 1개 이상 존재하면 이미 분석된 장면 (U-090 정책)
+      // 새 이미지 생성 시 핫스팟이 초기화되면 자동으로 다시 활성화됨
+      const isVisionDisabledByHotspots = isVisionAction && hasHotspots;
+
       // 최종 비활성화 여부: 서버 판단 우선, 없으면 클라이언트 판단
-      const isDisabled = !serverEnabled || !isAffordable;
+      const isDisabled = !serverEnabled || !isAffordable || isVisionDisabledByHotspots;
 
       // 비활성화 사유 결정 (U-065: disabled_reason 제거됨)
+      // U-128: 정밀분석 완료 사유를 가장 높은 우선순위로 표시
       let finalDisabledReason: string | null = null;
-      if (!serverEnabled) {
+      if (isVisionDisabledByHotspots) {
+        finalDisabledReason = t('action.vision_already_analyzed');
+      } else if (!serverEnabled) {
         finalDisabledReason = t('action.server_disabled');
       } else if (!isAffordable) {
         finalDisabledReason = t('action.insufficient_balance');
@@ -561,7 +573,7 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
         displayCost,
       };
     });
-  }, [displayCards, currentBalance, t]);
+  }, [displayCards, currentBalance, hasHotspots, t]);
 
   // 일반 카드와 대안 카드 분리 (대안 카드는 뒤에 배치)
   const sortedCards = useMemo(() => {

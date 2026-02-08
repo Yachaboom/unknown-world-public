@@ -432,6 +432,7 @@
     "server_disabled": "사용 불가",
     "vision_badge": "정밀분석",
     "earn_badge": "Signal 획득",
+    "vision_already_analyzed": "이미 분석된 장면입니다",
     "all_disabled_notice": "실행 가능한 행동이 없습니다. 대안을 확인하세요.",
     "risk": {
       "low": "낮음",

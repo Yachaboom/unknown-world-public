@@ -1855,6 +1855,20 @@ body {
   color: #00e5ff;
 }
 
+/* U-128: VISION 카드 정밀분석 완료 비활성화 스타일 */
+/* 기존 disabled보다 더 dim 처리하여 "이미 수행됨"을 시각적으로 강조 */
+.action-card.card-vision.card-disabled,
+.action-card.card-vision:disabled {
+  border-color: rgba(0, 229, 255, 0.25);
+  opacity: 0.4;
+}
+
+/* U-128: VISION 배지도 함께 dim 처리 */
+.action-card.card-vision.card-disabled .badge-vision,
+.action-card.card-vision:disabled .badge-vision {
+  opacity: 0.5;
+}
+
 /* 비활성화된 카드 */
 .action-card.card-disabled,
 .action-card:disabled {

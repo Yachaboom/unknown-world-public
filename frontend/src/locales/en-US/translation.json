@@ -432,6 +432,7 @@
     "server_disabled": "Unavailable",
     "vision_badge": "VISION",
     "earn_badge": "Earn Signal",
+    "vision_already_analyzed": "Scene already analyzed",
     "all_disabled_notice": "No actions available. Check alternatives.",
     "risk": {
       "low": "Low",

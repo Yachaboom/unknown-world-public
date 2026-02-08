@@ -358,12 +358,9 @@ class GenAIClient:
                             raw_sig = part.thought_signature
                             # bytes인 경우 latin-1로 인코딩하여 문자열로 보존
                             # (API에 다시 보낼 때 bytes로 복원 가능)
-                            if isinstance(raw_sig, bytes):
-                                import base64
+                            import base64
 
-                                thought_signature = base64.b64encode(raw_sig).decode("ascii")
-                            else:
-                                thought_signature = str(raw_sig)
+                            thought_signature = base64.b64encode(raw_sig).decode("ascii")
                             break
 
         # 토큰 사용량 추출

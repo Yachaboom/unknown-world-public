@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ActionDeck } from './ActionDeck';
 import type { ActionCard } from '../schemas/turn';
 import { useActionDeckStore } from '../stores/actionDeckStore';
@@ -16,6 +16,8 @@ vi.mock('react-i18next', () => ({
       if (key === 'action.risk.high') return 'High';
       if (key === 'action.insufficient_balance') return 'Insufficient Balance';
       if (key === 'action.alternative') return 'Alt';
+      // U-128: 번역 키 모킹 추가
+      if (key === 'action.vision_already_analyzed') return 'action.vision_already_analyzed';
       return key;
     },
   }),
@@ -56,13 +58,20 @@ describe('ActionDeck Component', () => {
 
   beforeEach(() => {
     // 스토어 초기화
-    useActionDeckStore.setState({ cards: [] });
-    useWorldStore.setState({ economy: { signal: 100, memory_shard: 5, credit: 0 } });
-    useAgentStore.setState({ isStreaming: false });
+    act(() => {
+      useActionDeckStore.setState({ cards: [] });
+      useWorldStore.setState({
+        economy: { signal: 100, memory_shard: 5, credit: 0 },
+        sceneObjects: [], // U-128: 핫스팟 초기화 명시
+      });
+      useAgentStore.setState({ isStreaming: false });
+    });
   });
 
   it('renders provided cards from store', () => {
-    useActionDeckStore.setState({ cards: mockCards });
+    act(() => {
+      useActionDeckStore.setState({ cards: mockCards });
+    });
     render(<ActionDeck />);
     expect(screen.getByText('Regular Action')).toBeInTheDocument();
     expect(screen.getByText('Expensive Action')).toBeInTheDocument();
@@ -71,7 +80,9 @@ describe('ActionDeck Component', () => {
 
   // U-065: cost_estimate 제거됨, cost만 표시
   it('displays cost values', () => {
-    useActionDeckStore.setState({ cards: mockCards });
+    act(() => {
+      useActionDeckStore.setState({ cards: mockCards });
+    });
     render(<ActionDeck />);
     // card-1 has cost: 10
     expect(screen.getByText('10')).toBeInTheDocument();
@@ -81,8 +92,10 @@ describe('ActionDeck Component', () => {
 
   // U-065: cost_estimate 제거됨, cost만 사용
   it('disables cards when balance is insufficient in worldStore', () => {
-    useActionDeckStore.setState({ cards: mockCards });
-    useWorldStore.setState({ economy: { signal: 5, memory_shard: 0, credit: 0 } });
+    act(() => {
+      useActionDeckStore.setState({ cards: mockCards });
+      useWorldStore.setState({ economy: { signal: 5, memory_shard: 0, credit: 0 } });
+    });
 
     render(<ActionDeck />);
 
@@ -97,14 +110,18 @@ describe('ActionDeck Component', () => {
   });
 
   it('renders alternative badge for alternative cards', () => {
-    useActionDeckStore.setState({ cards: mockCards });
+    act(() => {
+      useActionDeckStore.setState({ cards: mockCards });
+    });
     render(<ActionDeck />);
     expect(screen.getByText('Alt')).toBeInTheDocument();
   });
 
   it('calls onCardClick when an enabled card is clicked', () => {
     const onCardClick = vi.fn();
-    useActionDeckStore.setState({ cards: mockCards });
+    act(() => {
+      useActionDeckStore.setState({ cards: mockCards });
+    });
     render(<ActionDeck onCardClick={onCardClick} />);
 
     fireEvent.click(screen.getByText('Regular Action'));
@@ -119,7 +136,9 @@ describe('ActionDeck Component', () => {
         enabled: false,
       },
     ];
-    useActionDeckStore.setState({ cards: disabledCard });
+    act(() => {
+      useActionDeckStore.setState({ cards: disabledCard });
+    });
     render(<ActionDeck />);
     // action.server_disabled 키가 그대로 출력됨 (모킹에서 처리 안 됨)
     const card = screen.getByRole('button', { name: /Regular Action/i });
@@ -127,15 +146,19 @@ describe('ActionDeck Component', () => {
   });
 
   it('renders default cards when store cards are empty', () => {
-    useActionDeckStore.setState({ cards: [] });
+    act(() => {
+      useActionDeckStore.setState({ cards: [] });
+    });
     render(<ActionDeck />);
     // useDefaultCards should provide some default labels
     expect(screen.getByText('action.default.explore.label')).toBeInTheDocument();
   });
 
   it('disables all cards when isStreaming is true in agentStore', () => {
-    useActionDeckStore.setState({ cards: mockCards });
-    useAgentStore.setState({ isStreaming: true });
+    act(() => {
+      useActionDeckStore.setState({ cards: mockCards });
+      useAgentStore.setState({ isStreaming: true });
+    });
 
     render(<ActionDeck />);
 
@@ -159,7 +182,9 @@ describe('ActionDeck Component', () => {
           is_alternative: false,
         },
       ];
-      useActionDeckStore.setState({ cards: complexCard });
+      act(() => {
+        useActionDeckStore.setState({ cards: complexCard });
+      });
       render(<ActionDeck />);
 
       // VISION 뱃지 (🔍 action.vision_badge)
@@ -180,7 +205,9 @@ describe('ActionDeck Component', () => {
           is_alternative: true, // 수정된 로직에 의해 다른 뱃지가 있어도 추가됨
         },
       ];
-      useActionDeckStore.setState({ cards: threeBadgesCard });
+      act(() => {
+        useActionDeckStore.setState({ cards: threeBadgesCard });
+      });
       render(<ActionDeck />);
 
       // VISION과 EARN은 표시되어야 함 (collectBadges 순서상)
@@ -203,10 +230,89 @@ describe('ActionDeck Component', () => {
           is_alternative: true,
         },
       ];
-      useActionDeckStore.setState({ cards: altOnlyCard });
+      act(() => {
+        useActionDeckStore.setState({ cards: altOnlyCard });
+      });
       render(<ActionDeck />);
 
       expect(screen.getByText('Alt')).toBeInTheDocument();
+    });
+  });
+
+  describe('Vision Action Restriction (U-128)', () => {
+    const visionCard: ActionCard[] = [
+      {
+        id: '정밀분석', // VISION_TRIGGER_ACTION_IDS에 포함됨
+        label: 'Analyze Scene',
+        cost: { signal: 5, memory_shard: 0 },
+        risk: 'medium',
+        enabled: true,
+        is_alternative: false,
+      },
+    ];
+
+    it('enables vision action when no hotspots exist', () => {
+      act(() => {
+        useActionDeckStore.setState({ cards: visionCard });
+        useWorldStore.setState({ sceneObjects: [] });
+      });
+
+      render(<ActionDeck />);
+
+      const card = screen.getByRole('button', { name: /Analyze Scene/i });
+      expect(card).not.toBeDisabled();
+    });
+
+    it('disables vision action when hotspots exist (already analyzed)', () => {
+      act(() => {
+        useActionDeckStore.setState({ cards: visionCard });
+        // 핫스팟이 1개 이상 존재함
+        useWorldStore.setState({
+          sceneObjects: [
+            {
+              id: 'obj-1',
+              label: 'Object',
+              box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
+              interaction_hint: null,
+            },
+          ],
+        });
+      });
+
+      render(<ActionDeck />);
+
+      const card = screen.getByRole('button', { name: /Analyze Scene/i });
+      expect(card).toBeDisabled();
+      // 비활성화 사유 표시 확인
+      expect(screen.getByText('action.vision_already_analyzed')).toBeInTheDocument();
+    });
+
+    it('re-enables vision action when hotspots are cleared (new scene)', () => {
+      act(() => {
+        useActionDeckStore.setState({ cards: visionCard });
+        // 1. 처음엔 핫스팟이 있어 비활성 상태
+        useWorldStore.setState({
+          sceneObjects: [
+            {
+              id: 'obj-1',
+              label: 'Object',
+              box_2d: { ymin: 100, xmin: 100, ymax: 200, xmax: 200 },
+              interaction_hint: null,
+            },
+          ],
+        });
+      });
+
+      const { rerender } = render(<ActionDeck />);
+      expect(screen.getByRole('button', { name: /Analyze Scene/i })).toBeDisabled();
+
+      // 2. 핫스팟이 초기화됨 (새 장면 이미지 생성 등으로 인해)
+      act(() => {
+        useWorldStore.setState({ sceneObjects: [] });
+      });
+
+      rerender(<ActionDeck />);
+      expect(screen.getByRole('button', { name: /Analyze Scene/i })).not.toBeDisabled();
     });
   });
 });

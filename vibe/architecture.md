@@ -96,6 +96,8 @@ vibe/unit-results/U-117[Mvp].md
 vibe/unit-results/U-114.md
 vibe/unit-results/U-099[Mvp].md
 vibe/unit-results/U-123[Mvp].md
+vibe/unit-results/U-128[Mvp].md
+vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -402,6 +404,20 @@ vibe/unit-results/U-123[Mvp].md
 2. **공간 최적화 및 구분**:
     - **Compact Grid**: 배지를 상시 노출하되 공간 점유를 최소화하기 위해 2x2 컴팩트 그리드 레이아웃을 적용함.
     - **Divider**: 대기열과 배지 사이에 얇은 반투명 구분선을 추가하여 정보의 성격을 명확히 분리함.
+
+---
+
+## 60. 정밀분석 완료 상태에서 정밀분석 카드 비활성화 (U-128[Mvp])
+
+1. **중복 분석 및 비용 낭비 방지 (Analysis Lock)**:
+    - **Contextual Guard**: 정밀분석(Agentic Vision)이 이미 수행되어 화면에 핫스팟이 존재하는 상태에서는 "정밀분석" 액션 카드를 비활성화함. 이는 동일 장면의 재분석으로 인한 1.5x 비용 낭비와 핫스팟 데이터 충돌을 원천 차단함.
+    - **SSOT Detection**: `worldStore.sceneObjects.length > 0`을 기준으로 정밀분석 완료 여부를 판별하여 `ActionDeck`의 비활성화 조건(`isDisabled`)에 실시간 반영함.
+2. **시각적 상태 및 사유 전달 (Feedback Hierarchy)**:
+    - **Tiered Disabled Style**: 비활성화된 비전 카드는 일반 비활성화보다 더 낮은 불투명도(`0.4`)와 흐린 테두리 농도(`0.25`)를 적용하여 "이미 수행됨"을 시각적으로 강조함.
+    - **Reason Overlay**: 비활성화 사유로 "이미 분석된 장면입니다" (ko-KR) / "Scene already analyzed" (en-US) 툴팁 및 오버레이 메시지를 제공하여 시스템 상태를 명확히 전달함.
+3. **자동 활성화 및 생명 주기 연동**:
+    - **Zero-touch Reactivation**: U-090 정책(장면 전환 시 핫스팟 초기화)에 의존하여, 새 이미지가 생성되면 별도의 상태 조작 없이 정밀분석 카드가 자동으로 활성 상태로 복원됨.
+    - **Consistency OK**: i18n 정책(RULE-006)을 준수하여 모든 세션 언어에서 일관된 비활성화 피드백을 보장함.
 
     
     ---
