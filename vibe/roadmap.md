@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 119/132 (90.2%) | **MVP**: 119/127 (93.7%) | **MMP**: 0/5 (0%)
+**전체**: 119/136 (87.5%) | **MVP**: 119/131 (90.8%) | **MMP**: 0/5 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
@@ -12,7 +12,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 **최근 완료**: [U-087[Mvp]](vibe/unit-results/U-087[Mvp].md) (2026-02-08) / **취소**: U-084[Mvp] (기존 아트 스타일 유지 결정)
 
-**블로커**: 없음 | **마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
+**블로커**: 없음 | **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
 
 **메모**:
 - 취소 UX(Cancel 버튼) 미완성 → 정책 SSOT: `vibe/refactors/RU-003-S1.md`
@@ -20,6 +20,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **[2026-02-08 유닛 병합]** U-098→U-116 흡수, U-118→U-117 흡수, U-025+U-026 통합, RU-007→MMP 이동. 상세: `vibe/changelog.md`
 - **[2026-02-08 MMP 제출 최적화]** M5를 "해커톤 제출 준비"로 재편. U-100+U-101→U-120 흡수. U-119(WIG 폴리시), U-121(제출 문서), U-122(데모 영상), CP-SUB-01 추가. 상세: `vibe/changelog.md`
 - **[2026-02-08 M6 전체 제거 + MVP 보강]** M6(품질 강화/후속) 16개 유닛 전체 skip. 대신 MVP에 U-123~U-126 추가 (Agent Console 재조정, 프로필 씬 이미지, 이전턴 텍스트 약화, 성능 최적화). 상세: `vibe/changelog.md`
+- **[2026-02-08 맥락 유지/UX/에러 보강]** 멀티턴 맥락 유지+모델 전환(U-127), 정밀분석 중복 방지(U-128), 아이템 판매 UX(U-129), 429 에러 재시도 안내(U-130) 추가. 상세: `vibe/changelog.md`
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -123,7 +124,7 @@ _해소 완료: R-005~R-008, R-010~R-018, R-020~R-022 (대응 유닛 완료). �
 
 ## Devpost 제출 요건 매핑 (Gemini 3 Hackathon)
 
-_마감: 2026-02-09 5:00 PM PST | 심사: Technical Execution(40%), Innovation/Wow(30%), Impact(20%), Presentation(10%)_
+_마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Execution(40%), Innovation/Wow(30%), Impact(20%), Presentation(10%)_
 
 | 제출 요건                                | 상태 | 담당 유닛 | 비고                                       |
 | ---------------------------------------- | ---- | --------- | ------------------------------------------ |
@@ -151,7 +152,11 @@ _마감: 2026-02-09 5:00 PM PST | 심사: Technical Execution(40%), Innovation/W
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP (9개)
+### MVP (13개)
+ID=[U-127[Mvp]](unit-plans/U-127[Mvp].md) | ⚡멀티턴 대화 히스토리 맥락 유지 + 기본 모델 gemini-3-pro-preview 전환 | Depends=U-069,U-017 | ⏸️
+ID=[U-128[Mvp]](unit-plans/U-128[Mvp].md) | 정밀분석 완료 상태에서 정밀분석 카드 비활성화 | Depends=U-090,U-087 | ⏸️
+ID=[U-129[Mvp]](unit-plans/U-129[Mvp].md) | 아이템 판매 직관적 UX 개선 (항상 노출 + 확인 절차) | Depends=U-096,U-088 | ⏸️
+ID=[U-130[Mvp]](unit-plans/U-130[Mvp].md) | ⚡429 Rate Limit 에러 시 프론트엔드 재시도 안내 UI | Depends=U-087 | ⏸️
 ID=[U-123[Mvp]](unit-plans/U-123[Mvp].md) | Agent Console 접기 제거 + 대기열 상단/배지 하단 재배치 | Depends=U-114 | ⏸️
 ID=[U-124[Mvp]](unit-plans/U-124[Mvp].md) | 프로필별 첫 씬 이미지 사전 생성 (nanobanana-mcp) | Depends=U-116 | ⏸️
 ID=[U-125[Mvp]](unit-plans/U-125[Mvp].md) | 이전턴 텍스트 주목성 제거 - 색상 dim + 폰트 축소 | Depends=U-086 | ⏸️
@@ -164,7 +169,7 @@ ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프
 
 ### MMP - M5: 해커톤 제출 준비 (5개)
 
-_Devpost 마감: 2026-02-09 5:00 PM PST. 제출 요건 매핑 → 아래 "제출 요건 매핑" 참조._
+_Devpost 마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM). 제출 요건 매핑 → 아래 "제출 요건 매핑" 참조._
 
 ID=[U-119[Mmp]](unit-plans/U-119[Mmp].md) | ⚡Frontend Layout 전체 다듬기 (WIG 기반 폴리시) | Depends=None | ⏸️
 ID=[U-120[Mmp]](unit-plans/U-120[Mmp].md) | ⚡제출용 배포 + 공개 데모 URL **(U-100+U-101 흡수)** | Depends=None | ⏸️
@@ -228,5 +233,5 @@ pnpm kill
 **계획 추가**: U-123(Agent Console 재배치), U-124(프로필 씬 이미지), U-125(이전턴 텍스트 약화), U-126(성능 최적화)
 **M6 전체 skip**: 해커톤 일정상 M6(16개) 전체 제거. U-126(MVP)으로 핵심 성능/품질만 커버.
 **블로커**: 없음
-**마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
+**마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
 **제출 크리티컬 패스**: MVP 잔여(U-123~U-126 등) → U-119(폴리시) + U-120(배포) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)
