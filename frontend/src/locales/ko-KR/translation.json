@@ -264,9 +264,6 @@
       },
       "expand": "상세 보기",
       "collapse": "접기",
-      "badges_toggle": "검증 배지 접기/펼치기",
-      "badge_fail_warning": "검증 실패 {{count}}건",
-      "badges_summary_ok": "{{ok}}/{{total}} OK",
       "queue_idle": "대기 중..."
     }
   },

@@ -94,6 +94,7 @@ scripts/process_item_icons.py
 vibe/unit-results/U-117[Mvp].md
 vibe/unit-results/U-114.md
 vibe/unit-results/U-099[Mvp].md
+vibe/unit-results/U-123[Mvp].md
 ```
 
 ### 주요 디렉토리 설명
@@ -389,6 +390,18 @@ vibe/unit-results/U-099[Mvp].md
 4. **인벤토리 UI 동기화 (Frontend)**:
     - **Dynamic Icon URL**: `inventoryStore`에서 아이템별 `icon_url`을 관리하며, 백엔드로부터 생성 완료 신호를 받거나 폴링을 통해 실제 아이콘으로 교체함.
     - **Visual Feedback**: 아이콘 생성 중에는 스캔라인 애니메이션 및 로딩 상태를 표시하여 시스템의 활동성을 체감하게 함.
+
+---
+
+## 59. Agent Console 배치 재조정 (U-123[Mvp])
+
+1. **상시 노출 및 계층 구조 (Fixed Visibility)**:
+    - **Toggle Removal**: U-114에서 도입했던 접기/펼치기 토글을 제거하고, 모든 정보를 한눈에 볼 수 있는 Flat 레이아웃으로 회귀하여 "채팅이 아닌 시스템"임을 강조함.
+    - **Visual Flow**: 실시간 변화를 보여주는 **대기열(Queue)**을 상단에 배치하여 1차 시선을 확보하고, 정적인 검증 결과인 **배지(Badges)**를 하단에 배치하는 자연스러운 시각적 흐름을 구축함.
+2. **공간 최적화 및 구분**:
+    - **Compact Grid**: 배지를 상시 노출하되 공간 점유를 최소화하기 위해 2x2 컴팩트 그리드 레이아웃을 적용함.
+    - **Divider**: 대기열과 배지 사이에 얇은 반투명 구분선을 추가하여 정보의 성격을 명확히 분리함.
+
     
     ---
     

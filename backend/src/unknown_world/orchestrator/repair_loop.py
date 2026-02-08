@@ -18,6 +18,7 @@ max_repair_attempts 내에서 repair 재요청을 수행하고,
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -219,12 +220,24 @@ async def run_repair_loop(
             repair_context = _build_repair_context_schema(gen_result, turn_input.language)
             continue
 
-        # 2. API 에러
+        # 2. API 에러 (429 RESOURCE_EXHAUSTED 등)
         if gen_result.status == GenerationStatus.API_ERROR:
             badges.append(ValidationBadge.SCHEMA_FAIL)
             error_messages.append(gen_result.error_message)
-            # API 에러는 재시도해도 동일한 결과일 가능성이 높음
-            # 하지만 일시적 오류일 수 있으므로 재시도 허용
+            # 일시적 오류(429 버스트 리밋 등)일 수 있으므로
+            # 지수 백오프 대기 후 재시도 허용
+            backoff_seconds = 2.0 * (2**attempt)  # 2s → 4s → 8s
+            logger.warning(
+                "[RepairLoop] API 에러 — %.1fs 대기 후 재시도",
+                backoff_seconds,
+                extra={
+                    "attempt": attempt,
+                    "error_message": gen_result.error_message,
+                    "error_details": gen_result.error_details,
+                    "backoff_seconds": backoff_seconds,
+                },
+            )
+            await asyncio.sleep(backoff_seconds)
             repair_context = ""
             continue
 

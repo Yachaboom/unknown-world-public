@@ -111,8 +111,8 @@ return (
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 대기열과 배지 사이 구분은?
-  - Option A: **얇은 구분선** (CRT 테마, 반투명)
+- [x] **Q1**: 대기열과 배지 사이 구분은?
+  - ✅Option A: **얇은 구분선** (CRT 테마, 반투명)
   - Option B: 간격만 (구분선 없이 padding)
   - Option C: 라벨 섹션 헤더 ("Queue" / "Verification")
 

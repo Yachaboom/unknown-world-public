@@ -4,10 +4,10 @@
  * 에이전트형 시스템임을 UI로 증명하기 위한 컴포넌트입니다.
  * Plan/Queue/Badges/Auto-repair 트레이스를 실시간으로 표시합니다.
  *
- * U-114: 검증배지 기본 접힘 + 대기열(Queue) 상시 노출
- *   - Queue(대기열): 항상 노출, idle 시 "대기 중..." 표시 (Q1: Option A)
- *   - Badges(검증배지): 기본 접힘, 축약 요약 "4/4 OK" 또는 "⚠ N FAIL" (Q2: Option C)
- *   - 토글 버튼(▼/▲)으로 배지 펼침/접힘 전환
+ * U-123: 접기 제거 + 대기열 상단 + 배지 하단 (항상 노출)
+ *   - Queue(대기열): 상단 항상 노출, idle 시 "대기 중..." 표시
+ *   - Badges(검증배지): 하단 항상 노출 (접기/펼치기 토글 제거)
+ *   - 구분선으로 대기열/배지 영역 시각적 분리
  *
  * U-082: Agent Console 축소 기반 (레이아웃 축소 범위 유지)
  *
@@ -18,7 +18,6 @@
  * @module components/AgentConsole
  */
 
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useAgentStore,
@@ -194,42 +193,6 @@ function BadgesPanel() {
   );
 }
 
-/**
- * 배지 축약 요약 (접힌 상태) - U-114 Q2: Option C
- *
- * 접힌 상태에서:
- *   - 모두 OK → "4/4 OK" 축약 텍스트
- *   - 실패 있음 → "⚠ N" 경고 아이콘 + 실패 개수
- *   - 배지 없음 → 표시하지 않음
- */
-function BadgesSummary() {
-  const { t } = useTranslation();
-  const badges = useAgentStore(selectBadges);
-
-  if (badges.length === 0) return null;
-
-  const failBadges = badges.filter((b) => BADGE_INFO[b] && !BADGE_INFO[b].isOk);
-  const okBadges = badges.filter((b) => BADGE_INFO[b]?.isOk);
-
-  if (failBadges.length > 0) {
-    return (
-      <span
-        className="badge-fail-indicator"
-        aria-label={t('agent.console.badge_fail_warning', { count: failBadges.length })}
-      >
-        <span className="fail-warning-icon">⚠</span>
-        <span className="fail-count">{failBadges.length}</span>
-      </span>
-    );
-  }
-
-  return (
-    <span className="badge-ok-summary">
-      {t('agent.console.badges_summary_ok', { ok: okBadges.length, total: badges.length })}
-    </span>
-  );
-}
-
 /** Auto-repair 트레이스 */
 function RepairTrace() {
   const { t } = useTranslation();
@@ -313,25 +276,20 @@ function StreamingStatus() {
 /**
  * Agent Console 컴포넌트.
  *
- * U-114: Queue(대기열) 상시 노출 + Badges(검증배지) 기본 접힘.
- *   - Queue: 항상 표시 (idle 시 "대기 중..." 텍스트)
- *   - Badges: 기본 접힘 → 축약 요약 "4/4 OK" 또는 "⚠ N" 표시
- *   - 토글 버튼으로 배지 펼침 → 전체 배지 + RepairTrace 표시
- *   - Q1: Option A - idle 시 "대기 중..." 텍스트
- *   - Q2: Option C - 접힌 상태에서 "4/4 OK" 축약 텍스트
+ * U-123: 접기 제거 + 대기열 상단 + 배지 하단 항상 노출.
+ *   - Queue: 상단 항상 표시 (idle 시 "대기 중..." 텍스트)
+ *   - 구분선: CRT 테마 반투명 구분선으로 영역 분리
+ *   - Badges: 하단 항상 표시 (접기/펼치기 토글 없음)
+ *   - RepairTrace: 배지 아래 조건부 표시
  *
  * RULE-008에 따라 프롬프트/내부 추론은 노출하지 않습니다.
  * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
  * U-069: 현재 사용 중인 모델 라벨(FAST/QUALITY) 표시 추가
  */
 export function AgentConsole() {
-  const { t } = useTranslation();
-  // U-114: 배지 기본 접힘 상태 (Queue는 항상 노출)
-  const [badgesExpanded, setBadgesExpanded] = useState(false);
-
   return (
     <div className="agent-console-content" data-ui-importance="critical">
-      {/* U-114: 항상 표시 영역 - StreamingStatus + ModelLabel + Queue */}
+      {/* 상단: StreamingStatus + ModelLabel + Queue(대기열) */}
       <div className="agent-console-always">
         <div className="agent-console-summary">
           <StreamingStatus />
@@ -340,25 +298,13 @@ export function AgentConsole() {
         <AlwaysVisibleQueue />
       </div>
 
-      {/* U-114: 배지 섹션 (기본 접힘) */}
+      {/* U-123: CRT 테마 구분선 (Q1: Option A - 얇은 구분선) */}
+      <hr className="agent-console-divider" />
+
+      {/* 하단: Badges(검증 배지) + RepairTrace — 항상 노출 */}
       <div className="agent-badges-section">
-        <button
-          type="button"
-          className="agent-badges-toggle"
-          onClick={() => setBadgesExpanded(!badgesExpanded)}
-          aria-expanded={badgesExpanded}
-          aria-label={t('agent.console.badges_toggle')}
-        >
-          <span className="toggle-icon">{badgesExpanded ? '▲' : '▼'}</span>
-          <span className="toggle-text">{t('agent.console.badges')}</span>
-          {!badgesExpanded && <BadgesSummary />}
-        </button>
-        {badgesExpanded && (
-          <div className="agent-badges-expanded">
-            <BadgesPanel />
-            <RepairTrace />
-          </div>
-        )}
+        <BadgesPanel />
+        <RepairTrace />
       </div>
 
       {/* 에러는 항상 표시 */}
