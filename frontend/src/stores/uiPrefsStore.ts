@@ -1,12 +1,13 @@
 /**
- * Unknown World - UI 설정 상태 관리 (Zustand + persist).
+ * Unknown World - UI 설정 상태 관리 (Zustand + persist) (U-116[Mvp]).
  *
- * UI 스케일 설정을 저장하고, SaveGame 구조와 통합 가능하도록 직렬화 인터페이스를 제공합니다.
+ * UI 스케일 설정을 LocalStorage에 영속화합니다.
+ * U-116: SaveGame 시스템 제거에 따라 독립적인 persist 스토어로 유지됩니다.
  *
  * 설계 원칙:
  *   - PRD 9.4: 가독성(필수) - 전역 UI 스케일 조절 제공
  *   - U-037: Readable 모드 제거 → critical/ambient 중요도 기반 스타일로 대체
- *   - Q1 결정: Option B (SaveGame에 포함) - persist + 직렬화
+ *   - U-116: SaveGame 통합 로직 제거
  *
  * @module stores/uiPrefsStore
  */
@@ -25,14 +26,14 @@ export type UIScale = (typeof UI_SCALES)[number];
 /** 기본 UI 스케일 */
 export const DEFAULT_UI_SCALE: UIScale = 1.0;
 
-/** localStorage 키 (SaveGame 통합 시에도 사용 가능) */
+/** localStorage 키 */
 export const UI_PREFS_STORAGE_KEY = 'unknown-world-ui-prefs';
 
 // =============================================================================
 // 상태 타입 정의
 // =============================================================================
 
-/** UI 설정 상태 (SaveGame 직렬화 대상) */
+/** UI 설정 상태 */
 export interface UIPrefsState {
   /**
    * UI 스케일 (0.9 ~ 1.2)
@@ -57,18 +58,6 @@ export interface UIPrefsActions {
 
   /** 설정 초기화 */
   resetPrefs: () => void;
-
-  /**
-   * SaveGame 직렬화용 상태 추출
-   * (추후 SaveGame 통합 시 사용)
-   */
-  getSerializableState: () => UIPrefsState;
-
-  /**
-   * SaveGame 역직렬화용 상태 복원
-   * (추후 SaveGame 통합 시 사용)
-   */
-  restoreState: (state: Partial<UIPrefsState>) => void;
 }
 
 export type UIPrefsStore = UIPrefsState & UIPrefsActions;
@@ -169,23 +158,6 @@ export const useUIPrefsStore = create<UIPrefsStore>()(
 
       resetPrefs: () => {
         set(createInitialState());
-      },
-
-      getSerializableState: () => {
-        const { uiScale } = get();
-        return { uiScale };
-      },
-
-      restoreState: (state) => {
-        const updates: Partial<UIPrefsState> = {};
-
-        if (state.uiScale !== undefined && isValidScale(state.uiScale)) {
-          updates.uiScale = state.uiScale;
-        }
-
-        if (Object.keys(updates).length > 0) {
-          set(updates);
-        }
       },
     }),
     {

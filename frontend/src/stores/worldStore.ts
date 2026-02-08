@@ -271,18 +271,12 @@ export type WorldStore = WorldState & WorldActions;
 /**
  * 초기 상태를 생성합니다.
  *
- * RU-004-Q5: 초기값 정책 SSOT
- *
  * ## 중요: 이 값들은 "플레이 전 placeholder"입니다.
  *
- * 실제 게임 시작 값은 항상 다음 중 하나에서 주입됩니다:
- * 1. 프로필 초기 SaveGame (startSessionFromProfile)
- * 2. 저장된 SaveGame 복원 (continueSession)
- *
+ * 실제 게임 시작 값은 startSessionFromProfile()에서 프로필 데이터로 주입됩니다.
  * profile_select 상태에서는 HUD가 노출되지 않으므로
  * 이 placeholder 값이 화면에 표시될 일은 없습니다.
  *
- * @see save/constants.ts#INITIAL_VALUE_POLICY
  * @see save/sessionLifecycle.ts
  */
 function createInitialState(): WorldState {
@@ -290,7 +284,15 @@ function createInitialState(): WorldState {
     // RU-004-Q5: Placeholder - 실제 값은 프로필/세이브에서 주입됨
     economy: { signal: 100, memory_shard: 5, credit: 0 },
     isConnected: true,
-    sceneState: { status: 'default', message: '' },
+    sceneState: {
+      status: 'default',
+      message: '',
+      imageUrl: undefined,
+      previousImageUrl: undefined,
+      processingPhase: 'idle',
+      imageLoading: false,
+      pendingImageTurnId: undefined,
+    },
     sceneObjects: [],
     narrativeEntries: [],
     turnCount: 0,

@@ -1,8 +1,8 @@
 /**
- * Unknown World - 데모 프로필 선택 컴포넌트 (U-015[Mvp]).
+ * Unknown World - 데모 프로필 선택 컴포넌트 (U-015[Mvp], U-116[Mvp]).
  *
  * 첫 화면에서 3종의 데모 프로필을 선택할 수 있는 UI를 제공합니다.
- * 프로필 선택 시 해당 SaveGame을 즉시 로드하고 게임을 시작합니다.
+ * U-116: SaveGame 제거 후 항상 이 화면에서 시작합니다.
  *
  * 설계 원칙:
  *   - RULE-002: 채팅 UI 금지, 게임 UI로 상시 노출
@@ -24,10 +24,6 @@ import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../i18n';
 export interface DemoProfileSelectProps {
   /** 프로필 선택 시 호출되는 콜백 */
   onSelectProfile: (profile: DemoProfile) => void;
-  /** 기존 세이브 로드 시 호출되는 콜백 (세이브가 있는 경우) */
-  onContinue?: () => void;
-  /** 기존 세이브가 있는지 여부 */
-  hasSavedGame?: boolean;
   /** U-044: 현재 선택된 언어 */
   currentLanguage?: SupportedLanguage;
   /** U-044: 언어 변경 콜백 (profile_select에서만 허용) */
@@ -48,11 +44,10 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
  * 데모 프로필 선택 화면.
  * 게임 시작 전에 3종의 프로필 중 하나를 선택합니다.
  * U-044: 언어 선택 UI 포함 (profile_select에서만 변경 가능).
+ * U-116: SaveGame 제거 후 Continue 버튼 제거.
  */
 export function DemoProfileSelect({
   onSelectProfile,
-  onContinue,
-  hasSavedGame = false,
   currentLanguage = 'ko-KR',
   onLanguageChange,
 }: DemoProfileSelectProps) {
@@ -64,10 +59,6 @@ export function DemoProfileSelect({
     },
     [onSelectProfile],
   );
-
-  const handleContinue = useCallback(() => {
-    onContinue?.();
-  }, [onContinue]);
 
   /** U-044: 언어 토글 핸들러 */
   const handleLanguageToggle = useCallback(() => {
@@ -125,18 +116,6 @@ export function DemoProfileSelect({
           </button>
         ))}
       </div>
-
-      {/* 기존 세이브 계속하기 (있는 경우) */}
-      {hasSavedGame && onContinue && (
-        <div className="profile-continue-section">
-          <div className="profile-continue-divider">
-            <span>{t('profile.or')}</span>
-          </div>
-          <button type="button" className="profile-continue-btn" onClick={handleContinue}>
-            {t('profile.continue_saved')}
-          </button>
-        </div>
-      )}
 
       {/* 안내 문구 */}
       <footer className="profile-select-footer">

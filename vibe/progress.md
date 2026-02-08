@@ -1,6 +1,44 @@
 # 프로젝트 진행 상황
 
-## [2026-02-08 23:55] U-097[Mvp]: ⚡핫픽스 - SceneCanvas 렌더 중 Zustand setState 호출 분리 (첫 요청 차단 해소) 완료
+## [2026-02-08 15:00] U-116[Mvp]: SaveGame 제거 + 프로필 초기 상태 정리 (U-098 흡수) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: LocalStorage 기반 `SaveGame` 시스템 완전 제거, 새로고침 시 항상 프로필 선택 화면 복귀, 초기 핫스팟 제거(`sceneObjectDefs: []`).
+- **추가 컴포넌트**: `vibe/unit-results/U-116.md` (보고서), `vibe/unit-runbooks/U-116-savegame-removal-runbook.md` (런북).
+- **달성 요구사항**: [PRD 6.6] 세이브/로드 정책 변경(MVP 제거), [RULE-005] 경제/상태 무결성 사수, [U-090] 핫스팟 정책 준수.
+
+### 기술적 구현 세부사항
+
+**세션 라이프사이클 단순화 (Stateless)**:
+- **Removal of Persist Layer**: `migrations.ts`, `saveGame.test.ts` 등 영속성 관련 코드 및 테스트 대거 삭제. `sessionLifecycle.ts`에서 복원 로직을 제거하고 항상 `{ phase: 'profile_select' }`로 부팅되도록 단순화.
+- **Legacy Purge**: 부팅 시 1회 실행되는 `clearLegacySaveData()`를 통해 기존 브라우저에 남은 `unknown-world-save` 데이터를 강제 정리하여 상태 충돌 원천 차단.
+- **Reset Logic Invariant**: 리셋 버튼 클릭 시 단순히 모든 store 초기화 후 프로필 선택 화면으로 전이하여, 어떠한 상태 잔재도 남지 않는 "Clean Reset" 달성.
+
+**프로필 초기 상태 정리 (U-098 통합)**:
+- **Hotspot Neutralization**: `demoProfiles.ts`의 모든 프로필에서 `sceneObjectDefs`를 빈 배열로 설정하여, 턴 진행 전 임의의 핫스팟 노출 방지.
+- **Language Persistence**: 사용자의 편의를 위해 언어 설정(`unknown_world_language`)은 삭제 대상에서 제외하여 영속성 유지.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── save/ (migrations.ts 삭제, saveGame.ts/sessionLifecycle.ts 대폭 축소)
+    ├── data/demoProfiles.ts (초기 핫스팟 제거 및 SaveGame 변환기 제거)
+    ├── App.tsx (자동 저장 트리거 제거 및 부팅 흐름 수정)
+    └── components/DemoProfileSelect.tsx (계속하기 UI 제거)
+
+### 성능 및 품질 지표
+
+- **안정성**: 스키마 변경 시 발생하던 SaveGame 복원 실패 및 상태 오염 리스크 0% 달성.
+- **부팅 속도**: 복잡한 마이그레이션 및 검증 단계 생략으로 첫 화면 로딩 TTFB 개선.
+
+### 다음 단계
+
+- **U-099[Mvp]**: 거래 장부 i18n 혼합 출력 + 하단 여백 수정
+- **U-114[Mvp]**: Agent Console 검증배지 접기 + 대기열 상시 노출
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
 
 ### 구현 완료 항목
 

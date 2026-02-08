@@ -1,8 +1,11 @@
 /**
- * Unknown World - 데모 프로필 정의 (U-015[Mvp]).
+ * Unknown World - 데모 프로필 정의 (U-015[Mvp], U-116[Mvp]).
  *
  * 로그인 없이 즉시 시작 가능한 데모 프로필 3종을 정의합니다.
  * 각 프로필은 서로 다른 초기 상태(재화/인벤토리/퀘스트/룰)를 가집니다.
+ *
+ * U-116: SaveGame 중간 단계 제거. 프로필 데이터는 sessionLifecycle에서
+ * store에 직접 적용됩니다.
  *
  * 프로필:
  *   1. Narrator: 내러티브/스토리 중심 체험
@@ -11,20 +14,10 @@
  *
  * 설계 원칙:
  *   - RULE-006: 표시 문자열은 i18n 키 기반
- *   - RULE-010: SaveGame JSON 직렬화로 저장
  *   - PRD 6.9: 데모 프로필 3종 + 즉시 리셋
- *   - RU-004-Q5: seed 생성은 constants.ts SSOT 사용
  *
  * @module data/demoProfiles
  */
-
-import type { SupportedLanguage } from '../i18n';
-import type { SaveGame, SaveGameInput } from '../save/saveGame';
-import { createSaveGame } from '../save/saveGame';
-// RU-004-Q5: seed 생성 정책 SSOT
-import { generateDemoSeed } from '../save/constants';
-// U-092: 프리셋 아이콘 레지스트리
-import { getPresetIconUrl } from './itemIconPresets';
 
 // =============================================================================
 // 프로필 타입 정의
@@ -49,7 +42,7 @@ export interface DemoProfileDef {
 
 /**
  * 프로필 초기 상태.
- * SaveGame으로 변환 가능한 구조입니다.
+ * sessionLifecycle에서 store에 직접 적용됩니다.
  */
 export interface DemoProfileInitialState {
   /** 초기 재화 */
@@ -174,20 +167,8 @@ export const PROFILE_NARRATOR: DemoProfile = {
         descriptionKey: 'profile.narrator.rule.memories_persist_desc',
       },
     ],
-    sceneObjectDefs: [
-      {
-        id: 'mysterious-bookshelf',
-        labelKey: 'profile.narrator.scene.bookshelf',
-        hintKey: 'profile.narrator.scene.bookshelf_hint',
-        box_2d: { ymin: 200, xmin: 100, ymax: 700, xmax: 400 },
-      },
-      {
-        id: 'glowing-portal',
-        labelKey: 'profile.narrator.scene.portal',
-        hintKey: 'profile.narrator.scene.portal_hint',
-        box_2d: { ymin: 300, xmin: 600, ymax: 800, xmax: 900 },
-      },
-    ],
+    // U-116: 초기 핫스팟 제거 (U-090 정밀분석 전용 정책 준수)
+    sceneObjectDefs: [],
     welcomeMessageKey: 'profile.narrator.welcome',
   },
 };
@@ -254,26 +235,8 @@ export const PROFILE_EXPLORER: DemoProfile = {
         descriptionKey: 'profile.explorer.rule.darkness_desc',
       },
     ],
-    sceneObjectDefs: [
-      {
-        id: 'ancient-door',
-        labelKey: 'profile.explorer.scene.door',
-        hintKey: 'profile.explorer.scene.door_hint',
-        box_2d: { ymin: 150, xmin: 400, ymax: 850, xmax: 600 },
-      },
-      {
-        id: 'strange-mechanism',
-        labelKey: 'profile.explorer.scene.mechanism',
-        hintKey: 'profile.explorer.scene.mechanism_hint',
-        box_2d: { ymin: 500, xmin: 100, ymax: 700, xmax: 300 },
-      },
-      {
-        id: 'hidden-passage',
-        labelKey: 'profile.explorer.scene.passage',
-        hintKey: 'profile.explorer.scene.passage_hint',
-        box_2d: { ymin: 600, xmin: 700, ymax: 800, xmax: 950 },
-      },
-    ],
+    // U-116: 초기 핫스팟 제거 (U-090 정밀분석 전용 정책 준수)
+    sceneObjectDefs: [],
     welcomeMessageKey: 'profile.explorer.welcome',
   },
 };
@@ -340,20 +303,8 @@ export const PROFILE_TECH: DemoProfile = {
         descriptionKey: 'profile.tech.rule.system_limits_desc',
       },
     ],
-    sceneObjectDefs: [
-      {
-        id: 'main-terminal',
-        labelKey: 'profile.tech.scene.terminal',
-        hintKey: 'profile.tech.scene.terminal_hint',
-        box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
-      },
-      {
-        id: 'power-conduit',
-        labelKey: 'profile.tech.scene.conduit',
-        hintKey: 'profile.tech.scene.conduit_hint',
-        box_2d: { ymin: 100, xmin: 50, ymax: 400, xmax: 200 },
-      },
-    ],
+    // U-116: 초기 핫스팟 제거 (U-090 정밀분석 전용 정책 준수)
+    sceneObjectDefs: [],
     welcomeMessageKey: 'profile.tech.welcome',
   },
 };
@@ -372,104 +323,6 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
  */
 export function findProfileById(profileId: string): DemoProfile | undefined {
   return DEMO_PROFILES.find((p) => p.id === profileId);
-}
-
-// =============================================================================
-// 프로필 → SaveGameInput 변환 (RU-004-Q1: SSOT 단일화)
-// =============================================================================
-
-/**
- * 데모 프로필을 SaveGameInput으로 변환합니다.
- *
- * RU-004-Q1: SaveGame 생성은 createSaveGame(SSOT)만 수행하도록 분리.
- * 이 함수는 "입력 변환(input adapter)" 역할만 담당합니다.
- *
- * @param profile - 데모 프로필
- * @param language - 언어 설정
- * @param t - i18n 번역 함수
- * @returns SaveGameInput 객체 (createSaveGame에 전달 가능)
- */
-export function profileToSaveGameInput(
-  profile: DemoProfile,
-  language: SupportedLanguage,
-  t: (key: string) => string,
-): SaveGameInput {
-  const now = Date.now();
-
-  return {
-    language,
-    profileId: profile.id,
-    // RU-004-Q5: seed 생성 정책 SSOT (constants.ts)
-    seed: generateDemoSeed(profile.id),
-    economy: {
-      signal: profile.initialState.economy.signal,
-      memory_shard: profile.initialState.economy.memory_shard,
-      credit: profile.initialState.economy.credit,
-    },
-    economyLedger: [],
-    turnCount: 0,
-    narrativeHistory: [
-      {
-        turn: 0,
-        text: t(profile.initialState.welcomeMessageKey),
-      },
-    ],
-    // U-092: 프리셋 아이콘이 있으면 icon에 URL 경로를 설정 (즉시 표시)
-    inventory: profile.initialState.inventoryDefs.map((item) => ({
-      id: item.id,
-      name: t(item.nameKey),
-      icon: getPresetIconUrl(item.id) ?? item.icon,
-      quantity: item.quantity,
-    })),
-    // U-078: 목표 시스템 강화 - 주 목표/서브 목표/진행률/보상 반영
-    quests: profile.initialState.questDefs.map((quest) => ({
-      id: quest.id,
-      label: t(quest.labelKey),
-      is_completed: quest.is_completed,
-      description: quest.descriptionKey ? t(quest.descriptionKey) : null,
-      is_main: quest.is_main ?? false,
-      progress: quest.progress ?? 0,
-      reward_signal: quest.reward_signal ?? 0,
-    })),
-    activeRules: profile.initialState.ruleDefs.map((rule) => ({
-      id: rule.id,
-      label: t(rule.labelKey),
-      description: rule.descriptionKey ? t(rule.descriptionKey) : null,
-    })),
-    mutationTimeline: profile.initialState.ruleDefs.map((rule, index) => ({
-      turn: 0,
-      ruleId: rule.id,
-      type: 'added' as const,
-      label: t(rule.labelKey),
-      description: rule.descriptionKey ? t(rule.descriptionKey) : undefined,
-      timestamp: now - index * 1000,
-    })),
-    sceneObjects: profile.initialState.sceneObjectDefs.map((obj) => ({
-      id: obj.id,
-      label: t(obj.labelKey),
-      box_2d: obj.box_2d,
-      interaction_hint: t(obj.hintKey),
-    })),
-  };
-}
-
-/**
- * 데모 프로필을 SaveGame 형태로 변환합니다.
- *
- * RU-004-Q1: createSaveGame(SSOT)를 호출하는 얇은 wrapper입니다.
- * 기존 호출자와의 호환성을 유지합니다.
- *
- * @param profile - 데모 프로필
- * @param language - 언어 설정
- * @param t - i18n 번역 함수
- * @returns SaveGame 객체
- */
-export function createSaveGameFromProfile(
-  profile: DemoProfile,
-  language: SupportedLanguage,
-  t: (key: string) => string,
-): SaveGame {
-  return createSaveGame(profileToSaveGameInput(profile, language, t));
 }
 
 /**

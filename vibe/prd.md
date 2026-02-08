@@ -168,7 +168,7 @@
 
 ### 6.6 세이브/로드
 
-- **(MVP 정책 변경)** MVP에서는 **세이브/로드(SaveGame)를 완전 제거**한다. 현재 SaveGame 저장/복원이 스키마 변경·버전 불일치·상태 잔재로 인한 상태 불일치 오류를 빈번하게 유발하여, 안정적인 데모 루프를 위해 제거한다. 새로고침 시 항상 **프로필 선택 화면으로 복귀**한다. ⏸️ (U-116)
+- **(MVP 정책 변경)** MVP에서는 **세이브/로드(SaveGame)를 완전 제거**한다. 현재 SaveGame 저장/복원이 스키마 변경·버전 불일치·상태 잔재로 인한 상태 불일치 오류를 빈번하게 유발하여, 안정적인 데모 루프를 위해 제거한다. 새로고침 시 항상 **프로필 선택 화면으로 복귀**한다. ✅ (U-116)
 - ~~세션 상태를 JSON으로 직렬화하여 저장/복원한다.~~
 - ~~저장에는 WorldState 뿐 아니라 **재화 잔액/거래 장부(ledger) 이력/언어 설정**을 포함한다.~~
 - **(MMP 재검토)** 세이브/로드는 MMP(U-113)에서 처음부터 재설계를 검토한다. 기존 SaveGame의 상태 불일치 문제를 반복하지 않도록 검증/복구 메커니즘을 우선으로 설계한다.
@@ -382,9 +382,10 @@
     - `cost`: `{ signal, memory_shard }`
     - `balance_after`: `{ signal, memory_shard }`
   - `safety`: `{ blocked: boolean, message?: string|null }`
-- **SaveGame (Local/Server)**:
-  - `version`, `seed`, `language`, `theme`, `world_state`, `history`, `economy_ledger`, `assets`
-  - (정책) `version` 불일치 또는 WorldState/SaveGame 스키마가 확장/변경된 경우: 가능한 범위에서 **버전별 마이그레이션**을 수행하고, 불가하면 안전 리셋(텍스트-only 등 폴백) + 명시적 안내로 데모 루프를 끊지 않는다.
+- **SaveGame (MVP 제거)**:
+  - MVP 데모 안정성을 위해 LocalStorage 기반 영속성을 제거함.
+  - 세션 데이터는 브라우저 메모리(Zustand store)에서만 유지되며, 새로고침 시 초기화됨.
+  - MMP(U-113)에서 서버 사이드 저장소 또는 강화된 클라이언트 스키마로 재설계 예정.
 
 ## 9. 프론트엔드 UX/스타일 (Frontend Style Guide 반영)
 

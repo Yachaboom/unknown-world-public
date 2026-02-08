@@ -304,6 +304,11 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       useWorldStore.setState({
         turnCount: 10,
         economy: { signal: 50, memory_shard: 0, credit: 0 },
+        sceneState: {
+          status: 'scene',
+          imageUrl: 'test.png',
+          processingPhase: 'rendering',
+        },
         quests: [
           {
             id: 'q1',
@@ -324,6 +329,9 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       const state = useWorldStore.getState();
       expect(state.turnCount).toBe(0);
       expect(state.economy.signal).toBe(100);
+      expect(state.sceneState.status).toBe('default');
+      expect(state.sceneState.imageUrl).toBeUndefined();
+      expect(state.sceneState.processingPhase).toBe('idle');
       expect(state.quests).toEqual([]);
       expect(state.narrativeEntries).toEqual([]);
     });
@@ -358,7 +366,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       const store = useWorldStore.getState();
 
       // 1. 초기 상태 확인
-      expect(store.sceneState.processingPhase).toBeUndefined(); // 또는 'idle' (초기값 정책에 따라 다름)
+      expect(store.sceneState.processingPhase).toBe('idle');
 
       // 2. 단계 변경
       store.setProcessingPhase('processing');

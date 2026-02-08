@@ -67,18 +67,12 @@ import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
 // U-074: 온보딩 상태
 import { initializeOnboarding } from './stores/onboardingStore';
-// RU-004-Q4: 세션 라이프사이클 SSOT
-// U-044: 세션 언어 SSOT API 추가
+// U-116: 세션 라이프사이클 SSOT (SaveGame 제거)
 import {
   bootstrapSession,
-  hasValidSaveGame,
   startSessionFromProfile,
-  continueSession,
   resetToCurrentProfile,
   clearSessionAndReturnToSelect,
-  saveCurrentSession,
-  getInitialProfileId,
-  getSessionLanguage,
   setSessionLanguage,
   getInitialSessionLanguage,
 } from './save/sessionLifecycle';
@@ -98,18 +92,14 @@ type GamePhase = 'profile_select' | 'playing';
 function App() {
   const { t } = useTranslation();
 
-  // U-015: 게임 진행 상태 (프로필 선택 vs 플레이 중)
-  // RU-004-Q4: bootstrapSession()으로 초기 phase 결정 (SSOT)
+  // U-116: 항상 profile_select로 시작 (SaveGame 제거)
   const [gamePhase, setGamePhase] = useState<GamePhase>(() => {
-    const bootstrap = bootstrapSession();
-    return bootstrap.phase;
+    bootstrapSession(); // 레거시 데이터 정리
+    return 'profile_select';
   });
 
-  // 현재 선택된 프로필 ID
-  // RU-004-Q4: getInitialProfileId()로 초기 profileId 결정 (SSOT)
-  const [currentProfileId, setCurrentProfileId] = useState<string | null>(() => {
-    return getInitialProfileId();
-  });
+  // 현재 선택된 프로필 ID (세션 내에서만 유지, 새로고침 시 초기화)
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
 
   // U-044: 세션 언어 SSOT
   // - SaveGame.language를 권위자로 사용하여 드리프트 방지
@@ -148,9 +138,7 @@ function App() {
 
   /**
    * 프로필을 선택하고 게임을 시작합니다.
-   *
-   * RU-004-Q4: sessionLifecycle.startSessionFromProfile 호출
-   * U-044: 세션 언어를 명시적으로 전달하여 SSOT 유지
+   * U-116: SaveGame 없이 store에 직접 적용합니다.
    */
   const handleSelectProfile = useCallback(
     (profile: DemoProfile) => {
@@ -173,61 +161,24 @@ function App() {
   }, []);
 
   /**
-   * 저장된 게임을 계속합니다.
-   *
-   * RU-004-Q4: sessionLifecycle.continueSession 호출
-   * U-044: 세션 복원 후 언어 상태도 동기화
-   */
-  const handleContinue = useCallback(async () => {
-    const result = await continueSession();
-    if (result) {
-      setCurrentProfileId(result.profileId);
-      // U-044: 세션 복원 후 언어 상태 동기화 (SaveGame.language가 SSOT)
-      setSessionLanguageState(getSessionLanguage());
-      setGamePhase('playing');
-    } else {
-      // 로드 실패 시 profile_select로 폴백
-      setCurrentProfileId(null);
-      setGamePhase('profile_select');
-      console.warn('[App] SaveGame 복원 실패, 새로 시작');
-    }
-  }, []);
-
-  /**
    * 현재 프로필의 초기 상태로 리셋합니다.
-   *
-   * RU-004-Q4: sessionLifecycle.resetToCurrentProfile 호출
+   * U-116: store 전체 초기화 + 동일 프로필로 재시작합니다.
    */
   const handleReset = useCallback(() => {
     const result = resetToCurrentProfile({ t, currentProfileId });
     if (result.success && result.profileId) {
       setCurrentProfileId(result.profileId);
-      // 게임 상태는 이미 playing이므로 별도 설정 불필요
     }
   }, [t, currentProfileId]);
 
   /**
    * 프로필 선택 화면으로 돌아갑니다.
-   *
-   * RU-004-Q4: sessionLifecycle.clearSessionAndReturnToSelect 호출
+   * U-116: 모든 store 초기화 + profile_select로 전환합니다.
    */
   const handleChangeProfile = useCallback(() => {
     clearSessionAndReturnToSelect();
     setCurrentProfileId(null);
     setGamePhase('profile_select');
-  }, []);
-
-  // 게임 시작 시 저장된 게임 복원
-  // RU-004-Q4: sessionLifecycle.continueSession 호출
-  useEffect(() => {
-    if (gamePhase === 'playing' && currentProfileId) {
-      void continueSession().then((result) => {
-        if (result) {
-          setCurrentProfileId(result.profileId);
-        }
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // U-074: 게임 시작 시 온보딩 가이드 초기화 (Q3 Option B: 데모 프로필도 표시)
@@ -236,14 +187,6 @@ function App() {
       initializeOnboarding();
     }
   }, [gamePhase]);
-
-  // 턴 완료 시 자동 저장 (turnCount 변화 감지)
-  // RU-004-Q4: sessionLifecycle.saveCurrentSession 호출
-  useEffect(() => {
-    if (gamePhase === 'playing' && narrativeEntries.length > 0) {
-      saveCurrentSession(currentProfileId);
-    }
-  }, [gamePhase, narrativeEntries.length, currentProfileId]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
   // U-044: 세션 언어를 SSOT로 주입하여 드리프트 방지
@@ -404,18 +347,14 @@ function App() {
 
   // ==========================================================================
   // 렌더링: 프로필 선택 화면
-  // RU-004-Q4: hasValidSaveGame()으로 "유효한 세이브만" Continue 노출
-  // U-044: 언어 선택 UI 추가 (profile_select에서만, Q1: Option A)
+  // U-116: SaveGame 제거 → Continue 버튼 불필요, 항상 새 세션 시작
   // ==========================================================================
   if (gamePhase === 'profile_select') {
-    const hasSavedGame = hasValidSaveGame();
     return (
       <>
         <div className="crt-overlay" aria-hidden="true" />
         <DemoProfileSelect
           onSelectProfile={handleSelectProfile}
-          onContinue={hasSavedGame ? handleContinue : undefined}
-          hasSavedGame={hasSavedGame}
           currentLanguage={sessionLanguage}
           onLanguageChange={handleLanguageChange}
         />

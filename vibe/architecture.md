@@ -80,7 +80,6 @@ frontend/src/data/demoProfiles.ts
 frontend/src/data/itemIconPresets.ts
 frontend/src/save/sessionLifecycle.ts
 frontend/src/save/saveGame.ts
-frontend/src/save/migrations.ts
 frontend/src/save/constants.ts
 frontend/src/schemas/turn.ts
 frontend/src/stores/worldStore.ts
@@ -454,12 +453,33 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ---
 
-## 11. 세션 및 세이브 관리 정책 (U-015, U-041[Mvp])
+## 11. 세션 및 세이브 관리 정책 (U-116[Mvp])
 
-1. **SaveGame 마이그레이션 (U-041)**:
-    - **Version-First**: 버전 식별 후 순차적 마이그레이션 체인 실행.
-    - **데이터 보정**: 필드 오타 수정 및 누락 필드 기본값 주입으로 무결성 보장.
-2. **복원 정합성 (RU-004)**: 비동기 언어 로딩 대기 및 거래 장부 스냅샷 주입을 통한 완벽한 상태 복구.
+1. **Stateless 부팅 정책**: 
+    - MVP 데모의 안정성을 위해 `SaveGame`(진행 저장/불러오기) 시스템을 제거함.
+    - 브라우저 새로고침 시 항상 **프로필 선택 화면(`profile_select`)**으로 복귀하여 깨끗한 상태에서 시작함.
+2. **언어 설정 영속성**:
+    - 사용자의 편의를 위해 언어 설정(`unknown_world_language`)만 `localStorage`에 유지됨.
+3. **프로필 초기 상태 주입**:
+    - 프로필 선택 시 `DEMO_PROFILES`의 정적 데이터가 `sessionLifecycle`을 통해 각 store에 직접 주입됨.
+    - 모든 프로필의 초기 핫스팟(`sceneObjectDefs`)은 빈 배열로 시작하여 U-090 정책을 준수함.
+4. **리셋 및 레거시 정리**:
+    - 리셋 버튼 클릭 시 모든 store 초기화 후 프로필 선택 화면으로 전이함.
+    - 부팅 시 브라우저에 남은 구버전 SaveGame 데이터를 자동으로 정리하여 상태 오염을 방지함.
+
+---
+
+## 56. SaveGame 제거 및 세션 단순화 (U-116[Mvp])
+
+1. **SaveGame 시스템 완전 제거**:
+    - **Logic Removal**: `migrations.ts`, `saveGame.test.ts` 등 영속성 관련 코드 및 테스트를 대거 삭제하여 유지보수 부채를 해결함.
+    - **Bootstrap Simplification**: `sessionLifecycle.ts`의 부팅 로직을 단순화하여 항상 프로필 선택 화면에서 시작하도록 강제함.
+2. **프로필 초기 상태 정리 (U-098 통합)**:
+    - **Hotspot Neutralization**: 모든 프로필의 초기 핫스팟(`sceneObjectDefs`)을 빈 배열로 초기화하여, 턴 진행 전 임의의 핫스팟 노출을 방지하고 U-090 정책을 준수함.
+3. **레거시 데이터 자동 정리 (Purge)**:
+    - **Safety Guard**: `saveGame.ts`의 `clearLegacySaveData()`를 통해 기존 브라우저에 남은 구버전 데이터를 부팅 시 자동 정리하여 상태 충돌을 방지함.
+4. **Clean Reset 정책**:
+    - **Store Reset**: 리셋 시 단순히 UI만 새로고침하는 것이 아니라 모든 Zustand store를 초기값으로 강제 리셋하여 어떠한 상태 잔재도 남지 않는 무결성을 달성함.
 
 ---
 
