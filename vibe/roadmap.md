@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 118/145 (81.4%) | **MVP**: 118/124 (95.2%) | **MMP**: 0/21 (0%)
+**전체**: 119/145 (82.1%) | **MVP**: 119/124 (96.0%) | **MMP**: 0/21 (0%)
 
 **예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2 | MMP(M6 후속): D-7+
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**진행 중(현재 포커스)**: [U-087[Mvp]](unit-plans/U-087[Mvp].md) 턴 처리 중 모든 사용자 입력 잠금 / **최근 완료**: [U-117[Mvp]](vibe/unit-results/U-117[Mvp].md) (2026-02-08)
+**진행 중(현재 포커스)**: [U-084[Mvp]](unit-plans/U-084[Mvp].md) 이미지 픽셀 스타일 + 사이즈 축소 / **최근 완료**: [U-087[Mvp]](vibe/unit-results/U-087[Mvp].md) (2026-02-08)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
 
@@ -151,7 +151,6 @@ _마감: 2026-02-09 5:00 PM PST | 심사: Technical Execution(40%), Innovation/W
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP (8개)
-ID=[U-087[Mvp]](unit-plans/U-087[Mvp].md) | 턴 처리 중 모든 사용자 입력 잠금 | Depends=U-070,U-071 | ⏸️
 ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 픽셀 스타일 + 사이즈 축소 + Scene 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
 ID=[U-115[Mvp]](unit-plans/U-115[Mvp].md) | 핫스팟 컴팩트 원형 1~3개 + 우선순위/겹침 방지 | Depends=U-090,U-087,U-116 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️

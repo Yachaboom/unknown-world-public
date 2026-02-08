@@ -109,20 +109,26 @@ function App() {
   // 로컬 UI 상태
   const [inputText, setInputText] = useState('');
 
-  // Store 상태
-  const worldStore = useWorldStore();
-  const {
-    economy,
-    isConnected,
-    sceneObjects,
-    narrativeEntries,
-    appendSystemNarrative,
-    appendActionLog,
-  } = worldStore;
+  // Store 상태 (셀렉터 최적화)
+  const economy = useWorldStore((state) => state.economy);
+  const isConnected = useWorldStore((state) => state.isConnected);
+  const sceneObjects = useWorldStore((state) => state.sceneObjects);
+  const narrativeEntries = useWorldStore((state) => state.narrativeEntries);
+  const appendSystemNarrative = useWorldStore((state) => state.appendSystemNarrative);
+  const appendActionLog = useWorldStore((state) => state.appendActionLog);
 
   const { startDrag, endDrag } = useInventoryStore();
   const inventoryItemCount = useInventoryStore(selectItemCount);
-  const { isStreaming, narrativeBuffer } = useAgentStore();
+
+  // AgentStore 셀렉터
+  const isStreaming = useAgentStore((state) => state.isStreaming);
+  const narrativeBuffer = useAgentStore((state) => state.narrativeBuffer);
+
+  // U-087: 입력 잠금 SSOT - 처리 중 모든 사용자 입력을 차단
+  const processingPhase = useWorldStore((state) => state.sceneState.processingPhase);
+  const imageLoading = useWorldStore((state) => state.sceneState.imageLoading);
+  const isInputLocked = isStreaming || processingPhase !== 'idle' || imageLoading === true;
+
   const { uiScale, increaseUIScale, decreaseUIScale } = useUIPrefsStore();
 
   // DOM에 UI 설정 적용 (U-028→U-037)
@@ -213,10 +219,12 @@ function App() {
    * 입력 제출 핸들러
    */
   const handleSubmit = useCallback(() => {
+    // U-087: 입력 잠금 시 제출 차단
+    if (isInputLocked) return;
     if (inputText.trim()) {
       executeTurn(inputText.trim());
     }
-  }, [inputText, executeTurn]);
+  }, [inputText, executeTurn, isInputLocked]);
 
   /**
    * 카드 클릭 핸들러
@@ -224,11 +232,13 @@ function App() {
    */
   const handleCardClick = useCallback(
     (card: ActionCard) => {
+      // U-087: 입력 잠금 시 허위 액션 로그 방지 (즉시 반환)
+      if (isInputLocked) return;
       // U-070: 액션 로그 추가 (TurnInput 전송 전에 즉각적 피드백)
       appendActionLog(t('action_log.click_action', { action: card.label }));
       executeTurn(card.label, card.id);
     },
-    [executeTurn, appendActionLog, t],
+    [executeTurn, appendActionLog, t, isInputLocked],
   );
 
   /**
@@ -237,6 +247,8 @@ function App() {
    */
   const handleHotspotClick = useCallback(
     (data: HotspotClickData) => {
+      // U-087: 입력 잠금 시 허위 액션 로그 방지 (즉시 반환)
+      if (isInputLocked) return;
       const clickedObject = sceneObjects.find((obj) => obj.id === data.object_id);
       const clickText = clickedObject
         ? t('scene.hotspot.click_action', { label: clickedObject.label })
@@ -248,7 +260,7 @@ function App() {
 
       executeTurn(clickText, undefined, data);
     },
-    [executeTurn, sceneObjects, t, appendActionLog],
+    [executeTurn, sceneObjects, t, appendActionLog, isInputLocked],
   );
 
   /**
@@ -269,12 +281,14 @@ function App() {
    */
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
+      // U-087: 입력 잠금 시 드래그 시작 차단
+      if (isInputLocked) return;
       const { active } = event;
       if (isInventoryDragData(active.data.current)) {
         startDrag(active.data.current.item_id);
       }
     },
-    [startDrag],
+    [startDrag, isInputLocked],
   );
 
   /**
@@ -285,6 +299,9 @@ function App() {
     (event: DragEndEvent) => {
       const { active, over } = event;
       endDrag();
+
+      // U-087: 입력 잠금 시 드롭 처리 차단 (허위 액션 로그 방지)
+      if (isInputLocked) return;
 
       const activeData = active.data.current;
       if (!isInventoryDragData(activeData)) {
@@ -325,7 +342,7 @@ function App() {
 
       executeTurn(dropText, undefined, undefined, dropInput);
     },
-    [endDrag, executeTurn, appendSystemNarrative, appendActionLog, t],
+    [endDrag, executeTurn, appendSystemNarrative, appendActionLog, t, isInputLocked],
   );
 
   // dnd-kit 센서 설정 (U-117: distance 5px로 클릭/드래그 구분)
@@ -373,9 +390,9 @@ function App() {
             onIncreaseScale={increaseUIScale}
             onDecreaseScale={decreaseUIScale}
           >
-            {/* U-015: 리셋/프로필 변경 버튼 */}
-            <ResetButton onReset={handleReset} disabled={isStreaming} compact requireConfirm />
-            <ChangeProfileButton onClick={handleChangeProfile} disabled={isStreaming} />
+            {/* U-015: 리셋/프로필 변경 버튼 (U-087: isInputLocked로 확장) */}
+            <ResetButton onReset={handleReset} disabled={isInputLocked} compact requireConfirm />
+            <ChangeProfileButton onClick={handleChangeProfile} disabled={isInputLocked} />
           </GameHeader>
 
           {/* U-077: 좌측 사이드바 패널 영역 분배 (U-081 흡수) */}
@@ -405,13 +422,14 @@ function App() {
           <main className="game-center">
             {/* U-078: 목표 미니 트래커 (항상 상단에 표시, Q2: Option B) */}
             <ObjectiveTracker />
-            <SceneCanvas onHotspotClick={handleHotspotClick} />
+            {/* U-087: isInputLocked로 핫스팟 클릭/드롭 비활성화 */}
+            <SceneCanvas onHotspotClick={handleHotspotClick} disabled={isInputLocked} />
             {/* U-086: isStreaming/isImageLoading 전달 → 텍스트 우선 타이핑 + 이미지 pending 상태 라인 */}
             <NarrativeFeed
               entries={narrativeEntries}
               streamingText={narrativeBuffer}
               isStreaming={isStreaming}
-              isImageLoading={worldStore.sceneState.imageLoading === true}
+              isImageLoading={imageLoading === true}
             />
           </main>
 
@@ -425,36 +443,44 @@ function App() {
               <EconomyHud />
             </Panel>
             <Panel title={t('panel.scanner.title')} className="panel-scanner" hasChrome>
-              <ScannerSlot language={sessionLanguage} disabled={isStreaming} />
+              {/* U-087: isInputLocked로 확장 (스트리밍+이미지+처리 단계 모두 차단) */}
+              <ScannerSlot language={sessionLanguage} disabled={isInputLocked} />
             </Panel>
           </aside>
 
           <footer className="game-footer">
-            <ActionDeck onCardClick={handleCardClick} />
+            {/* U-087: isInputLocked로 ActionDeck 전체 비활성화 */}
+            <ActionDeck onCardClick={handleCardClick} disabled={isInputLocked} />
             <div className="command-input-area">
               <span className="command-prompt">&gt;</span>
               <input
                 type="text"
                 className="command-input"
-                placeholder={isStreaming ? t('ui.processing') : t('ui.command_placeholder')}
+                placeholder={isInputLocked ? t('ui.input_locked') : t('ui.command_placeholder')}
                 aria-label={t('ui.command_placeholder')}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                disabled={isStreaming}
+                disabled={isInputLocked}
               />
-              <button type="button" onClick={handleSubmit} disabled={isStreaming}>
-                {isStreaming ? t('ui.wait') : t('ui.execute')}
+              <button type="button" onClick={handleSubmit} disabled={isInputLocked}>
+                {isInputLocked ? t('ui.wait') : t('ui.execute')}
               </button>
             </div>
           </footer>
+          {/* U-079: 재화 획득 토스트 알림 */}
+          <CurrencyToastUI />
         </div>
       </DndContext>
 
-      {/* U-117: 온보딩 가이드 팝업 제거 (hover 힌트는 InteractionHint로 유지) */}
+      {/* U-087: 입력 잠금 오버레이 - 처리 중 pointer-events 차단 */}
+      {isInputLocked && (
+        <div className="input-lock-overlay" aria-live="polite" role="status">
+          <span className="input-lock-label">{t('ui.input_locked')}</span>
+        </div>
+      )}
 
-      {/* U-079: 재화 획득 토스트 알림 */}
-      <CurrencyToastUI />
+      {/* U-117: 온보딩 가이드 팝업 제거 (hover 힌트는 InteractionHint로 유지) */}
     </>
   );
 }

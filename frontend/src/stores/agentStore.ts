@@ -194,6 +194,9 @@ export const useAgentStore = create<AgentStore>((set) => ({
     set({
       finalOutput: event.data,
       repairCount: event.data.agent_console?.repair_count ?? 0,
+      // U-087: 텍스트가 entries에 확정되었으므로 스트리밍 버퍼 즉시 비움.
+      // completeStream()이 이미지 생성 완료까지 지연되어도 텍스트 중복 표시 방지.
+      narrativeBuffer: '',
     });
   },
 

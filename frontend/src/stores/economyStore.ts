@@ -370,6 +370,6 @@ export function canAffordEstimate(
 }
 
 // DEV: 디버그용 글로벌 노출
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__economyStore = useEconomyStore;
 }

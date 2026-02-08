@@ -327,30 +327,36 @@ export function createTurnRunner(deps: {
           useWorldStore.getState().setSceneState({ status: 'offline', message: event.message });
         }
       },
-      // Complete → agentStore.completeStream + U-097: 이미지 생성 시작
+      // Complete → U-097: 이미지 생성 시작 (text-first delivery)
       // 이 시점에서 narrative_delta 스트리밍이 모두 끝나고 final이 처리된 상태.
       // narrativeBuffer가 비워지고, entries에 텍스트가 확정된 이후에 이미지 생성을 시작한다.
+      // U-087: 이미지 잡이 있으면 completeStream()을 이미지 완료까지 지연하여
+      //   Agent Console 대기열에서 Render 단계가 "진행 중(◎)"으로 유지되도록 한다.
       onComplete: () => {
-        useAgentStore.getState().completeStream();
-
         // U-089: 턴 완료 시 분석 상태 해제 (최소 표시 시간 적용)
         if (visionAnalysis) {
           finishAnalyzing();
         }
 
         // U-097: 이미지 잡이 있으면 이 시점에서 비동기 생성 시작 (text-first delivery)
-        // completeStream()으로 narrativeBuffer 초기화 + isStreaming=false 처리 완료 후,
-        // entries에 확정된 텍스트가 NarrativeFeed에 표시된 상태에서 이미지 생성 요청.
         const job = pendingImageJob;
         pendingImageJob = null;
 
         if (job?.should_generate && job.prompt) {
           // U-080: StrictMode 대응 - 중복 요청 방지
           if (imageJobPending) {
+            useAgentStore.getState().completeStream();
             useWorldStore.getState().setProcessingPhase('idle');
             return;
           }
           imageJobPending = true;
+
+          // U-087: Render 단계를 다시 in_progress로 설정 (이미지 렌더링 진행 표시)
+          useAgentStore.getState().handleStage({
+            type: 'stage',
+            name: 'render',
+            status: 'start',
+          });
 
           // U-071: 이미지 생성 대기 단계로 전환
           useWorldStore.getState().setProcessingPhase('image_pending');
@@ -393,16 +399,31 @@ export function createTurnRunner(deps: {
               } else {
                 useWorldStore.getState().cancelImageLoading();
               }
+              // U-087: Render 단계 완료 후 스트림 종료
+              useAgentStore.getState().handleStage({
+                type: 'stage',
+                name: 'render',
+                status: 'complete',
+              });
+              useAgentStore.getState().completeStream();
               useWorldStore.getState().setProcessingPhase('idle');
             },
             () => {
               imageJobPending = false;
               useWorldStore.getState().cancelImageLoading();
+              // U-087: 이미지 생성 실패 시에도 Render 단계 완료 + 스트림 종료
+              useAgentStore.getState().handleStage({
+                type: 'stage',
+                name: 'render',
+                status: 'complete',
+              });
+              useAgentStore.getState().completeStream();
               useWorldStore.getState().setProcessingPhase('idle');
             },
           );
         } else {
-          // 이미지 잡이 없으면 idle로 전환
+          // 이미지 잡이 없으면 바로 스트림 종료 + idle
+          useAgentStore.getState().completeStream();
           useWorldStore.getState().setProcessingPhase('idle');
         }
       },
@@ -593,9 +614,9 @@ export function useTurnRunner(deps: {
         },
         // U-097: onComplete에서 이미지 생성 시작 (text-first delivery)
         // 이 시점에서 narrative_delta 스트리밍 + final 처리가 모두 완료된 상태.
+        // U-087: 이미지 잡이 있으면 completeStream()을 이미지 완료까지 지연하여
+        //   Agent Console 대기열에서 Render 단계가 "진행 중(◎)"으로 유지되도록 한다.
         onComplete: () => {
-          useAgentStore.getState().completeStream();
-
           if (visionAnalysis) {
             finishAnalyzing();
           }
@@ -606,10 +627,18 @@ export function useTurnRunner(deps: {
 
           if (job?.should_generate && job.prompt) {
             if (imageJobPendingRef.current) {
+              useAgentStore.getState().completeStream();
               useWorldStore.getState().setProcessingPhase('idle');
               return;
             }
             imageJobPendingRef.current = true;
+
+            // U-087: Render 단계를 다시 in_progress로 설정 (이미지 렌더링 진행 표시)
+            useAgentStore.getState().handleStage({
+              type: 'stage',
+              name: 'render',
+              status: 'start',
+            });
 
             useWorldStore.getState().setProcessingPhase('image_pending');
 
@@ -644,15 +673,31 @@ export function useTurnRunner(deps: {
                 } else {
                   useWorldStore.getState().cancelImageLoading();
                 }
+                // U-087: Render 단계 완료 후 스트림 종료
+                useAgentStore.getState().handleStage({
+                  type: 'stage',
+                  name: 'render',
+                  status: 'complete',
+                });
+                useAgentStore.getState().completeStream();
                 useWorldStore.getState().setProcessingPhase('idle');
               },
               () => {
                 imageJobPendingRef.current = false;
                 useWorldStore.getState().cancelImageLoading();
+                // U-087: 이미지 생성 실패 시에도 Render 단계 완료 + 스트림 종료
+                useAgentStore.getState().handleStage({
+                  type: 'stage',
+                  name: 'render',
+                  status: 'complete',
+                });
+                useAgentStore.getState().completeStream();
                 useWorldStore.getState().setProcessingPhase('idle');
               },
             );
           } else {
+            // 이미지 잡이 없으면 바로 스트림 종료 + idle
+            useAgentStore.getState().completeStream();
             useWorldStore.getState().setProcessingPhase('idle');
           }
         },

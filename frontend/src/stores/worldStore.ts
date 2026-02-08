@@ -839,6 +839,6 @@ export const selectCurrencyToast = (state: WorldStore) => state.currencyToast;
 // DEV: 디버그용 글로벌 노출 (프로덕션에서 제거됨)
 // =============================================================================
 
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__worldStore = useWorldStore;
 }

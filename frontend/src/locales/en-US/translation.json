@@ -279,7 +279,9 @@
     "panel_placeholder": "[ Ready ]",
     "scale_decrease": "Decrease text size",
     "scale_increase": "Increase text size",
-    "scale_label": "UI Scale Settings"
+    "scale_label": "UI Scale Settings",
+    "input_locked": "Processing…",
+    "input_locked_detail": "Awaiting turn results"
   },
   "economy": {
     "signal": "Signal",
@@ -405,11 +407,6 @@
     "tooltip": {
       "title": "Scanner",
       "description": "Upload a real-world photo to transform it into in-game items or clues"
-    },
-    "onboarding": {
-      "message": "Try dragging an image here!",
-      "detail": "Real photos become in-game items",
-      "dismiss": "Got it"
     },
     "affordance": {
       "idle_hint": "Image → Item",

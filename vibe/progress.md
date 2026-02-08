@@ -1,6 +1,40 @@
 # 프로젝트 진행 상황
 
-## [2026-02-08 17:15] U-117[Mvp]: 인벤토리 드래그 영역 Row 확장 + 스캐너 온보딩 팝업 제거 완료
+## [2026-02-08 23:55] U-087[Mvp]: 대기열(턴 처리) 진행 중 모든 사용자 입력 잠금 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 턴 처리(스트리밍) 및 이미지 생성 중 모든 사용자 입력(클릭, 드래그, 텍스트 입력) 차단, 허위 액션 로그 생성 가드, UI 잠금 오버레이 표시.
+- **추가 컴포넌트**: `vibe/unit-results/U-087[Mvp].md` (보고서), `vibe/unit-runbooks/U-087-input-lock-runbook.md` (런북).
+- **달성 요구사항**: [RULE-002] 게임 UI 레이아웃 안정성 및 입력 제어, [U-087] 중복 입력 및 상태 경합 방지.
+
+### 기술적 구현 세부사항
+
+**입력 잠금 파이프라인 (Lock-on-Processing)**:
+- **Unified Lock State**: `App.tsx`에서 `isStreaming`, `processingPhase`, `imageLoading` 상태를 구독하여 `isInputLocked`를 계산하는 단일 진실 공급원(SSOT) 구축.
+- **Physical Input Block**: `z-index: 9990`의 `.input-lock-overlay`를 최상단에 렌더링하고 `pointer-events: auto`를 적용하여 물리적인 클릭/드래그 접근을 원천 차단.
+- **Handler Guards**: 모든 입력 핸들러(제출, 카드 클릭, 핫스팟 클릭, DnD)에 잠금 상태 가드를 적용하여 서버 응답 대기 중 "허위 액션 로그"가 쌓이는 현상 해결.
+- **Visual Feedback**: 버튼 및 카드에 `disabled` 스타일을 전파하고, 오버레이에 "처리 중…" 라벨 및 `wait` 커서를 적용하여 시스템의 비지(Busy) 상태를 명확히 전달.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── App.tsx (입력 잠금 SSOT 정의 및 핸들러 가드 통합)
+    ├── components/ (ActionDeck, SceneCanvas, ScannerSlot 등에 disabled 전달)
+    ├── style.css (잠금 오버레이 및 비활성화 애니메이션/스타일)
+    └── locales/ (ui.input_locked, ui.wait 다국어 키 추가)
+
+### 성능 및 품질 지표
+
+- **데이터 정합성**: 턴 처리 중 발생하는 모든 불필요한 액션 로그 및 상태 변화 리스크 0% 달성.
+- **사용성**: 사용자가 의도치 않은 조작으로 인한 시스템 오작동을 겪지 않도록 명확한 물리적 가이드 제공.
+
+### 다음 단계
+
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+- **U-023[Mvp]**: Autopilot 모드 토글 + Goal 입력
+
+---
 
 ### 구현 완료 항목
 

@@ -119,19 +119,17 @@ function AlwaysVisibleQueue() {
   const isStreaming = useAgentStore(selectIsStreaming);
   const phases = useAgentStore(selectPhases);
 
-  const hasActivity = phases.some((p) => p.status !== 'pending');
-
   return (
     <div className="agent-queue-always">
       <div className="queue-label">{t('agent.console.queue')}</div>
-      {!isStreaming && !hasActivity ? (
-        <div className="queue-idle">{t('agent.console.queue_idle')}</div>
-      ) : (
+      {isStreaming ? (
         <div className="queue-items">
           {phases.map((phase) => (
             <PhaseQueueItem key={phase.name} phase={phase} />
           ))}
         </div>
+      ) : (
+        <div className="queue-idle">{t('agent.console.queue_idle')}</div>
       )}
     </div>
   );

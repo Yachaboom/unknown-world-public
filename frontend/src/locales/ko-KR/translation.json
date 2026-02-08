@@ -279,7 +279,9 @@
     "panel_placeholder": "[ 준비 중 ]",
     "scale_decrease": "글자 크기 줄이기",
     "scale_increase": "글자 크기 늘리기",
-    "scale_label": "UI 스케일 설정"
+    "scale_label": "UI 스케일 설정",
+    "input_locked": "처리 중…",
+    "input_locked_detail": "턴 결과를 기다리는 중입니다"
   },
   "economy": {
     "signal": "Signal",
@@ -405,11 +407,6 @@
     "tooltip": {
       "title": "스캐너",
       "description": "현실의 사진을 업로드하면 게임 속 아이템이나 단서로 변환됩니다"
-    },
-    "onboarding": {
-      "message": "이미지를 드래그해 보세요!",
-      "detail": "현실의 사진이 게임 속 아이템으로 변환됩니다",
-      "dismiss": "알겠습니다"
     },
     "affordance": {
       "idle_hint": "이미지 → 아이템",
