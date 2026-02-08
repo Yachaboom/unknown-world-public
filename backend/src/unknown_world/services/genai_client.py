@@ -79,20 +79,26 @@ class GenerateRequest:
     """텍스트 생성 요청.
 
     Attributes:
-        prompt: 생성 프롬프트 (주의: 로깅 금지)
+        prompt: 생성 프롬프트 (주의: 로깅 금지). contents가 설정되면 무시됩니다.
         model_label: 모델 라벨 (FAST, QUALITY 등)
         max_tokens: 최대 토큰 수 (선택)
         temperature: 온도 설정 (선택, 0.0~1.0)
         response_mime_type: 응답 MIME 타입 (예: "application/json")
         response_schema: 응답 JSON 스키마 (dict 또는 Pydantic 모델 타입)
+        contents: 멀티턴 contents 배열 (U-127). 설정 시 prompt 대신 사용.
+        system_instruction: 시스템 인스트럭션 (U-127). contents 사용 시 분리된 시스템 프롬프트.
+        thinking_level: Gemini 3 thinking level (U-127). "low" 또는 "high" (기본: "high").
     """
 
-    prompt: str
+    prompt: str = ""
     model_label: ModelLabel = ModelLabel.FAST
     max_tokens: int | None = None
     temperature: float | None = None
     response_mime_type: str | None = None
     response_schema: Any | None = None
+    contents: list[dict[str, Any]] | None = None
+    system_instruction: str | None = None
+    thinking_level: str | None = None
 
 
 @dataclass
@@ -104,12 +110,14 @@ class GenerateResponse:
         model_label: 사용된 모델 라벨
         finish_reason: 종료 이유 (stop, length 등)
         usage: 토큰 사용량 정보 (선택)
+        thought_signature: Gemini 3 Thought Signature (U-127). 다음 턴에 전달하여 추론 맥락 유지.
     """
 
     text: str
     model_label: ModelLabel
     finish_reason: str = "stop"
     usage: dict[str, int] = field(default_factory=lambda: {})
+    thought_signature: str | None = None
 
 
 # =============================================================================
@@ -151,6 +159,7 @@ class MockGenAIClient:
             extra={
                 "model_label": request.model_label,
                 "max_tokens": request.max_tokens,
+                "has_contents": request.contents is not None,
             },
         )
 
@@ -159,6 +168,7 @@ class MockGenAIClient:
             model_label=request.model_label,
             finish_reason="stop",
             usage={"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+            thought_signature="mock-thought-sig-placeholder",
         )
 
     async def generate_stream(self, request: GenerateRequest) -> AsyncGenerator[str]:
@@ -265,6 +275,9 @@ class GenAIClient:
     async def generate(self, request: GenerateRequest) -> GenerateResponse:
         """텍스트를 생성합니다.
 
+        U-127: contents 배열, system_instruction, thinking_config 지원.
+        contents가 설정되면 멀티턴 호출, 아니면 기존 prompt 기반 호출.
+
         Args:
             request: 생성 요청
 
@@ -286,11 +299,14 @@ class GenAIClient:
                 "model_label": request.model_label,
                 "model_id": model_id,
                 "max_tokens": request.max_tokens,
+                "has_contents": request.contents is not None,
+                "has_system_instruction": request.system_instruction is not None,
+                "thinking_level": request.thinking_level,
             },
         )
 
         # google-genai SDK 호출
-        from google.genai.types import GenerateContentConfig
+        from google.genai.types import GenerateContentConfig, ThinkingConfig
 
         config_dict: dict[str, Any] = {}
         if request.max_tokens:
@@ -301,24 +317,54 @@ class GenAIClient:
             config_dict["response_mime_type"] = request.response_mime_type
         if request.response_schema:
             config_dict["response_schema"] = request.response_schema
+        # U-127: system_instruction 지원
+        if request.system_instruction:
+            config_dict["system_instruction"] = request.system_instruction
+        # U-127: thinking_config 지원 (Gemini 3 Pro/Flash)
+        if request.thinking_level:
+            config_dict["thinking_config"] = ThinkingConfig(
+                thinking_level=request.thinking_level,  # type: ignore[reportArgumentType] - SDK가 str→enum 자동 변환
+            )
 
         config: GenerateContentConfig | None = (
             GenerateContentConfig(**config_dict) if config_dict else None
         )
 
+        # U-127: contents가 있으면 멀티턴, 없으면 기존 prompt
+        api_contents: Any = request.contents if request.contents is not None else request.prompt
+
         response = await self._client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
             model=model_id,
-            contents=request.prompt,
+            contents=api_contents,
             config=config,
         )
 
         # 응답 파싱
         text = response.text if hasattr(response, "text") and response.text else str(response)
         finish_reason = "stop"
+        thought_signature: str | None = None
+
         if hasattr(response, "candidates") and response.candidates:
             candidate = response.candidates[0]
             if hasattr(candidate, "finish_reason"):
                 finish_reason = str(candidate.finish_reason)
+            # U-127: Thought Signature 추출
+            # SDK는 bytes로 반환 → bytes를 그대로 유지하여 다음 턴에 전달
+            if hasattr(candidate, "content") and candidate.content:
+                content = candidate.content
+                if hasattr(content, "parts") and content.parts:
+                    for part in content.parts:
+                        if hasattr(part, "thought_signature") and part.thought_signature:
+                            raw_sig = part.thought_signature
+                            # bytes인 경우 latin-1로 인코딩하여 문자열로 보존
+                            # (API에 다시 보낼 때 bytes로 복원 가능)
+                            if isinstance(raw_sig, bytes):
+                                import base64
+
+                                thought_signature = base64.b64encode(raw_sig).decode("ascii")
+                            else:
+                                thought_signature = str(raw_sig)
+                            break
 
         # 토큰 사용량 추출
         usage: dict[str, int] = {}
@@ -336,6 +382,7 @@ class GenAIClient:
             model_label=request.model_label,
             finish_reason=finish_reason,
             usage=usage,
+            thought_signature=thought_signature,
         )
 
     async def generate_stream(self, request: GenerateRequest) -> AsyncGenerator[str]:

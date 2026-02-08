@@ -19,9 +19,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from unknown_world.models.turn import CurrencyAmount, TurnInput
+from unknown_world.orchestrator.conversation_history import (
+    ConversationHistory,
+    build_model_content_summary,
+    get_conversation_history,
+)
 from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.stages.commit import commit_stage
 from unknown_world.orchestrator.stages.parse import parse_stage
@@ -79,8 +84,11 @@ def create_pipeline_context(
     seed: int | None = None,
     is_mock: bool | None = None,
     image_generator: ImageGeneratorType | None = None,
+    session_id: str | None = None,
 ) -> PipelineContext:
     """파이프라인 컨텍스트를 생성합니다.
+
+    U-127: 세션별 대화 히스토리를 자동으로 주입합니다.
 
     Args:
         turn_input: 사용자 턴 입력
@@ -89,23 +97,19 @@ def create_pipeline_context(
         image_generator: 이미지 생성 서비스 인스턴스 (U-051)
             None이면 render_stage에서 이미지 생성을 건너뜁니다 (기존 동작 보존).
             테스트 시 MockImageGenerator를 주입하여 모킹 가능합니다.
+        session_id: 세션 ID (U-127, None이면 "default" 사용)
 
     Returns:
         초기화된 파이프라인 컨텍스트
 
     Example:
-        >>> # 기본 사용 (이미지 생성 없음)
+        >>> # 기본 사용 (이미지 생성 없음, 기본 세션)
         >>> ctx = create_pipeline_context(turn_input)
         >>>
         >>> # 이미지 생성 서비스 주입
         >>> from unknown_world.services.image_generation import get_image_generator
         >>> generator = get_image_generator()
         >>> ctx = create_pipeline_context(turn_input, image_generator=generator)
-        >>>
-        >>> # 테스트용 Mock 주입
-        >>> from unknown_world.services.image_generation import MockImageGenerator
-        >>> mock_gen = MockImageGenerator()
-        >>> ctx = create_pipeline_context(turn_input, image_generator=mock_gen)
     """
     economy_snapshot = CurrencyAmount(
         signal=turn_input.economy_snapshot.signal,
@@ -118,12 +122,19 @@ def create_pipeline_context(
     if image_generator is None:
         image_generator = get_image_generator(force_mock=is_mock)
 
+    # U-127: 대화 히스토리 자동 주입
+    conversation_history: ConversationHistory | None = None
+    if not is_mock:
+        # Real 모드에서만 히스토리 활성화
+        conversation_history = get_conversation_history(session_id or "default")
+
     return PipelineContext(
         turn_input=turn_input,
         economy_snapshot=economy_snapshot,
         is_mock=is_mock,
         seed=seed,
         image_generator=image_generator,
+        conversation_history=conversation_history,
     )
 
 
@@ -181,4 +192,53 @@ async def run_pipeline(
         )
         ctx.is_fallback = True
 
+    # U-127: 턴 완료 후 대화 히스토리에 추가
+    _update_conversation_history(ctx)
+
     return ctx
+
+
+def _update_conversation_history(ctx: PipelineContext) -> None:
+    """턴 완료 후 대화 히스토리를 업데이트합니다 (U-127).
+
+    성공/폴백에 관계없이 히스토리에 턴을 기록합니다.
+    폴백 시에도 사용자의 입력은 기록하여 맥락을 유지합니다.
+
+    Args:
+        ctx: 파이프라인 컨텍스트
+    """
+    if ctx.conversation_history is None or ctx.output is None:
+        return
+
+    # 사용자 입력 요약
+    user_content = ctx.turn_input.text
+    if ctx.turn_input.action_id:
+        user_content = f"[{ctx.turn_input.action_id}] {user_content}"
+
+    # 모델 응답 요약 (Option C: 내러티브 + 핵심 상태 변화)
+    # 세계 변화(delta)를 추출하여 요약
+    world_delta: dict[str, Any] | None = None
+    wd = ctx.output.world
+    if wd:
+        world_delta_dict: dict[str, Any] = {}
+        if wd.inventory_added:
+            world_delta_dict["inventory_added"] = [
+                {"label": item.label} for item in wd.inventory_added
+            ]
+        if wd.inventory_removed:
+            world_delta_dict["inventory_removed"] = wd.inventory_removed
+        if wd.rules_changed:
+            world_delta_dict["rules_added"] = [r.label for r in wd.rules_changed]
+        if world_delta_dict:
+            world_delta = world_delta_dict
+
+    model_content = build_model_content_summary(
+        narrative=ctx.output.narrative,
+        world_delta=world_delta,
+    )
+
+    ctx.conversation_history.add_turn(
+        user_content=user_content,
+        model_content=model_content,
+        thought_signature=ctx.thought_signature,
+    )

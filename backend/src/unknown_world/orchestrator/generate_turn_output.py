@@ -10,11 +10,15 @@ TurnOutput을 생성하고, Pydantic 검증을 통과한 결과만 반환합니�
     - RULE-006: ko/en 언어 정책 준수
     - RULE-007/008: 프롬프트/내부 추론 노출 금지
 
-페어링 질문 결정:
-    - Q1: 기본 텍스트 생성 모델 라벨 = FAST (Option A)
+U-127 변경:
+    - 기본 텍스트 모델 = QUALITY (gemini-3-pro-preview)
+    - 멀티턴 contents 배열 + system_instruction 분리
+    - Gemini 3 Thought Signature 순환
+    - thinking_level = "high" (기본)
 
 참조:
     - vibe/unit-plans/U-017[Mvp].md
+    - vibe/unit-plans/U-127[Mvp].md
     - vibe/unit-results/U-016[Mvp].md
     - vibe/unit-results/U-005[Mvp].md
     - .cursor/rules/20-backend-orchestrator.mdc
@@ -30,13 +34,19 @@ from typing import Any, cast
 
 from pydantic import ValidationError
 
-from unknown_world.config.models import ModelLabel, TextModelTiering
+from unknown_world.config.models import (
+    DEFAULT_THINKING_LEVEL,
+    MODEL_DEFAULT_LABEL,
+    ModelLabel,
+    TextModelTiering,
+)
 from unknown_world.models.turn import (
     CurrencyAmount,
     Language,
     TurnInput,
     TurnOutput,
 )
+from unknown_world.orchestrator.conversation_history import ConversationHistory
 from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.prompt_loader import (
     load_image_prompt,
@@ -140,6 +150,7 @@ class GenerationResult:
         model_label: 사용된 모델 라벨
         cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
         raw_response: 원본 응답 텍스트 (디버그용, UI 노출 금지)
+        thought_signature: Gemini 3 Thought Signature (U-127). 히스토리에 저장하여 추론 맥락 유지.
     """
 
     status: GenerationStatus
@@ -149,6 +160,7 @@ class GenerationResult:
     model_label: ModelLabel = ModelLabel.FAST
     cost_multiplier: float = 1.0
     raw_response: str = ""
+    thought_signature: str | None = None
 
 
 # =============================================================================
@@ -172,13 +184,13 @@ class TurnOutputGenerator:
     def __init__(
         self,
         *,
-        default_model_label: ModelLabel = ModelLabel.FAST,
+        default_model_label: ModelLabel = MODEL_DEFAULT_LABEL,
         force_mock: bool = False,
     ) -> None:
         """TurnOutputGenerator를 초기화합니다.
 
         Args:
-            default_model_label: 기본 모델 라벨 (Q1 결정: FAST)
+            default_model_label: 기본 모델 라벨 (U-127: QUALITY = Pro)
             force_mock: Mock 클라이언트 강제 사용 여부
         """
         self._default_model_label = default_model_label
@@ -186,9 +198,10 @@ class TurnOutputGenerator:
         self._json_schema: dict[str, Any] | None = None
 
     def _select_text_model(self, turn_input: TurnInput) -> tuple[ModelLabel, float]:
-        """액션 기반 텍스트 모델을 선택합니다 (U-069).
+        """액션 기반 텍스트 모델을 선택합니다 (U-069 + U-127).
 
-        FAST 모델 기본 + "정밀조사" 트리거 시 QUALITY 모델 전환.
+        U-127: 기본 모델이 QUALITY(Pro)로 변경됨.
+        "정밀조사" 트리거 시 추가 비용 배수(2x)가 적용됨.
 
         페어링 질문 결정:
             - Q1: Option B - 액션 ID + 키워드 매칭
@@ -203,11 +216,11 @@ class TurnOutputGenerator:
         action_id = turn_input.action_id
         text = turn_input.text
 
-        # QUALITY 트리거 검사
+        # QUALITY 트리거 검사 (U-069: 비용 배수 적용)
         if TextModelTiering.is_quality_trigger(action_id, text):
             model_label = ModelLabel.QUALITY
             logger.info(
-                "[TurnOutputGenerator] QUALITY 모델 트리거 감지 (U-069)",
+                "[TurnOutputGenerator] QUALITY 트리거 감지 (비용 2x 적용)",
                 extra={
                     "action_id": action_id,
                     "has_trigger_keyword": bool(text),
@@ -318,30 +331,137 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 """
         return full_prompt
 
-    async def generate(
+    def _build_system_instruction(
         self,
         turn_input: TurnInput,
-        *,
         world_context: str = "",
-    ) -> GenerationResult:
-        """TurnOutput을 생성합니다.
+    ) -> str:
+        """시스템 인스트럭션을 구성합니다 (U-127: contents와 분리).
 
-        Structured Outputs(JSON Schema) 모드로 Gemini를 호출하고,
-        Pydantic으로 응답을 검증합니다.
-
-        U-069: FAST 모델 기본 + "정밀조사" 트리거 시 QUALITY 모델 전환.
-            - Q1: Option B - 액션 ID + 키워드 매칭
-            - Q2: Option A - 2x (기본 비용의 2배)
+        멀티턴 모드에서는 시스템 프롬프트가 config.system_instruction으로 분리됩니다.
 
         Args:
             turn_input: 사용자 턴 입력
             world_context: 현재 세계 상태 요약 (선택)
 
         Returns:
+            시스템 인스트럭션 문자열
+        """
+        # 언어별 프롬프트 로드
+        system_prompt = load_system_prompt(turn_input.language)
+        turn_instructions = load_turn_instructions(turn_input.language)
+
+        # 이미지 가이드라인 로드
+        try:
+            image_guidelines = load_image_prompt(turn_input.language)
+            system_prompt = f"""{system_prompt}
+
+---
+
+## 이미지 생성 지침 (Image Generation Guidelines)
+
+아래 가이드라인에 따라 `image_job.prompt` 필드를 작성하세요.
+LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 있도록 합니다.
+
+{image_guidelines}"""
+        except FileNotFoundError:
+            logger.warning(
+                "[TurnOutputGenerator] 이미지 가이드라인 파일 미존재, 기본 프롬프트 사용",
+                extra={"language": turn_input.language.value},
+            )
+
+        # 세계 상태 컨텍스트 (시스템 인스트럭션에 포함하여 히스토리와 중복 방지)
+        world_section = ""
+        if world_context:
+            world_section = f"""
+
+---
+
+## 현재 세계 상태
+
+{world_context}
+"""
+
+        # 시스템 인스트럭션 조합
+        return f"""{system_prompt}
+
+---
+
+{turn_instructions}
+{world_section}"""
+
+    def _build_contents(
+        self,
+        turn_input: TurnInput,
+        conversation_history: ConversationHistory | None = None,
+    ) -> list[dict[str, Any]]:
+        """멀티턴 contents 배열을 구성합니다 (U-127).
+
+        대화 히스토리 + 현재 턴 입력을 Gemini API contents 형태로 변환합니다.
+
+        Args:
+            turn_input: 사용자 턴 입력
+            conversation_history: 대화 히스토리 (None이면 히스토리 없이 현재 턴만)
+
+        Returns:
+            Gemini API contents 배열
+        """
+        contents: list[dict[str, Any]] = []
+
+        # 이전 턴 히스토리 추가 (있는 경우)
+        if conversation_history and conversation_history.turn_count > 0:
+            history_contents = conversation_history.get_contents()
+            contents.extend(history_contents)
+
+        # 현재 턴 사용자 입력
+        user_text = f"""## 현재 턴 입력
+
+- language: {turn_input.language.value}
+- text: "{turn_input.text}"
+- action_id: {turn_input.action_id or "없음"}
+- economy_snapshot:
+  - signal: {turn_input.economy_snapshot.signal}
+  - memory_shard: {turn_input.economy_snapshot.memory_shard}
+
+위 입력에 따라 TurnOutput JSON을 생성하세요."""
+
+        contents.append(
+            {
+                "role": "user",
+                "parts": [{"text": user_text}],
+            }
+        )
+
+        return contents
+
+    async def generate(
+        self,
+        turn_input: TurnInput,
+        *,
+        world_context: str = "",
+        conversation_history: ConversationHistory | None = None,
+    ) -> GenerationResult:
+        """TurnOutput을 생성합니다.
+
+        Structured Outputs(JSON Schema) 모드로 Gemini를 호출하고,
+        Pydantic으로 응답을 검증합니다.
+
+        U-127: 멀티턴 contents + system_instruction + thinking_level 지원.
+        대화 히스토리가 제공되면 멀티턴 모드로, 아니면 기존 단일 프롬프트 모드로 동작.
+
+        Args:
+            turn_input: 사용자 턴 입력
+            world_context: 현재 세계 상태 요약 (선택)
+            conversation_history: 대화 히스토리 (U-127, 선택)
+
+        Returns:
             GenerationResult: 생성 결과 (status, output, error 등)
         """
         # U-069: 모델 티어링 - 액션/키워드 기반 모델 선택
         label, cost_multiplier = self._select_text_model(turn_input)
+
+        # 멀티턴 모드 여부 판단
+        use_multiturn = conversation_history is not None
 
         # 로그에는 메타만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.info(
@@ -352,6 +472,8 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                 "cost_multiplier": cost_multiplier,
                 "has_text": bool(turn_input.text),
                 "has_action_id": bool(turn_input.action_id),
+                "multiturn": use_multiturn,
+                "history_turns": conversation_history.turn_count if conversation_history else 0,
             },
         )
 
@@ -359,23 +481,39 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
             # GenAI 클라이언트 가져오기
             client = get_genai_client(force_mock=self._force_mock)
 
-            # 프롬프트 구성
-            prompt = self._build_prompt(turn_input, world_context)
-
             # Structured Outputs 요청 구성 (RULE-003)
-            # SDK 레벨에서 JSON Schema를 강제하여 파싱 오류를 최소화합니다.
             json_schema = self._get_json_schema()
-            request = GenerateRequest(
-                prompt=prompt,
-                model_label=label,
-                temperature=0.7,  # 창의성 적당히
-                response_mime_type="application/json",
-                response_schema=json_schema,
-            )
+
+            if use_multiturn:
+                # U-127: 멀티턴 모드 - contents + system_instruction 분리
+                contents = self._build_contents(turn_input, conversation_history)
+                system_instruction = self._build_system_instruction(turn_input, world_context)
+
+                request = GenerateRequest(
+                    model_label=label,
+                    temperature=0.7,
+                    response_mime_type="application/json",
+                    response_schema=json_schema,
+                    contents=contents,
+                    system_instruction=system_instruction,
+                    thinking_level=DEFAULT_THINKING_LEVEL,
+                )
+            else:
+                # 기존 단일 프롬프트 모드 (호환성 유지)
+                prompt = self._build_prompt(turn_input, world_context)
+                request = GenerateRequest(
+                    prompt=prompt,
+                    model_label=label,
+                    temperature=0.7,
+                    response_mime_type="application/json",
+                    response_schema=json_schema,
+                )
 
             # API 호출
             response = await client.generate(request)
             raw_text = response.text
+            # U-127: Thought Signature 추출
+            thought_signature = response.thought_signature
 
             # Pydantic 검증 (model_validate_json 사용 - U-017 완료 기준)
             # Structured Outputs로 인해 응답이 이미 JSON이므로
@@ -423,6 +561,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                         "cost_multiplier": cost_multiplier,
                         "has_narrative": bool(turn_output.narrative),
                         "cost_signal": turn_output.economy.cost.signal,
+                        "has_thought_signature": thought_signature is not None,
                     },
                 )
 
@@ -432,6 +571,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                     model_label=label,
                     cost_multiplier=cost_multiplier,
                     raw_response=raw_text,
+                    thought_signature=thought_signature,
                 )
 
             except ValidationError as e:
@@ -493,15 +633,19 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         except Exception as e:
             # 예상치 못한 오류
             logger.exception(
-                "[TurnOutputGenerator] 예상치 못한 오류",
-                extra={"error_type": type(e).__name__},
+                "[TurnOutputGenerator] 예상치 못한 오류: %s: %s",
+                type(e).__name__,
+                str(e)[:500],
             )
             return GenerationResult(
                 status=GenerationStatus.API_ERROR,
                 error_message="처리 중 오류가 발생했습니다"
                 if turn_input.language == Language.KO
                 else "An error occurred during processing",
-                error_details={"unexpected_error": type(e).__name__},
+                error_details={
+                    "unexpected_error": type(e).__name__,
+                    "error_message": str(e)[:200],
+                },
                 model_label=label,
                 cost_multiplier=cost_multiplier,
             )
@@ -588,7 +732,7 @@ def get_turn_output_generator(
 
     if force_new or _default_generator is None or force_mock:
         _default_generator = TurnOutputGenerator(
-            default_model_label=ModelLabel.FAST,  # Q1 결정: FAST 기본
+            default_model_label=MODEL_DEFAULT_LABEL,  # U-127: QUALITY 기본
             force_mock=force_mock,
         )
 
@@ -599,24 +743,24 @@ async def generate_turn_output(
     turn_input: TurnInput,
     *,
     world_context: str = "",
+    conversation_history: ConversationHistory | None = None,
     force_mock: bool = False,
 ) -> GenerationResult:
     """TurnOutput을 생성하는 편의 함수.
 
-    Note:
-        현재 항상 FAST 모델을 사용합니다.
-        QUALITY 모델은 추후 "정밀 조사" 기능 구현 시 별도 경로로 추가 예정.
+    U-127: 기본 모델 QUALITY(Pro) + 멀티턴 히스토리 지원.
 
     Args:
         turn_input: 사용자 턴 입력
         world_context: 현재 세계 상태 요약 (선택)
+        conversation_history: 대화 히스토리 (U-127, 선택)
         force_mock: Mock 클라이언트 강제 사용 여부
 
     Returns:
         GenerationResult: 생성 결과
 
     Example:
-        >>> result = await generate_turn_output(turn_input)
+        >>> result = await generate_turn_output(turn_input, conversation_history=history)
         >>> if result.status == GenerationStatus.SUCCESS:
         ...     print(result.output.narrative)
     """
@@ -624,4 +768,5 @@ async def generate_turn_output(
     return await generator.generate(
         turn_input,
         world_context=world_context,
+        conversation_history=conversation_history,
     )

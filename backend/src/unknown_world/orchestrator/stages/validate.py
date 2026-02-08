@@ -184,8 +184,15 @@ async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
 
 
 async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
-    """Real 모드 검증을 수행합니다 (Gemini API + Repair loop)."""
-    result = await run_repair_loop(ctx.turn_input)
+    """Real 모드 검증을 수행합니다 (Gemini API + Repair loop).
+
+    U-127: 대화 히스토리를 repair_loop에 전달하고, Thought Signature를 추적합니다.
+    """
+    # U-127: 대화 히스토리를 repair_loop에 전달
+    result = await run_repair_loop(
+        ctx.turn_input,
+        conversation_history=ctx.conversation_history,
+    )
 
     # Repair 이벤트 송출 (시도가 있었다면)
     for i in range(result.repair_attempts):
@@ -204,6 +211,9 @@ async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
     ctx.badges = list(result.badges)
     ctx.repair_attempts = result.repair_attempts
     ctx.is_fallback = result.is_fallback
+
+    # U-127: Thought Signature 저장 (파이프라인 종료 시 히스토리에 기록)
+    ctx.thought_signature = result.thought_signature
 
     # U-069: 모델 티어링 정보 전달 (PipelineContext + TurnOutput)
     # config.models.ModelLabel을 models.turn.ModelLabel로 변환하여 할당 (Pyright 대응)

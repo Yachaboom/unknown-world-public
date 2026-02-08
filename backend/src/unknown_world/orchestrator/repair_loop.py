@@ -4,6 +4,11 @@
 max_repair_attempts 내에서 repair 재요청을 수행하고,
 최종 실패 시 안전한 폴백으로 종료합니다.
 
+U-127 변경:
+    - 멀티턴 대화 히스토리 전달 지원
+    - Pro→Flash 모델 폴백 (API 에러 시 자동 전환)
+    - Thought Signature 추적
+
 설계 원칙:
     - RULE-004: 검증 실패 시 Repair loop + 안전한 폴백
     - RULE-007/008: 프롬프트 원문/내부 추론 노출 금지, 결과/횟수만 표시
@@ -13,6 +18,7 @@ max_repair_attempts 내에서 repair 재요청을 수행하고,
 
 참조:
     - vibe/unit-plans/U-018[Mvp].md
+    - vibe/unit-plans/U-127[Mvp].md
     - vibe/unit-results/U-017[Mvp].md
 """
 
@@ -23,7 +29,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from unknown_world.config.models import ModelLabel
+from unknown_world.config.models import MODEL_FALLBACK_LABEL, ModelLabel
 from unknown_world.models.turn import (
     CurrencyAmount,
     Language,
@@ -31,10 +37,12 @@ from unknown_world.models.turn import (
     TurnOutput,
     ValidationBadge,
 )
+from unknown_world.orchestrator.conversation_history import ConversationHistory
 from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.generate_turn_output import (
     GenerationResult,
     GenerationStatus,
+    TurnOutputGenerator,
     get_turn_output_generator,
 )
 from unknown_world.validation.business_rules import (
@@ -117,6 +125,7 @@ class RepairLoopResult:
         error_messages: 각 시도의 에러 메시지 (UI 노출용)
         model_label: 사용된 텍스트 모델 라벨 (U-069: FAST/QUALITY)
         cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
+        thought_signature: Gemini 3 Thought Signature (U-127). 히스토리에 저장.
     """
 
     output: TurnOutput
@@ -127,6 +136,7 @@ class RepairLoopResult:
     error_messages: list[str] = field(default_factory=lambda: [])
     model_label: ModelLabel = ModelLabel.FAST
     cost_multiplier: float = 1.0
+    thought_signature: str | None = None
 
 
 # =============================================================================
@@ -138,6 +148,7 @@ async def run_repair_loop(
     turn_input: TurnInput,
     *,
     world_context: str = "",
+    conversation_history: ConversationHistory | None = None,
     force_mock: bool = False,
     max_attempts: int = MAX_REPAIR_ATTEMPTS,
 ) -> RepairLoopResult:
@@ -146,14 +157,15 @@ async def run_repair_loop(
     초기 생성을 시도하고, 실패 시 max_attempts까지 재시도합니다.
     최종 실패 시 안전한 폴백을 반환합니다.
 
-    U-069: 모델 티어링
-        - 기본: FAST 모델 (gemini-3-flash-preview)
-        - 트리거: action_id 또는 키워드 매칭 시 QUALITY 모델 (gemini-3-pro-preview)
-        - 비용 배수: FAST=1.0, QUALITY=2.0
+    U-127 변경:
+        - 멀티턴 대화 히스토리 전달 (conversation_history)
+        - API 에러 시 Pro→Flash 모델 자동 폴백
+        - Thought Signature 추적 (RepairLoopResult에 포함)
 
     Args:
         turn_input: 사용자 턴 입력
         world_context: 현재 세계 상태 요약 (선택)
+        conversation_history: 멀티턴 대화 히스토리 (U-127, 선택)
         force_mock: Mock 클라이언트 강제 사용 여부
         max_attempts: 최대 복구 시도 횟수
 
@@ -161,13 +173,16 @@ async def run_repair_loop(
         RepairLoopResult: 최종 결과 (성공 또는 폴백, 모델 라벨/비용 배수 포함)
 
     Example:
-        >>> result = await run_repair_loop(turn_input)
+        >>> result = await run_repair_loop(turn_input, conversation_history=history)
         >>> if result.is_fallback:
         ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
         >>> print(f"사용 모델: {result.model_label}, 비용 배수: {result.cost_multiplier}")
         >>> print(result.output.narrative)
     """
     generator = get_turn_output_generator(force_mock=force_mock)
+    # U-127: Flash 폴백용 생성기 (Pro API 에러 시 사용)
+    fallback_generator: TurnOutputGenerator | None = None
+
     economy_snapshot = CurrencyAmount(
         signal=turn_input.economy_snapshot.signal,
         memory_shard=turn_input.economy_snapshot.memory_shard,
@@ -180,12 +195,21 @@ async def run_repair_loop(
     # U-069: 모델 티어링 - 최초 시도에서 결정된 모델 정보 저장
     selected_model_label: ModelLabel = ModelLabel.FAST
     selected_cost_multiplier: float = 1.0
+    # U-127: Thought Signature 추적
+    last_thought_signature: str | None = None
+    # U-127: Pro→Flash 폴백 상태
+    model_fell_back = False
 
     last_attempt = 0
     for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
         badges = []  # 매 시도마다 배지 초기화 (최종 시도 상태만 유지)
         last_attempt = attempt
         is_repair = attempt > 0
+
+        # U-127: 폴백 상태에서는 Flash 생성기 사용
+        current_generator = (
+            fallback_generator if model_fell_back and fallback_generator else generator
+        )
 
         # 로그 기록 (프롬프트 노출 금지)
         logger.info(
@@ -194,6 +218,7 @@ async def run_repair_loop(
                 "attempt": attempt,
                 "is_repair": is_repair,
                 "language": turn_input.language.value,
+                "model_fell_back": model_fell_back,
             },
         )
 
@@ -202,13 +227,14 @@ async def run_repair_loop(
         if is_repair and repair_context:
             current_context = f"{world_context}\n\n{repair_context}"
 
-        # 생성 시도
-        gen_result = await generator.generate(
+        # 생성 시도 (U-127: 멀티턴 히스토리 전달)
+        gen_result = await current_generator.generate(
             turn_input,
             world_context=current_context,
+            conversation_history=conversation_history,
         )
 
-        # U-069: 모델 티어링 - 생성 결과에서 모델 정보 저장 (매 시도 동일하나 명시적으로 갱신)
+        # U-069: 모델 티어링 - 생성 결과에서 모델 정보 저장
         selected_model_label = gen_result.model_label
         selected_cost_multiplier = gen_result.cost_multiplier
 
@@ -220,15 +246,35 @@ async def run_repair_loop(
             repair_context = _build_repair_context_schema(gen_result, turn_input.language)
             continue
 
-        # 2. API 에러 (429 RESOURCE_EXHAUSTED 등)
+        # 2. API 에러 (429 RESOURCE_EXHAUSTED, 5xx, timeout 등)
         if gen_result.status == GenerationStatus.API_ERROR:
             badges.append(ValidationBadge.SCHEMA_FAIL)
             error_messages.append(gen_result.error_message)
-            # 일시적 오류(429 버스트 리밋 등)일 수 있으므로
-            # 지수 백오프 대기 후 재시도 허용
+
+            # U-127: Pro→Flash 모델 폴백 시도
+            if not model_fell_back:
+                model_fell_back = True
+                fallback_generator = TurnOutputGenerator(
+                    default_model_label=MODEL_FALLBACK_LABEL,
+                    force_mock=force_mock,
+                )
+                logger.warning(
+                    "[RepairLoop] Pro→Flash 모델 폴백 전환 (U-127)",
+                    extra={
+                        "attempt": attempt,
+                        "from_model": gen_result.model_label,
+                        "to_model": MODEL_FALLBACK_LABEL,
+                    },
+                )
+                # 폴백 전환 시 짧은 대기
+                await asyncio.sleep(1.0)
+                repair_context = ""
+                continue
+
+            # 이미 폴백 상태에서도 실패 → 지수 백오프 대기 후 재시도
             backoff_seconds = 2.0 * (2**attempt)  # 2s → 4s → 8s
             logger.warning(
-                "[RepairLoop] API 에러 — %.1fs 대기 후 재시도",
+                "[RepairLoop] API 에러 (Flash 폴백 후) — %.1fs 대기 후 재시도",
                 backoff_seconds,
                 extra={
                     "attempt": attempt,
@@ -244,6 +290,8 @@ async def run_repair_loop(
         # 3. 스키마 검증 성공 → 비즈니스 룰 검증
         if gen_result.status == GenerationStatus.SUCCESS and gen_result.output:
             badges.append(ValidationBadge.SCHEMA_OK)
+            # U-127: Thought Signature 추적
+            last_thought_signature = gen_result.thought_signature
 
             # 비즈니스 룰 검증
             biz_result = validate_business_rules(turn_input, gen_result.output)
@@ -267,6 +315,8 @@ async def run_repair_loop(
                     extra={
                         "total_attempts": attempt + 1,
                         "repair_attempts": attempt,
+                        "model_fell_back": model_fell_back,
+                        "has_thought_signature": last_thought_signature is not None,
                     },
                 )
 
@@ -279,6 +329,7 @@ async def run_repair_loop(
                     error_messages=error_messages,
                     model_label=selected_model_label,
                     cost_multiplier=selected_cost_multiplier,
+                    thought_signature=last_thought_signature,
                 )
 
             # 비즈니스 룰 실패
@@ -304,6 +355,7 @@ async def run_repair_loop(
         extra={
             "max_attempts": max_attempts,
             "actual_attempts": last_attempt,
+            "model_fell_back": model_fell_back,
         },
     )
 
@@ -323,6 +375,7 @@ async def run_repair_loop(
         error_messages=error_messages,
         model_label=selected_model_label,
         cost_multiplier=selected_cost_multiplier,
+        thought_signature=last_thought_signature,
     )
 
 

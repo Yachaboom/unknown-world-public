@@ -1,5 +1,46 @@
 # 프로젝트 진행 상황
 
+## [2026-02-08 23:25] U-127[Mvp]: 멀티턴 대화 히스토리 맥락 유지 + 기본 텍스트 모델 gemini-3-pro-preview 전환 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 멀티턴 대화(최근 5턴) 히스토리 관리 및 Gemini `contents` 파라미터 주입, `thought_signature` 순환을 통한 추론 맥락 유지, 기본 텍스트 모델을 `gemini-3-pro-preview` (QUALITY)로 상향 및 폴백 구현.
+- **추가 컴포넌트**: `vibe/unit-results/U-127[Mvp].md` (보고서), `vibe/unit-runbooks/U-127-multiturn-history-runbook.md` (런북), `backend/src/unknown_world/orchestrator/conversation_history.py` (신규).
+- **달성 요구사항**: [PRD 8.3] 대화 맥락 유지(멀티턴), [PRD 8.1] Gemini 3.0 Pro 기반 고품질 내러티브, [RULE-004] 모델 실패 시 안전 폴백(Pro → Flash).
+
+### 기술적 구현 세부사항
+
+**멀티턴 히스토리 시스템**:
+- **Sliding Window**: `ConversationHistory` 클래스에서 `UW_HISTORY_MAX_TURNS`(5) 및 `UW_HISTORY_TOKEN_BUDGET`(50k) 제한을 적용하여 오래된 턴을 자동으로 트리밍.
+- **Thought Signature Loop**: Gemini 3 모델의 추론 과정(`thought_signature`)을 base64로 캡처하여 다음 턴 요청 시 전달함으로써 논리적 일관성을 유지.
+- **System Instruction Separation**: 기존 프롬프트 구조에서 시스템 지시사항을 `system_instruction` 파라미터로 분리하여 `contents`와 명확히 구분 전송.
+
+**모델 품질 및 안정성**:
+- **Quality by Default**: 일반 턴에서도 `gemini-3-pro-preview`를 기본으로 사용하여 내러티브 깊이와 문맥 이해도 향상.
+- **Fallback Mechanism**: Pro 모델 호출 실패(429/500 등) 시 `gemini-3-flash-preview`로 자동 전환하여 서비스 중단 방지 (`repair_loop.py` 통합).
+
+**코드 구조**:
+repo-root/
+└── backend/src/unknown_world/
+    ├── orchestrator/
+    │   ├── conversation_history.py (신규: 히스토리/토큰 관리)
+    │   ├── generate_turn_output.py (히스토리 주입 및 서명 추출)
+    │   └── repair_loop.py (모델 폴백 로직)
+    ├── services/genai_client.py (API 파라미터 확장)
+    └── config/models.py (기본 모델 상향)
+
+### 성능 및 품질 지표
+
+- **맥락 유지**: 3턴 이상 연속 대화 시 이전 턴의 장소/사건/NPC 참조가 유지됨을 런북 검증.
+- **안정성**: Pro 모델 실패 시 Flash 모델로 투명하게 전환되어 에러 없이 턴 완료.
+
+### 다음 단계
+
+- **U-130[Mvp]**: 엔딩 조건 및 게임 오버 처리
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-08 10:15] U-123[Mvp]: Agent Console 배치 재조정 - 접기 제거 + 대기열 상단 + 배지 하단 완료
 
 ### 구현 완료 항목

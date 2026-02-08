@@ -7,11 +7,13 @@ Pipeline에서 사용하는 컨텍스트와 emit 콜백 인터페이스를 정�
     - 레이어링 보호: 오케스트레이터가 FastAPI에 직접 의존하지 않도록 emit 콜백 사용
     - RULE-007/008: 프롬프트/내부 추론 노출 금지, 단계/배지만 표시
     - U-051: 이미지 생성 서비스 의존성 주입 (순환 의존 방지를 위해 TYPE_CHECKING 활용)
+    - U-127: 멀티턴 대화 히스토리 전달 경로
 
 참조:
     - vibe/refactors/RU-005-Q4.md
     - vibe/unit-results/U-018[Mvp].md
     - vibe/unit-results/U-019[Mvp].md
+    - vibe/unit-plans/U-127[Mvp].md
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from unknown_world.models.turn import (
 )
 
 if TYPE_CHECKING:
+    from unknown_world.orchestrator.conversation_history import ConversationHistory
     from unknown_world.services.image_generation import ImageGeneratorType
 
 # =============================================================================
@@ -111,6 +114,8 @@ class PipelineContext:
             테스트 시 MockImageGenerator를 주입하여 실제 API 호출 없이 검증 가능합니다.
         model_label: 현재 사용 중인 텍스트 모델 라벨 (U-069: FAST/QUALITY)
         cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
+        conversation_history: 멀티턴 대화 히스토리 (U-127, 선택적 주입)
+        thought_signature: 현재 턴의 Thought Signature (U-127, validate 후 설정)
     """
 
     turn_input: TurnInput
@@ -126,6 +131,8 @@ class PipelineContext:
     image_generator: ImageGeneratorType | None = None
     model_label: ModelLabel = ModelLabel.FAST
     cost_multiplier: float = 1.0
+    conversation_history: ConversationHistory | None = None
+    thought_signature: str | None = None
 
 
 # =============================================================================

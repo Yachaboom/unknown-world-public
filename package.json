@@ -8,9 +8,10 @@
     "node": "24.12.0"
   },
   "scripts": {
-    "kill": "pnpm kill:port && pnpm kill:zombies",
+    "kill": "pnpm kill:port && sleep 1 && pnpm kill:zombies",
     "kill:port": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
     "kill:zombies": "bash scripts/kill-zombies.sh",
+    "kill:nuke": "bash scripts/kill-nuke.sh",
     "kill:front": "npx --yes kill-port 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010",
     "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
     "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",

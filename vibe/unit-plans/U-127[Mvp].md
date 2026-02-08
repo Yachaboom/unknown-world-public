@@ -6,9 +6,11 @@
 | --------- | ------------------------------------------------------------------------- |
 | Unit ID   | U-127[Mvp]                                                                |
 | Phase     | MVP                                                                       |
+| 상태      | ✅ **완료** (2026-02-08)                                                  |
 | 예상 소요 | 75분 (멀티턴 45분 + 모델 전환 15분 + Thought Signature 15분)              |
 | 의존성    | U-069[Mvp], U-017[Mvp]                                                    |
 | 우선순위  | ⚡ Critical (이야기 맥락 상실은 게임 체험의 핵심 결함)                     |
+| 결과      | [완료 보고서](../unit-results/U-127[Mvp].md) · [런북](../unit-runbooks/U-127-multiturn-history-runbook.md) |
 
 ## 작업 목표
 
@@ -114,13 +116,13 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 히스토리에 포함할 내용의 범위는?
+- [x] **Q1**: 히스토리에 포함할 내용의 범위는?
   - Option A: 전체 TurnInput/TurnOutput (정확하지만 토큰 소비 큼)
   - Option B: 사용자 텍스트 + GM 내러티브 요약만 (토큰 절약, 일부 맥락 손실 가능)
-  - Option C: 사용자 텍스트 + GM 내러티브 + 핵심 상태 변화(delta) (균형)
+  - ✅ Option C: 사용자 텍스트 + GM 내러티브 + 핵심 상태 변화(delta) (균형)
 
-- [ ] **Q2**: gemini-3-pro-preview의 `thinking_level` 기본값은?
-  - Option A: `high` (기본값 유지, 최고 추론 품질, TTFB 증가)
+- [x] **Q2**: gemini-3-pro-preview의 `thinking_level` 기본값은?
+  - ✅ Option A: `high` (기본값 유지, 최고 추론 품질, TTFB 증가)
   - Option B: `low` (저지연, 데모 체감 우선, 추론 깊이 감소)
 
 ## 참고 자료

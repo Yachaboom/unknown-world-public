@@ -61,6 +61,28 @@ MODEL_IMAGE_FAST: Final[str] = "gemini-2.5-flash-image"
 MODEL_VISION: Final[str] = "gemini-3-flash-preview"
 """VISION 라벨 모델 ID - 비전/공간 분석용 (bbox/segmentation)"""
 
+# =============================================================================
+# U-127: 기본 텍스트 모델 / 폴백 모델 상수
+# =============================================================================
+# gemini-3-pro-preview를 기본 텍스트 모델로 사용.
+# API 오류(429/5xx/timeout) 시 gemini-3-flash-preview로 자동 폴백.
+
+MODEL_DEFAULT: Final[str] = MODEL_QUALITY
+"""기본 텍스트 모델 ID (U-127: gemini-3-pro-preview)"""
+
+MODEL_DEFAULT_LABEL: Final[ModelLabel] = ModelLabel.QUALITY
+"""기본 텍스트 모델 라벨 (U-127: QUALITY = Pro)"""
+
+MODEL_FALLBACK: Final[str] = MODEL_FAST
+"""폴백 텍스트 모델 ID (U-127: gemini-3-flash-preview)"""
+
+MODEL_FALLBACK_LABEL: Final[ModelLabel] = ModelLabel.FAST
+"""폴백 텍스트 모델 라벨 (U-127: FAST = Flash)"""
+
+# U-127: Gemini 3 Thinking Level 기본값 (페어링 Q2: Option A - high)
+DEFAULT_THINKING_LEVEL: Final[str] = "high"
+"""Gemini 3 thinking level 기본값 (U-127)"""
+
 
 # =============================================================================
 # 텍스트 모델 티어링 설정 (U-069)
@@ -71,7 +93,8 @@ MODEL_VISION: Final[str] = "gemini-3-flash-preview"
 class TextModelTiering:
     """텍스트 모델 티어링 설정.
 
-    FAST 모델 기본 + "정밀조사" 트리거 시 QUALITY 모델 전환.
+    U-127 변경: 기본 모델이 gemini-3-pro-preview(QUALITY)로 전환됨.
+    "정밀조사" 트리거 시 추가 비용 배수(2x)가 적용됨.
 
     페어링 질문 결정:
         - Q1: Option B - 액션 ID + 키워드 매칭

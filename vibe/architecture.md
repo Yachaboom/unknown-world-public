@@ -28,6 +28,7 @@ backend/src/unknown_world/config/models.py
 backend/src/unknown_world/main.py
 backend/src/unknown_world/models/scanner.py
 backend/src/unknown_world/models/turn.py
+backend/src/unknown_world/orchestrator/conversation_history.py
 backend/src/unknown_world/orchestrator/fallback.py
 backend/src/unknown_world/orchestrator/generate_turn_output.py
 backend/src/unknown_world/orchestrator/mock.py
@@ -416,7 +417,7 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ## 4. 핵심 아키텍처 원칙
 
-1. **Stateful Orchestrator**: 월드 상태(WorldState)를 유지하고 갱신하는 시스템.
+1. **Stateful Orchestrator**: 월드 상태(WorldState) 및 대화 맥락(ConversationHistory)을 유지하고 갱신하는 시스템.
 2. **Structured Turn Contract**: 엄격한 JSON Schema 기반 통신.
 3. **Resilient Pipeline (RU-005 / Repair Loop / U-051)**: 
     - **Pipeline SSOT**: 모든 턴 처리는 `orchestrator/pipeline.py`에 정의된 7대 단계를 따름.
