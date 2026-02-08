@@ -4,9 +4,9 @@
 
 ## 진행 현황
 
-**전체**: 119/145 (82.1%) | **MVP**: 119/124 (96.0%) | **MMP**: 0/21 (0%)
+**전체**: 119/133 (89.5%) | **MVP**: 119/128 (93.0%) | **MMP**: 0/5 (0%)
 
-**예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2 | MMP(M6 후속): D-7+
+**예상 완료(가정)**: MVP D-2 | MMP(M5 제출): D-2
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
@@ -19,6 +19,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - U-081 skip(U-077에 흡수). U-116으로 SaveGame 완전 제거 → U-098/U-113 의존성 수정 완료.
 - **[2026-02-08 유닛 병합]** U-098→U-116 흡수, U-118→U-117 흡수, U-025+U-026 통합, RU-007→MMP 이동. 상세: `vibe/changelog.md`
 - **[2026-02-08 MMP 제출 최적화]** M5를 "해커톤 제출 준비"로 재편. U-100+U-101→U-120 흡수. U-119(WIG 폴리시), U-121(제출 문서), U-122(데모 영상), CP-SUB-01 추가. 상세: `vibe/changelog.md`
+- **[2026-02-08 M6 전체 제거 + MVP 보강]** M6(품질 강화/후속) 16개 유닛 전체 skip. 대신 MVP에 U-123~U-126 추가 (Agent Console 재조정, 프로필 씬 이미지, 이전턴 텍스트 약화, 성능 최적화). 상세: `vibe/changelog.md`
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -57,14 +58,14 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | ---- | --------- | -------------------------------------- | ------ | ---- |
 | MVP  | M1        | 스캐폴딩 + Turn 계약 + HTTP Streaming  | 11/11  | ✅   |
 | MVP  | CP-MVP-01 | **✓ 체크포인트: 스트리밍/스키마/폴백** | -      | ✅   |
-| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 11/22  | 🚧   |
+| MVP  | M2        | 핵심 UI(액션덱/핫스팟/DnD) + 가독성/에셋 | 11/26  | 🚧   |
 | MVP  | CP-MVP-02 | **✓ 체크포인트: 클릭+드래그 데모**     | -      | ✅   |
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 10/10  | ✅   |
 | MVP  | CP-MVP-04~07 | ✓ 실모델/이미지/Scanner/real모드 게이트 | -   | ✅   |
 | MVP  | CP-MVP-03 | **체크포인트: 10분 데모 루프**          | -      | ⏸️   |
 | MMP  | M5        | ⚡해커톤 제출 준비 (Submission Sprint) | 0/5    | ⏸️   |
 | MMP  | CP-SUB-01 | **체크포인트: 해커톤 제출 완료**       | -      | ⏸️   |
-| MMP  | M6        | 품질 강화/후속 (Post-Submission)       | 0/16   | ⏸️   |
+| ~~MMP~~ | ~~M6~~   | ~~품질 강화/후속 (Post-Submission)~~   | ~~0/16~~ | **skip** (해커톤 이후 재계획) |
 
 ## 핵심 기능 (MVP)
 
@@ -76,7 +77,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
 - **완료 기준**: Action Deck / Inventory(DnD Row) / Scene Canvas(Hotspots) / Economy HUD / Agent Console 상시 노출, 클릭+드래그 동작, 가독성 확보 _(✅ 레이아웃/스크롤/Row 전환/아이콘/소비 로직/디자인 개선/드래그 확장 및 온보딩 제거 완료)_
-- **잔여**: Agent Console 배지 접기(U-114), 핫스팟 원형 1~3개(U-115), 입력 잠금(U-087), 이미지 최적화(U-084)
+- **잔여**: Agent Console 접기 제거+재배치(U-123), 핫스팟 원형 1~3개(U-115), 이미지 최적화(U-084), 프로필 씬 이미지(U-124), 이전턴 텍스트 약화(U-125), 성능 최적화(U-126)
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋) + 엔딩 아티팩트
@@ -116,7 +117,7 @@ _해소 완료: R-005~R-008, R-010~R-018, R-020~R-022 (대응 유닛 완료). �
 | R-009 | Agentic Vision 비용/지연 악화          | Med  | 20%  | Economy 게이트 + 텍스트 폴백              |
 | R-019 | 처리 중 입력 허용 → 허위 액션/경합     | Med  | 35%  | U-087 입력 잠금 + U-086 텍스트 우선       |
 | R-023 | 리셋 시 세션 상태 잔재                 | Med  | 40%  | U-116 완전 리셋 + U-099 ledger 정합       |
-| R-024 | 새로고침 시 진행 전량 소실(SaveGame 제거) | Med | 30% | MMP U-113 세션 영속성 재설계              |
+| R-024 | 새로고침 시 진행 전량 소실(SaveGame 제거) | Med | 30% | ~~MMP U-113~~ skip → 해커톤 이후 재계획   |
 | R-025 | 배포 환경 다운 → 심사 불가               | High | 20% | U-120 min-instances=1 + 모니터링          |
 | R-026 | 영문 모드 UI/내러티브 품질 부족          | Med  | 30% | U-099 i18n 수정 + U-119 WIG 폴리시       |
 
@@ -150,8 +151,12 @@ _마감: 2026-02-09 5:00 PM PST | 심사: Technical Execution(40%), Innovation/W
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP (8개)
+### MVP (10개)
 ID=[U-084[Mvp]](unit-plans/U-084[Mvp].md) | 이미지 픽셀 스타일 + 사이즈 축소 + Scene 높이 조정 | Depends=U-066,U-049,U-085 | ⏸️
+ID=[U-123[Mvp]](unit-plans/U-123[Mvp].md) | Agent Console 접기 제거 + 대기열 상단/배지 하단 재배치 | Depends=U-114 | ⏸️
+ID=[U-124[Mvp]](unit-plans/U-124[Mvp].md) | 프로필별 첫 씬 이미지 사전 생성 (nanobanana-mcp, 픽셀아트) | Depends=U-084,U-116 | ⏸️
+ID=[U-125[Mvp]](unit-plans/U-125[Mvp].md) | 이전턴 텍스트 주목성 제거 - 색상 dim + 폰트 축소 | Depends=U-086 | ⏸️
+ID=[U-126[Mvp]](unit-plans/U-126[Mvp].md) | MVP 성능/품질 기본 최적화 (M6 대체, 번들/에셋/CSS/렌더링) | Depends=None | ⏸️
 ID=[U-115[Mvp]](unit-plans/U-115[Mvp].md) | 핫스팟 컴팩트 원형 1~3개 + 우선순위/겹침 방지 | Depends=U-090,U-087,U-116 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
@@ -168,24 +173,10 @@ ID=[U-121[Mmp]](unit-plans/U-121[Mmp].md) | ⚡제출 문서 패키지 (README +
 ID=[U-122[Mmp]](unit-plans/U-122[Mmp].md) | ⚡데모 영상 제작 (3분, 영어 자막) | Depends=U-119,U-120 | ⏸️
 ID=[CP-SUB-01](unit-plans/CP-SUB-01.md) | **⚡체크포인트: 해커톤 제출 완료** | Depends=U-119,U-120,U-121,U-122 | ⏸️
 
-### MMP - M6: 품질 강화/후속 (16개)
+### ~~MMP - M6: 품질 강화/후속~~ (전체 skip)
 
-_Post-Submission. U-100/U-101은 U-120에 흡수되어 skip._
-
-ID=[U-102[Mmp]](unit-plans/U-102[Mmp].md) | ⚡GCS 스토리지 어댑터 | Depends=U-120 | ⏸️
-ID=[U-103[Mmp]](unit-plans/U-103[Mmp].md) | 이미지 편집(멀티턴, REF 유지) | Depends=U-019,U-102 | ⏸️
-ID=[U-109[Mmp]](unit-plans/U-109[Mmp].md) | Agentic Vision 자동 실행 확장(U-076 재사용) | Depends=U-019,U-020,RU-005,U-076 | ⏸️
-ID=[U-104[Mmp]](unit-plans/U-104[Mmp].md) | 장기 세션 메모리 요약/핀 고도화 | Depends=U-025 | ⏸️
-ID=[U-105[Mmp]](unit-plans/U-105[Mmp].md) | ⚡Scenario Library(5) + 자동 리플레이 | Depends=U-025 | ⏸️
-ID=[RU-007[Mmp]](unit-plans/RU-007[Mvp].md) | 리팩토링: artifacts 버전/경로/링크 정리 **(MVP→MMP 이동)** | Depends=U-025 | ⏸️
-ID=[RU-010[Mmp]](unit-plans/RU-010[Mmp].md) | 리팩토링: 스키마/상수 SSOT 강화 | Depends=U-105 | ⏸️
-ID=[CP-MMP-01](unit-plans/CP-MMP-01.md) | **체크포인트: 배포/관측 게이트** | Depends=U-120,RU-010 | ⏸️
-ID=[U-106[Mmp]](unit-plans/U-106[Mmp].md) | 관측 지표/대시보드 고도화 | Depends=CP-MMP-01 | ⏸️
-ID=[U-107[Mmp]](unit-plans/U-107[Mmp].md) | 접근성/단축키/모바일 UX (심층, U-119 후속) | Depends=U-106 | ⏸️
-ID=[U-108[Mmp]](unit-plans/U-108[Mmp].md) | ⚡보안 하드닝 | Depends=CP-MMP-01 | ⏸️
-ID=[U-110~112[Mmp]] | 디버깅 모드/스토리지 TTL/Panel Corner 수정 | Depends=Various | ⏸️
-ID=[U-113[Mmp]](unit-plans/U-113[Mmp].md) | 세션 상태 영속성(SaveGame 제거 후 재설계) | Depends=U-116,CP-MMP-01 | ⏸️
-ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀 100%** | Depends=U-108,U-107,U-110~112 | ⏸️
+_**[2026-02-08] M6 전체 skip**: 해커톤 일정상 실행 불가. MVP에 U-126(성능/품질 최적화) 1개로 대체. 해커톤 이후 필요 시 재계획._
+_기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-106, U-107, U-108, U-110~112, U-113, CP-MMP-02 — 모두 skip._
 
 ### 완료 (118개)
 
@@ -208,8 +199,9 @@ ID=[CP-MMP-02](unit-plans/CP-MMP-02.md) | **체크포인트: 시나리오 회귀
 
 ## 빠른 실행
 
-**현재 작업**: [U-114[Mvp]](unit-plans/U-114[Mvp].md) - Agent Console 검증배지 접기
-**다음 작업(MVP 완료 후)**: [U-119[Mmp]](unit-plans/U-119[Mmp].md) - Frontend Layout WIG 폴리시 → [U-120[Mmp]](unit-plans/U-120[Mmp].md) - 배포
+**현재 작업**: [U-084[Mvp]](unit-plans/U-084[Mvp].md) - 이미지 픽셀 스타일 + 사이즈 축소
+**다음 작업**: U-123(Agent Console 재배치) → U-124(프로필 씬 이미지) → U-125(이전턴 텍스트 약화) → U-126(성능 최적화)
+**MVP 완료 후**: [U-119[Mmp]](unit-plans/U-119[Mmp].md) - Frontend Layout WIG 폴리시 → [U-120[Mmp]](unit-plans/U-120[Mmp].md) - 배포
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -233,9 +225,10 @@ pnpm kill
 
 ## 일일 스탠드업 (2026-02-08)
 
-**완료**: U-116[Mvp] - SaveGame 제거 + 프로필 초기 상태 정리, U-099[Mvp] - 거래 장부 버그 수정
-**진행중**: U-114[Mvp] - Agent Console 검증배지 접기
+**완료**: U-116[Mvp], U-099[Mvp], U-114[Mvp], U-117[Mvp], U-087[Mvp]
+**진행중**: U-084[Mvp] - 이미지 픽셀 스타일 + 사이즈 축소
+**계획 추가**: U-123(Agent Console 재배치), U-124(프로필 씬 이미지), U-125(이전턴 텍스트 약화), U-126(성능 최적화)
+**M6 전체 skip**: 해커톤 일정상 M6(16개) 전체 제거. U-126(MVP)으로 핵심 성능/품질만 커버.
 **블로커**: 없음
 **마감**: Devpost 2026-02-09 5:00 PM PST (**KST 2/10 화 10:00 AM, D-2**)
-**MMP 재편**: M5 "해커톤 제출 준비"로 전면 재편 (U-119 WIG 폴리시, U-120 배포, U-121 문서, U-122 영상, CP-SUB-01). U-100+U-101→U-120 흡수.
-**제출 크리티컬 패스**: MVP 잔여(U-114 등) → U-119(폴리시) + U-120(배포) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)
+**제출 크리티컬 패스**: MVP 잔여(U-084, U-123~U-126 등) → U-119(폴리시) + U-120(배포) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)
