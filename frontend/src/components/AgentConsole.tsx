@@ -239,11 +239,22 @@ function ModelLabelBadge() {
   );
 }
 
-/** 에러 표시 */
+/** 에러 표시 (U-130: RATE_LIMITED 전용 스타일 추가) */
 function ErrorDisplay() {
+  const { t } = useTranslation();
   const error = useAgentStore(selectError);
 
   if (!error) return null;
+
+  // U-130: RATE_LIMITED 에러는 전용 경고 스타일로 표시
+  if (error.code === 'RATE_LIMITED') {
+    return (
+      <div className="agent-error agent-error--rate-limited">
+        <span className="error-icon">⏳</span>
+        <span className="error-message">{t('error.rate_limited')}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="agent-error">

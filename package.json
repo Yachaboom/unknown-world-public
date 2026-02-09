@@ -18,4 +18,3 @@
     "dev:front": "pnpm -C frontend dev"
   }
 }
-

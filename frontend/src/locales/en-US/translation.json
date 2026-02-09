@@ -8,7 +8,11 @@
   "error": {
     "unknown_error": "An unknown error occurred.",
     "response_processing": "[System] An error occurred while processing response data.",
-    "connection_failed": "[System] Failed to connect to server. Please try again."
+    "connection_failed": "[System] Failed to connect to server. Please try again.",
+    "rate_limited": "API Rate Limit Exceeded",
+    "rate_limited_detail": "Too many requests. Please wait a moment and try again.",
+    "retry_button": "Retry",
+    "retry_countdown": "Retry available in {{seconds}}s"
   },
   "profile": {
     "select_title": "Select Your Profile",

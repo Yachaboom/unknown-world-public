@@ -49,10 +49,12 @@ ERROR_MESSAGES = {
     Language.KO: {
         "internal_error": "처리 중 오류가 발생했습니다",
         "validation_error": "입력 검증에 실패했습니다",
+        "rate_limited": "API 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
     },
     Language.EN: {
         "internal_error": "An error occurred during processing",
         "validation_error": "Input validation failed",
+        "rate_limited": "API request limit exceeded. Please try again shortly.",
     },
 }
 
@@ -156,6 +158,30 @@ async def emit_error_with_fallback(
     )
 
 
+async def emit_rate_limited_error(language: Language) -> AsyncGenerator[str]:
+    """RATE_LIMITED 에러 이벤트를 송출합니다 (final 없이).
+
+    U-130: 429 Rate Limit으로 모든 재시도가 소진된 경우 사용합니다.
+    final 이벤트를 보내지 않으므로 프론트엔드에서 재시도 UI를 표시할 수 있습니다.
+
+    Args:
+        language: 응답 언어
+
+    Yields:
+        str: NDJSON 라인 (error 이벤트만, final 없음)
+    """
+    messages = ERROR_MESSAGES[language]
+    message = messages.get("rate_limited", "API request limit exceeded.")
+
+    yield serialize_event(
+        ErrorEvent(
+            type=StreamEventType.ERROR,
+            message=message,
+            code="RATE_LIMITED",
+        ).model_dump()
+    )
+
+
 async def emit_final(output: TurnOutput) -> AsyncGenerator[str]:
     """최종 TurnOutput을 final 이벤트로 송출합니다.
 
@@ -225,6 +251,7 @@ __all__ = [
     "ERROR_MESSAGES",
     "stream_narrative_delta",
     "emit_error_with_fallback",
+    "emit_rate_limited_error",
     "emit_final",
     "stream_output_with_narrative",
 ]

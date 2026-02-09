@@ -21,10 +21,10 @@ shared/
 
 ### 소비 전략 (Option B: 생성물 기반 동기화)
 
-| 소비자 | 도구/방식 | 생성물 경로 (권장) |
-|--------|-----------|-------------------|
+| 소비자               | 도구/방식                                   | 생성물 경로 (권장)                             |
+| -------------------- | ------------------------------------------- | ---------------------------------------------- |
 | **Backend (Python)** | `datamodel-code-generator` 또는 수동 동기화 | `backend/src/unknown_world/schemas/generated/` |
-| **Frontend (TS)** | `json-schema-to-zod` 또는 수동 동기화 | `frontend/src/schemas/generated/` |
+| **Frontend (TS)**    | `json-schema-to-zod` 또는 수동 동기화       | `frontend/src/schemas/generated/`              |
 
 > **MVP 단계에서는 수동 동기화**로 시작하고, drift가 발생하면 생성 스크립트를 도입합니다.
 
@@ -32,9 +32,9 @@ shared/
 
 ### Turn 계약 (MVP)
 
-| 파일 | 용도 | PRD 참조 |
-|------|------|----------|
-| `turn/turn_input.schema.json` | Client → Server 턴 요청 | PRD 8.7절 TurnInput |
+| 파일                           | 용도                    | PRD 참조             |
+| ------------------------------ | ----------------------- | -------------------- |
+| `turn/turn_input.schema.json`  | Client → Server 턴 요청 | PRD 8.7절 TurnInput  |
 | `turn/turn_output.schema.json` | Server → Client 턴 응답 | PRD 8.7절 TurnOutput |
 
 ## ✅ 스키마 작성 가이드라인

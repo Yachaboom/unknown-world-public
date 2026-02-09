@@ -52,6 +52,7 @@ from unknown_world.api.turn_stream_events import (
 )
 from unknown_world.api.turn_streaming_helpers import (
     emit_error_with_fallback,
+    emit_rate_limited_error,
     stream_output_with_narrative,
 )
 from unknown_world.models.turn import (
@@ -205,8 +206,12 @@ async def _stream_turn_events(
             if stream_event is not None:
                 yield serialize_event(stream_event)
 
+        # U-130: rate limit 상태이면 error(RATE_LIMITED)만 송출, final 없음
+        if ctx.is_rate_limited:
+            async for line in emit_rate_limited_error(turn_input.language):
+                yield line
         # Pipeline 완료 후 내러티브 + final 전송 (RU-005-Q3: 헬퍼 사용)
-        if ctx.output is not None:
+        elif ctx.output is not None:
             async for line in stream_output_with_narrative(ctx.output):
                 yield line
 

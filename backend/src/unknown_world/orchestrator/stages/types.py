@@ -116,6 +116,7 @@ class PipelineContext:
         cost_multiplier: 비용 배수 (U-069: FAST=1.0, QUALITY=2.0)
         conversation_history: 멀티턴 대화 히스토리 (U-127, 선택적 주입)
         thought_signature: 현재 턴의 Thought Signature (U-127, validate 후 설정)
+        is_rate_limited: API rate limit(429)으로 모든 재시도 소진 여부 (U-130)
     """
 
     turn_input: TurnInput
@@ -126,6 +127,7 @@ class PipelineContext:
     repair_attempts: int = 0
     current_phase: AgentPhase = AgentPhase.PARSE
     is_fallback: bool = False
+    is_rate_limited: bool = False
     is_mock: bool = False
     seed: int | None = None
     image_generator: ImageGeneratorType | None = None

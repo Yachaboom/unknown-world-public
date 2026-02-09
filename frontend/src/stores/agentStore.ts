@@ -59,6 +59,8 @@ export interface AgentState {
   finalOutput: TurnOutput | null;
   /** 에러 정보 */
   error: AgentError | null;
+  /** U-130: API rate limit(429)으로 모든 재시도 소진 여부 */
+  isRateLimited: boolean;
 }
 
 /** Agent Console 액션 */
@@ -112,6 +114,7 @@ function createInitialState(): AgentState {
     repairCount: 0,
     finalOutput: null,
     error: null,
+    isRateLimited: false,
   };
 }
 
@@ -206,6 +209,8 @@ export const useAgentStore = create<AgentStore>((set) => ({
         message: event.message,
         code: event.code,
       },
+      // U-130: RATE_LIMITED 코드이면 전용 플래그 설정
+      isRateLimited: event.code === 'RATE_LIMITED',
     });
   },
 
@@ -248,6 +253,9 @@ export const selectFinalOutput = (state: AgentStore) => state.finalOutput;
 
 /** 에러 셀렉터 */
 export const selectError = (state: AgentStore) => state.error;
+
+/** U-130: rate limit 상태 셀렉터 */
+export const selectIsRateLimited = (state: AgentStore) => state.isRateLimited;
 
 /** 모델 라벨 셀렉터 (U-069: FAST/QUALITY 표시) */
 export const selectModelLabel = (state: AgentStore) =>

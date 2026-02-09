@@ -310,6 +310,16 @@ export function createTurnRunner(deps: {
       // Error → agentStore.handleError + worldStore 상태 복구
       onError: (event) => {
         useAgentStore.getState().handleError(event);
+
+        // U-130: RATE_LIMITED 에러 시 scene/연결 상태 유지 (재시도 안내 UI만 표시)
+        if (event.code === 'RATE_LIMITED') {
+          useWorldStore.getState().setProcessingPhase('idle');
+          if (visionAnalysis) {
+            finishAnalyzing();
+          }
+          return;
+        }
+
         useWorldStore.getState().setConnected(false);
         // U-071: 에러 시 idle로 전환
         useWorldStore.getState().setProcessingPhase('idle');
@@ -596,6 +606,16 @@ export function useTurnRunner(deps: {
         },
         onError: (event) => {
           useAgentStore.getState().handleError(event);
+
+          // U-130: RATE_LIMITED 에러 시 scene/연결 상태 유지 (재시도 안내 UI만 표시)
+          if (event.code === 'RATE_LIMITED') {
+            useWorldStore.getState().setProcessingPhase('idle');
+            if (visionAnalysis) {
+              finishAnalyzing();
+            }
+            return;
+          }
+
           useWorldStore.getState().setConnected(false);
           useWorldStore.getState().setProcessingPhase('idle');
           if (visionAnalysis) {

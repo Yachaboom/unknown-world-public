@@ -132,6 +132,7 @@ class RepairLoopResult:
     total_attempts: int = 1
     repair_attempts: int = 0
     is_fallback: bool = False
+    is_rate_limited: bool = False
     badges: list[ValidationBadge] = field(default_factory=lambda: [])
     error_messages: list[str] = field(default_factory=lambda: [])
     model_label: ModelLabel = ModelLabel.FAST
@@ -199,6 +200,8 @@ async def run_repair_loop(
     last_thought_signature: str | None = None
     # U-127: Pro→Flash 폴백 상태
     model_fell_back = False
+    # U-130: 마지막 실패가 API 에러(429 등)인지 추적
+    last_failure_was_api_error = False
 
     last_attempt = 0
     for attempt in range(max_attempts + 1):  # 0 = 초기 시도, 1~max = 복구 시도
@@ -242,6 +245,8 @@ async def run_repair_loop(
         if gen_result.status == GenerationStatus.SCHEMA_FAILURE:
             badges.append(ValidationBadge.SCHEMA_FAIL)
             error_messages.append(gen_result.error_message)
+            # U-130: 스키마 실패는 rate limit이 아님
+            last_failure_was_api_error = False
             # RU-005-S2: language에 따라 repair 메시지 분기
             repair_context = _build_repair_context_schema(gen_result, turn_input.language)
             continue
@@ -250,6 +255,8 @@ async def run_repair_loop(
         if gen_result.status == GenerationStatus.API_ERROR:
             badges.append(ValidationBadge.SCHEMA_FAIL)
             error_messages.append(gen_result.error_message)
+            # U-130: API 에러 추적 (최종 실패 시 RATE_LIMITED 판정용)
+            last_failure_was_api_error = True
 
             # U-127: Pro→Flash 모델 폴백 시도
             if not model_fell_back:
@@ -349,6 +356,9 @@ async def run_repair_loop(
             )
             break
 
+    # U-130: API 에러로 모든 재시도(폴백 포함) 소진 시 rate limited 판정
+    rate_limited = last_failure_was_api_error and model_fell_back
+
     # 최종 실패 → 안전한 폴백 반환
     logger.warning(
         "[RepairLoop] 최종 폴백 반환",
@@ -356,6 +366,7 @@ async def run_repair_loop(
             "max_attempts": max_attempts,
             "actual_attempts": last_attempt,
             "model_fell_back": model_fell_back,
+            "is_rate_limited": rate_limited,
         },
     )
 
@@ -371,6 +382,7 @@ async def run_repair_loop(
         total_attempts=last_attempt + 1,
         repair_attempts=last_attempt,
         is_fallback=True,
+        is_rate_limited=rate_limited,
         badges=badges,
         error_messages=error_messages,
         model_label=selected_model_label,

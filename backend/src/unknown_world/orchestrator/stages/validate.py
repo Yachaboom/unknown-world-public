@@ -211,6 +211,8 @@ async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
     ctx.badges = list(result.badges)
     ctx.repair_attempts = result.repair_attempts
     ctx.is_fallback = result.is_fallback
+    # U-130: rate limit 상태 전파
+    ctx.is_rate_limited = result.is_rate_limited
 
     # U-127: Thought Signature 저장 (파이프라인 종료 시 히스토리에 기록)
     ctx.thought_signature = result.thought_signature

@@ -50,11 +50,7 @@
           "title": "Hint"
         }
       },
-      "required": [
-        "id",
-        "label",
-        "cost"
-      ],
+      "required": ["id", "label", "cost"],
       "title": "ActionCard",
       "type": "object"
     },
@@ -108,15 +104,7 @@
     },
     "AgentPhase": {
       "description": "에이전트 실행 단계 (RULE-008).\n\n에이전트형 시스템임을 UI로 증명하기 위한 단계 표시.",
-      "enum": [
-        "parse",
-        "validate",
-        "plan",
-        "resolve",
-        "render",
-        "verify",
-        "commit"
-      ],
+      "enum": ["parse", "validate", "plan", "resolve", "render", "verify", "commit"],
       "title": "AgentPhase",
       "type": "string"
     },
@@ -153,12 +141,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "ymin",
-        "xmin",
-        "ymax",
-        "xmax"
-      ],
+      "required": ["ymin", "xmin", "ymax", "xmax"],
       "title": "Box2D",
       "type": "object"
     },
@@ -179,10 +162,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "signal",
-        "memory_shard"
-      ],
+      "required": ["signal", "memory_shard"],
       "title": "CurrencyAmount",
       "type": "object"
     },
@@ -199,10 +179,7 @@
           "description": "소비 후 잔액"
         }
       },
-      "required": [
-        "cost",
-        "balance_after"
-      ],
+      "required": ["cost", "balance_after"],
       "title": "EconomyOutput",
       "type": "object"
     },
@@ -248,18 +225,13 @@
           "type": "array"
         }
       },
-      "required": [
-        "should_generate"
-      ],
+      "required": ["should_generate"],
       "title": "ImageJob",
       "type": "object"
     },
     "Language": {
       "description": "지원 언어 (RULE-006).\n\nko/en 혼합 출력 금지. TurnInput.language를 SSOT로 삼아\n모든 UI/내러티브/시스템 메시지는 동일 언어로 고정합니다.",
-      "enum": [
-        "ko-KR",
-        "en-US"
-      ],
+      "enum": ["ko-KR", "en-US"],
       "title": "Language",
       "type": "string"
     },
@@ -282,22 +254,13 @@
           "description": "고정에 필요한 비용"
         }
       },
-      "required": [
-        "id",
-        "content",
-        "cost"
-      ],
+      "required": ["id", "content", "cost"],
       "title": "MemoryPin",
       "type": "object"
     },
     "ModelLabel": {
       "description": "모델/품질 선택 라벨 (RULE-008).\n\n프롬프트 노출 없이 \"왜 이 선택이었는지\"를 사용자 친화 라벨로 표시.",
-      "enum": [
-        "FAST",
-        "QUALITY",
-        "CHEAP",
-        "REF"
-      ],
+      "enum": ["FAST", "QUALITY", "CHEAP", "REF"],
       "title": "ModelLabel",
       "type": "string"
     },
@@ -322,10 +285,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "id",
-        "label"
-      ],
+      "required": ["id", "label"],
       "title": "Quest",
       "type": "object"
     },
@@ -351,11 +311,7 @@
     },
     "RiskLevel": {
       "description": "행동 위험도 수준.",
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ],
+      "enum": ["low", "medium", "high"],
       "title": "RiskLevel",
       "type": "string"
     },
@@ -418,11 +374,7 @@
           "title": "Interaction Hint"
         }
       },
-      "required": [
-        "id",
-        "label",
-        "box_2d"
-      ],
+      "required": ["id", "label", "box_2d"],
       "title": "SceneObject",
       "type": "object"
     },
@@ -594,10 +546,7 @@
           "title": "Description"
         }
       },
-      "required": [
-        "id",
-        "label"
-      ],
+      "required": ["id", "label"],
       "title": "WorldRule",
       "type": "object"
     }
@@ -639,13 +588,7 @@
       "description": "에이전트 실행 정보"
     }
   },
-  "required": [
-    "language",
-    "narrative",
-    "economy",
-    "safety"
-  ],
+  "required": ["language", "narrative", "economy", "safety"],
   "title": "TurnOutput",
   "type": "object"
 }
-

@@ -25,7 +25,7 @@
  * @see vibe/prd.md 6.7/6.8/9장
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DndContext,
@@ -60,8 +60,9 @@ import { useAgentStore } from './stores/agentStore';
 import { useInventoryStore, selectItemCount } from './stores/inventoryStore';
 import { useUIPrefsStore, applyUIPrefsToDOM } from './stores/uiPrefsStore';
 import { useWorldStore } from './stores/worldStore';
-import { useTurnRunner } from './turn/turnRunner';
+import { useTurnRunner, type RunTurnParams } from './turn/turnRunner';
 import type { ActionCard, DropInput } from './schemas/turn';
+import { RateLimitPanel } from './components/RateLimitPanel';
 import { getCurrentThemeFromDOM } from './demo/demoFixtures';
 import { isInventoryDragData, isHotspotDropData } from './dnd/types';
 // U-117: initializeOnboarding 제거 (온보딩 가이드 삭제)
@@ -123,11 +124,18 @@ function App() {
   // AgentStore 셀렉터
   const isStreaming = useAgentStore((state) => state.isStreaming);
   const narrativeBuffer = useAgentStore((state) => state.narrativeBuffer);
+  // U-130: rate limit 상태 셀렉터
+  const isRateLimited = useAgentStore((state) => state.isRateLimited);
 
   // U-087: 입력 잠금 SSOT - 처리 중 모든 사용자 입력을 차단
+  // U-130: rate limit 시에도 입력 잠금 유지 (재시도 버튼만 활성화)
   const processingPhase = useWorldStore((state) => state.sceneState.processingPhase);
   const imageLoading = useWorldStore((state) => state.sceneState.imageLoading);
-  const isInputLocked = isStreaming || processingPhase !== 'idle' || imageLoading === true;
+  const isInputLocked =
+    isStreaming || processingPhase !== 'idle' || imageLoading === true || isRateLimited;
+
+  // U-130: 마지막 턴 파라미터 저장 (재시도용)
+  const lastTurnParamsRef = useRef<RunTurnParams | null>(null);
 
   const { uiScale, increaseUIScale, decreaseUIScale } = useUIPrefsStore();
 
@@ -204,16 +212,30 @@ function App() {
    */
   const executeTurn = useCallback(
     (text: string, actionId?: string, clickData?: HotspotClickData, dropData?: DropInput) => {
-      turnRunner.runTurn({
+      const params: RunTurnParams = {
         text,
         actionId,
         click: clickData,
         drop: dropData,
-      });
+      };
+      // U-130: 재시도를 위해 마지막 턴 파라미터 저장
+      lastTurnParamsRef.current = params;
+      turnRunner.runTurn(params);
       setInputText('');
     },
     [turnRunner],
   );
+
+  /**
+   * U-130: Rate limit 시 재시도 핸들러.
+   * 마지막 실패한 턴 파라미터로 다시 실행합니다.
+   */
+  const handleRetry = useCallback(() => {
+    const params = lastTurnParamsRef.current;
+    if (!params) return;
+    // agentStore.startStream() 호출 시 isRateLimited가 false로 초기화됨
+    turnRunner.runTurn(params);
+  }, [turnRunner]);
 
   /**
    * 입력 제출 핸들러
@@ -479,6 +501,9 @@ function App() {
           <span className="input-lock-label">{t('ui.input_locked')}</span>
         </div>
       )}
+
+      {/* U-130: Rate Limit 재시도 안내 패널 (input-lock-overlay보다 높은 z-index) */}
+      {isRateLimited && <RateLimitPanel onRetry={handleRetry} />}
 
       {/* U-117: 온보딩 가이드 팝업 제거 (hover 힌트는 InteractionHint로 유지) */}
     </>

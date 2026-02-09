@@ -77,6 +77,3 @@
   "required": ["language", "text", "client", "economy_snapshot"],
   "additionalProperties": false
 }
-
-
-
