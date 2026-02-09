@@ -27,6 +27,11 @@ vi.mock('../utils/box2d', () => ({
     width: 200,
     height: 200,
   })),
+  box2dCenter: vi.fn((box) => ({
+    x: (box.xmin + box.xmax) / 2,
+    y: (box.ymin + box.ymax) / 2,
+  })),
+  NORMALIZED_MAX: 1000,
 }));
 
 describe('Hotspot UX - Hover Hint', () => {

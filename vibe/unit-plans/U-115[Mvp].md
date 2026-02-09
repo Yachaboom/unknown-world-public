@@ -1,5 +1,7 @@
 # U-115[Mvp]: 핫스팟 컴팩트 원형(Circle) 디자인 + 1~3개 제한 생성 + 우선순위/겹침 방지
 
+> **상태: DONE** — 결과: [`vibe/unit-results/U-115[Mvp].md`](../unit-results/U-115[Mvp].md) | 런북: [`vibe/unit-runbooks/U-115-hotspot-circle-runbook.md`](../unit-runbooks/U-115-hotspot-circle-runbook.md)
+
 ## 메타데이터
 
 | 항목      | 내용                                                     |
@@ -154,19 +156,20 @@ def filter_hotspots(objects: list, max_count: int = 3, min_distance: int = 100):
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 원형 마커 반지름 계산 방식?
+- [x] **Q1**: 원형 마커 반지름 계산 방식?
   - Option A: bbox 크기에 비례 (큰 오브젝트 = 큰 마커)
-  - Option B: 고정 반지름 (모든 마커 동일 크기)
+  - ✅Option B: 고정 반지름 (모든 마커 동일 크기)
   - Option C: 중요도에 따라 크기 차등 (중요한 것 = 큰 마커)
 
-- [ ] **Q2**: 추가 정밀분석 시 이전 핫스팟과의 관계?
+- [x] **Q2**: 추가 정밀분석 시 이전 핫스팟과의 관계?
   - Option A: 이전 핫스팟 교체(최신 결과만 유지)
   - Option B: 병합(총 최대 3개, 겹침 제거 후)
   - Option C: 사용자 선택(기존 유지/교체)
+  - ✅Option D: 현재 사양상 추가 정밀분석 불가 (한번 분석한 턴은 추가 분석 불가)
 
-- [ ] **Q3**: 겹침 판정 임계값(0~1000 좌표계)?
+- [x] **Q3**: 겹침 판정 임계값(0~1000 좌표계)?
   - Option A: 100 (약 10% 거리)
-  - Option B: 150 (약 15% 거리)
+  - ✅Option B: 150 (약 15% 거리)
   - Option C: 동적 계산 (두 bbox 크기 합의 일정 비율)
 
 ## 참고 자료

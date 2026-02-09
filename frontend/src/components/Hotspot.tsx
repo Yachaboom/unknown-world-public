@@ -1,13 +1,14 @@
 /**
  * Unknown World - Hotspot 컴포넌트
  *
- * U-058[Mvp]: 핫스팟 디자인 개선 (코너/스트로크/색상)
- * - Q1 Option C: Magenta/Purple 계열 강조
- * - Q2 Option A: L자 브라켓 코너 마커
+ * U-115[Mvp]: 핫스팟 컴팩트 원형(Circle) 디자인
+ * - Q1 Option B: 고정 반지름 (모든 마커 동일 크기)
+ * - bbox 중앙에 원형 마커 렌더링, 펄스 애니메이션
+ * - 기존 bbox 데이터 규약(0~1000) 유지, 렌더링만 원형으로 변환
  *
+ * U-058[Mvp]: 핫스팟 디자인 기반 (Magenta 테마)
  * U-074[Mvp]: 핫스팟 인터랙션 안내 UX
  * - Q1 Option B: 첫 N번만 hover 힌트 표시 (학습 후 사라짐)
- * - hover 시 "클릭하여 조사" 힌트 표시
  *
  * RULE-002 준수: 채팅 버블이 아닌 게임 UI
  * RULE-009 준수: 좌표 규약 (0~1000 정규화, bbox=[ymin,xmin,ymax,xmax])
@@ -22,11 +23,27 @@ import { useState, useCallback, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDroppable } from '@dnd-kit/core';
 import type { SceneObject, Box2D } from '../schemas/turn';
-import { box2dToPixel, type CanvasSize } from '../utils/box2d';
+import { box2dCenter, type CanvasSize, NORMALIZED_MAX } from '../utils/box2d';
 import { DND_TYPE, type HotspotDropData } from '../dnd/types';
 import { useOnboardingStore, selectShouldShowHotspotHint } from '../stores/onboardingStore';
 import { InteractionHint } from './InteractionHint';
 import '../styles/hotspot.css';
+
+// =============================================================================
+// U-115: 원형 마커 상수
+// =============================================================================
+
+/**
+ * 원형 마커 반지름 (px) - Q1 Option B: 고정 반지름.
+ * 22px → 직경 44px = 최소 터치 타겟 사이즈 충족.
+ */
+const CIRCLE_RADIUS_PX = 22;
+
+/**
+ * 히트 영역 패딩 (px).
+ * 원형 마커 주변에 추가 클릭 영역을 확보합니다.
+ */
+const HIT_AREA_PADDING_PX = 6;
 
 // =============================================================================
 // 타입 정의
@@ -113,8 +130,14 @@ function HotspotComponent({
     disabled,
   });
 
-  // box_2d(0~1000) → px 변환 (RULE-009)
-  const pixelBox = box2dToPixel(object.box_2d, canvasSize);
+  // U-115: bbox 중심점 → 픽셀 좌표 변환 (RULE-009)
+  // 데이터 레벨(box_2d)은 유지, 렌더링만 원형으로 변환
+  const center = box2dCenter(object.box_2d);
+  const centerPxX = (center.x / NORMALIZED_MAX) * canvasSize.width;
+  const centerPxY = (center.y / NORMALIZED_MAX) * canvasSize.height;
+
+  // 히트 영역 크기 (원형 + 패딩)
+  const hitSize = (CIRCLE_RADIUS_PX + HIT_AREA_PADDING_PX) * 2;
 
   // 클릭 핸들러
   const handleClick = useCallback(() => {
@@ -141,13 +164,12 @@ function HotspotComponent({
   const isHighlighted = isHovered || isOver;
 
   // 툴팁 방향 결정: 상단 여백이 부족하면 아래쪽으로 표시
-  // 툴팁 높이(~80px) + 여유분을 기준으로 판단
   const TOOLTIP_FLIP_THRESHOLD = 80;
-  const tooltipBelow = pixelBox.top < TOOLTIP_FLIP_THRESHOLD;
+  const tooltipBelow = centerPxY - CIRCLE_RADIUS_PX < TOOLTIP_FLIP_THRESHOLD;
 
   // CSS 클래스 조합
   const classNames = [
-    'hotspot',
+    'hotspot-circle',
     isHighlighted && !disabled ? 'hovered' : '',
     disabled ? 'disabled' : '',
     isOver ? 'drop-target-active' : '',
@@ -162,10 +184,11 @@ function HotspotComponent({
       ref={setNodeRef}
       className={classNames}
       style={{
-        top: `${pixelBox.top}px`,
-        left: `${pixelBox.left}px`,
-        width: `${pixelBox.width}px`,
-        height: `${pixelBox.height}px`,
+        // U-115: 중심점 기반 위치 지정 (원형의 중앙이 bbox 중앙에 오도록)
+        top: `${centerPxY - hitSize / 2}px`,
+        left: `${centerPxX - hitSize / 2}px`,
+        width: `${hitSize}px`,
+        height: `${hitSize}px`,
         ...style,
       }}
       onClick={handleClick}
@@ -180,18 +203,13 @@ function HotspotComponent({
       data-demo-state={isDemoState}
       data-object-id={object.id}
     >
-      {/* L자 코너 마커 (하단 2개) */}
-      <div className="hotspot-corners" aria-hidden="true" />
+      {/* U-115: 원형 마커 (펄스 애니메이션은 CSS에서 처리) */}
+      <div className="hotspot-circle-marker" aria-hidden="true" />
 
       {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
       {isHighlighted && !disabled && (
         <div className="hotspot-tooltip">
           <span className="hotspot-tooltip-label">{object.label}</span>
-
-          {/* 데모 상태 표시 */}
-          {isDemoState && (
-            <span className="hotspot-tooltip-demo">{t('scene.hotspot.demo_hint')}</span>
-          )}
 
           {/* 드래그 오버 시 드롭 힌트 표시 */}
           {isOver && (
@@ -199,7 +217,7 @@ function HotspotComponent({
           )}
 
           {/* 일반 상호작용 힌트 */}
-          {!isOver && !isDemoState && object.interaction_hint && (
+          {!isOver && object.interaction_hint && (
             <span className="hotspot-tooltip-hint">
               {t('scene.hotspot.hint_prefix')}: {object.interaction_hint}
             </span>

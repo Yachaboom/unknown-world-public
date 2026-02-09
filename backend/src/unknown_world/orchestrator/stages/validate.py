@@ -24,6 +24,7 @@ from unknown_world.orchestrator.mock import MockOrchestrator
 from unknown_world.orchestrator.repair_loop import (
     MAX_REPAIR_ATTEMPTS,
     add_business_badges,
+    fix_economy_invariant,
     run_repair_loop,
 )
 from unknown_world.orchestrator.stages.types import (
@@ -126,6 +127,9 @@ async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
         try:
             # Mock 생성
             turn_output = orchestrator.generate_turn_output(ctx.turn_input)
+
+            # Economy 인바리언트 자동 교정 (모델 산술 오류 방지)
+            fix_economy_invariant(ctx.turn_input, turn_output)
 
             # 비즈니스 룰 검증 (U-018)
             biz_result = validate_business_rules(ctx.turn_input, turn_output)

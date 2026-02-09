@@ -13,14 +13,18 @@ backend/
 ├── prompts/ (XML Tags: meta/body)
 │   ├── system/game_master.{en,ko}.md
 │   ├── turn/turn_output_instructions.{en,ko}.md
-│   └── image/scene_prompt.{en,ko}.md
+│   ├── image/scene_prompt.{en,ko}.md
+│   └── vision/scene_affordances.{en,ko}.md (1~3개 제한 지침)
 ├── src/unknown_world/
 │   ├── main.py (Logging refined)
 │   ├── orchestrator/
 │   │   ├── pipeline.py (7-stage pipeline)
 │   │   ├── generate_turn_output.py
 │   │   ├── repair_loop.py (Model fallback)
-│   │   └── conversation_history.py (5-turn sliding window)
+│   │   ├── conversation_history.py (5-turn sliding window)
+│   │   └── stages/
+│   │       ├── resolve.py (Hotspot filtering: Priority/Overlap/Limit)
+│   │       └── render.py (Image generation bridge)
 │   ├── services/
 │   │   ├── genai_client.py (API Key Auth)
 │   │   ├── image_generation.py (Late-binding)
@@ -41,23 +45,45 @@ frontend/src/
 │   ├── ActionDeck.tsx (memo)
 │   ├── InventoryPanel.tsx (memo)
 │   ├── SceneCanvas.tsx (ResizeObserver)
+│   ├── Hotspot.tsx (Circle rendering & Pulse)
 │   ├── SceneImage.tsx (memo)
 │   ├── AgentConsole.tsx (memo)
 │   ├── EconomyHud.tsx (memo)
 │   └── NarrativeFeed.tsx (memo & Typing engine)
+├── styles/
+│   ├── style.css (Core layout)
+│   └── hotspot.css (Circle marker & Animation)
 ├── stores/ (Zustand: world, economy, inventory, agent)
+├── utils/
+│   └── box2d.ts (Coordinate conversion)
 └── turn/
     └── turnRunner.ts (Context injection)
 ```
 
 ### 주요 디렉토리 설명
 
-- `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 7단계 파이프라인으로 구현되어 있습니다. 영문화된 로그 시스템과 기술 부채 해소를 위한 테스트 격리 정책이 적용되어 있습니다.
+- `backend/src/unknown_world/orchestrator/stages/`: 게임 마스터의 7단계 파이프라인 개별 단계가 위치합니다. `resolve.py`에는 정밀분석 결과 핫스팟의 품질을 높이기 위한 우선순위 정렬 및 겹침 방지 필터링 로직이 포함되어 있습니다.
 - `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석, 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
-- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치하며, 핵심 컴포넌트들은 `React.memo`로 최적화되어 불필요한 리렌더링이 억제됩니다.
-- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`) 상태를 도메인별로 격리하여 관리합니다.
-- `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다. 에셋 매니페스트 스키마에 `'scene'` 타입이 추가되어 정합성이 확보되었습니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치하며, `Hotspot.tsx`는 비전 분석 결과를 원형 마커로 시각화합니다.
+- `frontend/src/styles/`: 테마 및 컴포넌트별 스타일 시트가 관리됩니다. `hotspot.css`는 원형 핫스팟의 펄스 애니메이션과 상태별 시각적 효과를 정의합니다.
+- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 도메인별 상태를 격리하여 관리합니다.
+- `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 70. 핫스팟 컴팩트 원형 디자인 및 우선순위 필터링 (U-115[Mvp])
+
+1. **백엔드 정밀도 및 개수 제어 (Priority & Limit Filter)**:
+    - **filter_hotspots 로직**: `resolve.py`에 구현된 후처리 필터를 통해 정밀분석 결과 중 (1) bbox 면적이 큰 오브젝트 우선 정렬, (2) 중심점 간 거리 150(15% 거리) 미만 겹침 제거, (3) 최종 최대 3개로 개수를 제한함.
+    - **Prompt Reinforcement**: `scene_affordances` 프롬프트에 "가장 중요하고 상호작용 가능한 오브젝트 1~3개 선택" 지침을 추가하여 모델이 응답 시점부터 고품질 핫스팟을 생성하도록 유도함.
+2. **프론트엔드 원형 마커 시스템 (Circle Hotspots)**:
+    - **Fixed Radius Design**: 기존 bbox 사각형 렌더링을 제거하고, 0~1000 좌표계 중심점을 기반으로 한 고정 반지름(22px) 원형 마커로 전환함. (페어링 Q1: Option B 결정)
+    - **Visual Discoverability**: 2초 주기의 펄스(pulse) 애니메이션을 통해 마커의 발견성을 높이고, `prefers-reduced-motion` 환경에서는 정적 glow 효과로 대체하여 접근성을 보호함.
+    - **Enhanced Hit Area**: 실제 시각적 마커보다 6px 더 넓은 히트 영역을 확보하여, 마우스 및 터치 조작 시의 편의성을 극대화함.
+3. **상태 기반 시각 피드백 (Interaction Feedback)**:
+    - **Contextual Styling**: 호버 시 마커 확대 및 툴팁 표시, 아이템 DnD 드롭 타겟 상태 시 앰버 색상 변화, 턴 처리 중 입력 잠금 시 grayscale 처리를 통해 시스템 상태를 직관적으로 전달함.
+    - **Coordinate Invariant (RULE-009)**: 데이터 레벨에서는 `[ymin, xmin, ymax, xmax]` 0~1000 규약을 유지하고, 렌더링 시점에만 `box2d.ts` 유틸을 통해 원형 중심점으로 변환함으로써 하위 호환성을 확보함.
 
 ---
 

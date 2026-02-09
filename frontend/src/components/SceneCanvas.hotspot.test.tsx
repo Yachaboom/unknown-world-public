@@ -201,11 +201,12 @@ describe('SceneCanvas Hotspots', () => {
     const firstHotspot = screen.getByLabelText('Object 1');
 
     // 초기 크기 (800x600) 기반 위치 확인
+    // U-115: 중심점(150, 150) -> px(120, 90), hitSize(56) -> top: 90-28=62, left: 120-28=92
     expect(firstHotspot).toHaveStyle({
-      top: '60px',
-      left: '80px',
-      width: '80px',
-      height: '60px',
+      top: '62px',
+      left: '92px',
+      width: '56px',
+      height: '56px',
     });
 
     // 크기 변경 트리거 (400x300)
@@ -217,11 +218,12 @@ describe('SceneCanvas Hotspots', () => {
     });
 
     // 변경된 크기 기반 위치 확인
+    // U-115: 중심점(150, 150) -> px(60, 45), hitSize(56) -> top: 45-28=17, left: 60-28=32
     expect(firstHotspot).toHaveStyle({
-      top: '30px',
-      left: '40px',
-      width: '40px',
-      height: '30px',
+      top: '17px',
+      left: '32px',
+      width: '56px',
+      height: '56px',
     });
 
     vi.useRealTimers();

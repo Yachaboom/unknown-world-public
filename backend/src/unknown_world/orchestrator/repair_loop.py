@@ -29,6 +29,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from unknown_world.config.economy import MAX_CREDIT
 from unknown_world.config.models import MODEL_FALLBACK_LABEL, ModelLabel
 from unknown_world.models.turn import (
     CurrencyAmount,
@@ -300,6 +301,9 @@ async def run_repair_loop(
             # U-127: Thought Signature 추적
             last_thought_signature = gen_result.thought_signature
 
+            # Economy 인바리언트 자동 교정 (모델 산술 오류 방지)
+            fix_economy_invariant(turn_input, gen_result.output)
+
             # 비즈니스 룰 검증
             biz_result = validate_business_rules(turn_input, gen_result.output)
 
@@ -453,6 +457,45 @@ def _build_repair_context_business(
 
 {messages["business_instruction"]}
 """
+
+
+def fix_economy_invariant(turn_input: TurnInput, output: TurnOutput) -> None:
+    """Economy 인바리언트 자동 교정 (서버 사이드).
+
+    모델이 생성한 cost/gains를 기반으로 balance_after와 credit를
+    서버에서 재계산합니다. 이를 통해 모델의 산술 오류로 인한
+    Economy FAIL(balance mismatch)을 방지합니다.
+
+    수정 대상:
+        - cost: snapshot + MAX_CREDIT 초과 시 cap
+        - balance_after: max(0, snapshot - cost + gains) 재계산
+        - credit: max(0, cost - snapshot - gains) 재계산
+
+    Args:
+        turn_input: 사용자 턴 입력 (economy_snapshot 참조)
+        output: 모델이 생성한 TurnOutput (in-place 수정)
+    """
+    snapshot = turn_input.economy_snapshot
+    economy = output.economy
+
+    # 1. cost가 snapshot + MAX_CREDIT를 초과하면 cap
+    max_affordable_signal = snapshot.signal + MAX_CREDIT
+    if economy.cost.signal > max_affordable_signal:
+        economy.cost.signal = max_affordable_signal
+    if economy.cost.memory_shard > snapshot.memory_shard:
+        economy.cost.memory_shard = snapshot.memory_shard
+
+    # 2. balance_after 재계산 (RULE-005: 잔액 음수 금지)
+    economy.balance_after = CurrencyAmount(
+        signal=max(0, snapshot.signal - economy.cost.signal + economy.gains.signal),
+        memory_shard=max(
+            0,
+            snapshot.memory_shard - economy.cost.memory_shard + economy.gains.memory_shard,
+        ),
+    )
+
+    # 3. credit 재계산
+    economy.credit = max(0, economy.cost.signal - snapshot.signal - economy.gains.signal)
 
 
 def add_business_badges(

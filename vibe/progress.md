@@ -1,5 +1,44 @@
 # 프로젝트 진행 상황
 
+## [2026-02-10 18:30] U-115[Mvp]: 핫스팟 컴팩트 원형(Circle) 디자인 + 1~3개 제한 생성 + 우선순위/겹침 방지 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 정밀분석 핫스팟을 bbox 사각형에서 **컴팩트한 원형(Circle) 마커**로 전환하고, **1~3개 제한 + 우선순위/겹침 방지** 필터링 로직 구현.
+- **추가 컴포넌트**: `vibe/unit-results/U-115[Mvp].md` (개발 보고서), `frontend/src/components/Hotspot.tsx` (원형 렌더링), `frontend/src/styles/hotspot.css` (펄스 애니메이션).
+- **달성 요구사항**: [Consistency OK] 0~1000 정규화 좌표 규약 유지, [RULE-002] 게임 UI 고정 레이아웃 강화, [PRD 6.2] 핫스팟 생성 정책 준수.
+
+### 기술적 구현 세부사항
+
+**백엔드 우선순위 필터링 (Priority Filtering)**:
+- **filter_hotspots()**: `resolve.py`에 구현된 필터 로직을 통해 (1) bbox 면적 기준 내림차순 정렬, (2) 중심 거리 150 미만 겹침 제거, (3) 최대 3개 제한을 적용하여 핫스팟 품질 상향.
+- **프롬프트 강화**: `scene_affordances.*.md` 지침을 보강하여 모델이 가장 중요하고 상호작용 가능한 오브젝트를 1~3개만 선택하도록 유도.
+
+**프론트엔드 원형 렌더링 (Circle Rendering)**:
+- **Circle Marker**: bbox의 정규화 중심점을 기반으로 고정 반지름(22px) 원형 마커로 시각화. 히트 영역(+6px)을 확보하여 56px의 충분한 터치 타겟 제공.
+- **Pulse Animation**: 2초 주기의 펄스 효과를 통해 발견성을 높이고, `prefers-reduced-motion` 감지 시 정적 glow로 대체하여 접근성 확보.
+- **Interaction Feedback**: 호버 시 확대 및 툴팁 표시, DnD 드롭 타겟 상태 시 색상 변화, 턴 처리 중 비활성 상태(grayscale) 등 상태별 시각적 피드백 완성.
+
+**코드 구조**:
+repo-root/
+├── backend/src/unknown_world/orchestrator/stages/resolve.py (필터 로직)
+└── frontend/src/
+    ├── components/Hotspot.tsx (원형 렌더링 컴포넌트)
+    ├── styles/hotspot.css (애니메이션 및 스타일)
+    └── utils/box2d.ts (좌표 변환 유틸)
+
+### 성능 및 품질 지표
+
+- **시각적 품질**: 겹치는 사각형 핫스팟 문제를 해결하여 깔끔한 장면 분석 UX 제공.
+- **안정성**: Mock/Real 모드 모두에서 1~3개 제한 및 정확한 중심 배치를 확인.
+
+### 다음 단계
+
+- **CP-MVP-03**: 10분 데모 루프에서 "정밀분석 → 핫스팟 클릭" 시나리오 통합 검증
+- **U-109[Mmp]**: 자동 실행(Autopilot) 확장 시 동일 필터링 로직 재사용
+
+---
+
 ## [2026-02-10 17:30] U-126[Mvp]: MVP 성능/품질 최적화 + 기술 부채 해소 완료
 
 ### 구현 완료 항목

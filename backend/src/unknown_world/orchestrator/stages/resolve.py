@@ -3,6 +3,7 @@
 해결 단계입니다.
 U-076에서 "정밀분석" 트리거 분기가 추가되었습니다.
 U-090에서 비정밀분석 턴의 핫스팟 생성을 강제 필터링합니다.
+U-115에서 핫스팟 후처리 필터(우선순위 정렬 + 겹침 제거 + 1~3개 제한)를 추가합니다.
 
 설계 원칙:
     - RULE-008: 단계 이벤트 일관성
@@ -11,22 +12,27 @@ U-090에서 비정밀분석 턴의 핫스팟 생성을 강제 필터링합니다
     - 동작 보존: 기존 시뮬레이션 지연 유지
     - U-076: "정밀분석" 트리거 시 Agentic Vision 실행 → 핫스팟 추가
     - U-090: 비정밀분석 턴에서 GM 생성 핫스팟 조용히 제거 (서버 안전장치)
+    - U-115: 핫스팟 1~3개 제한 + 면적 기반 우선순위 + 겹침 방지 필터
 
 참조:
     - vibe/refactors/RU-005-Q4.md
     - vibe/unit-plans/U-076[Mvp].md
     - vibe/unit-plans/U-090[Mvp].md
+    - vibe/unit-plans/U-115[Mvp].md
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import math
 
 from unknown_world.config.models import TextModelTiering
 from unknown_world.models.turn import (
     AgentPhase,
+    Box2D,
     Language,
+    SceneObject,
 )
 from unknown_world.orchestrator.stages.types import (
     EmitFn,
@@ -38,8 +44,101 @@ from unknown_world.orchestrator.stages.types import (
 # 모의 처리 지연 시간 (ms)
 RESOLVE_DELAY_MS = 150
 
+# U-115: 핫스팟 후처리 상수
+HOTSPOT_MAX_COUNT = 3  # 최대 핫스팟 개수
+HOTSPOT_MIN_DISTANCE = 150  # 겹침 판정 최소 거리 (0~1000 좌표계, Q3: Option B)
+
 # 로거 (프롬프트/비밀정보 노출 금지 - RULE-007)
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# U-115: 핫스팟 후처리 필터 (우선순위 정렬 + 겹침 제거 + 개수 제한)
+# =============================================================================
+
+
+def _bbox_area(box: Box2D) -> int:
+    """bbox 면적을 계산합니다 (0~1000 좌표계).
+
+    Args:
+        box: 바운딩 박스
+
+    Returns:
+        면적 값 (0~1000000)
+    """
+    return (box.ymax - box.ymin) * (box.xmax - box.xmin)
+
+
+def _bbox_center(box: Box2D) -> tuple[float, float]:
+    """bbox 중심점을 계산합니다 (0~1000 좌표계).
+
+    Args:
+        box: 바운딩 박스
+
+    Returns:
+        (center_x, center_y) 튜플
+    """
+    cx = (box.xmin + box.xmax) / 2.0
+    cy = (box.ymin + box.ymax) / 2.0
+    return (cx, cy)
+
+
+def _center_distance(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """두 중심점 간 유클리드 거리를 계산합니다.
+
+    Args:
+        a: 첫 번째 점 (x, y)
+        b: 두 번째 점 (x, y)
+
+    Returns:
+        거리 값
+    """
+    return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+
+
+def filter_hotspots(
+    objects: list[SceneObject],
+    *,
+    max_count: int = HOTSPOT_MAX_COUNT,
+    min_distance: int = HOTSPOT_MIN_DISTANCE,
+) -> list[SceneObject]:
+    """핫스팟을 우선순위 정렬 + 겹침 제거 + 개수 제한으로 필터링합니다.
+
+    U-115[Mvp]: 정밀분석 결과의 핫스팟을 1~3개로 제한하고,
+    크기가 큰 오브젝트를 우선 선택하며, 중심점 거리가 임계값 미만인
+    겹치는 핫스팟을 배제합니다.
+
+    Args:
+        objects: 원본 SceneObject 목록
+        max_count: 최대 유지 개수 (기본 3)
+        min_distance: 겹침 판정 최소 거리 (기본 150, 0~1000 좌표계)
+
+    Returns:
+        필터링된 SceneObject 목록 (최대 max_count개)
+    """
+    if not objects:
+        return []
+
+    # 1. 면적 기준 내림차순 정렬 (큰 오브젝트 우선)
+    sorted_objs = sorted(objects, key=lambda o: _bbox_area(o.box_2d), reverse=True)
+
+    # 2. 겹침 필터 + 개수 제한
+    selected: list[SceneObject] = []
+    for obj in sorted_objs:
+        if len(selected) >= max_count:
+            break
+
+        center = _bbox_center(obj.box_2d)
+
+        # 이미 선택된 핫스팟과의 거리 검사
+        is_overlapping = any(
+            _center_distance(center, _bbox_center(s.box_2d)) < min_distance for s in selected
+        )
+
+        if not is_overlapping:
+            selected.append(obj)
+
+    return selected
 
 
 # =============================================================================
@@ -117,7 +216,9 @@ async def _execute_vision_analysis(
             # 정밀분석: 비전 결과로 대체 (텍스트 모델은 이미지를 보지 않아 불일치)
             # 텍스트 모델이 생성한 objects는 내러티브 기반이므로
             # 실제 이미지를 분석한 비전 결과만 사용해야 정합성 유지
-            merged_objects = new_objects[:5]
+
+            # U-115: 우선순위 정렬 + 겹침 제거 + 1~3개 제한
+            merged_objects = filter_hotspots(new_objects)
 
             # UI 업데이트
             new_ui = ctx.output.ui.model_copy(update={"objects": merged_objects})
@@ -140,9 +241,10 @@ async def _execute_vision_analysis(
             ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
 
             logger.info(
-                "[Resolve] Detailed analysis succeeded (U-076)",
+                "[Resolve] Detailed analysis succeeded (U-076, U-115 filter applied)",
                 extra={
                     "affordance_count": len(result.affordances),
+                    "pre_filter_count": len(new_objects),
                     "merged_object_count": len(merged_objects),
                     "analysis_time_ms": result.analysis_time_ms,
                 },

@@ -16,11 +16,16 @@ Analyze the given scene image and extract **clickable/interactable objects (affo
 ## Task Instructions
 
 1. Carefully observe the image and identify **interactable objects**.
-2. For each object:
+2. Select only **1 to 3** of the most important and interactable objects from the scene.
+3. **Selection criteria** (by priority):
+   - (1) Objects that are **large and visually prominent** in the scene
+   - (2) Objects that are **important for game progression** (doors, keys, NPCs, etc.)
+   - (3) Objects that are **contextually appropriate for interaction**
+4. **If objects are close together or overlapping, select only one** of them.
+5. For each object:
    - **label**: Object name (English, concise)
    - **box_2d**: Bounding box coordinates `{ymin, xmin, ymax, xmax}` (0~1000 normalized)
    - **interaction_hint**: One-line hint about possible interaction (optional)
-3. Extract up to **5 objects** (ordered by importance and interaction likelihood).
 
 ---
 
