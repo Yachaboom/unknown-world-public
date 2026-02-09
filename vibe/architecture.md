@@ -11,74 +11,76 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ```text
 backend/
 ├── prompts/ (XML Tags: meta/body)
+│   ├── image/scene_prompt.{en,ko}.md
+│   ├── scan/scan_instructions.{en,ko}.md
 │   ├── system/game_master.{en,ko}.md
 │   ├── turn/turn_output_instructions.{en,ko}.md
-│   ├── image/scene_prompt.{en,ko}.md
-│   └── vision/scene_affordances.{en,ko}.md (1~3개 제한 지침)
+│   └── vision/scene_affordances.{en,ko}.md
 ├── src/unknown_world/
-│   ├── main.py (Logging refined)
+│   ├── api/
+│   │   ├── ending_report.py
+│   │   ├── image.py
+│   │   ├── item_icon.py
+│   │   ├── scanner.py
+│   │   ├── turn_stream_events.py
+│   │   └── turn.py
 │   ├── artifacts/
-│   │   └── ending_report.py (U-025: Session summary engine)
-│   ├── harness/
-│   │   ├── scenario.py (U-025: Scenario & Gate models)
-│   │   └── replay_runner.py (U-025: Hard Gate verification engine)
-│   ├── orchestrator/
-│   │   ├── pipeline.py (7-stage pipeline)
-│   │   ├── generate_turn_output.py
-│   │   ├── repair_loop.py (Model fallback)
-│   │   ├── conversation_history.py (5-turn sliding window)
-│   │   └── stages/
-│   │       ├── resolve.py (Hotspot filtering: Priority/Overlap/Limit)
-│   │       └── render.py (Image generation bridge)
-│   ├── services/
-│   │   ├── genai_client.py (API Key Auth)
-│   │   ├── image_generation.py (Late-binding)
-│   │   └── item_icon_generator.py (English logs)
-│   ├── validation/
-│   │   ├── business_rules.py (Gains-aware economy)
-│   │   └── language_gate.py
+│   │   └── ending_report.py
 │   ├── config/
-│   │   ├── models.py (ModelLabel SSOT)
-│   │   └── economy.py (Reward caps)
-│   └── models/
-│       └── turn.py (EconomyOutput.gains)
-└── tests/ (Isolated & Skips applied)
+│   │   ├── economy.py
+│   │   └── models.py
+│   ├── harness/
+│   │   ├── replay_runner.py
+│   │   └── scenario.py
+│   ├── main.py
+│   ├── models/
+│   │   ├── scanner.py
+│   │   └── turn.py
+│   ├── orchestrator/
+│   │   ├── conversation_history.py
+│   │   ├── fallback.py
+│   │   ├── generate_turn_output.py
+│   │   ├── mock.py
+│   │   ├── pipeline.py
+│   │   ├── prompt_loader.py
+│   │   ├── repair_loop.py
+│   │   └── stages/ (Parse, Plan, Resolve, Render, Verify, Commit)
+│   ├── services/
+│   │   ├── genai_client.py
+│   │   ├── image_generation.py
+│   │   ├── image_understanding.py
+│   │   └── item_icon_generator.py
+│   └── validation/
+│       ├── business_rules.py
+│       └── language_gate.py
+└── tests/ (unit, integration, qa)
 frontend/src/
-├── App.tsx (Input lock & Error guard)
-├── i18n.ts (DEFAULT: en-US)
-├── components/ (HUD-first UI, React.memo Optimized)
-│   ├── ActionDeck.tsx (memo)
-│   ├── InventoryPanel.tsx (memo)
-│   ├── SceneCanvas.tsx (ResizeObserver)
-│   ├── Hotspot.tsx (Circle rendering & Pulse)
-│   ├── QuestPanel.tsx (U-023: Design renewal)
-│   ├── ObjectiveTracker.tsx (U-023: Icon sync)
-│   ├── SceneImage.tsx (memo)
-│   ├── AgentConsole.tsx (memo)
-│   ├── EconomyHud.tsx (memo)
-│   ├── NarrativeFeed.tsx (memo & Typing engine)
-│   └── EndingReportModal.tsx (U-025: CRT Artifact UI)
-├── styles/
-│   ├── style.css (Core layout)
-│   └── hotspot.css (Circle marker & Animation)
-├── stores/ (Zustand: world, economy, inventory, agent, artifacts)
-│   └── artifactsStore.ts (U-025: Report state management)
-├── utils/
-│   └── box2d.ts (Coordinate conversion)
-└── turn/
-    └── turnRunner.ts (Context injection)
+├── api/ (turnStream, scanner, image)
+├── components/ (ActionDeck, InventoryPanel, SceneCanvas, AgentConsole, etc.)
+├── data/ (demoProfiles, itemIconPresets)
+├── demo/ (DemoProfileSelect)
+├── dnd/ (InventoryDnD, etc.)
+├── locales/ (i18n translations)
+├── save/ (sessionLifecycle)
+├── schemas/ (turn, scanner, economy)
+├── stores/ (world, economy, inventory, agent, artifacts)
+├── turn/ (turnRunner)
+├── App.tsx
+├── i18n.ts
+├── main.tsx
+├── setupTests.ts
+└── style.css
 ```
 
 ### 주요 디렉토리 설명
 
 - `backend/src/unknown_world/artifacts/`: 세션 종료 시 생성되는 엔딩 리포트 등 게임 아티팩트 생성 로직이 위치합니다.
 - `backend/src/unknown_world/harness/`: 시나리오 기반의 리플레이 실행 및 Hard Gate 검증 엔진이 위치합니다.
-- `backend/src/unknown_world/orchestrator/stages/`: 게임 마스터의 7단계 파이프라인 개별 단계가 위치합니다. `resolve.py`에는 정밀분석 결과 핫스팟의 품질을 높이기 위한 우선순위 정렬 및 겹침 방지 필터링 로직이 포함되어 있습니다.
+- `backend/src/unknown_world/orchestrator/stages/`: 게임 마스터의 7단계 파이프라인 개별 단계가 위치합니다.
 - `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석, 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
-- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치하며, `EndingReportModal.tsx`는 세션 요약 리포트를 아티팩트 형태로 시각화합니다.
-- `frontend/src/styles/`: 테마 및 컴포넌트별 스타일 시트가 관리됩니다. `hotspot.css`는 원형 핫스팟의 펄스 애니메이션과 상태별 시각적 효과를 정의합니다.
-- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, `artifactsStore.ts`는 엔딩 리포트 생성 및 표시 상태를 격리하여 관리합니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치합니다.
+- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드/경제/인벤토리/에이전트/아티팩트 상태를 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 
 ## 72. 엔딩 리포트 및 리플레이 하네스 (U-025[Mvp])
