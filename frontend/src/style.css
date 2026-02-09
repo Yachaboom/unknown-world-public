@@ -16,8 +16,10 @@
   --bg-color: #0d0d0d; /* 배경: 거의 순수한 검정 */
   --text-color: #33ff00; /* 주 텍스트: 인광 녹색 (CRT 그린) */
   --text-dim: #22a000; /* 보조 텍스트: 약간 더 밝게 하여 가독성 향상 (U-049) */
+  --text-muted: #4a7a4a; /* U-125: 액션 로그용 저채도 색상 */
   --accent-color: #ff00ff; /* 강조색: 마젠타 */
   --border-color: #33ff00; /* 테두리: 인광 녹색 */
+  --border-dim: rgba(51, 255, 0, 0.15); /* U-125: 이전 턴/현재 턴 구분선 */
   --panel-bg: rgba(0, 15, 0, 0.7); /* 패널 배경: 대비 향상을 위해 불투명도 증가 (U-049) */
   --warning-color: #ffaa00; /* 경고: 주황색 */
   --error-color: #ff3333; /* 에러: 붉은색 */
@@ -85,6 +87,33 @@
   --hotspot-corner-size: 12px;
   --hotspot-corner-thickness: 2px;
   --hotspot-stroke-width: 1px;
+}
+
+/* ============================================
+   1.1 라이트 테마 (Light Theme)
+   - CRT 페이퍼/브라이트 모드 재현
+   - Q1 Option A: 고대비 녹색-회색 조합
+   ============================================ */
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-color: #f4f8f4; /* 밝은 녹색 틴트 배경 */
+  --text-color: #004d00; /* 짙은 녹색 (가독성) */
+  --text-dim: #668866; /* 보조 텍스트 (이전 턴용) */
+  --text-muted: #809980; /* 액션 로그용 */
+  --accent-color: #9c27b0; /* 보라색 강조 */
+  --border-color: #004d00;
+  --border-dim: rgba(0, 77, 0, 0.15);
+  --panel-bg: rgba(220, 235, 220, 0.85); /* 밝은 패널 배경 */
+  --warning-color: #e65100;
+  --error-color: #c62828;
+
+  /* CRT 효과 완화 */
+  --crt-scanline: rgba(0, 50, 0, 0.04);
+  --glow-intensity: 2px;
+
+  /* 핫스팟 (라이트 테마 최적화) */
+  --hotspot-primary: #7b1fa2;
+  --hotspot-glow: rgba(123, 31, 162, 0.2);
 }
 
 /* ============================================
@@ -1457,6 +1486,74 @@ body {
 }
 
 /* ============================================
+   8.0.1 U-125: 이전 턴 텍스트 주목성 제거
+   - Q1 Option A: 색상 dim + 폰트 0.85em + opacity 0.75 (3중 약화)
+   - Q2 Option B: hover 시 opacity: 1 + 기본 색상 복원
+   - 시스템 메시지(.system-entry)는 기존 스타일 유지
+   - 현재 턴(.narrative-active-text)은 밝은 스타일 유지
+   ============================================ */
+
+/* 이전 턴 내러티브 엔트리: dim + 폰트 축소 + opacity 약화 */
+.narrative-entry.past-entry {
+  font-size: 0.85em;
+  opacity: 0.75;
+  line-height: 1.4;
+  transition: opacity 0.2s ease;
+}
+
+/* 일반 내러티브 텍스트만 dim 색상 적용 (액션로그/시스템은 개별 색상 유지) */
+.narrative-entry.past-entry:not(.action-log-entry):not(.system-entry) .narrative-text {
+  color: var(--text-dim);
+}
+
+.narrative-entry.past-entry .narrative-timestamp {
+  opacity: 0.7;
+}
+
+/* 이전 턴 hover 시 복원 (Q2 Option B: opacity + 기본 색상) */
+.narrative-entry.past-entry:hover {
+  opacity: 1;
+}
+
+.narrative-entry.past-entry:hover .narrative-text {
+  color: var(--text-color);
+}
+
+/* 액션 로그가 이전 턴일 때: 폰트 더 축소 (이미 작음) + muted 색상 유지 */
+.narrative-entry.past-entry.action-log-entry {
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
+.narrative-entry.past-entry.action-log-entry .narrative-text {
+  color: var(--text-muted);
+}
+
+/* 시스템 메시지가 이전 턴일 때: 기존 font-size 유지 (별도 스타일) */
+.narrative-entry.past-entry.system-entry {
+  font-size: 0.85em; /* 시스템 메시지 기본 크기 유지 */
+  opacity: 0.6;
+}
+
+.narrative-entry.past-entry.system-entry .narrative-text {
+  color: var(--text-dim);
+}
+
+/* 현재 턴 (streaming/typing): 밝은 스타일 강조 + 미세 구분선 */
+.narrative-entry.narrative-active-text {
+  font-size: 1em;
+  opacity: 1;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-dim);
+  padding-top: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.narrative-entry.narrative-active-text .narrative-text {
+  color: var(--text-color);
+}
+
+/* ============================================
    8.1. U-070: Action Log Entry 스타일
    - 액션 로그는 내러티브와 시각적으로 구분됨
    - PRD 9.0: "행동 실행: ..." 형식으로 표시
@@ -1464,23 +1561,23 @@ body {
    ============================================ */
 
 .action-log-entry {
-  color: var(--text-muted, #4a7a4a);
+  color: var(--text-muted);
   font-style: italic;
   font-size: 0.8em;
   padding-left: 0.8em;
-  border-left: 1px solid var(--text-muted, #4a7a4a);
+  border-left: 1px solid var(--text-muted);
   border-bottom: none;
   margin: 2px 0;
   opacity: 0.7;
 }
 
 .action-log-entry .narrative-text {
-  color: var(--text-muted, #4a7a4a);
+  color: var(--text-muted);
   font-style: italic;
 }
 
 .action-log-icon {
-  color: var(--text-muted, #4a7a4a);
+  color: var(--text-muted);
   margin-right: 4px;
   font-style: normal;
   font-size: 0.9em;
@@ -2698,8 +2795,9 @@ button:disabled,
    17. 내러티브 스트리밍 효과
    ============================================ */
 
+/* U-125: 현재 턴 streaming 상태도 밝기 유지 (이전 opacity: 0.8 → 1, 이전 턴과의 대비 강화) */
 .narrative-entry.streaming {
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .cursor-blink {

@@ -324,8 +324,13 @@ export function NarrativeFeed({
         const entryType = entry.type ?? 'narrative';
         const isActionLog = entryType === 'action_log';
         const isSystem = entryType === 'system';
+        // U-125: 이전 턴 vs 현재 턴 시각 계층 구분
+        // - 유휴 상태(showActiveTextArea=false)이고 마지막 엔트리 → 현재 턴으로 밝게 유지
+        // - 그 외 → 이전 턴으로 약화 (past-entry)
+        const isCurrentIdleTurn = isLastEntry && !showActiveTextArea;
         const entryClassName = [
           'narrative-entry',
+          isCurrentIdleTurn ? 'narrative-active-text' : 'past-entry',
           isActionLog && 'action-log-entry',
           isSystem && 'system-entry',
         ]
@@ -350,8 +355,11 @@ export function NarrativeFeed({
       })}
 
       {/* U-097: 활성 텍스트 영역 - 스트리밍 실시간 출력 또는 타이핑 효과 */}
+      {/* U-125: narrative-active-text 클래스로 현재 턴 강조 유지 */}
       {showActiveTextArea && (
-        <div className={`narrative-entry ${streamingText ? 'streaming' : 'typing'}`}>
+        <div
+          className={`narrative-entry narrative-active-text ${streamingText ? 'streaming' : 'typing'}`}
+        >
           <span className="narrative-timestamp">
             {streamingText
               ? t('narrative.streaming_label')

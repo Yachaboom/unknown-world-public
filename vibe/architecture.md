@@ -43,6 +43,7 @@ frontend/src/components/AgentConsole.tsx
 frontend/src/components/EconomyHud.tsx
 frontend/src/components/InventoryPanel.tsx
 frontend/src/components/NarrativeFeed.tsx
+frontend/src/components/NarrativeFeed.U-125.test.tsx (신규: U-125)
 frontend/src/components/ObjectiveTracker.tsx
 frontend/src/components/RateLimitPanel.tsx (신규: U-130)
 frontend/src/components/ScannerSlot.tsx
@@ -56,11 +57,13 @@ frontend/src/stores/agentStore.ts
 frontend/src/turn/turnRunner.ts
 shared/schemas/turn/turn_output.schema.json
 vibe/unit-results/U-130[Mvp].md
+vibe/unit-results/U-125[Mvp].md (신규: U-125)
 vibe/unit-results/U-129[Mvp].md
 vibe/unit-results/U-128[Mvp].md
 vibe/unit-results/U-127[Mvp].md
 vibe/unit-results/U-124.md
 vibe/unit-runbooks/U-130[Mvp]-runbook.md
+vibe/unit-runbooks/U-125-past-turn-dim-runbook.md (신규: U-125)
 vibe/unit-runbooks/U-129-item-sell-ux-runbook.md
 vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
 vibe/unit-runbooks/U-124-profile-scene-images-runbook.md
@@ -76,6 +79,20 @@ vibe/unit-runbooks/U-124-profile-scene-images-runbook.md
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `frontend/public/ui/scenes/`: nanobanana-mcp로 제작된 프로필별 첫 씬 이미지(1024x576 WebP) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 63. 이전턴 텍스트 주목성 제거 (U-125[Mvp])
+
+1. **시각적 계층화 (Visual Hierarchy)**:
+    - **Past Entry De-emphasis**: NarrativeFeed의 이전 턴 엔트리(`.past-entry`)에 **색상 약화(dim), 폰트 축소(0.85em), 불투명도 조절(0.75)**을 적용하여 배경 정보로 전환함.
+    - **Active Text Emphasis**: 현재 타이핑 중이거나 스트리밍 중인 텍스트(`.narrative-active-text`)는 밝은 색상과 기본 폰트 크기를 유지하여 시선을 집중시킴.
+    - **Visual Separation**: 현재 턴 영역 상단에 미세한 구분선(`border-top: 1px solid var(--border-dim)`)을 추가하여 과거 기록과의 경계를 명확히 함.
+2. **인터랙티브 가독성 복원 (Hover Restoration)**:
+    - **Interaction Policy**: 약화된 이전 턴 텍스트에 마우스 hover 시 불투명도를 `1`로 높이고 색상을 기본 텍스트 색상(`--text-color`)으로 복원하여, 필요 시 과거 기록을 편하게 읽을 수 있도록 지원함.
+3. **상태 기반 스타일 제어 (Conditional Styling)**:
+    - **Turn Lifecycle Sync**: `isLastEntry`와 `showActiveTextArea` 상태를 조합하여, 대기 중일 때는 마지막 엔트리를 강조하고 입력/처리 중일 때는 별도 영역을 강조하는 정밀한 로직 적용.
+    - **System Entry Protection**: 시스템 메시지(`.system-entry`)는 약화 대상에서 분리하여 상태 인지성이 저하되지 않도록 개별 스타일 정책을 유지함.
 
 ---
 

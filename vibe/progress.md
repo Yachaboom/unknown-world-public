@@ -1,5 +1,39 @@
 # 프로젝트 진행 상황
 
+## [2026-02-09 19:50] U-125[Mvp]: 이전턴 텍스트 주목성 제거 - 색상 변경 + 폰트 축소 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: NarrativeFeed의 이전 턴 텍스트를 시각적으로 약화(dim 색상, 폰트 0.85em, opacity 0.75)하여 현재 턴의 주목성을 극대화함. hover 시 원본 스타일로 복원되는 인터랙션 추가.
+- **추가 컴포넌트**: `vibe/unit-results/U-125[Mvp].md` (보고서), `vibe/unit-runbooks/U-125-past-turn-dim-runbook.md` (런북), `frontend/src/components/NarrativeFeed.U-125.test.tsx` (테스트).
+- **달성 요구사항**: [PRD 9.1] CRT 테마 준수, [PRD 9.4/9.5] 가독성 및 시각적 계층화, [RULE-002] 게임 UI 가이드라인 준수.
+
+### 기술적 구현 세부사항
+
+**이전 턴 시각적 약화 (Visual De-emphasis)**:
+- **3중 약화 전략**: 이전 턴 엔트리(`.past-entry`)에 `color: var(--text-dim)`, `font-size: 0.85em`, `opacity: 0.75`를 동시 적용하여 배경 정보로 전환.
+- **현재 턴 강조 유지**: 스트리밍/타이핑 중인 텍스트(`.narrative-active-text`)는 1em 크기와 밟은 색상을 유지하며, 상단에 `border-top` 구분선을 추가하여 시각적 분리 강화.
+- **인터랙션 복원**: 약화된 텍스트에 마우스 hover 시 `opacity: 1`과 기본 텍스트 색상으로 복원하여 가독성 편의 제공.
+- **시스템 메시지 보호**: 이미지 생성 중 메시지 등 시스템 엔트리는 약화 대상에서 제외하거나 별도 스타일을 유지하여 상태 인지성 보호.
+
+**코드 구조**:
+repo-root/
+├── frontend/src/components/NarrativeFeed.tsx (조건부 클래스 적용 로직)
+├── frontend/src/components/NarrativeFeed.U-125.test.tsx (클래스 분리 테스트)
+└── frontend/src/style.css (past-entry/active-text 스타일 및 라이트 테마 대응)
+
+### 성능 및 품질 지표
+
+- **가독성**: 3중 약화 상태에서도 텍스트 식별이 가능한 대비를 유지함을 확인.
+- **안정성**: Vitest를 통해 턴 진행 상태(Idle, Streaming, Typing)에 따른 정확한 클래스 할당 검증 완료.
+
+### 다음 단계
+
+- **U-126[Mvp]**: MVP 성능/품질 기본 최적화
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-09 12:40] U-129[Mvp]: 아이템 판매 직관적 UX 개선 완료
 
 ### 구현 완료 항목

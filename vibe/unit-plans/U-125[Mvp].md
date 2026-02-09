@@ -134,14 +134,14 @@ NarrativeFeed의 **이전 턴 텍스트(entries)**를 시각적으로 약화하�
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: 이전 턴 약화 정도는?
-  - Option A: **색상 dim + 폰트 0.85em + opacity 0.75** (3중 약화, 강한 구분)
+- [x] **Q1**: 이전 턴 약화 정도는?
+  - ✅Option A: **색상 dim + 폰트 0.85em + opacity 0.75** (3중 약화, 강한 구분)
   - Option B: 색상 dim + 폰트 0.9em (2중 약화, 중간 구분)
   - Option C: 색상 dim만 (약한 구분, 폰트 동일)
 
-- [ ] **Q2**: 이전 턴 hover 시 밝아지는 효과?
+- [x] **Q2**: 이전 턴 hover 시 밝아지는 효과?
   - Option A: 없음 (항상 약화)
-  - Option B: **hover 시 opacity: 1 + 기본 색상** (읽기 편의)
+  - ✅Option B: **hover 시 opacity: 1 + 기본 색상** (읽기 편의)
   - Option C: hover 시 opacity만 복원
 
 ## 참고 자료
