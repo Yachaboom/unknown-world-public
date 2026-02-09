@@ -26,6 +26,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **[2026-02-10 로그/경제/밸런스 보강]** 백엔드 로그 영문화(U-135), 경제 검증 보상 시나리오 수정+ModelLabel 통합(U-136), Signal 획득-소비 밸런스 조정(U-137). 상세: `vibe/changelog.md`
 - **[2026-02-10 기술 부채 통합]** U-126에 debt-log.md 미해결 부채 8건 통합(테스트 mock/기대값/스키마 수정 + 아키텍처 변경 미반영 테스트 격리). 3건 MMP 보류. 상세: `vibe/changelog.md`
 - **[2026-02-10 공개 저장소 이전]** M5에 U-138(공개 저장소 이전+불필요 파일 정리) 추가. U-121 의존성에 U-138 추가. CP-SUB-01 의존성에 U-138 추가. 상세: `vibe/changelog.md`
+- **[2026-02-10 공개 레포 준비 통합 + 백로그 복원]** U-138을 "공개 저장소 준비 통합(레포 이전+문서 영문화+파일 정리)"으로 확대 재편. U-138을 U-120 전에 배치(배포가 공개 레포 기반). U-120 의존성에 U-138 추가. 누락된 백로그(CP-MVP-03, MMP M5) 복원. 상세: `vibe/changelog.md`
 - **[2026-02-10 Autopilot 제거 + Quest/Rule 심플화]** U-024(Backend Autopilot) 완전 삭제. U-023을 "Quest UI 개선 + Rule UI 제거"로 re-scope(45분). U-025(엔딩 리포트+리플레이) 유지. PRD 6.8 Autopilot 자동 실행 제거, Action Queue/Badge/Self-Repair 유지. 상세: `vibe/changelog.md`
 
 ## 맥락 요약 (SSOT 근거)
@@ -137,7 +138,7 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 | 제출 요건                                | 상태 | 담당 유닛 | 비고                                       |
 | ---------------------------------------- | ---- | --------- | ------------------------------------------ |
 | 공개 데모 링크 (Public Project Link)     | ⏸️   | U-120     | 로그인/결제 없이 접근 가능                 |
-| 공개 코드 저장소 (Public Code Repo)      | ⏸️   | U-138,U-121 | U-138 저장소 이전/정리 + U-121 README    |
+| 공개 코드 저장소 (Public Code Repo)      | ⏸️   | U-138,U-121 | U-138 레포 이전+문서 영문화+정리 + U-121 README |
 | Gemini Integration 텍스트 (~200 words)   | ⏸️   | U-121     | 영문 필수                                  |
 | 데모 영상 (3분 이내, 영어/영어자막)      | ⏸️   | U-122     | YouTube/Vimeo 공개                         |
 | 영어 지원 (English language)             | 🚧   | U-099,U-132 | en-US i18n 정합 수정 + 기본 언어 전환     |
@@ -159,6 +160,25 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 ### 작업 백로그
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
+
+### MVP (1개)
+ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** _(수동 조작 + 엔딩 리포트 데모 기준)_ | Depends=U-023,U-025,U-056,U-057,U-058,U-061 | ⏸️
+
+### MMP - M5: 해커톤 제출 준비 (6개)
+
+_Devpost 마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM). 제출 요건 매핑 → 위 "Devpost 제출 요건 매핑" 참조._
+
+ID=[U-119[Mmp]](unit-plans/U-119[Mmp].md) | ⚡Frontend Layout 전체 다듬기 (WIG 기반 폴리시) | Depends=None | ⏸️
+ID=[U-138[Mmp]](unit-plans/U-138[Mmp].md) | ⚡공개 저장소 준비 통합 (레포 이전+문서 영문화+파일 정리) | Depends=None | ⏸️
+ID=[U-120[Mmp]](unit-plans/U-120[Mmp].md) | ⚡제출용 배포 + 공개 데모 URL **(U-100+U-101 흡수)** | Depends=U-138 | ⏸️
+ID=[U-121[Mmp]](unit-plans/U-121[Mmp].md) | ⚡제출 문서 패키지 (README + 아키텍처 + Write-up) | Depends=U-120,U-138 | ⏸️
+ID=[U-122[Mmp]](unit-plans/U-122[Mmp].md) | ⚡데모 영상 제작 (3분, 영어 자막) | Depends=U-119,U-120 | ⏸️
+ID=[CP-SUB-01](unit-plans/CP-SUB-01.md) | **⚡체크포인트: 해커톤 제출 완료** | Depends=U-119,U-120,U-121,U-122,U-138 | ⏸️
+
+### ~~MMP - M6: 품질 강화/후속~~ (전체 skip)
+
+_**[2026-02-08] M6 전체 skip**: 해커톤 일정상 실행 불가. MVP에 U-126(성능/품질 최적화) 1개로 대체. 해커톤 이후 필요 시 재계획._
+_기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-106, U-107, U-108, U-110~112, U-113, CP-MMP-02 — 모두 skip._
 
 ### 완료 (137개)
 
@@ -199,7 +219,7 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 ## 빠른 실행
 
 **다음 작업**: CP-MVP-03(10분 데모 루프 검증) → MMP 진입
-**MVP 완료 후**: [U-119[Mmp]](unit-plans/U-119[Mmp].md)(폴리시) + [U-120[Mmp]](unit-plans/U-120[Mmp].md)(배포) + [U-138[Mmp]](unit-plans/U-138[Mmp].md)(공개 저장소) 병렬 → [U-121[Mmp]](unit-plans/U-121[Mmp].md)(문서) → [U-122[Mmp]](unit-plans/U-122[Mmp].md)(영상)
+**MVP 완료 후**: [U-119[Mmp]](unit-plans/U-119[Mmp].md)(폴리시) + [U-138[Mmp]](unit-plans/U-138[Mmp].md)(공개 레포 준비) 병렬 → [U-120[Mmp]](unit-plans/U-120[Mmp].md)(배포, 공개 레포 기반) → [U-121[Mmp]](unit-plans/U-121[Mmp].md)(문서) → [U-122[Mmp]](unit-plans/U-122[Mmp].md)(영상)
 
 ```bash
 # Frontend (RULE-011: 8001~8010)
@@ -227,4 +247,4 @@ pnpm kill
 **계획 추가**: U-135(로그 영문화), U-136(경제 검증 보상 수정+ModelLabel 통합), U-137(Signal 밸런스 조정)
 **블로커**: R-029(보상 시 Economy 검증 실패 → 폴백) — U-136이 해소 예정
 **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
-**제출 크리티컬 패스**: CP-MVP-03(데모 루프 검증) → U-119(폴리시) + U-120(배포) + U-138(공개 저장소) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)
+**제출 크리티컬 패스**: CP-MVP-03(데모 루프 검증) → U-119(폴리시) + U-138(공개 레포 준비) 병렬 → U-120(배포, 공개 레포 기반) → U-121(문서) → U-122(영상) → CP-SUB-01(제출)

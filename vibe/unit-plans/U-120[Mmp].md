@@ -7,14 +7,14 @@
 | Unit ID   | U-120[Mmp]                                            |
 | Phase     | MMP                                                   |
 | 예상 소요 | 60분                                                  |
-| 의존성    | None                                                  |
+| 의존성    | U-138 (공개 레포 정리 완료 후 배포)                   |
 | 우선순위  | ⚡ Critical (제출 필수: 공개 데모 링크)               |
 
 ## 작업 목표
 
 해커톤 제출 요건인 **"공개 접근 가능한 데모 URL"**을 확보하기 위해, 프론트엔드+백엔드를 컨테이너화하고 **Cloud Run(또는 동등한 PaaS)**에 배포한다. 기존 U-100(Dockerfile), U-101(Cloud Run 배포)을 **하나의 유닛으로 흡수·간소화**한 제출 특화 배포이다.
 
-**배경**: Devpost 제출 요건에 _"Public Project Link: A URL to your working product or interactive demo. It should be publicly accessible and not require a login or paywall."_ 가 명시되어 있다. 현재 프로젝트는 로컬에서만 실행 가능하며, 심사자가 접근할 수 있는 공개 URL이 없다. 데모 프로필 기반 즉시 시작이 이미 구현되어 있으므로(로그인/가입 불필요), 배포만 완료하면 요건을 충족한다. U-100(Dockerfile)과 U-101(Cloud Run 배포)을 개별 작업 대신 **하나의 흐름으로 통합**하여 제출 마감에 맞춘다.
+**배경**: Devpost 제출 요건에 _"Public Project Link: A URL to your working product or interactive demo. It should be publicly accessible and not require a login or paywall."_ 가 명시되어 있다. 현재 프로젝트는 로컬에서만 실행 가능하며, 심사자가 접근할 수 있는 공개 URL이 없다. 데모 프로필 기반 즉시 시작이 이미 구현되어 있으므로(로그인/가입 불필요), 배포만 완료하면 요건을 충족한다. U-100(Dockerfile)과 U-101(Cloud Run 배포)을 개별 작업 대신 **하나의 흐름으로 통합**하여 제출 마감에 맞춘다. **U-138(공개 레포 준비)에서 정리된 공개 저장소 기반으로 배포**하므로 U-138 완료 후 진행한다.
 
 **완료 기준**:
 
