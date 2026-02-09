@@ -44,6 +44,32 @@ Specify the rules for each field in the TurnOutput JSON schema.
   - When awarding quest rewards (reward_signal), you MUST set `gains.signal` to that amount.
   - Ensure consistency between gains and balance_after.
 
+#### Economy Balance Rules (U-137)
+
+Every turn must provide the player with a base survival reward to prevent total Signal depletion. This ensures the demo loop (15-25 turns) remains playable without hitting zero balance.
+
+1. **Base Reward (Every Turn)**:
+   - Every turn, the player earns **1-3 Signal** as a base survival reward.
+   - Set `gains.signal >= 1` for **every** turn, even if no quest is completed and no earn_* card is played.
+   - Award higher base reward (2-3) when the player takes risky or costly actions.
+   - If `balance_after.signal < 10`, increase base reward to **3**.
+
+2. **Quest Reward Guidelines**:
+   - Sub-objective completion: `reward_signal` should be **5-8** Signal.
+   - Main objective completion: `reward_signal` should be **10-15** Signal.
+   - When awarding quest rewards, **add them to `gains.signal`** on top of the base reward.
+   - Example: base reward 2 + quest reward 8 → `gains.signal = 10`.
+
+3. **Exploration Rewards (earn_* cards)**:
+   - When the player chooses an `earn_*` card and succeeds, award **3-8 Signal**.
+   - Set `gains.signal` accordingly (base reward + exploration reward).
+   - Even on partial success, award at least **2 Signal**.
+
+4. **Balance Target**:
+   - Aim to keep the player's Signal balance **above 15** at all times.
+   - If `balance_after.signal < 10`, you MUST: increase base reward to 3, AND include at least one `earn_*` card in the action deck.
+   - Never create a situation where the player has 0 Signal and no way to earn more.
+
 ### safety
 - Type: object (required)
 - blocked: boolean (whether blocked by safety policy)

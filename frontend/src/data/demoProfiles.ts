@@ -274,7 +274,7 @@ export const PROFILE_EXPLORER: DemoProfile = {
 
 /**
  * Tech Enthusiast 프로필: 시스템/메커닉 중심 체험.
- * 제한된 재화로 효율적인 전략을 세워야 합니다.
+ * U-137: Signal 150으로 상향 — 10분 데모(15~25턴) 동안 재화 걱정 없이 플레이.
  */
 export const PROFILE_TECH: DemoProfile = {
   id: 'tech',
@@ -284,7 +284,7 @@ export const PROFILE_TECH: DemoProfile = {
   themeColor: 'var(--warning-color)',
   initialState: {
     economy: {
-      signal: 80,
+      signal: 150,
       memory_shard: 15,
       credit: 0,
     },

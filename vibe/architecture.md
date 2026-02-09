@@ -59,6 +59,19 @@ frontend/src/
 
 ---
 
+## 68. Signal 획득-소비 밸런스 조정 (U-137[Mvp])
+
+1. **지속 가능한 경제 밸런스 (Playability Tuning)**:
+    - **Base Reward 도입**: 모든 턴에서 1~3 Signal의 생존 보상(`gains.signal`)을 지급하도록 프롬프트를 보강하여, 10분 내외의 데모 루프(15~25턴) 동안 재화가 완전히 고갈되는 문제를 해결함.
+    - **Adaptive Reward**: 잔액이 10 미만으로 떨어질 경우 기본 보상을 3으로 상향하고 `earn_*` 카드를 강제하는 보호 정책을 통해 플레이 불가능한 상황(Deadlock)을 방지함.
+2. **보상 체계 상향 및 명시**:
+    - **Quest & Exploration**: 서브 퀘스트 보상을 5~8, 메인 퀘스트를 10~15로 상향 조정하고, 탐색 카드 성공 시 3~8 Signal을 지급하도록 수치 가이드라인을 구체화함.
+    - **Reward Composition**: 퀘스트 보상과 기본 보상이 합산되어 `gains` 필드에 반영되도록 로직을 정비하여 보상의 가시성과 체감도를 높임.
+3. **데모 프로필 최적화**:
+    - **Initial State Adjustment**: `Tech Enthusiast` 프로필의 초기 Signal을 80에서 150으로 상향하여, 복잡한 시스템 조작을 선호하는 유저가 초반부터 다양한 액션을 시도할 수 있는 여유를 제공함.
+
+---
+
 ## 67. Economy 검증 보상 시나리오 수정 및 ModelLabel 통합 (U-136[Mvp])
 
 1. **보상 인식 경제 검증 (Gains-aware Validation)**:
