@@ -182,6 +182,19 @@ generated/
 backend/.data/
 
 # ============================================================================
+# 🗂️ Internal Development Artifacts (excluded from public repo)
+# ============================================================================
+vibe/
+test-screenshots/
+.cursor/
+.gemini/
+.claude/
+CLAUDE.md
+.geminiignore
+nanobanana-output/
+code-base.xml
+
+# ============================================================================
 # 📝 Temporary Files
 # ============================================================================
 tmp/
@@ -189,10 +202,17 @@ temp/
 *.tmp
 *.temp
 .cache/
-vibe/commands.md
 nanobanana-output
 backend/generated_images/
 .img-ref/
 backend/viilab-dev-b43137729c78.json
-vibe/commands-temp.md
 NUL
+nul
+request.json
+
+# ============================================================================
+# 📊 Test Coverage Reports
+# ============================================================================
+coverage/
+frontend/coverage/
+htmlcov/
