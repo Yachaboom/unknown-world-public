@@ -85,6 +85,11 @@ def test_asset_files_existence_and_size():
             assert actual_size <= 120 * 1024, (
                 f"Chrome asset {rel_path} exceeds 120KB budget ({actual_size} bytes)"
             )
+        elif asset_type == "scene":
+            # 200KB limit for scene images (WebP Q80, PRD 9.7)
+            assert actual_size <= 200 * 1024, (
+                f"Scene asset {rel_path} exceeds 200KB budget ({actual_size} bytes)"
+            )
 
     # 4. Total Budget Check
     recorded_total = manifest.get("totalBytes")

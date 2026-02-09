@@ -26,10 +26,7 @@
 
   /* CRT 효과 */
   --crt-scanline: rgba(18, 16, 16, 0.1);
-  --crt-flicker: 0.03;
   --glow-intensity: 5px;
-  --crt-flicker-opacity-min: 0.97;
-  --crt-flicker-opacity-max: 1;
 
   /* 타이포그래피 */
   --font-main: 'NeoDunggeunmo', 'VT323', monospace;
@@ -4743,7 +4740,7 @@ button:disabled,
   width: 16px;
   height: 16px;
   border: 2px solid transparent;
-  border-top: 2px solid var(--primary-color);
+  border-top: 2px solid var(--text-color);
   border-radius: 50%;
   animation: icon-loading-spin 1s linear infinite;
 }
@@ -6023,7 +6020,7 @@ button:disabled,
   border-radius: 3px;
   background: rgba(51, 255, 0, 0.2);
   border: 1px solid rgba(51, 255, 0, 0.4);
-  color: var(--primary-color);
+  color: var(--text-color);
   font-family: var(--font-micro-en);
   font-size: 0.625rem;
   font-weight: 700;

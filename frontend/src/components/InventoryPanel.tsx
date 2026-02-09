@@ -32,7 +32,7 @@
  * @module components/InventoryPanel
  */
 
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useDraggable, DragOverlay, type Modifier } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -324,7 +324,9 @@ interface InventoryPanelProps {
  * <InventoryPanel disabled={isStreaming} />
  * ```
  */
-export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
+export const InventoryPanel = memo(function InventoryPanel({
+  disabled = false,
+}: InventoryPanelProps) {
   const { t, i18n } = useTranslation();
 
   // Store 상태
@@ -520,6 +522,6 @@ export function InventoryPanel({ disabled = false }: InventoryPanelProps) {
       </DragOverlay>
     </div>
   );
-}
+});
 
 export default InventoryPanel;

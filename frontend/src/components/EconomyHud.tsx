@@ -12,7 +12,7 @@
  * @module components/EconomyHud
  */
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useWorldStore, type EconomyState } from '../stores/worldStore';
@@ -243,7 +243,10 @@ const selectHistory = selectRecentLedger(10);
 // 메인 Economy HUD 컴포넌트
 // =============================================================================
 
-export function EconomyHud({ compact = false, className = '' }: EconomyHudProps) {
+export const EconomyHud = memo(function EconomyHud({
+  compact = false,
+  className = '',
+}: EconomyHudProps) {
   const { t } = useTranslation();
 
   // Store 상태
@@ -349,7 +352,7 @@ export function EconomyHud({ compact = false, className = '' }: EconomyHudProps)
       </div>
     </div>
   );
-}
+});
 
 // =============================================================================
 // 헤더용 간소화 컴포넌트 (GameHeader 통합용)

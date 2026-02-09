@@ -348,9 +348,9 @@ class MockOrchestrator:
             narrative = f"{prefix} {narrative}"
 
         # U-048: 모든 생성에 turn_rng 사용 (입력별 결정적 다양성)
-        # 액션 덱 생성 (3~6장)
+        # 액션 덱 생성 (3~5장 권장, ActionDeck max_length=5 준수)
         action_templates = KO_ACTION_CARDS if is_korean else EN_ACTION_CARDS
-        num_cards = turn_rng.randint(3, 6)
+        num_cards = turn_rng.randint(3, 5)
         selected_templates = turn_rng.sample(
             action_templates, min(num_cards, len(action_templates))
         )

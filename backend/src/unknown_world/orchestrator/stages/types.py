@@ -149,4 +149,6 @@ class StageFn(Protocol):
     ctx를 받아 수정하고 반환하며, emit 콜백으로 이벤트를 전달합니다.
     """
 
+    __name__: str
+
     async def __call__(self, ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext: ...

@@ -14,7 +14,7 @@
  * @module components/ActionDeck
  */
 
-import { useMemo, useCallback, useRef, useState } from 'react';
+import { useMemo, useCallback, useRef, useState, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionCard } from '../schemas/turn';
 import { useActionDeckStore } from '../stores/actionDeckStore';
@@ -463,7 +463,10 @@ function ActionCardItem({ card, onClick, onHover, disabled }: ActionCardItemProp
 // 메인 Action Deck 컴포넌트
 // =============================================================================
 
-export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckProps) {
+export const ActionDeck = memo(function ActionDeck({
+  onCardClick,
+  disabled: propsDisabled,
+}: ActionDeckProps) {
   const { t } = useTranslation();
   const defaultCards = useDefaultCards();
 
@@ -606,6 +609,6 @@ export function ActionDeck({ onCardClick, disabled: propsDisabled }: ActionDeckP
       )}
     </div>
   );
-}
+});
 
 export default ActionDeck;

@@ -7,7 +7,7 @@
  * @module components/SceneImage
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   SceneCanvasStatus,
@@ -77,7 +77,7 @@ interface SceneImageProps {
  * - 폴백: 로드 실패 시 에러 배지를 표시하고 이전 이미지를 유지합니다.
  * - U-066: isGenerating 상태에서 "새 장면 생성 중" 인디케이터를 표시합니다.
  */
-export function SceneImage({
+export const SceneImage = memo(function SceneImage({
   status,
   imageUrl,
   message,
@@ -264,4 +264,4 @@ export function SceneImage({
       )}
     </div>
   );
-}
+});

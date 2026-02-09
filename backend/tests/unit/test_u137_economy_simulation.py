@@ -1,5 +1,3 @@
-
-
 def simulate_turns(initial_signal, turns, avg_cost, avg_base_reward, quest_rewards, earn_rewards):
     """
     경제 시스템 시뮬레이션 함수.

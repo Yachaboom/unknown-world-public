@@ -17,6 +17,7 @@ Stage 함수들을 체인으로 조합하여 실행하는 파이프라인입니�
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
@@ -41,6 +42,8 @@ from unknown_world.orchestrator.stages.types import (
 from unknown_world.orchestrator.stages.validate import validate_stage
 from unknown_world.orchestrator.stages.verify import verify_stage
 from unknown_world.services.image_generation import get_image_generator
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from unknown_world.services.image_generation import ImageGeneratorType
@@ -174,6 +177,9 @@ async def run_pipeline(
             # output이 None이면 validate 실패 등 → 이후 단계는 스킵
             # (단, parse 단계는 output이 없어도 정상)
             if ctx.output is None and stage != parse_stage:
+                logger.warning(
+                    f"[Pipeline] Breaking loop after {stage.__name__} because output is None"
+                )
                 # 폴백 생성
                 ctx.output = create_safe_fallback(
                     language=ctx.turn_input.language,
@@ -183,7 +189,8 @@ async def run_pipeline(
                 ctx.is_fallback = True
                 break
 
-    except Exception:
+    except Exception as e:
+        logger.exception(f"[Pipeline] Exception during pipeline execution: {e}")
         # 예외 발생 시 안전한 폴백 (RULE-004)
         ctx.output = create_safe_fallback(
             language=ctx.turn_input.language,

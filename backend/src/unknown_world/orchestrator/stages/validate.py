@@ -16,6 +16,8 @@ U-018의 run_repair_loop()를 호출해 output/badges/repair_count를 결정합�
 
 from __future__ import annotations
 
+import logging
+
 from unknown_world.models.turn import AgentPhase, Language, ValidationBadge
 from unknown_world.orchestrator.fallback import create_safe_fallback
 from unknown_world.orchestrator.mock import MockOrchestrator
@@ -31,6 +33,8 @@ from unknown_world.orchestrator.stages.types import (
     PipelineEventType,
 )
 from unknown_world.validation.business_rules import validate_business_rules
+
+logger = logging.getLogger(__name__)
 
 
 async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
@@ -62,8 +66,9 @@ async def validate_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineConte
             await _validate_mock(ctx, emit)
         else:
             await _validate_real(ctx, emit)
-    except Exception:
+    except Exception as e:
         # 예외 발생 시 폴백 (RULE-004, RU-005-S1)
+        logger.exception(f"[Validate] Exception during validation: {e}")
         ctx.output = create_safe_fallback(
             language=ctx.turn_input.language,
             economy_snapshot=ctx.economy_snapshot,
@@ -156,7 +161,8 @@ async def _validate_mock(ctx: PipelineContext, emit: EmitFn) -> None:
             ctx.repair_attempts = repair_attempt
             return
 
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[Validate] Mock validation exception (attempt {repair_attempt}): {e}")
             repair_attempt += 1
             ctx.repair_attempts = repair_attempt
             if repair_attempt > MAX_REPAIR_ATTEMPTS:

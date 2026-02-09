@@ -18,6 +18,7 @@
  * @module components/AgentConsole
  */
 
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useAgentStore,
@@ -308,7 +309,7 @@ function StreamingStatus() {
  * U-037: data-ui-importance="critical" 마킹으로 가독성 보장
  * U-069: 현재 사용 중인 모델 라벨(FAST/QUALITY) 표시 추가
  */
-export function AgentConsole() {
+export const AgentConsole = memo(function AgentConsole() {
   return (
     <div className="agent-console-content" data-ui-importance="critical">
       {/* 상단: StreamingStatus + ModelLabel + Queue(대기열) */}
@@ -333,6 +334,6 @@ export function AgentConsole() {
       <ErrorDisplay />
     </div>
   );
-}
+});
 
 export default AgentConsole;

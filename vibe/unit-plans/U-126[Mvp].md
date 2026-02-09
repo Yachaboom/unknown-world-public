@@ -253,18 +253,18 @@ pnpm -C frontend build -- --report
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: React.memo 적용 범위는?
-  - Option A: **Profiler 핫스팟만** (보수적, 안전)
+- [x] **Q1**: React.memo 적용 범위는?
+  - ✅Option A: **Profiler 핫스팟만** (보수적, 안전)
   - Option B: 모든 leaf 컴포넌트 (공격적)
   - Option C: 이번에는 skip (CSS/에셋 정리만)
 
-- [ ] **Q2**: 에셋 포맷 변환?
-  - Option A: PNG 유지 (호환성 우선)
+- [x] **Q2**: 에셋 포맷 변환?
+  - ✅Option A: PNG 유지 (호환성 우선)
   - Option B: **WebP 변환** (크기 절감, 모던 브라우저 지원)
   - Option C: 혼합 (아이콘=PNG, 씬=WebP)
 
-- [ ] **Q3**: render_stage 테스트 격리 방식?
-  - Option A: **`@pytest.mark.skip`** (명확한 skip, CI에서 표시)
+- [x] **Q3**: render_stage 테스트 격리 방식?
+  - ✅Option A: **`@pytest.mark.skip`** (명확한 skip, CI에서 표시)
   - Option B: `@pytest.mark.xfail(strict=False)` (실패 허용, 성공 시 알림)
   - Option C: 테스트 파일 자체를 `tests/quarantine/`으로 이동
 

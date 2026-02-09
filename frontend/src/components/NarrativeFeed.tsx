@@ -15,7 +15,7 @@
  * @module components/NarrativeFeed
  */
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NarrativeEntry } from '../stores/worldStore';
 
@@ -245,7 +245,7 @@ function useTypewriter(targetText: string, shouldBuyTime: boolean, initialLength
 // 컴포넌트 구현
 // =============================================================================
 
-export function NarrativeFeed({
+export const NarrativeFeed = memo(function NarrativeFeed({
   entries,
   streamingText,
   isStreaming: _isStreaming = false, // U-097: prop 유지 (향후 사용 가능, API 호환성)
@@ -389,4 +389,4 @@ export function NarrativeFeed({
       )}
     </div>
   );
-}
+});
