@@ -1,4 +1,4 @@
-# U-023[Mvp]: Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI
+# U-023[Mvp]: Quest UI 개선 + Rule UI 제거 (좌측 사이드바 심플화)
 
 ## 메타데이터
 
@@ -6,91 +6,127 @@
 | --------- | ----------- |
 | Unit ID   | U-023[Mvp]  |
 | Phase     | MVP         |
-| 예상 소요 | 75분        |
-| 의존성    | U-008,U-013 |
+| 예상 소요 | 45분        |
+| 의존성    | U-013       |
 | 우선순위  | ⚡ Critical |
 
 ## 작업 목표
 
-프론트에 Autopilot 모드(Manual/Assist/Autopilot) 토글과 Goal 입력을 제공하고, 에이전트가 수행하는 단계(Queue)/배지(Badges)를 “계획/작업 큐”로 시각화한다.
+좌측 사이드바에서 **Rule UI(RuleBoard + MutationTimeline)를 완전 제거**하고, **Quest UI를 개선**하여 "겉도는 느낌"을 해소한다. 사이드바가 Inventory + Quest 2패널로 심플해지고, Quest가 게임 플레이와 밀접하게 연결되어 보이도록 한다.
 
-**배경**: PRD는 “Action Era”의 증거로 Goal→Plan→Subquests + Action Queue + Badges를 UI에서 상시 노출하라고 요구한다(단, 프롬프트/내부 추론은 비노출). (PRD 6.8, RULE-008)
+**배경**: Rule UI(RuleBoard/MutationTimeline)는 데모에서 실질적 가치를 전달하지 못하며, 사이드바 공간만 차지한다. Quest UI는 존재하지만 게임과 분리된 느낌("겉도는")이 있어 심사자/사용자에게 임팩트가 부족하다.
 
 **완료 기준**:
 
-- UI에 Autopilot 토글(Manual/Assist/Autopilot)이 보이며 즉시 전환된다.
-- Autopilot에서 Goal 입력 후, Plan/Queue UI가 업데이트되고 작업 단계가 진행 중임을 보여준다.
-- 프롬프트 원문/내부 추론은 어디에도 노출되지 않고, 사용자 친화 라벨(단계/배지/모델 라벨)만 표시된다. (RULE-008)
+- Rule UI(RuleBoard + MutationTimeline) 패널이 사이드바에서 완전 제거된다.
+- Quest UI가 더 눈에 띄고, 게임 진행과 연결된 느낌을 준다.
+- 좌측 사이드바가 Inventory + Quest 2패널로 깔끔해진다.
 
 ## 영향받는 파일
 
-**생성**:
+**삭제**:
 
-- `frontend/src/components/AutopilotToggle.tsx` - 모드 토글 UI
-- `frontend/src/components/GoalInput.tsx` - Goal 입력 UI
-- `frontend/src/components/PlanPanel.tsx` - Goal/Plan/서브퀘스트 표시(최소)
-- `frontend/src/stores/autopilotStore.ts` - autopilot 모드/goal/plan 상태(Zustand)
+- `frontend/src/components/RuleBoard.tsx` — Rule 카드 표시 UI
+- `frontend/src/components/MutationTimeline.tsx` — Rule 변형 타임라인 UI
+- `frontend/src/components/RuleBoard.test.tsx` — 테스트
+- `frontend/src/components/MutationTimeline.test.tsx` — 테스트
 
 **수정**:
 
-- `frontend/src/App.tsx` - 토글/Goal 입력/Plan 패널 배치 및 turn 실행 경로 연결
-- `frontend/src/style.css` - 토글/플랜 카드 스타일
-- `frontend/src/components/AgentConsole.tsx` - (필요 시) Plan/Queue 표시 확장
+- `frontend/src/App.tsx` — `panel-rule-board` 패널 제거, `panel-inventory`에서 `flex-1` 유틸 클래스 제거, Quest 패널 레이아웃 조정
+- `frontend/src/components/QuestPanel.tsx` — Quest UI 개선 (디자인/레이아웃 리뉴얼)
+- `frontend/src/components/ObjectiveTracker.tsx` — 미니 트래커 개선 (선택)
+- `frontend/src/style.css` — Rule 관련 스타일 제거, Quest 스타일 개선, 사이드바 레이아웃 조정
+- `frontend/src/stores/worldStore.ts` — `activeRules`/`mutationTimeline` 상태 유지 (백엔드 데이터는 수신, UI만 제거)
 
 **참조**:
 
-- `vibe/prd.md` 6.8 - Autopilot/Plan/Queue/Badges 요구
-- `.cursor/rules/00-core-critical.mdc` - RULE-008(관측/프롬프트 비노출)
-- `.cursor/rules/10-frontend-game-ui.mdc` - Agent Console 상시 노출
+- `vibe/prd.md` 6.7 — Quest/Objective Panel 요구
+- `.cursor/rules/10-frontend-game-ui.mdc` — 좌측 사이드바 레이아웃
 
 ## 구현 흐름
 
-### 1단계: Autopilot 모드 모델/상태 정의
+### 1단계: Rule UI 제거
 
-- `mode`: `manual | assist | autopilot`
-- `goal`: 사용자 목표 텍스트
-- `plan`: 플랜 카드/서브퀘스트(초기엔 최소 구조)
+- `App.tsx`에서 `panel-rule-board` 패널 전체 제거 (RuleBoard + MutationTimeline import 포함)
+- `style.css`에서 `.panel-rule-board`, `.rule-board-*`, `.rule-card-*`, `.mutation-timeline-*`, `.timeline-*` 관련 스타일 제거
+- `RuleBoard.tsx`, `MutationTimeline.tsx` 파일 삭제 (테스트 파일 포함)
+- **worldStore의 `activeRules`/`mutationTimeline` 상태는 유지** — 백엔드가 여전히 `rules_changed`를 보내므로, 데이터는 수신하되 UI만 없앰. MMP에서 다른 형태로 활용 가능.
 
-### 2단계: UI 추가(고정 패널/헤더 영역)
+### 2단계: Inventory + Quest 5:5 고정 비율 레이아웃
 
-- 토글은 항상 보이게 두고, 모드 변경 시 UI 라벨/설명이 즉시 바뀌게 한다.
-- Goal 입력은 autopilot 모드에서 활성화(또는 모든 모드에서 입력 가능 + autopilot에서만 실행).
+Rule 패널 제거 후 좌측 사이드바를 **Inventory : Quest = 5 : 5** 균등 분배로 재구성:
 
-### 3단계: turn 실행/스트리밍과 연결
+- **현재 문제**: Inventory는 `flex-1`(가변 확장), Quest는 `max-height: 200px`(고정 제한) → 불균형
+- **변경 방향**:
+  - `.panel-inventory`: `flex-1` 유틸 클래스 제거, `flex: 1; min-height: 0;` 적용
+  - `.panel-quest`: `max-height: 200px` / `flex-shrink: 0` 제거, `flex: 1; min-height: 0;` 적용
+  - 양쪽 `.panel-content`: `overflow-y: auto; scrollbar-width: thin;` 통일
+  - `min-height: 0`은 flex 컨테이너 내부 스크롤이 정상 동작하기 위한 필수 설정
+- **반응형(max-height: 768px)**: Quest `max-height: 150px` 제거, 동일하게 5:5 유지
+- **CSS 변경 위치**: `style.css` 섹션 11.2 "좌측 사이드바 패널별 높이 전략" 전면 교체
 
-- Goal 제출은 `/api/turn`에 TurnInput으로 전달하거나(간단), 별도 엔드포인트를 두는 방식(U-024에서 확정) 중 하나로 연결한다.
-- Agent Console의 Queue/Badges가 “Autopilot 실행 중”에도 동일 계약으로 업데이트되게 한다.
+```
+/* 변경 전 */
+.panel-inventory { min-height: 120px; }           /* flex-1 클래스로 가변 */
+.panel-quest    { max-height: 200px; flex-shrink: 0; }  /* 고정 제한 */
+.panel-rule-board { max-height: 200px; flex-shrink: 0; } /* 제거 대상 */
+
+/* 변경 후 */
+.panel-inventory { flex: 1; min-height: 0; }  /* 5:5 균등 */
+.panel-quest     { flex: 1; min-height: 0; }  /* 5:5 균등 */
+/* panel-rule-board 삭제 */
+```
+
+### 3단계: Quest UI 디자인 개선
+
+"겉도는 느낌" 해소를 위한 구체적 개선:
+
+1. **주 목표(Main Objective) 강화**:
+   - 진행률 바를 더 시각적으로 눈에 띄게 (CRT 테마 glow 효과 활용)
+   - 보상 미리보기를 Signal 아이콘과 함께 더 명확하게 표시
+   - 완료 시 축하 애니메이션 강화
+
+2. **서브 목표 체크리스트 개선**:
+   - 완료 시 Signal 획득 애니메이션 (Economy HUD와 연동되는 느낌)
+   - 체크박스를 더 게임스러운 아이콘으로 교체 (○/✓ → 커스텀)
+   - 활성 서브 목표에 미묘한 pulse/glow로 "다음 할 일" 강조
+
+3. **빈 상태("자유 탐색 중") 개선**:
+   - 더 분위기 있는 아이콘/메시지로 교체
+   - "이 세계를 탐험하세요" 같은 게임적 톤
 
 ## 의존성 & 연결
 
 **이전 작업에서 가져올 것**:
 
-- **계획서**: [U-008[Mvp]](U-008[Mvp].md) - 스트림 소비/Agent Console/배지
-- **계획서**: [U-013[Mvp]](U-013[Mvp].md) - Quest/Rule 데이터 모델(Plan/서브퀘스트 표시와 연결)
+- **계획서**: [U-013[Mvp]](U-013[Mvp].md) — Quest/Rule 데이터 모델 및 초기 UI
 
 **다음 작업에 전달할 것**:
 
-- U-024에서 백엔드 autopilot 실행/큐 스트리밍을 구현할 프론트 UI/상태 기반
-- CP-MVP-03에서 “Autopilot 데모” 시나리오의 사용자 조작 표면
+- CP-MVP-03에서 Quest UI가 데모 루프에서 자연스럽게 보이는지 검증
+- 엔딩 리포트(U-025)에서 퀘스트 달성도를 참조할 때 Quest 데이터 활용
 
 ## 주의사항
 
 **기술적 고려사항**:
 
-- (RULE-008) Plan/Queue는 “과정”만 노출: 프롬프트 원문/내부 추론/툴 호출 상세를 UI에 그대로 내보내지 않는다.
-- Autopilot은 MVP에서는 “제한된 스텝/안전한 종료”를 전제로 한다(무한 실행 금지).
+- Rule 데이터(`activeRules`/`mutationTimeline`)는 store에 유지. 프롬프트에서 규칙 변형이 게임플레이에 영향을 주므로 **백엔드 로직은 그대로** — UI 표시만 제거.
+- Quest UI 개선 시 CRT 테마 가이드(`vibe/ref/frontend-style-guide.md`)를 준수한다.
+- ObjectiveTracker(상단 미니 트래커)는 유지하되, Quest 패널 개선과 시각적 일관성을 맞춘다.
 
 **잠재적 리스크**:
 
-- Autopilot이 복잡해지면 데모 안정성이 떨어짐 → MVP는 “제한된 스텝 + 언제든 중단 가능”을 기본으로 둔다.
+- Rule UI 제거로 "규칙이 바뀐다"는 게임 메커닉이 덜 보일 수 있음 → 내러티브 피드에서 규칙 변형을 텍스트로 전달하는 것으로 충분. MMP에서 더 나은 형태로 재도입 가능.
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Plan 표시의 최소 단위는?
-  - Option A: Goal 1개 + 서브퀘스트 체크리스트(권장: 단순/명확)
-  - Option B: 더 세분화된 단계 카드(정보량↑, UI 복잡↑)
+- [x] **Q1**: ObjectiveTracker(상단 미니 트래커)도 함께 개선할까, 그대로 둘까?
+  - ✅ Option A: 함께 개선 — Quest 패널과 시각적 일관성 확보 (권장)
+  - Option B: 그대로 — 범위 축소, 이후 별도 작업
 
 ## 참고 자료
 
-- `vibe/prd.md` - Autopilot/Plan/Queue/Badges
-- `.cursor/rules/00-core-critical.mdc` - RULE-008
+- `vibe/prd.md` — Quest/Objective Panel 요구
+- `vibe/ref/frontend-style-guide.md` — CRT 테마 가이드
+- `.cursor/rules/10-frontend-game-ui.mdc` — 좌측 사이드바 레이아웃

@@ -2,7 +2,7 @@
 
 계획 수립 단계입니다.
 현재 MVP에서는 실제 처리 없이 pass-through로 동작합니다.
-추후 Autopilot(U-024) 등에서 로직을 추가할 자리입니다.
+추후 MMP에서 계획 수립 로직을 추가할 자리입니다.
 
 설계 원칙:
     - RULE-008: 단계 이벤트 일관성
@@ -32,7 +32,7 @@ async def plan_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext:
     """Plan 단계를 실행합니다.
 
     현재는 pass-through로 동작합니다.
-    추후 Autopilot 등에서 계획 수립 로직을 추가합니다.
+    추후 MMP에서 계획 수립 로직을 추가합니다.
 
     Args:
         ctx: 파이프라인 컨텍스트

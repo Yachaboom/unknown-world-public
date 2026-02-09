@@ -1,5 +1,109 @@
 # 로드맵 변경 이력
 
+## 2026-02-10 - rescope/quest-rule-simplify (Quest UI 개선 + Rule UI 제거 + Autopilot 정리)
+
+### 변경 요약
+
+**U-023을 "Quest UI 개선 + Rule UI 제거"로 최종 re-scope**. U-024(Backend Autopilot) 유닛 계획서 완전 삭제. U-025(엔딩 리포트+리플레이) 유지. 모든 skip/strikethrough 마커를 깔끔하게 삭제(해깔림 방지).
+
+### 영향받은 문서
+
+- ✏️ `vibe/unit-plans/U-023[Mvp].md`: "Quest UI 개선 + Rule UI 제거 (좌측 사이드바 심플화)"로 전면 재작성 (45분)
+- 🗑️ `vibe/unit-plans/U-024[Mvp].md`: 완전 삭제 (Backend Autopilot — 구현 계획 자체 불필요)
+- ✏️ `vibe/roadmap.md`: 진행률 135/136(99.3%), 백로그 정리(skip 마커 제거), 핵심 기능 섹션 갱신
+- ✏️ `vibe/prd.md`: 6.8 Autopilot/Plan 관련 잔여 skip 마커 삭제, 7장/9장 skip 라인 삭제
+- ✏️ `vibe/unit-plans/CP-MVP-03.md`: Autopilot skip 라인 3건 삭제 (깔끔한 상태)
+- ✏️ `vibe/changelog.md`: 본 이력 추가
+
+### 진행률 변화
+
+- **MVP**: 98.5% (135/137) → **99.3%** (135/136) — U-024 완전 삭제로 분모 -1
+- **전체**: 94.4% (135/143) → **95.1%** (135/142) — 분모 -1
+
+---
+
+## 2026-02-10 - rescope/autopilot-partial-restore (Plan/Queue UI·엔딩 리포트 복원)
+
+### 변경 요약
+
+**Autopilot skip 범위 보정**: U-024(Backend Autopilot)만 skip 유지. U-023은 "Plan/Queue UI"로 re-scope(Autopilot 토글/Goal 제거, 45분), U-025(엔딩 리포트+리플레이)는 완전 복원(U-024 의존성만 제거). Plan/Queue UI와 엔딩 리포트는 Autopilot 자동 실행과 독립적인 기능.
+
+### 영향받은 문서
+
+- ✏️ `vibe/unit-plans/U-023[Mvp].md`: skip → re-scope (Plan/Queue UI만, Autopilot 토글/Goal/Store 제거)
+- ✏️ `vibe/unit-plans/U-025[Mvp].md`: skip → 복원 (U-024 의존성 제거, 엔딩/리플레이 유지)
+- ✏️ `vibe/roadmap.md`: 진행률 135/137(98.5%), 백로그 U-023 re-scope + U-025 복원, 핵심 기능 섹션 갱신
+- ✏️ `vibe/prd.md`: 6.8 Plan→Subquests 시각화 복원 (Autopilot 없이 수동 턴 기반)
+- ✏️ `vibe/unit-plans/CP-MVP-03.md`: 3단계(엔딩+리플레이) 복원, U-025 의존성 복원
+- ✏️ `vibe/changelog.md`: 본 이력 추가
+
+### 백로그 변경
+
+**복원(re-scope)**:
+
+- U-023[Mvp]: ~~Autopilot 모드 토글 + Goal 입력 +~~ Plan/Queue UI → "Plan/Queue UI (에이전트 계획/큐 표시)" (45분)
+- U-025[Mvp]: 엔딩 리포트 + 리플레이/시나리오 하네스 — skip 취소, U-024 의존성만 제거
+
+**Skip 유지**:
+
+- U-024[Mvp]: Backend Autopilot(제한 스텝) + Action Queue Streaming — skip 유지
+
+### 진행률 변화
+
+- **MVP**: 100% (135/135) → **98.5%** (135/137) — U-023·U-025 복원으로 분모 +2
+- **MMP**: 0% (0/6) → 0% (0/6) — 변경 없음
+- **전체**: 95.7% (135/141) → **94.4%** (135/143) — 분모 +2
+
+---
+
+## 2026-02-10 - skip/autopilot-removal (Autopilot 기능 전체 MVP skip)
+
+### 변경 요약
+
+**MVP Autopilot 3개 유닛 전체 skip**: U-023(Autopilot 토글/Goal/Plan UI), U-024(Backend Autopilot/Action Queue Streaming), U-025(엔딩 리포트/리플레이 하네스)를 MVP에서 제거. 해커톤 제출 기한 내 핵심 조작(클릭/드래그/스캐너/룰 변형) 데모에 집중하기 위한 결정. Action Queue/Badge/Self-Repair UI는 유지.
+
+### 영향받은 문서
+
+- ✏️ `vibe/roadmap.md`: U-023/U-024/U-025 skip, MVP 진행률 135/135(100%), CP-MVP-03 의존성 수정, 데모 루프 설명 갱신
+- ✏️ `vibe/prd.md`: 6.8 Autopilot 모드/Goal→Plan→Subquests skip 표시, 7장/9장/10장 Autopilot 참조 제거/수정, 아이콘 목록 정리
+- ✏️ `vibe/tech-stack.md`: 온보딩 체크리스트 "Autopilot" → "에이전트 가시화" 용어 변경
+- ✏️ `vibe/unit-plans/U-023[Mvp].md`: skip 헤더/상태 추가
+- ✏️ `vibe/unit-plans/U-024[Mvp].md`: skip 헤더/상태 추가
+- ✏️ `vibe/unit-plans/U-025[Mvp].md`: skip 헤더/상태 추가, U-024 의존성 strikethrough
+- ✏️ `vibe/unit-plans/CP-MVP-03.md`: Autopilot 검증 단계 skip, 의존성(U-024/U-025/U-026) 제거, 데모 루프 "룰 변형 → 리셋"으로 수정
+- ✏️ `vibe/changelog.md`: 본 이력 추가
+
+### 백로그 변경
+
+**Skip(MVP 제거)**:
+
+- U-023[Mvp]: Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI
+- U-024[Mvp]: Backend Autopilot(제한 스텝) + Action Queue Streaming
+- U-025[Mvp]: 엔딩 리포트 + 리플레이/시나리오 하네스
+
+### 의존성 변경
+
+- CP-MVP-03: U-025 의존성 제거 (이전: ...U-025 → 이후: U-056,U-057,U-058,U-061)
+- U-025[Mvp]: U-024 의존성 strikethrough (skip이므로 실행하지 않음)
+
+### 진행률 변화
+
+- **MVP**: 97.8% (135/138) → **100%** (135/135) — skip 3개로 분모 축소
+- **MMP**: 0% (0/6) → 0% (0/6) — 변경 없음
+- **전체**: 93.8% (135/144) → **95.7%** (135/141) — 분모 -3
+
+### 코드베이스 영향
+
+- Autopilot 관련 **구현 코드 없음** (설계 단계에서 skip)
+- `frontend/src/turn/turnRunner.ts`, `backend/src/unknown_world/orchestrator/stages/plan.py`에 Autopilot 관련 코멘트가 남아 있음 → 정리 예정
+
+### MMP 재계획 참고
+
+- ~~엔딩 리포트(U-025의 핵심 기능)는 MMP에서 독립 유닛으로 재계획 가능~~ → **복원됨** (위 `rescope/autopilot-partial-restore` 참조)
+- Autopilot 모드(Goal→Plan→Auto-execute)는 MMP M4 이후 재검토
+
+---
+
 ## 2026-02-10 - add/U-138-public-repo-migration (공개 저장소 이전)
 
 ### 변경 요약

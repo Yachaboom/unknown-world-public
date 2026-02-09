@@ -4,7 +4,7 @@
 
 ## 진행 현황
 
-**전체**: 135/144 (93.8%) | **MVP**: 135/138 (97.8%) | **MMP**: 0/6 (0%)
+**전체**: 135/142 (95.1%) | **MVP**: 135/136 (99.3%) | **MMP**: 0/6 (0%)
 
 **예상 완료(가정)**: MVP D-1 | MMP(M5 제출): D-1
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
@@ -26,6 +26,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **[2026-02-10 로그/경제/밸런스 보강]** 백엔드 로그 영문화(U-135), 경제 검증 보상 시나리오 수정+ModelLabel 통합(U-136), Signal 획득-소비 밸런스 조정(U-137). 상세: `vibe/changelog.md`
 - **[2026-02-10 기술 부채 통합]** U-126에 debt-log.md 미해결 부채 8건 통합(테스트 mock/기대값/스키마 수정 + 아키텍처 변경 미반영 테스트 격리). 3건 MMP 보류. 상세: `vibe/changelog.md`
 - **[2026-02-10 공개 저장소 이전]** M5에 U-138(공개 저장소 이전+불필요 파일 정리) 추가. U-121 의존성에 U-138 추가. CP-SUB-01 의존성에 U-138 추가. 상세: `vibe/changelog.md`
+- **[2026-02-10 Autopilot 제거 + Quest/Rule 심플화]** U-024(Backend Autopilot) 완전 삭제. U-023을 "Quest UI 개선 + Rule UI 제거"로 re-scope(45분). U-025(엔딩 리포트+리플레이) 유지. PRD 6.8 Autopilot 자동 실행 제거, Action Queue/Badge/Self-Repair 유지. 상세: `vibe/changelog.md`
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -54,7 +55,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **Economy OK**: 예상 비용 노출, 거래 장부(ledger) 일관성, 잔액 음수 불가
 - **Safety OK**: 차단/실패 시 명시 + 안전한 대체 결과(텍스트-only 등) 제공
 - **Consistency OK**: 언어 정책(ko/en 혼합 금지), bbox 규약(0~1000, [ymin,xmin,ymax,xmax]) 준수
-- **Demo OK(10분 루프)**: 드래그→클릭→(스캐너)업로드→룰 변형/퀘스트→오토파일럿→엔딩 리포트까지 반복 가능(데모프로필+리셋 포함)
+- **Demo OK(10분 루프)**: 드래그→클릭→(스캐너)업로드→룰 변형/퀘스트→엔딩까지 반복 가능(데모프로필+리셋 포함)
 
 ---
 
@@ -103,10 +104,10 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **잔여**: ~~이미지 픽셀 스타일(U-084)~~ (취소됨 — 기존 스타일 유지)
 - **상태**: 🚧
 
-### Autopilot + 리플레이/엔딩(데모 회귀)
+### Quest/Rule UI 심플화 + 엔딩 리포트 + 리플레이
 
-- **완료 기준**: Manual/Assist/Autopilot 모드, 엔딩 리포트, seed+actions 리플레이로 Hard Gate 점검
-- **잔여**: U-023, U-024, U-025(+U-026 흡수)
+- **완료 기준**: Quest UI 개선(겉도는 느낌 해소) + Rule UI 제거(의미 부족) + 엔딩 리포트(요약/타임라인/결산) + 리플레이 하네스
+- **잔여**: U-023(Quest/Rule UI 심플화), U-025(엔딩 리포트+리플레이)
 - **상태**: ⏸️
 
 ## 리스크 (활성만)
@@ -159,11 +160,12 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP (4개)
-ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
-ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
-ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 + 리플레이/시나리오 하네스 **(U-026 흡수)** | Depends=U-018,U-024 | ⏸️
-ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** | Depends=U-025,U-056,U-057,U-058,U-061 | ⏸️
+### MVP (2개)
+ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Quest UI 개선 + Rule UI 제거 (좌측 사이드바 심플화) | Depends=U-013 | ⏸️
+ID=[U-025[Mvp]](unit-plans/U-025[Mvp].md) | 엔딩 리포트 + 리플레이/시나리오 하네스 **(U-026 흡수)** | Depends=U-018 | ⏸️
+
+### MVP (1개)
+ID=[CP-MVP-03](unit-plans/CP-MVP-03.md) | **체크포인트: 10분 데모 루프** _(수동 조작 + 엔딩 리포트 데모 기준)_ | Depends=U-023,U-025,U-056,U-057,U-058,U-061 | ⏸️
 
 ### MMP - M5: 해커톤 제출 준비 (6개)
 
@@ -217,7 +219,7 @@ _기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-
 
 ## 빠른 실행
 
-**다음 작업**: U-126(성능 최적화+기술 부채) → U-115(핫스팟) → Autopilot(U-023→U-024→U-025) → CP-MVP-03
+**다음 작업**: CP-MVP-03(10분 데모 루프 검증) → MMP 진입
 **MVP 완료 후**: [U-119[Mmp]](unit-plans/U-119[Mmp].md)(폴리시) + [U-120[Mmp]](unit-plans/U-120[Mmp].md)(배포) + [U-138[Mmp]](unit-plans/U-138[Mmp].md)(공개 저장소) 병렬 → [U-121[Mmp]](unit-plans/U-121[Mmp].md)(문서) → [U-122[Mmp]](unit-plans/U-122[Mmp].md)(영상)
 
 ```bash
@@ -246,4 +248,4 @@ pnpm kill
 **계획 추가**: U-135(로그 영문화), U-136(경제 검증 보상 수정+ModelLabel 통합), U-137(Signal 밸런스 조정)
 **블로커**: R-029(보상 시 Economy 검증 실패 → 폴백) — U-136이 해소 예정
 **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
-**제출 크리티컬 패스**: U-135→U-136→U-137→U-134 → U-119(폴리시) + U-120(배포) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)
+**제출 크리티컬 패스**: CP-MVP-03(데모 루프 검증) → U-119(폴리시) + U-120(배포) + U-138(공개 저장소) 병렬 → U-121(문서) → U-122(영상) → CP-SUB-01(제출)

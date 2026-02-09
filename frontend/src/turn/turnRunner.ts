@@ -494,7 +494,7 @@ export function createTurnRunner(deps: {
   /**
    * 스트림을 취소합니다.
    *
-   * 추후 Cancel/Pause/Autopilot UX를 위한 기본 골격입니다.
+   * 추후 Cancel/Pause UX를 위한 기본 골격입니다.
    * 현재 executeTurnStream은 Abort 시 onComplete를 호출하지 않으므로,
    * Cancel 버튼을 넣을 계획이라면 "취소 시 UI 복구 정책"을 별도로 명시해야 합니다.
    */

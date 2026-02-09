@@ -152,7 +152,7 @@
 
 ### 온보딩(신규 합류자/에이전트) 10분 루프
 
-- `vibe/prd.md` 6~9장(게임 UI/경제/Autopilot) → “채팅 UI 금지” 합의
+- `vibe/prd.md` 6~9장(게임 UI/경제/에이전트 가시화) → “채팅 UI 금지” 합의
 - `vibe/tech-stack.md`(버전/모델 ID 고정) 확인
 - `vibe/ref/frontend-style-guide.md`로 CRT 테마 규칙 숙지
 - `vibe/ref/structured-outputs-guide.md`로 JSON Schema 제약 이해
