@@ -261,7 +261,7 @@ async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, A
             "error": True,
             "message": "Invalid input",
             "details": e.errors(),
-            "language": raw_language if raw_language in ("ko-KR", "en-US") else "ko-KR",
+            "language": raw_language if raw_language in ("ko-KR", "en-US") else "en-US",
             "economy_snapshot": raw_economy,
         }
     except Exception:
@@ -269,7 +269,7 @@ async def _validate_and_parse_input(request: Request) -> TurnInput | dict[str, A
             "error": True,
             "message": "Failed to parse request body",
             "details": None,
-            "language": "ko-KR",
+            "language": "en-US",
             "economy_snapshot": None,
         }
 
@@ -332,7 +332,7 @@ async def turn_stream(request: Request) -> StreamingResponse:
 
     if isinstance(parse_result, dict) and parse_result.get("error"):
         # RU-002-S1: 입력 검증 실패 시에도 error + final(폴백) 순서로 송출
-        error_language = parse_result.get("language", "ko-KR")
+        error_language = parse_result.get("language", "en-US")
         error_economy = parse_result.get("economy_snapshot")
 
         # economy_snapshot이 유효한지 확인

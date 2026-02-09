@@ -43,11 +43,11 @@ def test_validate_image_generation_request_with_sdk_sizes():
 
     # 3. 실패 케이스 (지원하지 않는 크기)
     err = validate_image_generation_request("A test prompt", "8K")
-    assert "지원하지 않는 이미지 크기" in err
+    assert "Unsupported image size" in err
 
     # 4. 실패 케이스 (프롬프트 짧음)
     err = validate_image_generation_request("A", "1K")
-    assert "프롬프트가 너무 짧습니다" in err
+    assert "Prompt is too short" in err
 
 
 def test_image_generation_service_request_validation():

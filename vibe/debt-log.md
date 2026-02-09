@@ -265,3 +265,17 @@ mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 - **보류 사유**: 이번 유닛(`U-131`) 범위 밖이며, 텍스트 프롬프트 주입과는 무관한 이미지 생성 모듈의 기존 이슈임.
 - **권장 조치**: `render_stage`의 이미지 생성 트리거 조건을 재확인하고 테스트 Mock 설정을 현행화함.
 
+
+## 2026-02-09 이슈: 자산 매니페스트 스키마 검증 실패
+
+- **발견 위치**: tests/qa/test_asset_manifest.py
+- **현상**: jsonschema.exceptions.ValidationError: 'scene' is not one of ['icon', 'placeholder', 'chrome', 'item-icon']
+- **추정 원인**: ui-asset-manifest.json 스키마의 에셋 유형(type) enum에 'scene'이 누락되어 있음.
+- **보류 사유**: 이번 유닛(U-132: 영어 기본 언어 전환) 범위 밖임.
+
+## 2026-02-09 이슈: 이미지 생성 관련 단위 테스트 실패 (U-097 영향)
+
+- **발견 위치**: tests/unit/orchestrator/test_u053_render_async.py, tests/unit/orchestrator/test_u054_image_fallback.py
+- **현상**: AssertionError (Expected 'generate' to have been called once. Called 0 times.) 등
+- **추정 원인**: U-097에서 이미지 생성을 프론트엔드로 위임하도록 render_stage가 변경되었으나, 기존 단위 테스트들이 이를 반영하지 못함.
+- **보류 사유**: 이번 유닛(U-132) 범위 밖이며, 렌더링 아키텍처 변경에 따른 테스트 코드 전면 수정이 필요함.

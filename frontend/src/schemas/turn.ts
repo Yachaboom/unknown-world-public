@@ -740,7 +740,7 @@ export type TurnOutputParseResult =
  */
 export function safeParseTurnOutput(
   data: unknown,
-  language: Language = 'ko-KR',
+  language: Language = 'en-US',
   repairCount: number = 0,
   economySnapshot?: { signal: number; memory_shard: number },
 ): TurnOutputParseResult {

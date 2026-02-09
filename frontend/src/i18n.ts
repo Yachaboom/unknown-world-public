@@ -21,14 +21,34 @@ import enUS from './locales/en-US/translation.json';
 /** 지원 언어 타입 (TurnInput.language와 동기화) */
 export type SupportedLanguage = 'ko-KR' | 'en-US';
 
-/** 기본 언어 (데모 일관성을 위해 ko-KR 고정) */
-export const DEFAULT_LANGUAGE: SupportedLanguage = 'ko-KR';
+/** 기본 언어 (Devpost 제출 요건 대응을 위해 en-US 기본) */
+export const DEFAULT_LANGUAGE: SupportedLanguage = 'en-US';
 
 /** 폴백 언어 */
 export const FALLBACK_LANGUAGE: SupportedLanguage = 'en-US';
 
 /** 지원 언어 목록 */
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['ko-KR', 'en-US'];
+
+/**
+ * 초기 언어를 결정합니다.
+ * LocalStorage에 이전 설정이 있으면 우선 사용하고, 없으면 DEFAULT_LANGUAGE를 반환합니다.
+ *
+ * 주의: sessionLifecycle.ts의 getInitialSessionLanguage()와 동일한 로직이지만,
+ * i18n 모듈 초기화 시점에 순환 참조를 방지하기 위해 인라인으로 구현합니다.
+ * 키: 'unknown_world_language' (save/constants.ts의 LANGUAGE_STORAGE_KEY와 동일)
+ */
+function resolveInitialLanguage(): SupportedLanguage {
+  try {
+    const stored = localStorage.getItem('unknown_world_language');
+    if (stored === 'ko-KR' || stored === 'en-US') {
+      return stored;
+    }
+  } catch {
+    // localStorage 접근 불가 환경 (SSR, 시크릿 모드 등)
+  }
+  return DEFAULT_LANGUAGE;
+}
 
 // i18n 리소스 정의 (BCP-47 형식 언어 코드)
 const resources = {
@@ -42,7 +62,7 @@ const resources = {
 
 i18n.use(initReactI18next).init({
   resources,
-  lng: DEFAULT_LANGUAGE,
+  lng: resolveInitialLanguage(),
   fallbackLng: FALLBACK_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
   interpolation: {

@@ -59,7 +59,7 @@ class GenerateIconRequest(BaseModel):
 
     item_id: str = Field(description="아이템 고유 ID")
     description: str = Field(description="아이템 설명 (아이콘 생성용)")
-    language: str = Field(default="ko-KR", description="현재 세션 언어 (ko-KR/en-US)")
+    language: str = Field(default="en-US", description="현재 세션 언어 (ko-KR/en-US)")
     wait: bool = Field(
         default=False,
         description="생성 완료까지 대기 (false: placeholder 즉시 반환)",
@@ -170,7 +170,7 @@ async def get_icon_status(item_id: str) -> IconStatusResponse:
 async def get_or_generate_icon(
     item_id: Annotated[str, Query(description="아이템 고유 ID")],
     description: Annotated[str, Query(description="아이템 설명")],
-    language: Annotated[str, Query(description="세션 언어")] = "ko-KR",
+    language: Annotated[str, Query(description="세션 언어")] = "en-US",
 ) -> IconResponse:
     """아이콘을 조회하거나 생성합니다 (GET 방식).
 

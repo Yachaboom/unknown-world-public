@@ -48,7 +48,7 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
  */
 export function DemoProfileSelect({
   onSelectProfile,
-  currentLanguage = 'ko-KR',
+  currentLanguage = 'en-US',
   onLanguageChange,
 }: DemoProfileSelectProps) {
   const { t } = useTranslation();
@@ -61,17 +61,19 @@ export function DemoProfileSelect({
   );
 
   /** U-044: 언어 토글 핸들러 */
+  const nextLanguage =
+    SUPPORTED_LANGUAGES[
+      (SUPPORTED_LANGUAGES.indexOf(currentLanguage) + 1) % SUPPORTED_LANGUAGES.length
+    ];
+
   const handleLanguageToggle = useCallback(() => {
     if (!onLanguageChange) return;
-    // 현재 언어의 다음 언어로 전환 (2개 언어만 지원하므로 토글)
-    const currentIndex = SUPPORTED_LANGUAGES.indexOf(currentLanguage);
-    const nextIndex = (currentIndex + 1) % SUPPORTED_LANGUAGES.length;
-    onLanguageChange(SUPPORTED_LANGUAGES[nextIndex]);
-  }, [currentLanguage, onLanguageChange]);
+    onLanguageChange(nextLanguage);
+  }, [nextLanguage, onLanguageChange]);
 
   return (
     <div className="profile-select-container" data-ui-importance="critical">
-      {/* U-044: 언어 선택 토글 (우측 상단) */}
+      {/* U-044: 언어 선택 토글 (우측 상단) — 전환 대상 언어를 표시 */}
       {onLanguageChange && (
         <div className="language-toggle-container">
           <button
@@ -84,7 +86,7 @@ export function DemoProfileSelect({
             <span className="language-toggle-icon" aria-hidden="true">
               🌐
             </span>
-            <span className="language-toggle-label">{LANGUAGE_LABELS[currentLanguage]}</span>
+            <span className="language-toggle-label">{LANGUAGE_LABELS[nextLanguage]}</span>
           </button>
         </div>
       )}

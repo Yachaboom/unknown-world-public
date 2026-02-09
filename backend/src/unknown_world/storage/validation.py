@@ -100,7 +100,7 @@ def validate_image_upload(
     content: bytes,
     content_type: str,
     *,
-    language: Language = Language.KO,
+    language: Language = Language.EN,
 ) -> str | None:
     """업로드 이미지를 검증합니다.
 
@@ -164,7 +164,7 @@ def validate_image_generation_request(
     prompt: str,
     image_size: str,
     *,
-    language: Language = Language.KO,
+    language: Language = Language.EN,
 ) -> str | None:
     """이미지 생성 요청을 검증합니다.
 

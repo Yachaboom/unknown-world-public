@@ -14,14 +14,15 @@ backend/prompts/turn/turn_output_instructions.{en,ko}.md (v0.3.0)
 backend/src/unknown_world/main.py
 backend/src/unknown_world/orchestrator/pipeline.py
 backend/src/unknown_world/orchestrator/prompt_loader.py
-backend/tests/unit/orchestrator/test_u131_prompt_composition.py (신규)
 frontend/src/App.tsx
+frontend/src/i18n.ts (DEFAULT_LANGUAGE: en-US)
 frontend/src/components/AgentConsole.tsx
 frontend/src/components/NarrativeFeed.tsx
 frontend/src/components/ObjectiveTracker.tsx
 frontend/src/data/demoProfiles.ts
-vibe/unit-results/U-131[Mvp].md (신규)
-vibe/unit-runbooks/U-131-overarching-mystery-runbook.md (신규)
+vibe/unit-results/U-132[Mvp].md (신규)
+vibe/unit-results/U-131[Mvp].md
+vibe/unit-runbooks/U-131-overarching-mystery-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -765,6 +766,19 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **첫 요청 차단 버그 해소**:
     - **Initial Mount Stability**: 프로필 선택 직후 초기 크기를 측정하는 로직에서도 동일한 분리 패턴을 적용하여, 부팅 시점에 발생하던 React 경고와 이로 인한 마이크로태스크 차단 현상을 원천 해결함.
     - **Invariant Compliance**: 1프레임의 지연이 발생하지만, `ResizeObserver`에 이미 100ms 디바운스가 적용되어 있어 실질적인 게임플레이 정합성에는 영향이 없음.
+
+---
+
+## 65. 영어(en-US) 기본 언어 전환 (U-132[Mvp])
+
+1. **기본 언어 정책 전환 (Default-to-English)**:
+    - **Devpost Compliance**: 해커톤 제출 요건("The Application must, at a minimum, support English language use")에 대응하여, 애플리케이션의 `DEFAULT_LANGUAGE`를 `ko-KR`에서 `en-US`로 전환함.
+    - **Initial Boot Flow**: LocalStorage에 언어 설정이 없는 첫 접속 시(심사자 환경) 자동으로 영어 UI와 영어 내러티브로 시작되도록 보장함.
+2. **사용자 설정 보존 (LocalStorage Priority)**:
+    - **Persistence Policy**: `resolveInitialLanguage()` 로직을 통해 브라우저에 저장된 `'unknown_world_language'`가 있는 경우 이를 `DEFAULT_LANGUAGE`보다 우선시함. 이를 통해 기존 한국어 사용자의 환경이 초기화되지 않도록 보호함.
+3. **i18n 리소스 및 폴백 강화**:
+    - **Fallback Invariant**: `FALLBACK_LANGUAGE`를 `en-US`로 유지하여, 특정 번역 키가 누락된 경우에도 시스템 언어가 섞이지 않고 영어가 우선적으로 노출되도록 설계함.
+    - **Resource Consistency**: U-099(거래 장부) 및 U-044(세션 SSOT)와 연동하여, 영어 모드에서 모든 시스템 메시지 및 내러티브가 일관된 언어로 출력됨을 보장함.
 
 ---
 

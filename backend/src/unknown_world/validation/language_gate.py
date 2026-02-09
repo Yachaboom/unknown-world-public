@@ -310,7 +310,7 @@ class LanguageGateResult:
 
     is_valid: bool = True
     violations: list[dict[str, str]] = field(default_factory=lambda: [])
-    expected_language: Language = Language.KO
+    expected_language: Language = Language.EN
 
     def add_violation(self, field_path: str, sample_text: str) -> None:
         """위반 사항을 추가합니다."""

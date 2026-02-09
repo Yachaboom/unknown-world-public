@@ -38,12 +38,12 @@ def turn_input_base() -> TurnInput:
 
 
 def test_select_text_model_default(turn_input_base):
-    """기본 입력 시 FAST 모델이 선택되는지 테스트."""
+    """기본 입력 시 QUALITY 모델이 선택되는지 테스트 (U-127)."""
     generator = TurnOutputGenerator()
     label, multiplier = generator._select_text_model(turn_input_base)
 
-    assert label == ModelLabel.FAST
-    assert multiplier == 1.0
+    assert label == ModelLabel.QUALITY
+    assert multiplier == 2.0
 
 
 def test_select_text_model_by_action_id(turn_input_base):

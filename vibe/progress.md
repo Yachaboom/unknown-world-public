@@ -1,46 +1,33 @@
 # 프로젝트 진행 상황
 
-## [2026-02-09 20:20] U-131[Mvp]: 추상적 최종 목표(Overarching Mystery) 시스템 완료
+## [2026-02-09 10:15] U-132[Mvp]: 영어(en-US) 기본 언어 전환 — Devpost 제출 요건 대응 완료
 
 ### 구현 완료 항목
 
-- **핵심 기능**: '메아리(Echo)' 컨셉의 추상적 최종 목표를 시스템 프롬프트에 주입하여 스토리와 퀘스트의 방향성을 구조적으로 정렬함. 5턴 이상의 장기 세션에서도 내러티브 일관성을 유지하도록 GM 지침 보강.
-- **추가 컴포넌트**: `vibe/unit-results/U-131[Mvp].md` (보고서), `vibe/unit-runbooks/U-131-overarching-mystery-runbook.md` (런북).
-- **달성 요구사항**: [PRD 6.1] 에이전트형 GM 엔진, [PRD 6.8] 목표 시스템 강화.
+- **핵심 기능**: 프론트엔드 기본 언어를 `en-US`로 전환하여 첫 접속 시 영어로 시작하도록 함. LocalStorage 설정이 없는 신규 사용자(심사자) 대응.
+- **추가 컴포넌트**: `vibe/unit-results/U-132[Mvp].md` (보고서).
+- **달성 요구사항**: [RULE-006] ko/en i18n 정책 준수, Devpost 제출 요건(English language) 충족.
 
 ### 기술적 구현 세부사항
 
-**사용 기술/라이브러리**:
-
-- Google GenAI SDK (Python) v1.60.0: 시스템 프롬프트 및 지침 반영
-
-**설계 패턴 및 아키텍처 선택**:
-
-- **추상적 미스터리 패턴**: 구체적 목표가 아닌 해석 여지가 큰 메타포를 주입하여 장르 독립적 일관성 확보.
-- **XML 태그 구조화**: `<overarching_mystery>` 태그를 사용하여 프롬프트 내 지침 영역을 명확히 분리.
+**기본 언어 전환 (Default Language Shift)**:
+- **DEFAULT_LANGUAGE 변경**: `frontend/src/i18n.ts`에서 `DEFAULT_LANGUAGE`를 `'en-US'`로 변경하여 부팅 시 기본 언어 우선순위 조정.
+- **LocalStorage 존중**: 기존 사용자의 `'unknown_world_language'` 설정을 우선 확인하여 기존 한국어 사용자의 설정 유지.
+- **Fallback Policy**: `FALLBACK_LANGUAGE`를 `'en-US'`로 고정하여 번역 키 누락 시에도 영어로 우선 표시되도록 보강.
 
 **코드 구조**:
-backend/
-├── prompts/
-│   ├── system/
-│   │   ├── game_master.ko.md (수정)
-│   │   └── game_master.en.md (수정)
-│   └── turn/
-│       ├── turn_output_instructions.ko.md (수정)
-│       └── turn_output_instructions.en.md (수정)
+repo-root/
+└── frontend/src/i18n.ts (DEFAULT_LANGUAGE 상수 수정 및 로직 검증)
 
 ### 성능 및 품질 지표
 
-- **코드 품질**: Ruff 린트 통과 완료
-- **일관성**: ko/en 양 언어 및 3종 프로필에서 동일한 미스터리 분위기 반영 확인
-
-### 의존성 변경
-
-- 없음 (기존 U-078 시스템 활용)
+- **접근성**: 영어권 심사자가 별도 설정 없이 즉시 플레이 가능.
+- **일관성**: U-099, U-044와 연계하여 영어 모드에서의 내러티브 및 UI 일관성 확보.
 
 ### 다음 단계
 
-- U-133[Mvp]: 첫 턴 이미지-스토리 정합성 작업에 미스터리 모티프 반영
+- **U-133[Mvp]**: 프로필 시작 이미지-스토리 정합성 강화
+- **U-119[Mmp]**: Frontend Layout 전체 다듬기 (WIG 폴리시)
 
 ---
 

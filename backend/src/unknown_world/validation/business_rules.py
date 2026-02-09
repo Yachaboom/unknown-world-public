@@ -138,7 +138,7 @@ class BusinessRuleValidationResult:
     is_valid: bool = True
     errors: list[dict[str, str]] = field(default_factory=lambda: [])
     error_summary: str = ""
-    language: Language = Language.KO
+    language: Language = Language.EN
     language_gate_result: LanguageGateResult | None = None
 
     def add_error(self, error_type: BusinessRuleError, message: str) -> None:
@@ -374,23 +374,7 @@ def validate_business_rules(
     turn_input: TurnInput,
     turn_output: TurnOutput,
 ) -> BusinessRuleValidationResult:
-    """비즈니스 룰을 검증합니다.
-
-    스키마 검증 이후 호출되며, 의미적 규칙을 검증합니다.
-    에러 메시지는 turn_input.language에 따라 분기됩니다 (RULE-006).
-
-    Args:
-        turn_input: 사용자 턴 입력
-        turn_output: 생성된 턴 출력
-
-    Returns:
-        BusinessRuleValidationResult: 검증 결과
-
-    Example:
-        >>> result = validate_business_rules(turn_input, turn_output)
-        >>> if not result.is_valid:
-        ...     print(result.build_summary())
-    """
+    """비즈니스 룰을 검증합니다."""
     # RU-005-S2: turn_input.language에 따라 에러 메시지 i18n 분기
     result = BusinessRuleValidationResult(language=turn_input.language)
 

@@ -151,7 +151,7 @@ async def scan_image(
     language: Annotated[
         str,
         Form(description="응답 언어 (ko-KR 또는 en-US)"),
-    ] = "ko-KR",
+    ] = "en-US",
     preserve_original: Annotated[
         bool,
         Form(description="원본 이미지 저장 여부 (디버깅/재분석용, RU-006-S1)"),

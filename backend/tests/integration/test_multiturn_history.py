@@ -21,7 +21,7 @@ def mock_genai_client():
 
         # Setup successful response
         mock_response = MagicMock()
-        mock_response.text = '{"language": "ko-KR", "narrative": "Success", "ui": {}, "world": {}, "economy": {"cost": {"signal": 10, "memory_shard": 0}, "balance_after": {"signal": 90, "memory_shard": 100}}, "safety": {"blocked": false}, "agent_console": {}}'
+        mock_response.text = '{"language": "en-US", "narrative": "Success", "ui": {}, "world": {}, "economy": {"cost": {"signal": 10, "memory_shard": 0}, "balance_after": {"signal": 90, "memory_shard": 100}}, "safety": {"blocked": false}, "agent_console": {}}'
         mock_response.thought_signature = "mock_sig"
         mock_client.generate.return_value = mock_response
 
@@ -31,7 +31,7 @@ def mock_genai_client():
 @pytest.fixture
 def turn_input():
     return TurnInput(
-        language=Language.KO,
+        language=Language.EN,
         text="Hello",
         action_id="test_action",
         economy_snapshot=EconomySnapshot(signal=100, memory_shard=100),

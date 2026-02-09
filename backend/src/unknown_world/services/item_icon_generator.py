@@ -140,7 +140,7 @@ class IconGenerationRequest(BaseModel):
 
     item_id: str = Field(description="아이템 고유 ID")
     item_description: str = Field(description="아이템 설명 (아이콘 생성용)")
-    language: str = Field(default="ko-KR", description="현재 세션 언어")
+    language: str = Field(default="en-US", description="현재 세션 언어")
 
 
 class IconGenerationResponse(BaseModel):

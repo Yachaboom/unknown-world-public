@@ -239,7 +239,7 @@ def get_fallback_message(language: str) -> str:
 def decide_image_generation(
     turn_output: TurnOutput,
     economy_snapshot: EconomySnapshot,
-    language: str = "ko-KR",
+    language: str = "en-US",
     previous_image_url: str | None = None,
 ) -> ImageGenerationDecision:
     """이미지 생성 여부를 종합적으로 판정합니다.
@@ -420,7 +420,7 @@ class ImageFallbackResult:
 
 def create_image_fallback_result(
     status_message: str | None,
-    language: str = "ko-KR",
+    language: str = "en-US",
 ) -> ImageFallbackResult:
     """이미지 생성 실패에 대한 폴백 결과를 생성합니다.
 

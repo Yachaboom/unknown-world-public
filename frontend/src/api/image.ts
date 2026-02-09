@@ -134,7 +134,7 @@ export async function generateImage(
       },
       body: JSON.stringify({
         prompt: request.prompt,
-        language: request.language ?? 'ko-KR',
+        language: request.language ?? 'en-US',
         // U-085: aspect_ratio는 UI 레이아웃 기반 선택값 사용 (기본 16:9)
         aspect_ratio: request.aspectRatio ?? '16:9',
         // U-085 Q2: image_size는 SDK 값 (1K/2K/4K) 사용

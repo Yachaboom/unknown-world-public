@@ -69,7 +69,7 @@ def test_scan_image_invalid_type():
     res_data = response.json()
     assert res_data["success"] is False
     assert res_data["status"] == ScanStatus.FAILED
-    assert "지원하지 않는 이미지 형식" in res_data["message"]
+    assert "Unsupported image format" in res_data["message"]
 
 
 def test_scan_image_too_large():
@@ -83,4 +83,4 @@ def test_scan_image_too_large():
     assert response.status_code == 200
     res_data = response.json()
     assert res_data["success"] is False
-    assert "파일이 너무 큽니다" in res_data["message"]
+    assert "File too large" in res_data["message"]

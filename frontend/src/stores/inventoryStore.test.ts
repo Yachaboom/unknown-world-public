@@ -102,7 +102,7 @@ describe('inventoryStore', () => {
       description: '설명 B',
       icon: '/static/icon.png',
       quantity: 2,
-      iconStatus: 'ready',
+      iconStatus: 'completed',
     });
   });
 });

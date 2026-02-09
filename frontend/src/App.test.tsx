@@ -3,24 +3,22 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 import * as turnStream from './api/turnStream';
 import { useInventoryStore } from './stores/inventoryStore';
+import { DemoProfile } from './data/demoProfiles';
 
 // i18next 모킹 (RU-003-Q5: 데모 i18n 키 지원)
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       // 데모 아이템 이름
-      if (key === 'demo.items.keycard-alpha.name') return '키카드 A';
-      if (key === 'demo.items.medkit.name') return '응급 키트';
-      if (key === 'demo.items.flashlight.name') return '손전등';
-      if (key === 'demo.items.data-chip.name') return '데이터칩';
+      if (key === 'profile.tech.items.data_core') return 'Data Core';
+      if (key === 'profile.tech.items.circuit_board') return 'Circuit Board';
+      if (key === 'profile.tech.items.energy_cell') return 'Energy Cell';
+      if (key === 'profile.tech.items.scanner') return 'Scanner Device';
+
       // 데모 씬 오브젝트 (프로필 기반)
-      if (key === 'profile.tech.scene.terminal') return '터미널';
-      if (key === 'profile.tech.scene.terminal_hint') return '활성화된 터미널이다';
-      // 구버전/공통 씬 오브젝트
-      if (key === 'demo.scene.terminal.label') return '터미널';
-      if (key === 'demo.scene.terminal.hint') return '활성화된 터미널이다';
-      if (key === 'demo.scene.door.label') return '문';
-      if (key === 'demo.scene.door.hint') return '잠겨있는 것 같다';
+      if (key === 'profile.tech.scene.terminal') return 'Terminal';
+      if (key === 'profile.tech.scene.terminal_hint') return 'An active terminal';
+
       // 액션 템플릿
       if (key === 'scene.hotspot.click_action') {
         return `Click: ${options?.label}`;
@@ -29,7 +27,7 @@ vi.mock('react-i18next', () => ({
     },
     i18n: {
       changeLanguage: () => Promise.resolve(),
-      resolvedLanguage: 'ko-KR',
+      resolvedLanguage: 'en-US',
     },
   }),
   initReactI18next: {
@@ -37,6 +35,37 @@ vi.mock('react-i18next', () => ({
     init: () => {},
   },
 }));
+
+// U-132: 데모 프로필에 핫스팟 주입 (테스트용)
+vi.mock('./data/demoProfiles', async (importOriginal) => {
+  const actual = (await importOriginal()) as {
+    PROFILE_NARRATOR: DemoProfile;
+    PROFILE_EXPLORER: DemoProfile;
+    PROFILE_TECH: DemoProfile;
+    DEMO_PROFILES: DemoProfile[];
+  };
+  const modifiedProfileTech: DemoProfile = {
+    ...actual.PROFILE_TECH,
+    initialState: {
+      ...actual.PROFILE_TECH.initialState,
+      sceneObjectDefs: [
+        {
+          id: 'main-terminal',
+          labelKey: 'profile.tech.scene.terminal',
+          hintKey: 'profile.tech.scene.terminal_hint',
+          box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
+        },
+      ],
+    },
+  };
+  return {
+    ...actual,
+    PROFILE_TECH: modifiedProfileTech,
+    get DEMO_PROFILES() {
+      return [actual.PROFILE_NARRATOR, actual.PROFILE_EXPLORER, modifiedProfileTech];
+    },
+  };
+});
 
 // ResizeObserver 모킹
 class MockResizeObserver {
@@ -78,9 +107,9 @@ describe('App Integration - Hotspot Click', () => {
     fireEvent.click(techProfile);
 
     // U-060: 프로필 선택 후 상태 전환이 React 상태 업데이트이므로 waitFor 사용
-    // 2. 이제 메인 게임 UI가 나타남 - 테크 프로필의 '터미널' 핫스팟 찾기
+    // 2. 이제 메인 게임 UI가 나타남 - 테크 프로필의 'Terminal' 핫스팟 찾기
     const terminalHotspot = await waitFor(() => {
-      const hotspot = screen.getByLabelText('터미널');
+      const hotspot = screen.getByLabelText('Terminal');
       expect(hotspot).toBeInTheDocument();
       return hotspot;
     });
@@ -96,7 +125,7 @@ describe('App Integration - Hotspot Click', () => {
     const [input] = vi.mocked(turnStream.startTurnStream).mock.calls[0];
 
     // TurnInput 검증
-    expect(input.text).toBe('Click: 터미널');
+    expect(input.text).toBe('Click: Terminal');
     expect(input.click).toEqual({
       object_id: 'main-terminal',
       box_2d: { ymin: 200, xmin: 300, ymax: 600, xmax: 700 },
