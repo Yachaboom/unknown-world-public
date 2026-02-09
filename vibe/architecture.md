@@ -9,64 +9,19 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ### 디렉토리 구조
 
 ```text
-backend/prompts/image/scene_prompt.{en,ko}.md
-backend/prompts/system/game_master.{en,ko}.md
-backend/prompts/turn/turn_output_instructions.{en,ko}.md
-backend/prompts/vision/scene_affordances.{en,ko}.md
-backend/src/unknown_world/api/image.py
-backend/src/unknown_world/api/item_icon.py
-backend/src/unknown_world/api/scanner.py
-backend/src/unknown_world/api/turn.py
-backend/src/unknown_world/api/turn_streaming_helpers.py
-backend/src/unknown_world/config/economy.py
-backend/src/unknown_world/config/models.py
+backend/prompts/system/game_master.{en,ko}.md (v0.3.0)
+backend/prompts/turn/turn_output_instructions.{en,ko}.md (v0.3.0)
 backend/src/unknown_world/main.py
-backend/src/unknown_world/models/turn.py
-backend/src/unknown_world/orchestrator/conversation_history.py
 backend/src/unknown_world/orchestrator/pipeline.py
-backend/src/unknown_world/orchestrator/repair_loop.py
-backend/src/unknown_world/orchestrator/stages/parse.py
-backend/src/unknown_world/orchestrator/stages/validate.py
-backend/src/unknown_world/orchestrator/stages/render.py
-backend/src/unknown_world/services/agentic_vision.py
-backend/src/unknown_world/services/image_generation.py
-backend/src/unknown_world/services/image_understanding.py
-backend/src/unknown_world/services/item_icon_generator.py
-backend/src/unknown_world/storage/paths.py
-backend/src/unknown_world/storage/seed.py
-backend/src/unknown_world/validation/business_rules.py
-frontend/public/ui/items/*.png
-frontend/public/ui/scenes/*.webp
-frontend/src/api/turnStream.ts
-frontend/src/components/ActionDeck.tsx
+backend/src/unknown_world/orchestrator/prompt_loader.py
+backend/tests/unit/orchestrator/test_u131_prompt_composition.py (신규)
+frontend/src/App.tsx
 frontend/src/components/AgentConsole.tsx
-frontend/src/components/EconomyHud.tsx
-frontend/src/components/InventoryPanel.tsx
 frontend/src/components/NarrativeFeed.tsx
-frontend/src/components/NarrativeFeed.U-125.test.tsx (신규: U-125)
 frontend/src/components/ObjectiveTracker.tsx
-frontend/src/components/RateLimitPanel.tsx (신규: U-130)
-frontend/src/components/ScannerSlot.tsx
-frontend/src/components/SceneCanvas.tsx
-frontend/src/components/SceneImage.tsx
-frontend/src/components/Hotspot.tsx
 frontend/src/data/demoProfiles.ts
-frontend/src/save/sessionLifecycle.ts
-frontend/src/stores/worldStore.ts
-frontend/src/stores/agentStore.ts
-frontend/src/turn/turnRunner.ts
-shared/schemas/turn/turn_output.schema.json
-vibe/unit-results/U-130[Mvp].md
-vibe/unit-results/U-125[Mvp].md (신규: U-125)
-vibe/unit-results/U-129[Mvp].md
-vibe/unit-results/U-128[Mvp].md
-vibe/unit-results/U-127[Mvp].md
-vibe/unit-results/U-124.md
-vibe/unit-runbooks/U-130[Mvp]-runbook.md
-vibe/unit-runbooks/U-125-past-turn-dim-runbook.md (신규: U-125)
-vibe/unit-runbooks/U-129-item-sell-ux-runbook.md
-vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
-vibe/unit-runbooks/U-124-profile-scene-images-runbook.md
+vibe/unit-results/U-131[Mvp].md (신규)
+vibe/unit-runbooks/U-131-overarching-mystery-runbook.md (신규)
 ```
 
 ### 주요 디렉토리 설명
@@ -810,3 +765,16 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 3. **첫 요청 차단 버그 해소**:
     - **Initial Mount Stability**: 프로필 선택 직후 초기 크기를 측정하는 로직에서도 동일한 분리 패턴을 적용하여, 부팅 시점에 발생하던 React 경고와 이로 인한 마이크로태스크 차단 현상을 원천 해결함.
     - **Invariant Compliance**: 1프레임의 지연이 발생하지만, `ResizeObserver`에 이미 100ms 디바운스가 적용되어 있어 실질적인 게임플레이 정합성에는 영향이 없음.
+
+---
+
+## 64. 추상적 최종 목표(Overarching Mystery) 시스템 (U-131[Mvp])
+
+1. **미스터리 지향점 주입 (Overarching Mystery)**:
+    - **Concept**: 모든 프로필에 공통적으로 적용되는 추상적 최종 목표인 **'메아리(Echo)'**를 시스템 프롬프트에 주입함. 이를 통해 개별 턴의 내러티브가 일관된 테마를 중심으로 전개되도록 유도함.
+    - **Abstract Framing**: 구체적인 엔딩이나 목표가 아닌, "잊힌 진실", "모든 선택의 공명"과 같은 추상적 메타포를 사용하여 장르와 무관하게 자연스러운 포괄이 가능함.
+2. **GM 지향성 정렬 및 퀘스트 정합성**:
+    - **Subtle Reflection Policy**: 내러티브에 미스터리 단서를 노골적으로 언급하는 대신 은은하게(subtle) 반영하도록 지침을 강화함. 5턴 이상의 장기 세션에서 스토리와 퀘스트가 발산하는 문제를 구조적으로 해결함.
+    - **Quest-Mystery Alignment**: 주 목표(Main Quest) 생성 시 미스터리 여정의 하위 단계로 느껴지도록 라벨과 설명을 설계하는 8번 목표 관리 규칙을 도입함.
+3. **보안 및 비노출 원칙 (RULE-007/008)**:
+    - **Prompt Concealment**: 미스터리의 구체적인 프롬프트 텍스트는 시스템 프롬프트 내부에만 존재하며, 에이전트 콘솔이나 API 응답을 통해 UI에 직접 노출되지 않도록 철저히 격리함.

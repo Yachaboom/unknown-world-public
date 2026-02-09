@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 126/139 (90.6%) | **MVP**: 126/134 (94.0%) | **MMP**: 0/5 (0%)
+**전체**: 127/139 (91.4%) | **MVP**: 127/134 (94.8%) | **MMP**: 0/5 (0%)
 
 **예상 완료(가정)**: MVP D-1 | MMP(M5 제출): D-1
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**최근 완료**: [U-125[Mvp]](vibe/unit-results/U-125[Mvp].md) (2026-02-09) / [U-124[Mvp]](vibe/unit-results/U-124.md) (2026-02-09) / [U-130[Mvp]](vibe/unit-results/U-130[Mvp].md) (2026-02-09)
+**최근 완료**: [U-131[Mvp]](vibe/unit-results/U-131[Mvp].md) (2026-02-09) / [U-125[Mvp]](vibe/unit-results/U-125[Mvp].md) (2026-02-09) / [U-124[Mvp]](vibe/unit-results/U-124.md) (2026-02-09) / [U-130[Mvp]](vibe/unit-results/U-130[Mvp].md) (2026-02-09)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
 
@@ -85,8 +85,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### 데모 반복 가능(데모프로필/리셋) + 엔딩 아티팩트
 
 - **완료 기준**: 데모프로필 3종 + 리셋 + 새로고침 시 프로필 선택(SaveGame 제거: U-116) + 엔딩 리포트 + 목표 시스템 + Overarching Mystery
-- **잔여**: SaveGame 제거+프로필 정리(U-116), 거래 장부 버그(U-099), 추상적 최종 목표(U-131), 프로필 이미지-스토리 정합(U-133)
-- **상태**: 🚧
+- **상태**: ✅ (U-131 완료로 핵심 기반 구축)
 
 ### 게임 경제/재화 시스템
 
@@ -108,7 +107,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 ## 리스크 (활성만)
 
-_해소 완료: R-005~R-008, R-010~R-018, R-020~R-022 (대응 유닛 완료). 이력 → `vibe/changelog.md`_
+_해소 완료: R-005~R-008, R-010~R-018, R-020~R-022, R-027 (대응 유닛 완료). 이력 → `vibe/changelog.md`_
 
 | ID    | 내용                                   | 영향 | 확률 | 대응                                      |
 | ----- | -------------------------------------- | ---- | ---- | ----------------------------------------- |
@@ -122,7 +121,6 @@ _해소 완료: R-005~R-008, R-010~R-018, R-020~R-022 (대응 유닛 완료). �
 | R-024 | 새로고침 시 진행 전량 소실(SaveGame 제거) | Med | 30% | ~~MMP U-113~~ skip → 해커톤 이후 재계획   |
 | R-025 | 배포 환경 다운 → 심사 불가               | High | 20% | U-120 min-instances=1 + 모니터링          |
 | R-026 | 영문 모드 UI/내러티브 품질 부족          | Med  | 30% | U-099 i18n 수정 + U-119 WIG 폴리시       |
-| R-027 | 멀티턴 진행 시 Quest와 스토리 방향 발산  | Med  | 40% | U-131 Overarching Mystery + 프롬프트 정렬 |
 | R-028 | 프로필 시작 이미지와 첫 턴 내러티브 불일치 | Med | 50% | U-133 첫 턴 씬 설명 맥락 주입            |
 
 ## Devpost 제출 요건 매핑 (Gemini 3 Hackathon)
@@ -155,8 +153,7 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
-### MVP (11개)
-ID=[U-131[Mvp]](unit-plans/U-131[Mvp].md) | 추상적 최종 목표(Overarching Mystery) — Quest/스토리 방향성 정렬 | Depends=U-078 | ⏸️
+### MVP (10개)
 ID=[U-132[Mvp]](unit-plans/U-132[Mvp].md) | 영어(en-US) 기본 언어 전환 — Devpost 제출 요건 대응 | Depends=U-099 | ⏸️
 ID=[U-133[Mvp]](unit-plans/U-133[Mvp].md) | 프로필 시작 이미지-스토리 정합성 강화 — 첫 턴 맥락 주입 | Depends=U-124,U-131 | ⏸️
 ID=[U-126[Mvp]](unit-plans/U-126[Mvp].md) | MVP 성능/품질 기본 최적화 (M6 대체, 번들/에셋/CSS/렌더링) | Depends=None | ⏸️
@@ -181,8 +178,9 @@ ID=[CP-SUB-01](unit-plans/CP-SUB-01.md) | **⚡체크포인트: 해커톤 제출
 _**[2026-02-08] M6 전체 skip**: 해커톤 일정상 실행 불가. MVP에 U-126(성능/품질 최적화) 1개로 대체. 해커톤 이후 필요 시 재계획._
 _기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-106, U-107, U-108, U-110~112, U-113, CP-MMP-02 — 모두 skip._
 
-### 완료 (126개)
+### 완료 (127개)
 
+- ✅ [U-131[Mvp]](vibe/unit-results/U-131[Mvp].md): 추상적 최종 목표(Overarching Mystery) — Quest/스토리 방향성 정렬 (2026-02-09)
 - ✅ [U-125[Mvp]](vibe/unit-results/U-125[Mvp].md): 이전턴 텍스트 주목성 제거 - 색상 변경 + 폰트 축소 (2026-02-09)
 - ✅ [U-124[Mvp]](vibe/unit-results/U-124.md): 프로필별 첫 씬 이미지 사전 생성 (2026-02-09)
 - ✅ [U-130[Mvp]](vibe/unit-results/U-130[Mvp].md): 429 Rate Limit 에러 시 프론트엔드 재시도 안내 UI (2026-02-09)

@@ -100,13 +100,13 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: Overarching Mystery의 구체적 텍스트는?
-  - Option A: **"Echo(메아리)"** 컨셉 — 모든 이야기/선택/진실을 묶는 공명 (위 예시)
+- [x] **Q1**: Overarching Mystery의 구체적 텍스트는?
+  - ✅Option A: **"Echo(메아리)"** 컨셉 — 모든 이야기/선택/진실을 묶는 공명 (위 예시)
   - Option B: **"The Threshold(문턱)"** 컨셉 — 알려진 것과 미지 사이의 경계를 넘으려는 여정
   - Option C: 개발자가 직접 작성
 
-- [ ] **Q2**: GM이 Overarching Mystery를 참조하는 강도는?
-  - Option A: **매 턴 은은하게** — 분위기/단어 선택에 반영 (권장)
+- [x] **Q2**: GM이 Overarching Mystery를 참조하는 강도는?
+  - ✅Option A: **매 턴 은은하게** — 분위기/단어 선택에 반영 (권장)
   - Option B: **3~5턴마다 직접적 힌트** — 간헐적으로 미스터리 이벤트 발생
   - Option C: **주 목표 전환 시에만** — 새 주 목표 생성 시에만 연결
 

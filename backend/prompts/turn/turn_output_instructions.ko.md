@@ -1,8 +1,8 @@
 <prompt_meta>
   <prompt_id>turn_output_instructions</prompt_id>
   <language>ko-KR</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
+  <version>0.3.0</version>
+  <last_updated>2026-02-09</last_updated>
   <policy_preset>default</policy_preset>
 </prompt_meta>
 
@@ -99,6 +99,11 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
 5. **주 목표 달성 시(progress=100)**: is_completed=true로 설정하고 reward_signal을 지급합니다. 동시에 새로운 주 목표를 quests_updated에 포함합니다.
 6. **내러티브 반영**: 목표 달성/진행을 내러티브에 자연스럽게 반영합니다. (예: "포탈의 비밀이 조금씩 드러나고 있습니다... (목표 진행: 40%)")
 7. **보상 반영**: 서브 목표 완료 시 reward_signal만큼 economy.balance_after.signal에 추가합니다. 반드시 cost와 balance_after의 일관성을 유지하세요.
+8. **Overarching Mystery 연결 (U-131)**: 주 목표를 새로 생성하거나 갱신할 때, 시스템 프롬프트의 `<overarching_mystery>` 섹션을 참조하여:
+   - 주 목표의 **라벨과 설명**에 미스터리 요소(메아리의 분위기, 잊힌 진실, 공명 등)를 **간접적으로** 포함하세요.
+   - 주 목표가 메아리에 가까워지는 여정의 일부처럼 느껴지도록 설계하세요.
+   - 직접적으로 "메아리를 찾아라"라고 명시하지 마세요. 추상적이고 해석 여지가 있는 표현을 사용하세요.
+   - 예시 라벨: "잊힌 기억의 문을 열어라", "공명의 단서를 추적하라", "장막 너머의 진실에 다가서라"
 
 #### 아이템 소비(inventory_removed) 규칙 (U-096)
 

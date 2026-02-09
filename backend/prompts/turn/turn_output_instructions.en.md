@@ -1,8 +1,8 @@
 <prompt_meta>
   <prompt_id>turn_output_instructions</prompt_id>
   <language>en-US</language>
-  <version>0.2.0</version>
-  <last_updated>2026-01-28</last_updated>
+  <version>0.3.0</version>
+  <last_updated>2026-02-09</last_updated>
   <policy_preset>default</policy_preset>
 </prompt_meta>
 
@@ -99,6 +99,11 @@ Update objective states based on player actions each turn:
 5. **Main objective completion (progress=100)**: Set is_completed=true, award reward_signal, and include a new main objective in quests_updated.
 6. **Narrative reflection**: Naturally reflect objective progress/completion in the narrative. (e.g., "The portal's secrets are slowly revealing... (Objective Progress: 40%)")
 7. **Reward reflection**: When a sub-objective is completed, add reward_signal to economy.balance_after.signal. Ensure cost and balance_after consistency.
+8. **Overarching Mystery Connection (U-131)**: When creating or updating the main objective, reference the `<overarching_mystery>` section in the system prompt:
+   - **Indirectly** include mystery elements (Echo's atmosphere, forgotten truths, resonance, etc.) in the main objective's **label and description**.
+   - Design the main objective to feel like part of the journey toward the Echo.
+   - Do NOT explicitly state "find the Echo". Use abstract and open-to-interpretation language.
+   - Example labels: "Open the gate of forgotten memories", "Track the clues of resonance", "Approach the truth beyond the veil"
 
 #### Item Consumption (inventory_removed) Rules (U-096)
 

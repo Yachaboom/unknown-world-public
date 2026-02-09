@@ -247,4 +247,21 @@ mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 - **현상**: `parseInventoryAdded` 테스트 실패 - `Expected: iconStatus: "ready"` vs `Received: iconStatus: "completed"`
 - **추정 원인**: `parseInventoryAdded` 함수가 아이콘 URL이 있는 아이템의 `iconStatus`를 `"ready"` 대신 `"completed"`로 설정하도록 변경되었으나, 테스트 기대값이 업데이트되지 않음.
 - **보류 사유**: U-082[Mvp] 범위 밖 (인벤토리 아이콘 상태 로직과 무관).
-- **권장 조치**: 테스트 기대값을 `iconStatus: "completed"`로 수정하거나, `parseInventoryAdded` 구현 의도를 확인 후 정렬.
+- **수정 파일**: `frontend/src/stores/inventoryStore.test.ts`
+
+## 2026-02-09 이슈: U-127 기본 모델 변경에 따른 test_u069_model_tiering 실패
+
+- **발견 위치**: `backend/tests/unit/orchestrator/test_u069_model_tiering.py:45`
+- **현상**: `test_select_text_model_default` 실패 - `Expected: ModelLabel.FAST` vs `Received: ModelLabel.QUALITY`
+- **추정 원인**: `U-127` 유닛에서 기본 텍스트 모델을 `QUALITY`로 변경했으나, 기존 테스트 코드의 기대값이 `FAST`로 남아 있음.
+- **보류 사유**: 이번 유닛(`U-131`) 범위 밖이며, 프롬프트 변경과는 무관한 기존 사양 동기화 이슈임.
+- **권장 조치**: 테스트의 기대값을 `ModelLabel.QUALITY`로 수정.
+
+## 2026-02-09 이슈: render_stage 이미지 생성 호출 검증 실패 (U-053, U-054)
+
+- **발견 위치**: `backend/tests/unit/orchestrator/test_u053_render_async.py`, `test_u054_image_fallback.py`
+- **현상**: `AssertionError: Expected 'generate' to have been called once. Called 0 times.` 등 이미지 생성 mock 호출 관련 실패 발생.
+- **추정 원인**: 이미지 파이프라인의 내부 로직 변경(지연 실행, 조건부 생성 등)으로 인해 기존 테스트의 Mock 설정이나 호출 시점이 실제 구현과 어긋남.
+- **보류 사유**: 이번 유닛(`U-131`) 범위 밖이며, 텍스트 프롬프트 주입과는 무관한 이미지 생성 모듈의 기존 이슈임.
+- **권장 조치**: `render_stage`의 이미지 생성 트리거 조건을 재확인하고 테스트 Mock 설정을 현행화함.
+
