@@ -264,7 +264,10 @@
         "fast": "빠름 (FAST)",
         "quality": "고품질 (QUALITY)",
         "cheap": "저비용",
-        "ref": "참조"
+        "ref": "참조",
+        "image": "이미지",
+        "image_fast": "빠른 이미지",
+        "vision": "비전"
       },
       "expand": "상세 보기",
       "collapse": "접기",
@@ -315,7 +318,8 @@
     },
     "ledger_reason": {
       "turn_cost": "턴 진행 비용"
-    }
+    },
+    "gains_toast": "보상을 획득했습니다!"
   },
   "connection": {
     "online": "온라인",

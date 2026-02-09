@@ -480,6 +480,15 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     // 잔액 부족 상태 업데이트
     economyStore.updateBalanceLowStatus(newEconomy);
 
+    // U-136: 보상(gains) 토스트 알림 - gains > 0인 경우 보상 획득 알림
+    const gains = output.economy.gains;
+    if (gains && gains.signal > 0) {
+      get().showCurrencyToast({
+        signalDelta: gains.signal,
+        reason: i18n.t('economy.gains_toast'),
+      });
+    }
+
     // 6. Quest 상태 업데이트 (U-013, U-078: 목표 시스템 강화)
     // quests_updated는 전체 퀘스트 목록이 아닌 "업데이트된" 퀘스트만 포함
     // 기존 퀘스트를 업데이트하거나 새 퀘스트를 추가

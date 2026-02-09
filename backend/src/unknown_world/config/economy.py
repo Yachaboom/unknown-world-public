@@ -35,3 +35,14 @@ IMAGE_GENERATION_COST_MEMORY_SHARD: Final[int] = 0
 
 FAST_IMAGE_COST_SIGNAL: Final[int] = 0
 """잔액 부족 시 FAST 폴백 이미지 Signal 비용 (무료)."""
+
+# =============================================================================
+# 보상(gains) 상한 (U-136)
+# =============================================================================
+# Q1 결정: Option B - 30 Signal (큰 퀘스트 완료 시 넉넉한 보상 허용)
+
+MAX_SINGLE_TURN_REWARD_SIGNAL: Final[int] = 30
+"""단일 턴에서 획득 가능한 최대 Signal 보상."""
+
+MAX_SINGLE_TURN_REWARD_MEMORY_SHARD: Final[int] = 10
+"""단일 턴에서 획득 가능한 최대 Memory Shard 보상."""

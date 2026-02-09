@@ -264,7 +264,10 @@
         "fast": "Fast (FAST)",
         "quality": "Quality (QUALITY)",
         "cheap": "Cheap",
-        "ref": "Reference"
+        "ref": "Reference",
+        "image": "Image",
+        "image_fast": "Fast Image",
+        "vision": "Vision"
       },
       "expand": "Details",
       "collapse": "Collapse",
@@ -315,7 +318,8 @@
     },
     "ledger_reason": {
       "turn_cost": "Turn Cost"
-    }
+    },
+    "gains_toast": "Rewards earned!"
   },
   "connection": {
     "online": "ONLINE",

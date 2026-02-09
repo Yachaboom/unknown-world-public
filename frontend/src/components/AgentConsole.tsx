@@ -69,6 +69,17 @@ const MODEL_LABEL_INFO: Record<ModelLabel, { labelKey: string; icon: string; col
     },
     CHEAP: { labelKey: 'agent.console.model.cheap', icon: '\u{1F4B0}', colorClass: 'model-cheap' },
     REF: { labelKey: 'agent.console.model.ref', icon: '\u{1F4F7}', colorClass: 'model-ref' },
+    IMAGE: { labelKey: 'agent.console.model.image', icon: '\u{1F5BC}', colorClass: 'model-image' },
+    IMAGE_FAST: {
+      labelKey: 'agent.console.model.image_fast',
+      icon: '\u26A1',
+      colorClass: 'model-fast',
+    },
+    VISION: {
+      labelKey: 'agent.console.model.vision',
+      icon: '\u{1F441}',
+      colorClass: 'model-quality',
+    },
   };
 
 // =============================================================================

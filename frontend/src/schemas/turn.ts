@@ -82,7 +82,16 @@ export type ValidationBadge = z.infer<typeof ValidationBadgeSchema>;
  * 모델/품질 선택 라벨 (RULE-008).
  * 프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
  */
-export const ModelLabelSchema = z.enum(['FAST', 'QUALITY', 'CHEAP', 'REF']);
+// U-136: ModelLabel SSOT 통합 - config/models.py와 동기화
+export const ModelLabelSchema = z.enum([
+  'FAST',
+  'QUALITY',
+  'CHEAP',
+  'REF',
+  'IMAGE',
+  'IMAGE_FAST',
+  'VISION',
+]);
 export type ModelLabel = z.infer<typeof ModelLabelSchema>;
 
 /**
@@ -528,7 +537,11 @@ export type LedgerEntry = z.infer<typeof LedgerEntrySchema>;
 export const EconomyOutputSchema = z
   .object({
     cost: CurrencyAmountSchema.describe('이번 턴에 소비된 비용'),
-    balance_after: CurrencyAmountSchema.describe('소비 후 잔액'),
+    // U-136: gains 필드 추가 - 보상(퀘스트 완료, 탐색, 이벤트 등)
+    gains: CurrencyAmountSchema.default({ signal: 0, memory_shard: 0 }).describe(
+      '이번 턴에 획득한 보상',
+    ),
+    balance_after: CurrencyAmountSchema.describe('소비 후 잔액 (= snapshot - cost + gains)'),
     credit: z.number().int().default(0).describe('사용 중인 크레딧 (빚, Signal 단위)'),
     low_balance_warning: z.boolean().default(false).describe('잔액 부족 경고 여부'),
   })
@@ -687,6 +700,7 @@ export function createFallbackTurnOutput(
     narrative: errorMessage ?? fallbackNarrative,
     economy: {
       cost: { signal: 0, memory_shard: 0 },
+      gains: { signal: 0, memory_shard: 0 },
       balance_after: balanceAfter,
       credit: 0,
       low_balance_warning: false,

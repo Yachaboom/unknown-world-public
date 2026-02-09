@@ -170,14 +170,14 @@ gains: CurrencyAmountSchema.default({ signal: 0, memory_shard: 0 })
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: `gains`의 단일 턴 상한(MAX_SINGLE_TURN_REWARD)을 얼마로 설정할 것인가?
+- [x] **Q1**: `gains`의 단일 턴 상한(MAX_SINGLE_TURN_REWARD)을 얼마로 설정할 것인가?
   - Option A: **20 Signal** (일반 보상 5~10, 특별 보상 15~20)
-  - Option B: **30 Signal** (큰 퀘스트 완료 시 넉넉한 보상 허용)
+  - ✅ Option B: **30 Signal** (큰 퀘스트 완료 시 넉넉한 보상 허용)
   - Option C: **상한 없음** (GM 재량, 프롬프트로만 제어)
 
-- [ ] **Q2**: `ModelLabel` enum 통합 SSOT 위치는?
+- [x] **Q2**: `ModelLabel` enum 통합 SSOT 위치는?
   - Option A: **`models/turn.py`에 통합** (Pydantic 모델과 동일 파일, 직렬화 일관성)
-  - Option B: **`config/models.py`에 통합** (설정/상수와 동일 파일, 모듈 분리)
+  - ✅ Option B: **`config/models.py`에 통합** (설정/상수와 동일 파일, 모듈 분리)
   - Option C: **새 파일 `models/enums.py`** (enum 전용 모듈)
 
 ## 참고 자료

@@ -25,9 +25,14 @@ backend/
 │   │   ├── genai_client.py (API Key Auth)
 │   │   ├── image_generation.py (Late-binding)
 │   │   └── item_icon_generator.py (English logs)
-│   └── validation/
-│       ├── business_rules.py
-│       └── language_gate.py
+│   ├── validation/
+│   │   ├── business_rules.py (Gains-aware economy)
+│   │   └── language_gate.py
+│   ├── config/
+│   │   ├── models.py (ModelLabel SSOT)
+│   │   └── economy.py (Reward caps)
+│   └── models/
+│       └── turn.py (EconomyOutput.gains)
 └── tests/ (English prints)
 frontend/src/
 ├── App.tsx (Input lock & Error guard)
@@ -51,6 +56,21 @@ frontend/src/
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`) 상태를 도메인별로 격리하여 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 67. Economy 검증 보상 시나리오 수정 및 ModelLabel 통합 (U-136[Mvp])
+
+1. **보상 인식 경제 검증 (Gains-aware Validation)**:
+    - **Problem**: 기존 검증 로직이 비용 차감만 고려하여, 보상(Reward) 지급 시 "잔액 불일치"로 인한 무한 리페어 및 폴백 문제를 해결함.
+    - **Solution**: `_validate_economy()` 공식을 보상(`gains`)이 포함된 수식으로 고도화하고, `TurnOutput` 스키마에 보상 전용 필드를 추가하여 GM의 보상 의도를 명확히 캡처함.
+2. **ModelLabel SSOT 통합 (Single Source of Truth)**:
+    - **Uniform Definition**: `config/models.py`를 단일 출처로 하여 `ModelLabel`을 `StrEnum`으로 통합 관리함. 
+    - **Serialization Fix**: 내부 모델 선택용과 UI 라벨용으로 분리되어 있던 중복 정의를 제거하여 Pydantic 직렬화 시 발생하던 예기치 않은 값 경고를 원천 차단함.
+    - **Frontend Alignment**: 프론트엔드의 Zod 스키마와 아이콘 맵을 통합된 에넘 값(`IMAGE`, `IMAGE_FAST`, `VISION` 등)에 맞춰 동기화함.
+3. **UI/UX 피드백 강화**:
+    - **Gains Toast**: 보상 획득 시 단순 잔액 변경을 넘어 시스템 토스트 알림을 통해 플레이어에게 즉각적인 성취감을 전달함.
+    - **Console Accuracy**: 에이전트 콘솔에 표시되는 모델 정보가 실제 추론 단계와 1:1로 일치하도록 정합성을 확보함.
 
 ---
 
@@ -501,13 +521,17 @@ Unknown World는 환경에 따른 동작 차이를 최소화하기 위해 다음
 
 ---
 
-## 9. Economy/재화 관리 정책 (U-014, U-042[Mvp])
+## 9. Economy/재화 관리 정책 (U-014, U-042, U-136[Mvp])
 
 1. **거래 장부(Ledger) 시스템 (U-042)**:
     - 모든 재화 변동은 **거래 장부(ko-KR: 거래 장부, en-US: Resource Log)**에 기록됨.
     - 내부 구현 용어는 `ledger`를 유지하되, UI 카피는 게임 친화적인 용어로 통일하여 몰입도 향상.
     - **Option A 정책**: 최근 20개 엔트리만 보관하며, 세션 내에서만 유지됨.
-2. **비용 인바리언트 (RULE-005)**:
+2. **보상 및 획득(Gains) 파이프라인 (U-136)**:
+    - **Gains Field**: `EconomyOutput`에 `gains` 필드를 도입하여 퀘스트 보상이나 이벤트 획득량을 명시적으로 선언함.
+    - **Reward-first Formula**: `balance_after = max(0, snapshot - cost + gains)` 공식을 통해 보상이 비용을 우선 상쇄하도록 정합함.
+    - **Inflation Control**: 단일 턴 최대 보상을 **Signal 30, Memory Shard 10**으로 제한하는 Hard Gate를 적용하여 게임 경제 인플레이션을 방지함.
+3. **비용 인바리언트 (RULE-005)**:
     - **사전 비용 노출**: 액션 실행 전 예상 비용(`min`, `max`)을 HUD에 표시.
     - **잔액 음수 금지**: 잔액 초과 액션 차단 및 저비용 대안(Alternative) 제안.
 3. **가시성 및 식별성 (U-037)**:

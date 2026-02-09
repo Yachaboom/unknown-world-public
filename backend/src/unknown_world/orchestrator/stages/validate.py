@@ -218,10 +218,9 @@ async def _validate_real(ctx: PipelineContext, emit: EmitFn) -> None:
     ctx.thought_signature = result.thought_signature
 
     # U-069: 모델 티어링 정보 전달 (PipelineContext + TurnOutput)
-    # config.models.ModelLabel을 models.turn.ModelLabel로 변환하여 할당 (Pyright 대응)
-    from unknown_world.models.turn import ModelLabel as TurnModelLabel
-
-    ctx.model_label = TurnModelLabel(result.model_label.value)
+    # U-136: ModelLabel SSOT 통합으로 config.models.ModelLabel = models.turn.ModelLabel
+    # 별도 변환 불필요 (동일 클래스)
+    ctx.model_label = result.model_label
     ctx.cost_multiplier = result.cost_multiplier
     if ctx.output:
-        ctx.output.agent_console.model_label = TurnModelLabel(result.model_label.value)
+        ctx.output.agent_console.model_label = result.model_label

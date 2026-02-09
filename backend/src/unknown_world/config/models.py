@@ -19,9 +19,11 @@ from typing import Final
 
 
 class ModelLabel(StrEnum):
-    """모델 라벨 열거형.
+    """모델 라벨 열거형 (SSOT, U-136 통합).
 
     UI/로그에는 모델 ID 원문 대신 이 라벨을 우선 노출합니다. (RULE-008)
+    이 enum이 프로젝트 전체의 유일한 ModelLabel 정의입니다.
+    models/turn.py의 중복 정의는 U-136에서 제거되었습니다.
     """
 
     FAST = "FAST"
@@ -29,6 +31,12 @@ class ModelLabel(StrEnum):
 
     QUALITY = "QUALITY"
     """고품질 텍스트 모델 (gemini-3-pro-preview)"""
+
+    CHEAP = "CHEAP"
+    """저비용 폴백 라벨 (UI 표시용)"""
+
+    REF = "REF"
+    """참조/레퍼런스 라벨 (UI 표시용)"""
 
     IMAGE = "IMAGE"
     """이미지 생성/편집 모델 (gemini-3-pro-image-preview, 고정)"""

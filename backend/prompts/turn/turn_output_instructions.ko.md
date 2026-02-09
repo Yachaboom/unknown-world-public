@@ -28,13 +28,21 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
 ### economy
 - 타입: object (필수)
 - cost: 이번 턴에 소비된 비용 {signal: int, memory_shard: int}
-- balance_after: 소비 후 잔액 {signal: int, memory_shard: int}
+- gains: 이번 턴에 획득한 보상 {signal: int, memory_shard: int} (기본값: {signal: 0, memory_shard: 0})
+  - 퀘스트 완료 보상, 탐색/이벤트 보상 등 이번 턴에서 획득한 재화
+  - 보상이 없으면 {signal: 0, memory_shard: 0}으로 설정
+  - 단일 턴 상한: signal ≤ 30, memory_shard ≤ 10
+- balance_after: 최종 잔액 {signal: int, memory_shard: int}
+  - **공식**: balance_after = max(0, snapshot - cost + gains)
+  - 예: snapshot=20, cost=5, gains=10 → balance_after = max(0, 20 - 5 + 10) = 25
 - credit: 사용 중인 크레딧 (빚, Signal 단위, int)
 - low_balance_warning: 잔액 부족 경고 여부 (boolean)
 - **중요**: 
   - balance_after.signal >= 0, balance_after.memory_shard >= 0 (음수 절대 불가)
   - 잔액이 부족하여 비용을 지불할 수 없는 경우, `cost`를 잔액 범위 내로 낮추거나 `credit`을 기록하세요.
   - Signal 잔액이 15 미만이면 `low_balance_warning`을 true로 설정합니다.
+  - 퀘스트 보상(reward_signal) 지급 시 반드시 `gains.signal`에 해당 금액을 설정하세요.
+  - gains와 balance_after의 일관성을 반드시 유지하세요.
 
 ### safety
 - 타입: object (필수)
@@ -95,10 +103,10 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
 1. **주 목표(is_main=true)는 항상 하나** 존재해야 합니다. 현재 주 목표가 완료되면 새 주 목표를 생성합니다.
 2. **서브 목표(is_main=false)**는 주 목표 달성을 위한 단계별 가이드입니다. 한 번에 최대 3~5개를 유지합니다.
 3. **진행률(progress)**: 플레이어 행동이 주 목표에 기여할 때 progress를 올립니다. 모든 서브 목표가 완료되면 100으로 설정합니다.
-4. **서브 목표 달성 시**: is_completed=true로 설정합니다. reward_signal이 있으면 해당 Signal이 자동 지급됩니다 (economy.balance_after에 반영 필수).
+4. **서브 목표 달성 시**: is_completed=true로 설정합니다. reward_signal이 있으면 해당 Signal을 `economy.gains.signal`에 설정하고 `economy.balance_after`에 반영합니다.
 5. **주 목표 달성 시(progress=100)**: is_completed=true로 설정하고 reward_signal을 지급합니다. 동시에 새로운 주 목표를 quests_updated에 포함합니다.
 6. **내러티브 반영**: 목표 달성/진행을 내러티브에 자연스럽게 반영합니다. (예: "포탈의 비밀이 조금씩 드러나고 있습니다... (목표 진행: 40%)")
-7. **보상 반영**: 서브 목표 완료 시 reward_signal만큼 economy.balance_after.signal에 추가합니다. 반드시 cost와 balance_after의 일관성을 유지하세요.
+7. **보상 반영**: 서브 목표 완료 시 reward_signal만큼 `economy.gains.signal`에 설정합니다. balance_after = max(0, snapshot - cost + gains) 공식에 따라 일관성을 유지하세요.
 8. **Overarching Mystery 연결 (U-131)**: 주 목표를 새로 생성하거나 갱신할 때, 시스템 프롬프트의 `<overarching_mystery>` 섹션을 참조하여:
    - 주 목표의 **라벨과 설명**에 미스터리 요소(메아리의 분위기, 잊힌 진실, 공명 등)를 **간접적으로** 포함하세요.
    - 주 목표가 메아리에 가까워지는 여정의 일부처럼 느껴지도록 설계하세요.
@@ -169,6 +177,7 @@ TurnOutput JSON 스키마의 각 필드 작성 규칙을 명시합니다.
   "narrative": "낡은 문이 삐걱거리며 열립니다. 안쪽에서 차가운 공기가 밀려옵니다.",
   "economy": {
     "cost": {"signal": 5, "memory_shard": 0},
+    "gains": {"signal": 0, "memory_shard": 0},
     "balance_after": {"signal": 95, "memory_shard": 5}
   },
   "safety": {"blocked": false, "message": null},

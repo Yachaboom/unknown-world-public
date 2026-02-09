@@ -28,13 +28,21 @@ Specify the rules for each field in the TurnOutput JSON schema.
 ### economy
 - Type: object (required)
 - cost: Resources consumed this turn {signal: int, memory_shard: int}
-- balance_after: Balance after consumption {signal: int, memory_shard: int}
+- gains: Resources earned this turn {signal: int, memory_shard: int} (default: {signal: 0, memory_shard: 0})
+  - Quest completion rewards, exploration/event rewards earned this turn
+  - Set to {signal: 0, memory_shard: 0} if no rewards
+  - Per-turn cap: signal ≤ 30, memory_shard ≤ 10
+- balance_after: Final balance {signal: int, memory_shard: int}
+  - **Formula**: balance_after = max(0, snapshot - cost + gains)
+  - Example: snapshot=20, cost=5, gains=10 → balance_after = max(0, 20 - 5 + 10) = 25
 - credit: Used credit (Debt in Signal, int)
 - low_balance_warning: Low balance warning flag (boolean)
 - **Important**: 
   - balance_after.signal >= 0, balance_after.memory_shard >= 0 (Negative balance strictly forbidden)
   - If the balance is insufficient to pay the cost, reduce `cost` within the balance range or record it in `credit`.
   - Set `low_balance_warning` to true if Signal balance is less than 15.
+  - When awarding quest rewards (reward_signal), you MUST set `gains.signal` to that amount.
+  - Ensure consistency between gains and balance_after.
 
 ### safety
 - Type: object (required)
@@ -95,10 +103,10 @@ Update objective states based on player actions each turn:
 1. **One main objective (is_main=true) must always exist.** When the current main objective is completed, create a new one.
 2. **Sub-objectives (is_main=false)** serve as step-by-step guides toward the main objective. Keep 3-5 active at a time.
 3. **Progress**: Increase progress when player actions contribute to the main objective. Set to 100 when all sub-objectives are complete.
-4. **Sub-objective completion**: Set is_completed=true. If reward_signal is set, that Signal amount is automatically awarded (must be reflected in economy.balance_after).
+4. **Sub-objective completion**: Set is_completed=true. If reward_signal is set, set `economy.gains.signal` to that amount and reflect it in `economy.balance_after`.
 5. **Main objective completion (progress=100)**: Set is_completed=true, award reward_signal, and include a new main objective in quests_updated.
 6. **Narrative reflection**: Naturally reflect objective progress/completion in the narrative. (e.g., "The portal's secrets are slowly revealing... (Objective Progress: 40%)")
-7. **Reward reflection**: When a sub-objective is completed, add reward_signal to economy.balance_after.signal. Ensure cost and balance_after consistency.
+7. **Reward reflection**: When a sub-objective is completed, set reward_signal in `economy.gains.signal`. Ensure balance_after = max(0, snapshot - cost + gains) consistency.
 8. **Overarching Mystery Connection (U-131)**: When creating or updating the main objective, reference the `<overarching_mystery>` section in the system prompt:
    - **Indirectly** include mystery elements (Echo's atmosphere, forgotten truths, resonance, etc.) in the main objective's **label and description**.
    - Design the main objective to feel like part of the journey toward the Echo.
@@ -169,6 +177,7 @@ When `scene_context` is included in the input, it is a **textual description of 
   "narrative": "The old door creaks open. Cold air rushes out from within.",
   "economy": {
     "cost": {"signal": 5, "memory_shard": 0},
+    "gains": {"signal": 0, "memory_shard": 0},
     "balance_after": {"signal": 95, "memory_shard": 5}
   },
   "safety": {"blocked": false, "message": null},

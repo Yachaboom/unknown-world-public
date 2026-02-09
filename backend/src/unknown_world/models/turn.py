@@ -27,6 +27,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from unknown_world.config.models import ModelLabel  # U-136: SSOT 통합
+
 # =============================================================================
 # 공통 Enum 타입
 # =============================================================================
@@ -81,16 +83,11 @@ class ValidationBadge(str, Enum):
     CONSISTENCY_FAIL = "consistency_fail"
 
 
-class ModelLabel(str, Enum):
-    """모델/품질 선택 라벨 (RULE-008).
-
-    프롬프트 노출 없이 "왜 이 선택이었는지"를 사용자 친화 라벨로 표시.
-    """
-
-    FAST = "FAST"
-    QUALITY = "QUALITY"
-    CHEAP = "CHEAP"
-    REF = "REF"
+# U-136: ModelLabel SSOT는 config/models.py로 통합 (import는 파일 상단 참조)
+# 기존: class ModelLabel(str, Enum): FAST/QUALITY/CHEAP/REF
+# 통합 후: config.models.ModelLabel(StrEnum): FAST/QUALITY/CHEAP/REF/IMAGE/IMAGE_FAST/VISION
+# → PydanticSerializationUnexpectedValue 경고 해소
+# re-export: `from unknown_world.models.turn import ModelLabel` 하위호환 유지
 
 
 class RiskLevel(str, Enum):
@@ -584,18 +581,24 @@ class EconomyOutput(BaseModel):
 
     Attributes:
         cost: 이번 턴에 소비된 비용
-        balance_after: 소비 후 잔액
+        gains: 이번 턴에 획득한 보상 (퀘스트 완료, 탐색, 이벤트 등, U-136)
+        balance_after: 소비 후 잔액 (= snapshot - cost + gains)
         credit: 사용 중인 크레딧 (빚, Signal 단위, U-079)
         low_balance_warning: 잔액 부족 경고 여부 (U-079)
 
     Important:
         - cost와 balance_after는 항상 포함되어야 합니다.
         - balance_after의 signal과 memory_shard는 0 이상이어야 합니다.
+        - balance_after = max(0, snapshot - cost + gains)
     """
 
     model_config = ConfigDict(extra="forbid")
 
     cost: CurrencyAmount = Field(description="이번 턴에 소비된 비용")
+    gains: CurrencyAmount = Field(
+        default_factory=lambda: CurrencyAmount(signal=0, memory_shard=0),
+        description="이번 턴에 획득한 보상 (퀘스트 완료, 탐색, 이벤트 등)",
+    )
     balance_after: CurrencyAmount = Field(description="소비 후 잔액")
     credit: int = Field(default=0, description="사용 중인 크레딧 (빚, Signal 단위)")
     low_balance_warning: bool = Field(default=False, description="잔액 부족 경고 여부")

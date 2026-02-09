@@ -311,6 +311,7 @@ function createFallbackTurnOutput(
     narrative: fallbackNarrative,
     economy: {
       cost: { signal: 0, memory_shard: 0 },
+      gains: { signal: 0, memory_shard: 0 },
       balance_after: balanceAfter,
       credit: 0,
       low_balance_warning: false,
@@ -491,6 +492,7 @@ function createClientFallbackTurnOutput(
     narrative: fallbackNarrative,
     economy: {
       cost: { signal: 0, memory_shard: 0 },
+      gains: { signal: 0, memory_shard: 0 },
       // RU-002-S1: 입력 스냅샷 그대로 유지 (비용 0, 잔액 변화 없음)
       balance_after: {
         signal: economySnapshot.signal,

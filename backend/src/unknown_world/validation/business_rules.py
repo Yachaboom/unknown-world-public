@@ -25,7 +25,11 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from unknown_world.config.economy import MAX_CREDIT
+from unknown_world.config.economy import (
+    MAX_CREDIT,
+    MAX_SINGLE_TURN_REWARD_MEMORY_SHARD,
+    MAX_SINGLE_TURN_REWARD_SIGNAL,
+)
 from unknown_world.models.turn import Language
 from unknown_world.validation.language_gate import (
     LanguageGateResult,
@@ -62,6 +66,8 @@ BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
         "box2d_invalid_yorder": "오브젝트 '{obj_id}'의 ymin({ymin}) >= ymax({ymax})",
         "box2d_invalid_xorder": "오브젝트 '{obj_id}'의 xmin({xmin}) >= xmax({xmax})",
         "safety_blocked_no_fallback": "안전 정책에 의해 차단되었지만 대체 텍스트가 없습니다",
+        "gains_signal_exceeded": "Signal 보상이 턴 상한을 초과: {value} > {max}",
+        "gains_shard_exceeded": "Memory Shard 보상이 턴 상한을 초과: {value} > {max}",
     },
     Language.EN: {
         "summary_header": "The following business rules were violated:",
@@ -77,6 +83,8 @@ BUSINESS_RULE_MESSAGES: dict[Language, dict[str, str]] = {
         "box2d_invalid_yorder": "Object '{obj_id}' ymin({ymin}) >= ymax({ymax})",
         "box2d_invalid_xorder": "Object '{obj_id}' xmin({xmin}) >= xmax({xmax})",
         "safety_blocked_no_fallback": "Blocked by safety policy but no fallback text provided",
+        "gains_signal_exceeded": "Signal gains exceed per-turn cap: {value} > {max}",
+        "gains_shard_exceeded": "Memory Shard gains exceed per-turn cap: {value} > {max}",
     },
 }
 
@@ -185,11 +193,29 @@ def _validate_economy(
     검증 항목:
     - 잔액 음수 금지
     - snapshot 대비 과도한 비용 청구 금지 (U-079: 크레딧 허용)
-    - cost와 balance_after 일관성
+    - cost와 balance_after 일관성 (U-136: gains 반영)
+    - gains 상한 초과 금지 (U-136: 인플레이션 방지)
     """
     economy = turn_output.economy
     snapshot = turn_input.economy_snapshot
     messages = BUSINESS_RULE_MESSAGES[result.language]
+
+    # 0. gains 상한 검증 (U-136: 인플레이션 방지)
+    if economy.gains.signal > MAX_SINGLE_TURN_REWARD_SIGNAL:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            messages["gains_signal_exceeded"].format(
+                value=economy.gains.signal, max=MAX_SINGLE_TURN_REWARD_SIGNAL
+            ),
+        )
+
+    if economy.gains.memory_shard > MAX_SINGLE_TURN_REWARD_MEMORY_SHARD:
+        result.add_error(
+            BusinessRuleError.ECONOMY_COST_MISMATCH,
+            messages["gains_shard_exceeded"].format(
+                value=economy.gains.memory_shard, max=MAX_SINGLE_TURN_REWARD_MEMORY_SHARD
+            ),
+        )
 
     # 1. 과도한 비용 청구 금지 (snapshot < cost)
     # U-079: 크레딧(빚)을 허용하여 잔액보다 큰 비용 지불 가능
@@ -223,14 +249,14 @@ def _validate_economy(
             messages["memory_shard_negative"].format(value=economy.balance_after.memory_shard),
         )
 
-    # 3. cost와 balance_after 일관성 검증
-    # balance_after = snapshot - cost + credit_delta 여야 함
-    # (또는 credit 필드가 사용 중인 총 빚을 나타냄)
-    # U-079 단순화: balance_after.signal = max(0, snapshot.signal - cost.signal)
-    # credit = max(0, cost.signal - snapshot.signal)
-    expected_signal = max(0, snapshot.signal - economy.cost.signal)
-    expected_shard = max(0, snapshot.memory_shard - economy.cost.memory_shard)
-    expected_credit = max(0, economy.cost.signal - snapshot.signal)
+    # 3. cost와 balance_after 일관성 검증 (U-136: gains 반영)
+    # balance_after = max(0, snapshot - cost + gains)
+    # credit = max(0, cost - snapshot - gains)  (보상 먼저 상쇄 후 남는 빚)
+    expected_signal = max(0, snapshot.signal - economy.cost.signal + economy.gains.signal)
+    expected_shard = max(
+        0, snapshot.memory_shard - economy.cost.memory_shard + economy.gains.memory_shard
+    )
+    expected_credit = max(0, economy.cost.signal - snapshot.signal - economy.gains.signal)
 
     if economy.balance_after.signal != expected_signal:
         result.add_error(

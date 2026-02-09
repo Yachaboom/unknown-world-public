@@ -45,6 +45,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       narrative: '새 퀘스트 발생',
       economy: {
         cost: { signal: 0, memory_shard: 0 },
+        gains: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
         credit: 0,
         low_balance_warning: false,
@@ -95,6 +96,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       narrative: '초기화',
       economy: {
         cost: { signal: 0, memory_shard: 0 },
+        gains: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
         credit: 0,
         low_balance_warning: false,
@@ -137,6 +139,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       narrative: '임무 완료!',
       economy: {
         cost: { signal: 0, memory_shard: 0 },
+        gains: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
         credit: 0,
         low_balance_warning: false,
@@ -184,6 +187,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       narrative: '새 규칙 적용',
       economy: {
         cost: { signal: 0, memory_shard: 0 },
+        gains: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
         credit: 0,
         low_balance_warning: false,
@@ -233,6 +237,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       narrative: '초기화',
       economy: {
         cost: { signal: 0, memory_shard: 0 },
+        gains: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
         credit: 0,
         low_balance_warning: false,
@@ -265,6 +270,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
       narrative: '규칙 수정',
       economy: {
         cost: { signal: 0, memory_shard: 0 },
+        gains: { signal: 0, memory_shard: 0 },
         balance_after: { signal: 100, memory_shard: 5 },
         credit: 0,
         low_balance_warning: false,
@@ -388,6 +394,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '일반 내러티브',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
@@ -432,6 +439,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '일반 내러티브',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
@@ -555,6 +563,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '임무 완료',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 150, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
@@ -621,6 +630,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '새 장면',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
@@ -677,6 +687,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '장면 전환 중...',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
@@ -742,6 +753,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '아무 일도 일어나지 않습니다.',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
@@ -799,6 +811,7 @@ describe('worldStore (U-013: Quest + Rules)', () => {
         narrative: '자세히 보니 새로운 것이 보입니다.',
         economy: {
           cost: { signal: 0, memory_shard: 0 },
+          gains: { signal: 0, memory_shard: 0 },
           balance_after: { signal: 100, memory_shard: 5 },
           credit: 0,
           low_balance_warning: false,
