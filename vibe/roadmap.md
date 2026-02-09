@@ -24,6 +24,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 - **[2026-02-09 스토리 정합/언어/첫인상 보강]** 추상적 최종 목표(U-131), 영어 기본 언어 전환(U-132), 프로필 이미지-스토리 정합성(U-133) 추가. 상세: `vibe/changelog.md`
 - **[2026-02-09 패널 코너 방향 수정]** Panel Corner 이미지 CSS 회전 정합 + 필요 시 방향별 이미지 신규 생성(U-134). M6 skip된 U-112[Mmp] 대체. 상세: `vibe/changelog.md`
 - **[2026-02-10 로그/경제/밸런스 보강]** 백엔드 로그 영문화(U-135), 경제 검증 보상 시나리오 수정+ModelLabel 통합(U-136), Signal 획득-소비 밸런스 조정(U-137). 상세: `vibe/changelog.md`
+- **[2026-02-10 기술 부채 통합]** U-126에 debt-log.md 미해결 부채 8건 통합(테스트 mock/기대값/스키마 수정 + 아키텍처 변경 미반영 테스트 격리). 3건 MMP 보류. 상세: `vibe/changelog.md`
 
 ## 맥락 요약 (SSOT 근거)
 
@@ -81,7 +82,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 ### "채팅이 아닌" 고정 게임 UI + 핵심 인터랙션
 
 - **완료 기준**: Action Deck / Inventory(DnD Row) / Scene Canvas(Hotspots) / Economy HUD / Agent Console 상시 노출, 클릭+드래그 동작, 가독성 확보 _(✅ 레이아웃/스크롤/Row 전환/아이콘/소비 로직/디자인 개선/드래그 확장 및 온보딩 제거 완료)_
-- **잔여**: Agent Console 접기 제거+재배치(U-123), 핫스팟 원형 1~3개(U-115), ~~이미지 최적화(U-084)~~, 프로필 씬 이미지(U-124), 이전턴 텍스트 약화(U-125), 성능 최적화(U-126), 패널 코너 방향 수정(U-134)
+- **잔여**: 핫스팟 원형 1~3개(U-115), 성능 최적화+기술 부채(U-126)
 - **상태**: 🚧
 
 ### 데모 반복 가능(데모프로필/리셋) + 엔딩 아티팩트
@@ -158,7 +159,7 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 **범례**: ⏸️ 대기 | 🚧 진행중 | ✅ 완료 | ❌ 차단 | ⚡ Critical Path
 
 ### MVP (6개)
-ID=[U-126[Mvp]](unit-plans/U-126[Mvp].md) | MVP 성능/품질 기본 최적화 (M6 대체, 번들/에셋/CSS/렌더링) | Depends=None | ⏸️
+ID=[U-126[Mvp]](unit-plans/U-126[Mvp].md) | MVP 성능/품질 최적화 + 기술 부채 해소 (번들/에셋/CSS/렌더링 + 테스트/스키마 정합) | Depends=None | ⏸️
 ID=[U-115[Mvp]](unit-plans/U-115[Mvp].md) | 핫스팟 컴팩트 원형 1~3개 + 우선순위/겹침 방지 | Depends=U-090,U-087,U-116 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
 ID=[U-024[Mvp]](unit-plans/U-024[Mvp].md) | ⚡Backend Autopilot(제한 스텝) + Action Queue Streaming | Depends=U-018,U-023 | ⏸️
@@ -214,7 +215,7 @@ _기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-
 
 ## 빠른 실행
 
-**다음 작업**: U-135(로그 영문화) → U-136(경제 검증 보상 수정) → U-137(밸런스 조정) → U-134(패널 코너 방향) → U-126(성능 최적화)
+**다음 작업**: U-126(성능 최적화+기술 부채) → U-115(핫스팟) → Autopilot(U-023→U-024→U-025) → CP-MVP-03
 **MVP 완료 후**: [U-119[Mmp]](unit-plans/U-119[Mmp].md) - Frontend Layout WIG 폴리시 → [U-120[Mmp]](unit-plans/U-120[Mmp].md) - 배포
 
 ```bash
