@@ -63,7 +63,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from unknown_world import __version__
-from unknown_world.api import image_router, item_icon_router, scanner_router, turn_router
+from unknown_world.api import (
+    ending_report_router,
+    image_router,
+    item_icon_router,
+    scanner_router,
+    turn_router,
+)
 from unknown_world.storage.paths import BASE_DATA_DIR, STATIC_URL_PREFIX
 from unknown_world.storage.seed import seed_scene_images
 
@@ -192,6 +198,9 @@ app.include_router(scanner_router)
 
 # U-075: /api/item 아이템 아이콘 생성 엔드포인트
 app.include_router(item_icon_router)
+
+# U-025: /api/ending-report 엔딩 리포트 생성 엔드포인트
+app.include_router(ending_report_router)
 
 
 # =============================================================================

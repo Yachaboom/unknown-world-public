@@ -149,8 +149,7 @@
   - **검증 결과**: 테스트 스크립트에서 56초 만에 이미지 생성 성공 (1.6MB)
 - **참고 문서**: https://ai.google.dev/gemini-api/docs/image-generation
 
-## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Ge
-mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
+## 2026-02-01 이슈: TurnOutput 스키마 복잡도로 Gemini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 
 - **발견 위치**: `backend/src/unknown_world/orchestrator/generate_turn_output.py:251`
 - **현상**: Real 모드에서 턴 생성 시 Gemini API가 400 에러 반환
@@ -325,3 +324,19 @@ mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
   - **수정**: `test_schema_ok_in_successful_turn` 메서드에 `@pytest.mark.skip(reason="...")` 추가로 격리
   - **사유**: render_stage 이미지 판정 타이밍 의존으로 간헐적 실패, MMP에서 안정화 예정
   - **수정 파일**: `backend/tests/integration/test_real_mode_gate.py`
+
+## [2026-02-10] 이슈: App.test.tsx 내 비동기 업데이트 act(...) 경고 ✅ 해결됨
+
+
+
+- **발견 위치**: frontend/src/App.test.tsx, InventoryPanel.test.tsx, ScannerSlot.test.tsx
+
+- **현상**: 테스트 실행 중 React state update was not wrapped in act(...) 경고 다수 발생
+
+- **추정 원인**: 프로필 선택 및 초기 데이터 로딩 과정의 비동기 상태 변화가 테스트 유틸 내에서 완벽하게 처리되지 않음
+
+- **해결 완료**: [U-025[Mvp]](unit-plans/U-025[Mvp].md) (2026-02-10)
+
+  - **수정**: 모든 상태 변경 및 fireEvent 호출을 `act()`로 감싸 리렌더링 주기를 동기화함
+
+  - **수정**: ScannerSlot.test.tsx에서 상태 전이 속도 이슈로 인한 Flaky 테스트 로직 정비

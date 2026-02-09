@@ -17,6 +17,11 @@ backend/
 │   └── vision/scene_affordances.{en,ko}.md (1~3개 제한 지침)
 ├── src/unknown_world/
 │   ├── main.py (Logging refined)
+│   ├── artifacts/
+│   │   └── ending_report.py (U-025: Session summary engine)
+│   ├── harness/
+│   │   ├── scenario.py (U-025: Scenario & Gate models)
+│   │   └── replay_runner.py (U-025: Hard Gate verification engine)
 │   ├── orchestrator/
 │   │   ├── pipeline.py (7-stage pipeline)
 │   │   ├── generate_turn_output.py
@@ -51,11 +56,13 @@ frontend/src/
 │   ├── SceneImage.tsx (memo)
 │   ├── AgentConsole.tsx (memo)
 │   ├── EconomyHud.tsx (memo)
-│   └── NarrativeFeed.tsx (memo & Typing engine)
+│   ├── NarrativeFeed.tsx (memo & Typing engine)
+│   └── EndingReportModal.tsx (U-025: CRT Artifact UI)
 ├── styles/
 │   ├── style.css (Core layout)
 │   └── hotspot.css (Circle marker & Animation)
-├── stores/ (Zustand: world, economy, inventory, agent)
+├── stores/ (Zustand: world, economy, inventory, agent, artifacts)
+│   └── artifactsStore.ts (U-025: Report state management)
 ├── utils/
 │   └── box2d.ts (Coordinate conversion)
 └── turn/
@@ -64,13 +71,28 @@ frontend/src/
 
 ### 주요 디렉토리 설명
 
+- `backend/src/unknown_world/artifacts/`: 세션 종료 시 생성되는 엔딩 리포트 등 게임 아티팩트 생성 로직이 위치합니다.
+- `backend/src/unknown_world/harness/`: 시나리오 기반의 리플레이 실행 및 Hard Gate 검증 엔진이 위치합니다.
 - `backend/src/unknown_world/orchestrator/stages/`: 게임 마스터의 7단계 파이프라인 개별 단계가 위치합니다. `resolve.py`에는 정밀분석 결과 핫스팟의 품질을 높이기 위한 우선순위 정렬 및 겹침 방지 필터링 로직이 포함되어 있습니다.
 - `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석, 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
-- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치하며, `Hotspot.tsx`는 비전 분석 결과를 원형 마커로 시각화합니다.
+- `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치하며, `EndingReportModal.tsx`는 세션 요약 리포트를 아티팩트 형태로 시각화합니다.
 - `frontend/src/styles/`: 테마 및 컴포넌트별 스타일 시트가 관리됩니다. `hotspot.css`는 원형 핫스팟의 펄스 애니메이션과 상태별 시각적 효과를 정의합니다.
-- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 도메인별 상태를 격리하여 관리합니다.
+- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, `artifactsStore.ts`는 엔딩 리포트 생성 및 표시 상태를 격리하여 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+## 72. 엔딩 리포트 및 리플레이 하네스 (U-025[Mvp])
+
+1. **동적 엔딩 리포트 생성 (Ending Report System)**:
+    - **Session Summary Engine**: `ending_report.py`를 통해 플레이어의 내러티브 여정, 퀘스트 달성도, 룰 변형 타임라인을 분석하여 구조화된 요약 데이터를 생성함.
+    - **Economy Settlement**: 세션 중 발생한 모든 거래 내역(Ledger)을 기반으로 자원 획득/소비 밸런스를 산출하고, 최종 잔액의 정합성(Consistency)을 검증하여 리포트에 포함함.
+    - **CRT Artifact UI**: `EndingReportModal.tsx`를 통해 생성된 리포트를 게임 아티팩트 형태로 시각화하며, CRT 테마의 모달 레이아웃을 사용하여 세션의 대단원을 연출함.
+2. **시나리오 리플레이 하네스 (Replay Harness)**:
+    - **Hard Gate Verification Engine**: `replay_runner.py`를 통해 저장된 시나리오(seed + 액션 시퀀스)를 고속 재생하며, 각 턴의 **Schema, Economy, Safety, Consistency** 게이트 준수 여부를 자동 판정함.
+    - **Internal Pipeline Execution**: HTTP 오버헤드 없이 서버 내부에서 오케스트레이터 파이프라인을 직접 호출하여 대규모 시나리오 검증 효율을 극대화함.
+    - **Regression Guard**: 시나리오별 통과/실패 요약을 통해 모델 변경이나 프롬프트 수정 시의 의도치 않은 회귀(Regression)를 감지함.
+
+---
 
 ## 71. Quest UI 개선 및 Rule UI 제거 (U-023[Mvp])
 

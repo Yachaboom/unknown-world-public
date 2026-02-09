@@ -80,8 +80,8 @@
 
 ## 페어링 질문 (결정 필요)
 
-- [ ] **Q1**: TurnOutput에 `schema_version`을 포함할까?
-  - Option A: 포함한다(권장: SaveGame/마이그레이션/검증에 유리)
+- [x] **Q1**: TurnOutput에 `schema_version`을 포함할까?
+  - ✅ Option A: 포함한다(권장: SaveGame/마이그레이션/검증에 유리)
   - Option B: 포함하지 않는다(초기 단순, 대신 앱 버전으로 관리)
   **A1**: Option A
 

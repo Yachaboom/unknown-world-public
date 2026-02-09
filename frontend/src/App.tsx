@@ -77,6 +77,11 @@ import {
 } from './save/sessionLifecycle';
 import type { DemoProfile } from './data/demoProfiles';
 import type { SupportedLanguage } from './i18n';
+// U-025: 엔딩 리포트 아티팩트
+import { EndingReportModal } from './components/EndingReportModal';
+import { useArtifactsStore } from './stores/artifactsStore';
+import type { SessionDataForReport } from './stores/artifactsStore';
+import { useEconomyStore } from './stores/economyStore';
 
 // =============================================================================
 // 게임 상태 타입
@@ -194,6 +199,86 @@ function App() {
   }, []);
 
   // U-117: 온보딩 가이드 초기화 제거 (팝업 삭제, hover 힌트만 유지)
+
+  // ==========================================================================
+  // U-025: 엔딩 리포트 세션 종료 핸들러
+  // ==========================================================================
+
+  const generateReport = useArtifactsStore((s) => s.generateReport);
+  const isReportGenerating = useArtifactsStore((s) => s.isGenerating);
+
+  /**
+   * U-025: 세션 종료 + 엔딩 리포트 생성 요청.
+   * 모든 store에서 세션 데이터를 수집하여 백엔드로 전송합니다.
+   */
+  const handleEndSession = useCallback(() => {
+    // 확인 다이얼로그
+    if (!window.confirm(t('ending_report.trigger_confirm'))) return;
+
+    // store 스냅샷 수집
+    const worldState = useWorldStore.getState();
+    const economyState = useEconomyStore.getState();
+    const inventoryState = useInventoryStore.getState();
+
+    const sessionData: SessionDataForReport = {
+      language: sessionLanguage,
+      profileId: currentProfileId ?? 'unknown',
+      turnCount: worldState.turnCount,
+      narrativeEntries: worldState.narrativeEntries.map((e) => ({
+        text: e.text,
+        type: e.type ?? 'narrative',
+        turn: e.turn,
+      })),
+      quests: worldState.quests.map((q) => ({
+        id: q.id,
+        label: q.label,
+        is_completed: q.is_completed,
+        is_main: q.is_main ?? false,
+        progress: q.progress ?? 0,
+        reward_signal: q.reward_signal ?? 0,
+      })),
+      economyLedger: economyState.ledger.map((entry) => ({
+        reason: entry.reason,
+        cost: { signal: entry.cost.signal, memory_shard: entry.cost.memory_shard },
+        balanceAfter: {
+          signal: entry.balanceAfter.signal,
+          memory_shard: entry.balanceAfter.memory_shard,
+        },
+        turnId: entry.turnId,
+      })),
+      balanceFinal: {
+        signal: worldState.economy.signal,
+        memory_shard: worldState.economy.memory_shard,
+      },
+      balanceInitial: {
+        // 초기 잔액 추정: 현재 잔액 + 총 소비 - 총 획득 (ledger 역산)
+        signal:
+          worldState.economy.signal +
+          economyState.ledger.reduce((acc, entry) => acc + entry.cost.signal, 0),
+        memory_shard:
+          worldState.economy.memory_shard +
+          economyState.ledger.reduce((acc, entry) => acc + entry.cost.memory_shard, 0),
+      },
+      activeRules: worldState.activeRules.map((r) => ({
+        id: r.id,
+        label: r.label,
+      })),
+      mutationEvents: worldState.mutationTimeline.map((m) => ({
+        turn: m.turn,
+        ruleId: m.ruleId,
+        type: m.type,
+        label: m.label,
+        description: m.description,
+      })),
+      inventoryItems: inventoryState.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+      })),
+    };
+
+    generateReport(sessionData);
+  }, [t, sessionLanguage, currentProfileId, generateReport]);
 
   // RU-003-Q3: Turn Runner (스트림 시작/취소/콜백 라우팅 담당)
   // U-044: 세션 언어를 SSOT로 주입하여 드리프트 방지
@@ -415,6 +500,18 @@ function App() {
             {/* U-015: 리셋/프로필 변경 버튼 (U-087: isInputLocked로 확장) */}
             <ResetButton onReset={handleReset} disabled={isInputLocked} compact requireConfirm />
             <ChangeProfileButton onClick={handleChangeProfile} disabled={isInputLocked} />
+            {/* U-025: 세션 종료 (엔딩 리포트 생성) 버튼 */}
+            <button
+              type="button"
+              className="end-session-btn"
+              onClick={handleEndSession}
+              disabled={isInputLocked || isReportGenerating}
+              title={t('ending_report.trigger_button')}
+            >
+              {isReportGenerating
+                ? t('ending_report.generating')
+                : t('ending_report.trigger_button')}
+            </button>
           </GameHeader>
 
           {/* U-077: 좌측 사이드바 패널 영역 분배 (U-081 흡수) */}
@@ -498,6 +595,9 @@ function App() {
 
       {/* U-130: Rate Limit 재시도 안내 패널 (input-lock-overlay보다 높은 z-index) */}
       {isRateLimited && <RateLimitPanel onRetry={handleRetry} />}
+
+      {/* U-025: 엔딩 리포트 모달 */}
+      <EndingReportModal />
 
       {/* U-117: 온보딩 가이드 팝업 제거 (hover 힌트는 InteractionHint로 유지) */}
     </>

@@ -1,6 +1,45 @@
 # 프로젝트 진행 상황
 
-## [2026-02-10 06:15] U-023[Mvp]: Quest UI 개선 + Rule UI 제거 (좌측 사이드바 심플화) 완료
+## [2026-02-10 07:15] U-025[Mvp]: 엔딩 리포트 + 리플레이/시나리오 하네스 (U-026 흡수) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 세션 요약 및 경제 결산을 포함한 **엔딩 리포트 아티팩트** 생성 시스템, 시스템 안정성 검증을 위한 **리플레이 하네스** 구현.
+- **추가 컴포넌트**: `vibe/unit-results/U-025[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-025-ending-report-runbook.md` (런북).
+- **달성 요구사항**: [PRD 6.5] 동적 엔딩 생성기 요구사항 충족, [PRD 8.7] 시나리오 리플레이 하네스 구축, [RULE-005] 경제 결산 정합성 확보.
+
+### 기술적 구현 세부사항
+
+**엔딩 리포트 시스템 (Ending Report System)**:
+- **Server-side Aggregation**: `ending_report.py`를 통해 내러티브 요약, 퀘스트 달성도, 경제 결산(Ledger 기반), 룰 변형 타임라인을 구조화된 JSON으로 생성.
+- **CRT Modal UI**: `EndingReportModal.tsx`를 통해 리포트 데이터를 CRT 테마로 시각화하며, 로딩/에러/데이터 없음 상태를 포함한 견고한 UX 제공.
+- **Artifacts Store**: `artifactsStore.ts`를 도입하여 리포트 생성 프로세스와 UI 상태를 독립적으로 관리.
+
+**리플레이 하네스 (Replay Harness)**:
+- **Scenario Framework**: `scenario.py`에 시나리오 및 검증 게이트 모델을 정의하여 테스트 케이스의 구조화된 저장/로드 지원.
+- **Fast Replay Runner**: `replay_runner.py`에서 서버 파이프라인을 직접 호출하여 4대 Hard Gate(Schema, Economy, Safety, Consistency)를 자동 검증.
+- **Gate-based Verification**: 각 스텝별 게이트 통과 여부를 수집하여 시스템 인바리언트 준수 여부를 즉각적으로 판정.
+
+**코드 구조**:
+repo-root/
+├── backend/src/unknown_world/
+│   ├── artifacts/ending_report.py (리포트 생성 엔진)
+│   └── harness/ (리플레이 및 시나리오 모델)
+└── frontend/src/
+    ├── components/EndingReportModal.tsx (리포트 UI)
+    └── stores/artifactsStore.ts (상태 관리)
+
+### 성능 및 품질 지표
+
+- **데이터 정합성**: 거래 장부(ledger) 분석을 통한 경제 결산의 정확성 확보 (RULE-005 준수).
+- **검증 자동화**: 리플레이를 통한 4대 Hard Gate 자동 검증 체계 마련.
+
+### 다음 단계
+
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+- **MMP 진입**: 해커톤 제출 준비 (U-119, U-120 등)
+
+---
 
 ### 구현 완료 항목
 

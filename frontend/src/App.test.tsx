@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import App from './App';
 import * as turnStream from './api/turnStream';
 import { useInventoryStore } from './stores/inventoryStore';
 import { DemoProfile } from './data/demoProfiles';
+import { useWorldStore } from './stores/worldStore';
+import { useEconomyStore } from './stores/economyStore';
+import { useAgentStore } from './stores/agentStore';
 
 // i18next 모킹 (RU-003-Q5: 데모 i18n 키 지원)
 vi.mock('react-i18next', () => ({
@@ -97,6 +100,13 @@ describe('App Integration - Hotspot Click', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // 스토어 초기화 추가 (잔상 제거)
+    act(() => {
+      useInventoryStore.getState().reset();
+      useWorldStore.getState().reset();
+      useEconomyStore.getState().reset();
+      useAgentStore.getState().reset();
+    });
   });
 
   it('should trigger startTurnStream when a hotspot is clicked', async () => {
@@ -104,18 +114,26 @@ describe('App Integration - Hotspot Click', () => {
 
     // 1. 프로필 선택 (Playing 페이즈 진입) - 테크 프로필 선택
     const techProfile = screen.getByLabelText('profile.tech.name');
-    fireEvent.click(techProfile);
+
+    await act(async () => {
+      fireEvent.click(techProfile);
+    });
 
     // U-060: 프로필 선택 후 상태 전환이 React 상태 업데이트이므로 waitFor 사용
     // 2. 이제 메인 게임 UI가 나타남 - 테크 프로필의 'Terminal' 핫스팟 찾기
-    const terminalHotspot = await waitFor(() => {
-      const hotspot = screen.getByLabelText('Terminal');
-      expect(hotspot).toBeInTheDocument();
-      return hotspot;
-    });
+    const terminalHotspot = await waitFor(
+      () => {
+        const hotspot = screen.getByLabelText('Terminal');
+        expect(hotspot).toBeInTheDocument();
+        return hotspot;
+      },
+      { timeout: 2000 },
+    );
 
     // 클릭 시뮬레이션
-    fireEvent.click(terminalHotspot);
+    await act(async () => {
+      fireEvent.click(terminalHotspot);
+    });
 
     // startTurnStream 호출 확인
     await waitFor(() => {
@@ -137,7 +155,12 @@ describe('App Layout - Inventory Count', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    useInventoryStore.getState().reset();
+    act(() => {
+      useInventoryStore.getState().reset();
+      useWorldStore.getState().reset();
+      useEconomyStore.getState().reset();
+      useAgentStore.getState().reset();
+    });
   });
 
   it('updates inventory panel title based on items', async () => {
@@ -145,7 +168,9 @@ describe('App Layout - Inventory Count', () => {
 
     // 1. 프로필 선택
     const techProfile = screen.getByLabelText('profile.tech.name');
-    fireEvent.click(techProfile);
+    await act(async () => {
+      fireEvent.click(techProfile);
+    });
 
     // 2. 초기 제목 확인 (Tech 프로필은 기본 아이템이 있으므로 바로 inventory.count가 보임)
     await waitFor(() => {
@@ -153,7 +178,9 @@ describe('App Layout - Inventory Count', () => {
     });
 
     // 3. 아이템 모두 제거
-    useInventoryStore.getState().reset();
+    await act(async () => {
+      useInventoryStore.getState().reset();
+    });
 
     // 4. 제목이 기본값으로 돌아왔는지 확인
     await waitFor(() => {
@@ -161,13 +188,15 @@ describe('App Layout - Inventory Count', () => {
     });
 
     // 5. 다시 아이템 추가
-    useInventoryStore.getState().addItems([
-      {
-        id: 'test-item',
-        name: 'Test Item',
-        quantity: 1,
-      },
-    ]);
+    await act(async () => {
+      useInventoryStore.getState().addItems([
+        {
+          id: 'test-item',
+          name: 'Test Item',
+          quantity: 1,
+        },
+      ]);
+    });
 
     // 6. 제목 업데이트 다시 확인
     await waitFor(() => {

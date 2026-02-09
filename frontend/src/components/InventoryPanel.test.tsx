@@ -54,18 +54,22 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 
 describe('InventoryPanel (U-117)', () => {
   beforeEach(() => {
-    useInventoryStore.getState().reset();
+    act(() => {
+      useInventoryStore.getState().reset();
+    });
   });
 
   it('should apply drag listeners and attributes to the entire row div', () => {
-    useInventoryStore.getState().addItems([
-      {
-        id: 'test-item-1',
-        name: 'Test Item 1',
-        quantity: 1,
-        icon: '📦',
-      },
-    ]);
+    act(() => {
+      useInventoryStore.getState().addItems([
+        {
+          id: 'test-item-1',
+          name: 'Test Item 1',
+          quantity: 1,
+          icon: '📦',
+        },
+      ]);
+    });
 
     render(<InventoryPanel />);
 
@@ -82,8 +86,10 @@ describe('InventoryPanel (U-117)', () => {
       quantity: 1,
       icon: '🔥',
     };
-    useInventoryStore.getState().addItems([testItem]);
-    useInventoryStore.getState().startDrag(testItem.id);
+    act(() => {
+      useInventoryStore.getState().addItems([testItem]);
+      useInventoryStore.getState().startDrag(testItem.id);
+    });
 
     render(<InventoryPanel />);
 
@@ -97,7 +103,9 @@ describe('InventoryPanel (U-117)', () => {
 
 describe('InventoryPanel (U-129: Sell UX)', () => {
   beforeEach(() => {
-    useInventoryStore.getState().reset();
+    act(() => {
+      useInventoryStore.getState().reset();
+    });
     mockSellItem.mockClear();
     vi.useFakeTimers();
   });
@@ -108,14 +116,16 @@ describe('InventoryPanel (U-129: Sell UX)', () => {
   });
 
   it('should always show sell button with correct price', () => {
-    useInventoryStore.getState().addItems([
-      {
-        id: 'test-item',
-        name: 'Sellable Item',
-        quantity: 1,
-        icon: '💎',
-      },
-    ]);
+    act(() => {
+      useInventoryStore.getState().addItems([
+        {
+          id: 'test-item',
+          name: 'Sellable Item',
+          quantity: 1,
+          icon: '💎',
+        },
+      ]);
+    });
 
     render(<InventoryPanel />);
 
@@ -125,19 +135,23 @@ describe('InventoryPanel (U-129: Sell UX)', () => {
   });
 
   it('should transition to confirm state on first click', () => {
-    useInventoryStore.getState().addItems([
-      {
-        id: 'test-item',
-        name: 'Sellable Item',
-        quantity: 1,
-        icon: '💎',
-      },
-    ]);
+    act(() => {
+      useInventoryStore.getState().addItems([
+        {
+          id: 'test-item',
+          name: 'Sellable Item',
+          quantity: 1,
+          icon: '💎',
+        },
+      ]);
+    });
 
     render(<InventoryPanel />);
 
     const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
-    fireEvent.click(sellBtn);
+    act(() => {
+      fireEvent.click(sellBtn);
+    });
 
     expect(sellBtn).toHaveTextContent('inventory.sell_confirm');
     expect(sellBtn).toHaveClass('confirming');
@@ -145,39 +159,49 @@ describe('InventoryPanel (U-129: Sell UX)', () => {
   });
 
   it('should execute sellItem on second click within 2 seconds', () => {
-    useInventoryStore.getState().addItems([
-      {
-        id: 'test-item',
-        name: 'Sellable Item',
-        quantity: 1,
-        icon: '💎',
-      },
-    ]);
+    act(() => {
+      useInventoryStore.getState().addItems([
+        {
+          id: 'test-item',
+          name: 'Sellable Item',
+          quantity: 1,
+          icon: '💎',
+        },
+      ]);
+    });
 
     render(<InventoryPanel />);
 
     const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
-    fireEvent.click(sellBtn);
-    fireEvent.click(sellBtn);
+    act(() => {
+      fireEvent.click(sellBtn);
+    });
+    act(() => {
+      fireEvent.click(sellBtn);
+    });
 
     expect(mockSellItem).toHaveBeenCalledWith('test-item', 'Sellable Item');
     expect(sellBtn).not.toHaveClass('confirming');
   });
 
   it('should revert to normal state after 2 seconds without second click', () => {
-    useInventoryStore.getState().addItems([
-      {
-        id: 'test-item',
-        name: 'Sellable Item',
-        quantity: 1,
-        icon: '💎',
-      },
-    ]);
+    act(() => {
+      useInventoryStore.getState().addItems([
+        {
+          id: 'test-item',
+          name: 'Sellable Item',
+          quantity: 1,
+          icon: '💎',
+        },
+      ]);
+    });
 
     render(<InventoryPanel />);
 
     const sellBtn = screen.getByRole('button', { name: /inventory.sell_aria/ });
-    fireEvent.click(sellBtn);
+    act(() => {
+      fireEvent.click(sellBtn);
+    });
     expect(sellBtn).toHaveClass('confirming');
 
     act(() => {
