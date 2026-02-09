@@ -4,7 +4,8 @@
  * RULE-002 준수: 채팅 버블 UI 금지
  * - 내러티브는 "채팅"이 아니라 "게임 로그/내러티브 피드" 형태
  * - 고정 패널: Scene Canvas, Action Deck, Inventory, Quest,
- *   Rule Board, Economy HUD, Agent Console, Scanner Slot
+ *   Economy HUD, Agent Console, Scanner Slot
+ * U-023: Rule Board/MutationTimeline UI 제거 (좌측 사이드바 심플화)
  *
  * RULE-008: Agent Console에서 단계/배지/복구만 표시 (프롬프트 노출 금지)
  *
@@ -48,8 +49,7 @@ import { InventoryPanel } from './components/InventoryPanel';
 import { QuestPanel } from './components/QuestPanel';
 // U-078: Objective Tracker (미니 트래커)
 import { ObjectiveTracker } from './components/ObjectiveTracker';
-import { RuleBoard } from './components/RuleBoard';
-import { MutationTimeline } from './components/MutationTimeline';
+// U-023: RuleBoard + MutationTimeline UI 제거 (데이터는 store에 유지, UI만 삭제)
 // U-022: Scanner Slot
 import { ScannerSlot } from './components/ScannerSlot';
 // U-015: SaveGame + Demo Profiles
@@ -419,25 +419,19 @@ function App() {
 
           {/* U-077: 좌측 사이드바 패널 영역 분배 (U-081 흡수) */}
           <aside className="sidebar-left">
-            {/* U-077: Inventory - flex-1 + min-height 보장, 아이템 개수 동적 타이틀 */}
+            {/* U-023: Inventory + Quest 5:5 균등 분배 (Rule UI 제거) */}
             <Panel
               title={
                 inventoryItemCount > 0
                   ? t('inventory.count', { count: inventoryItemCount })
                   : t('panel.inventory.title')
               }
-              className="panel-inventory flex-1"
+              className="panel-inventory"
             >
               <InventoryPanel />
             </Panel>
-            {/* U-013: Quest Panel (U-077: max-height + 내부 스크롤) */}
             <Panel title={t('panel.quest.title')} className="panel-quest">
               <QuestPanel />
-            </Panel>
-            {/* U-013: Rule Board + Mutation Timeline (U-077: max-height + 내부 스크롤) */}
-            <Panel title={t('panel.rule_board.title')} className="panel-rule-board">
-              <RuleBoard />
-              <MutationTimeline />
             </Panel>
           </aside>
 

@@ -46,6 +46,8 @@ frontend/src/
 │   ├── InventoryPanel.tsx (memo)
 │   ├── SceneCanvas.tsx (ResizeObserver)
 │   ├── Hotspot.tsx (Circle rendering & Pulse)
+│   ├── QuestPanel.tsx (U-023: Design renewal)
+│   ├── ObjectiveTracker.tsx (U-023: Icon sync)
 │   ├── SceneImage.tsx (memo)
 │   ├── AgentConsole.tsx (memo)
 │   ├── EconomyHud.tsx (memo)
@@ -69,6 +71,20 @@ frontend/src/
 - `frontend/src/styles/`: 테마 및 컴포넌트별 스타일 시트가 관리됩니다. `hotspot.css`는 원형 핫스팟의 펄스 애니메이션과 상태별 시각적 효과를 정의합니다.
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 도메인별 상태를 격리하여 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+## 71. Quest UI 개선 및 Rule UI 제거 (U-023[Mvp])
+
+1. **사이드바 레이아웃 단순화 (Sidebar Simplification)**:
+    - **Rule UI 제거**: 데모 효율성을 저해하던 `RuleBoard` 및 `MutationTimeline` 패널을 사이드바에서 완전히 제거함. 데이터 상태는 `worldStore`에 유지하여 내러티브 영향력은 보존함.
+    - **5:5 균등 분배**: 좌측 사이드바를 Inventory와 Quest 패널이 5:5 비율로 점유하도록 조정함. `flex: 1; min-height: 0;` 전략을 통해 화면 높이에 최적화된 내부 스크롤 가시성을 확보함.
+2. **Quest UI 디자인 리뉴얼 (Quest Polishing)**:
+    - **CRT Glow & Progress**: 주 목표(Main Objective)에 CRT glow 애니메이션이 가미된 진행률 바를 적용하고, 마젠타 강조색을 통해 시각적 위계(Visual Hierarchy)를 강화함.
+    - **Game-like Icons**: 퀘스트 상태 마커를 다이아몬드형(`◆/◇`)으로 통일하고, 보상(Signal) 아이콘을 명확히 표시하여 성취감을 고취함.
+    - **Interactive Pulse**: 활성 서브 목표(`sub-objective--next`)에 미묘한 pulse 효과를 주어 플레이어가 다음에 수행할 행동을 직관적으로 인지하게 함.
+3. **분위기 있는 빈 상태 (Ambient Empty State)**:
+    - **Free Exploration**: 퀘스트가 없는 상태를 단순한 "없음"이 아닌 `FREE EXPLORATION` 메시지와 함께 radial-gradient 배경 및 펄스 애니메이션으로 연출하여 게임의 분위기를 유지함.
+4. **ObjectiveTracker 디자인 동기화**:
+    - **Icon Sync**: 상단 미니 트래커의 아이콘과 텍스트 스타일을 Quest 패널과 일치시켜 시스템 전반의 시각적 언어 통일성을 확보함.
 
 ---
 

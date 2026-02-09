@@ -1,5 +1,45 @@
 # 프로젝트 진행 상황
 
+## [2026-02-10 06:15] U-023[Mvp]: Quest UI 개선 + Rule UI 제거 (좌측 사이드바 심플화) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Rule UI(Board/Timeline) 제거 및 Quest UI 디자인 리뉴얼, 사이드바 Inventory:Quest 5:5 고정 레이아웃 구현.
+- **추가 컴포넌트**: `vibe/unit-results/U-023[Mvp].md` (개발 보고서), `vibe/unit-runbooks/U-023-quest-ui-simplify-runbook.md` (런북).
+- **달성 요구사항**: [PRD 6.7] Quest/Objective 패널 요구사항 충족, [RULE-002] 채팅 UX 금지 및 고정 레이아웃 강화.
+
+### 기술적 구현 세부사항
+
+**사이드바 레이아웃 최적화 (Sidebar Simplification)**:
+- **Rule UI Removal**: `RuleBoard`와 `MutationTimeline`을 제거하여 사이드바의 시각적 노이즈를 줄이고 핵심 조작(Inventory, Quest)에 집중할 수 있는 공간 확보.
+- **5:5 Flexible Layout**: `panel-inventory`와 `panel-quest`에 `flex: 1; min-height: 0;`을 적용하여 균등 배분 및 내부 스크롤 격리 성공.
+
+**Quest UI & Tracker 고도화 (Quest Polishing)**:
+- **Visual Impact**: 주 목표에 CRT glow 애니메이션 및 마젠타 강조색 적용, 서브 목표에 `◆/◇` 아이콘 및 Pulse 효과(`sub-objective--next`)를 도입하여 게임 진행과의 연결성 강화.
+- **ObjectiveTracker Sync**: 상단 미니 트래커 디자인을 Quest 패널과 동기화하여 시각적 일관성 확보.
+- **Ambient Empty State**: 퀘스트가 없을 때 `FREE EXPLORATION` 메시지와 함께 분위기 있는 배경 그라디언트 및 펄스 애니메이션 제공.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── App.tsx (레이아웃 패널 구성 변경)
+    ├── components/
+    │   ├── QuestPanel.tsx (디자인 리뉴얼 및 애니메이션)
+    │   └── ObjectiveTracker.tsx (아이콘 및 스타일 동기화)
+    └── style.css (사이드바 비율 조정 및 Quest 테마 강화)
+
+### 성능 및 품질 지표
+
+- **UI 일관성**: 다이아몬드형 아이콘(`◆/◇`) 통일 및 CRT glow 효과 조절로 가독성과 미학의 균형 확보.
+- **레이아웃 안정성**: 768px 이하 모바일 뷰 및 데스크탑 뷰 모두에서 5:5 비율과 스크롤 안정성 확인.
+
+### 다음 단계
+
+- **U-025[Mvp]**: 엔딩 리포트 + 리플레이/시나리오 하네스 구현
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-10 18:30] U-115[Mvp]: 핫스팟 컴팩트 원형(Circle) 디자인 + 1~3개 제한 생성 + 우선순위/겹침 방지 완료
 
 ### 구현 완료 항목

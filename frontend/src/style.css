@@ -452,7 +452,7 @@ body {
 
 /* ============================================
    7. Sidebar (Left) 영역
-   - Inventory, Quest/Objective, Rule Board
+   - Inventory, Quest/Objective (U-023: Rule Board 제거)
    - U-049: 컬럼 전체 스크롤 제거, 패널 콘텐츠 단위 스크롤
    ============================================ */
 
@@ -2134,15 +2134,15 @@ body {
 }
 
 /* ===========================================
-   11.2 좌측 사이드바 패널별 높이 전략 (U-077 + U-081 흡수)
-   - Inventory: flex-1 + min-height 보장 (절대 축소 금지)
-   - Quest/Rule Board: max-height + 내부 스크롤
-   - 모든 패널 헤더 항상 보임
+   11.2 좌측 사이드바 패널별 높이 전략 (U-023: Inventory:Quest 5:5 균등)
+   - U-023: Rule UI 제거, Inventory + Quest 2패널 균등 분배
+   - 양쪽 flex: 1 + min-height: 0 (내부 스크롤 정상 동작)
    =========================================== */
 
-/* Inventory 패널: 최소 높이 보장 + 내부 스크롤 위임 */
+/* Inventory 패널: 5:5 균등 분배 */
 .panel-inventory {
-  min-height: 120px; /* U-077: 최소 가시성 보장 */
+  flex: 1;
+  min-height: 0; /* flex 컨테이너 내 스크롤 정상 동작 필수 */
 }
 
 /* U-077: 인벤토리 패널 내부 스크롤을 inventory-panel-content에 위임 */
@@ -2150,10 +2150,10 @@ body {
   overflow: hidden;
 }
 
-/* Quest 패널: max-height 제한 + 내부 스크롤 */
+/* Quest 패널: 5:5 균등 분배 */
 .panel-quest {
-  max-height: 200px; /* U-077(U-081 흡수): 과도한 확장 방지 */
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0; /* flex 컨테이너 내 스크롤 정상 동작 필수 */
 }
 
 .panel-quest .panel-content {
@@ -2162,30 +2162,11 @@ body {
   scrollbar-color: var(--text-dim) transparent;
 }
 
-/* Rule Board 패널: max-height 제한 + 내부 스크롤 */
-.panel-rule-board {
-  max-height: 200px; /* U-077(U-081 흡수): 과도한 확장 방지 */
-  flex-shrink: 0;
-}
-
-.panel-rule-board .panel-content {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--text-dim) transparent;
-}
-
-/* U-077: 반응형 - 뷰포트 높이가 작을 때 조정 */
+/* U-023: 반응형 - 뷰포트 높이가 작을 때도 5:5 유지 */
 @media (max-height: 768px) {
-  .panel-inventory {
-    min-height: 100px;
-  }
-
+  .panel-inventory,
   .panel-quest {
-    max-height: 150px;
-  }
-
-  .panel-rule-board {
-    max-height: 150px;
+    min-height: 0;
   }
 }
 
@@ -2966,8 +2947,6 @@ button:disabled,
 .narrative-text,
 .action-card-description,
 .quest-label,
-.rule-card-description,
-.timeline-event-description,
 .scanner-caption,
 .hotspot-tooltip-hint,
 .ledger-reason {
@@ -2981,8 +2960,6 @@ button:disabled,
 .panel-title,
 .action-card-title,
 .quest-section-title,
-.rule-card-label,
-.timeline-title,
 .scanner-candidates-title {
   text-shadow: 0 0 3px rgba(51, 255, 0, 0.4);
   filter: none;
@@ -3001,13 +2978,10 @@ button:disabled,
 .repair-trace .repair-label,
 .repair-trace .repair-status,
 .agent-error .error-code,
-.timeline-event-turn,
-.timeline-event-type,
 .ledger-model,
 .scanner-stats,
 .scanner-candidate-type,
-.cost-label,
-.timeline-more-text {
+.cost-label {
   font-weight: 500;
   letter-spacing: 0.02em;
   -webkit-font-smoothing: antialiased;
@@ -4831,9 +4805,9 @@ button:disabled,
 }
 
 /* ============================================
-   26. Quest Panel 스타일 (U-013)
+   26. Quest Panel 스타일 (U-013, U-023 개선)
    - RULE-002: 게임 UI로 상시 노출
-   - 체크리스트 형태로 목표 표시
+   - U-023: 겉도는 느낌 해소, CRT glow 강화, 게임 연결감
    ============================================ */
 
 .quest-panel-content {
@@ -4843,28 +4817,43 @@ button:disabled,
   padding: var(--spacing-xs);
 }
 
-/* 빈 상태 */
+/* 빈 상태 — U-023: 분위기 있는 탐험 메시지 */
 .quest-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-md);
-  min-height: 80px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg, 16px);
+  min-height: 100px;
+  background: radial-gradient(ellipse at center, rgba(0, 40, 0, 0.3) 0%, transparent 70%);
 }
 
 .quest-empty-icon {
-  font-size: 1.5rem;
-  opacity: 0.5;
+  font-size: 2rem;
+  opacity: 0.7;
+  animation: questEmptyPulse 3s ease-in-out infinite;
+}
+
+@keyframes questEmptyPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 .quest-empty-text {
   font-size: var(--font-size-sm);
-  color: var(--text-dim);
+  color: var(--text-color);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-align: center;
+  text-shadow: 0 0 6px rgba(51, 255, 0, 0.3);
 }
 
 /* 섹션 */
@@ -4962,15 +4951,17 @@ button:disabled,
    - ObjectiveTracker (미니 트래커)
    ============================================ */
 
-/* 빈 상태 힌트 */
+/* 빈 상태 힌트 — U-023: 게임적 톤 강화 */
 .quest-empty-hint {
   font-size: 0.6875rem;
   color: var(--text-dim);
   text-align: center;
-  opacity: 0.7;
+  opacity: 0.8;
+  line-height: 1.4;
+  max-width: 180px;
 }
 
-/* ---- 주 목표 (Main Objective) ---- */
+/* ---- 주 목표 (Main Objective) — U-023: CRT glow 강화 ---- */
 .main-objective {
   background: linear-gradient(135deg, rgba(0, 40, 0, 0.6) 0%, rgba(0, 20, 0, 0.8) 100%);
   border: 1px solid var(--text-color);
@@ -4981,6 +4972,9 @@ button:disabled,
   gap: 6px;
   position: relative;
   overflow: hidden;
+  box-shadow:
+    inset 0 0 12px rgba(51, 255, 0, 0.08),
+    0 0 6px rgba(51, 255, 0, 0.1);
 }
 
 .main-objective::before {
@@ -4991,11 +4985,25 @@ button:disabled,
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+  animation: mainObjScanline 3s ease-in-out infinite;
+}
+
+@keyframes mainObjScanline {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .main-objective--completed {
-  border-color: var(--text-dim);
-  opacity: 0.8;
+  border-color: var(--accent-color);
+  opacity: 0.85;
+  box-shadow:
+    inset 0 0 12px rgba(255, 0, 255, 0.08),
+    0 0 6px rgba(255, 0, 255, 0.1);
 }
 
 .main-objective__header {
@@ -5039,22 +5047,45 @@ button:disabled,
   margin: 0;
 }
 
-/* 진행률 바 */
+/* 진행률 바 — U-023: CRT glow 강화 */
 .objective-progress-bar {
-  height: 14px;
+  height: 16px;
   background-color: rgba(0, 20, 0, 0.8);
   border: 1px solid var(--text-dim);
   border-radius: 2px;
   position: relative;
   overflow: hidden;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
 }
 
 .objective-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--text-color), rgba(51, 255, 0, 0.7));
+  background: linear-gradient(
+    90deg,
+    rgba(51, 255, 0, 0.5),
+    var(--text-color),
+    rgba(51, 255, 0, 0.5)
+  );
   border-radius: 1px;
   transition: width 0.5s ease-out;
-  box-shadow: 0 0 4px var(--text-color);
+  box-shadow:
+    0 0 8px rgba(51, 255, 0, 0.4),
+    0 0 2px rgba(51, 255, 0, 0.8);
+  position: relative;
+}
+
+/* 진행률 바 내부 CRT 줄 효과 */
+.objective-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.15) 3px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
 }
 
 .objective-progress-text {
@@ -5068,26 +5099,46 @@ button:disabled,
   letter-spacing: 0.5px;
 }
 
-/* 보상 미리보기 */
+/* 보상 미리보기 — U-023: Signal 아이콘 강화 */
 .main-objective__reward {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 0.6875rem;
   color: var(--warning-color);
+  padding: 3px 6px;
+  background-color: rgba(255, 170, 0, 0.06);
+  border: 1px solid rgba(255, 170, 0, 0.2);
+  border-radius: 2px;
 }
 
 .main-objective__reward-icon {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
+  animation: rewardPulse 2s ease-in-out infinite;
 }
 
-/* 완료 뱃지 */
+@keyframes rewardPulse {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* 완료 뱃지 — U-023: 축하 애니메이션 강화 */
 .main-objective__complete-badge {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 0.6875rem;
   color: var(--accent-color);
+  padding: 3px 6px;
+  background-color: rgba(255, 0, 255, 0.08);
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  border-radius: 2px;
   animation: objectiveCompleteFlash 0.6s ease-out;
 }
 
@@ -5135,15 +5186,36 @@ button:disabled,
     opacity 0.3s;
 }
 
+/* U-023: 활성 서브 목표 스타일 */
 .sub-objective--active {
-  border-color: rgba(51, 255, 0, 0.3);
+  border-color: rgba(51, 255, 0, 0.25);
+}
+
+/* U-023: 첫 번째 활성 서브 목표 — "다음 할 일" pulse 강조 */
+.sub-objective--next {
+  border-color: rgba(51, 255, 0, 0.5);
+  background-color: rgba(0, 30, 0, 0.5);
+  animation: nextObjectivePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes nextObjectivePulse {
+  0%,
+  100% {
+    border-color: rgba(51, 255, 0, 0.5);
+    box-shadow: none;
+  }
+  50% {
+    border-color: rgba(51, 255, 0, 0.7);
+    box-shadow: 0 0 4px rgba(51, 255, 0, 0.15);
+  }
 }
 
 .sub-objective--completed {
   border-color: transparent;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
+/* U-023: 게임스러운 다이아몬드 체크 아이콘 (◇/◆) */
 .sub-objective__check {
   font-size: 0.75rem;
   color: var(--text-dim);
@@ -5153,6 +5225,10 @@ button:disabled,
   transition:
     color 0.3s,
     transform 0.3s;
+}
+
+.sub-objective--next .sub-objective__check {
+  color: var(--text-color);
 }
 
 .sub-objective__check--done {
@@ -5199,27 +5275,35 @@ button:disabled,
   animation: objectiveCompleteFlash 0.6s ease-out;
 }
 
-/* ---- ObjectiveTracker (미니 트래커, U-078 Q2: Option B) ---- */
+/* ---- ObjectiveTracker (미니 트래커, U-078 Q2 + U-023 일관성 개선) ---- */
 .objective-tracker {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
   padding: 4px var(--spacing-sm);
-  background-color: rgba(0, 20, 0, 0.7);
-  border: 1px solid rgba(51, 255, 0, 0.2);
+  background: linear-gradient(90deg, rgba(0, 30, 0, 0.7) 0%, rgba(0, 20, 0, 0.5) 100%);
+  border: 1px solid rgba(51, 255, 0, 0.25);
   border-radius: 2px;
   margin-bottom: var(--spacing-xs);
   min-height: 24px;
+  box-shadow: 0 0 4px rgba(51, 255, 0, 0.05);
 }
 
 .objective-tracker--completed {
   border-color: var(--accent-color);
-  opacity: 0.8;
+  opacity: 0.85;
+  box-shadow: 0 0 4px rgba(255, 0, 255, 0.1);
 }
 
+/* U-023: 다이아몬드 아이콘 — Quest 패널과 일관성 */
 .objective-tracker__icon {
   font-size: 0.75rem;
   flex-shrink: 0;
+  color: var(--text-color);
+}
+
+.objective-tracker--completed .objective-tracker__icon {
+  color: var(--accent-color);
 }
 
 .objective-tracker__content {
@@ -5237,298 +5321,50 @@ button:disabled,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 0 3px rgba(51, 255, 0, 0.2);
 }
 
+/* U-023: 서브 목표 카운트 스타일 개선 */
 .objective-tracker__sub-count {
   font-size: 0.5625rem;
   color: var(--text-dim);
   flex-shrink: 0;
+  font-family: var(--font-micro-en);
+  padding: 0 3px;
+  border: 1px solid rgba(51, 255, 0, 0.15);
+  border-radius: 2px;
+  background-color: rgba(0, 20, 0, 0.4);
 }
 
+/* U-023: 진행률 바 — Quest 패널과 일관성 */
 .objective-tracker__bar {
-  width: 48px;
+  width: 52px;
   height: 6px;
   background-color: rgba(0, 20, 0, 0.8);
   border: 1px solid var(--text-dim);
   border-radius: 1px;
   overflow: hidden;
   flex-shrink: 0;
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.4);
 }
 
 .objective-tracker__bar-fill {
   height: 100%;
-  background-color: var(--text-color);
+  background: linear-gradient(90deg, rgba(51, 255, 0, 0.6), var(--text-color));
   transition: width 0.5s ease-out;
-  box-shadow: 0 0 3px var(--text-color);
+  box-shadow: 0 0 4px rgba(51, 255, 0, 0.4);
+}
+
+.objective-tracker--completed .objective-tracker__bar-fill {
+  background: linear-gradient(90deg, rgba(255, 0, 255, 0.6), var(--accent-color));
+  box-shadow: 0 0 4px rgba(255, 0, 255, 0.4);
 }
 
 /* ============================================
-   27. Rule Board 스타일 (U-013)
-   - RULE-002: 게임 UI로 상시 노출
-   - 룰 카드 형태로 규칙 표시
+   27~28. [U-023] Rule Board + Mutation Timeline 스타일 제거됨
+   - 데이터는 worldStore에 유지, UI만 제거
+   - MMP에서 필요 시 다른 형태로 재도입
    ============================================ */
-
-.rule-board-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs);
-}
-
-/* 빈 상태 */
-.rule-board-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-md);
-  min-height: 80px;
-}
-
-.rule-board-empty-icon {
-  font-size: 1.5rem;
-  opacity: 0.5;
-}
-
-.rule-board-empty-text {
-  font-size: var(--font-size-sm);
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-align: center;
-}
-
-/* 헤더 */
-.rule-board-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--spacing-xs);
-  border-bottom: 1px solid rgba(51, 255, 0, 0.2);
-}
-
-.rule-board-count {
-  font-size: var(--font-size-xs);
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* 룰 카드 리스트 */
-.rule-card-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-/* 개별 룰 카드 */
-.rule-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--spacing-sm);
-  background: linear-gradient(180deg, rgba(0, 30, 0, 0.8) 0%, rgba(0, 15, 0, 0.9) 100%);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.rule-card:hover {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 8px rgba(255, 0, 255, 0.2);
-}
-
-.rule-card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.rule-card-icon {
-  font-size: 0.875rem;
-  color: var(--warning-color);
-  flex-shrink: 0;
-}
-
-.rule-card-label {
-  font-size: var(--font-size-sm);
-  font-weight: bold;
-  color: var(--text-color);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.rule-card-description {
-  font-size: var(--font-size-xs);
-  color: var(--text-dim);
-  line-height: 1.3;
-  padding-left: calc(0.875rem + var(--spacing-xs));
-}
-
-/* ============================================
-   28. Mutation Timeline 스타일 (U-013)
-   - PRD 6.4: Rule Mutation Timeline
-   - 시간순 이벤트 표시
-   ============================================ */
-
-.mutation-timeline-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs);
-  margin-top: var(--spacing-sm);
-  border-top: 1px dashed var(--text-dim);
-}
-
-/* 빈 상태 */
-.timeline-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-md);
-  min-height: 60px;
-}
-
-.timeline-empty-icon {
-  font-size: 1.5rem;
-  opacity: 0.5;
-}
-
-.timeline-empty-text {
-  font-size: var(--font-size-sm);
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-align: center;
-}
-
-/* 헤더 */
-.timeline-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--spacing-xs);
-}
-
-.timeline-title {
-  font-size: var(--font-size-xs);
-  color: var(--text-color);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.timeline-count {
-  font-size: var(--font-size-xs);
-  color: var(--text-dim);
-}
-
-/* 타임라인 이벤트 리스트 */
-.timeline-events {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  max-height: 150px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-}
-
-/* 개별 타임라인 이벤트 */
-.timeline-event {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs);
-  background-color: rgba(0, 20, 0, 0.5);
-  border-left: 3px solid var(--text-color);
-  border-radius: 0 2px 2px 0;
-  transition: background-color 0.2s;
-}
-
-.timeline-event:hover {
-  background-color: rgba(0, 30, 0, 0.7);
-}
-
-/* 이벤트 유형별 테두리 색상 */
-.timeline-event-added {
-  border-left-color: var(--text-color);
-}
-
-.timeline-event-modified {
-  border-left-color: var(--warning-color);
-}
-
-.timeline-event-removed {
-  border-left-color: var(--error-color);
-}
-
-/* 이벤트 마커 */
-.timeline-event-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  min-width: 40px;
-}
-
-.timeline-event-icon {
-  font-size: 0.75rem;
-}
-
-.timeline-event-turn {
-  font-family: var(--font-micro-en);
-  font-size: 0.625rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-}
-
-/* 이벤트 내용 */
-.timeline-event-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.timeline-event-label {
-  font-size: var(--font-size-xs);
-  color: var(--text-color);
-  font-weight: bold;
-}
-
-.timeline-event-type {
-  font-size: 0.625rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.timeline-event-description {
-  font-size: var(--font-size-xs);
-  color: var(--text-dim);
-  line-height: 1.2;
-}
-
-/* 더보기 표시 */
-.timeline-more {
-  display: flex;
-  justify-content: center;
-  padding: var(--spacing-xs);
-}
-
-.timeline-more-text {
-  font-size: 0.625rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
 
 /* 모바일 조정 */
 @media (max-width: 768px) {

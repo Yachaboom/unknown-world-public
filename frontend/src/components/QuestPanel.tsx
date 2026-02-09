@@ -1,7 +1,13 @@
 /**
- * Unknown World - Quest Panel (U-013, U-078 목표 시스템 강화)
+ * Unknown World - Quest Panel (U-013, U-078, U-023)
  *
  * 플레이어의 현재 목표를 **주 목표(Main Objective)** + **서브 목표** 형태로 표시합니다.
+ *
+ * U-023 변경사항:
+ *   - 주 목표: CRT glow 강화 진행률 바 + 보상 Signal 아이콘 명확화
+ *   - 서브 목표: 게임스러운 체크 아이콘(◇/◆) + 활성 목표 pulse 효과
+ *   - 빈 상태: 분위기 있는 탐험 메시지로 교체
+ *   - 전반적으로 "겉도는 느낌" 해소 → 게임 진행과 밀접한 연결감
  *
  * U-078 변경사항:
  *   - 주 목표(is_main=true): 상단 강조 영역, 진행률 바, 보상 미리보기
@@ -30,7 +36,7 @@ interface ProgressBarProps {
   value: number; // 0-100
 }
 
-/** 주 목표 진행률 바 */
+/** 주 목표 진행률 바 — U-023: CRT glow 강화 */
 function ProgressBar({ value }: ProgressBarProps) {
   const clampedValue = Math.max(0, Math.min(100, value));
   return (
@@ -55,7 +61,7 @@ interface MainObjectiveProps {
   quest: Quest;
 }
 
-/** 주 목표 영역 - 강조 표시 + 진행률 + 보상 */
+/** 주 목표 영역 — U-023: 강조 표시 + CRT glow 진행률 + 보상 */
 function MainObjective({ quest }: MainObjectiveProps) {
   const { t } = useTranslation();
 
@@ -66,7 +72,7 @@ function MainObjective({ quest }: MainObjectiveProps) {
     >
       <div className="main-objective__header">
         <span className="main-objective__icon" aria-hidden="true">
-          🎯
+          {quest.is_completed ? '\u2705' : '\uD83C\uDFAF'}
         </span>
         <span className="main-objective__badge">{t('quest.main_objective')}</span>
       </div>
@@ -76,14 +82,14 @@ function MainObjective({ quest }: MainObjectiveProps) {
       {quest.reward_signal > 0 && !quest.is_completed && (
         <div className="main-objective__reward">
           <span className="main-objective__reward-icon" aria-hidden="true">
-            💰
+            {'\u26A1'}
           </span>
           <span>{t('quest.reward_preview', { signal: quest.reward_signal })}</span>
         </div>
       )}
       {quest.is_completed && (
         <div className="main-objective__complete-badge">
-          <span aria-hidden="true">✅</span>
+          <span aria-hidden="true">{'\u2728'}</span>
           <span>{t('quest.objective_complete')}</span>
         </div>
       )}
@@ -97,22 +103,27 @@ function MainObjective({ quest }: MainObjectiveProps) {
 
 interface SubObjectiveItemProps {
   quest: Quest;
+  /** 첫 번째 활성 서브 목표인지 (pulse 강조용) */
+  isNext?: boolean;
 }
 
-/** 개별 서브 목표 아이템 */
-function SubObjectiveItem({ quest }: SubObjectiveItemProps) {
+/** 개별 서브 목표 아이템 — U-023: 게임스러운 체크 + pulse */
+function SubObjectiveItem({ quest, isNext }: SubObjectiveItemProps) {
   const { t } = useTranslation();
 
+  const activeClass = quest.is_completed
+    ? 'sub-objective--completed'
+    : isNext
+      ? 'sub-objective--active sub-objective--next'
+      : 'sub-objective--active';
+
   return (
-    <li
-      className={`sub-objective ${quest.is_completed ? 'sub-objective--completed' : 'sub-objective--active'}`}
-      data-quest-id={quest.id}
-    >
+    <li className={`sub-objective ${activeClass}`} data-quest-id={quest.id}>
       <span
         className={`sub-objective__check ${quest.is_completed ? 'sub-objective__check--done' : ''}`}
         aria-hidden="true"
       >
-        {quest.is_completed ? '✓' : '○'}
+        {quest.is_completed ? '\u25C6' : '\u25C7'}
       </span>
       <span className="sub-objective__label">{quest.label}</span>
       {quest.reward_signal > 0 && !quest.is_completed && (
@@ -120,7 +131,8 @@ function SubObjectiveItem({ quest }: SubObjectiveItemProps) {
           className="sub-objective__reward"
           title={t('quest.reward_preview', { signal: quest.reward_signal })}
         >
-          +{quest.reward_signal}⚡
+          +{quest.reward_signal}
+          {'\u26A1'}
         </span>
       )}
       {quest.is_completed && quest.reward_signal > 0 && (
@@ -137,7 +149,7 @@ function SubObjectiveItem({ quest }: SubObjectiveItemProps) {
 // =============================================================================
 
 /**
- * Quest Panel - U-078 목표 시스템 강화
+ * Quest Panel — U-023: Quest UI 개선
  *
  * 주 목표(Main Objective) + 서브 목표(Sub-objectives)를 분리 표시합니다.
  * worldStore의 quests 상태를 구독하여 실시간 업데이트됩니다.
@@ -155,7 +167,7 @@ export function QuestPanel() {
     return (
       <div className="quest-panel-content quest-empty" data-ui-importance="critical">
         <div className="quest-empty-icon" aria-hidden="true">
-          🧭
+          {'\uD83C\uDF0C'}
         </div>
         <p className="quest-empty-text">{t('quest.free_exploration')}</p>
         <p className="quest-empty-hint">{t('quest.free_exploration_desc')}</p>
@@ -173,8 +185,8 @@ export function QuestPanel() {
         <div className="quest-section quest-section-active">
           <h4 className="quest-section-title">{t('quest.sub_objectives')}</h4>
           <ul className="sub-objective-list" role="list" aria-label={t('quest.sub_objectives')}>
-            {activeSubObjectives.map((quest) => (
-              <SubObjectiveItem key={quest.id} quest={quest} />
+            {activeSubObjectives.map((quest, idx) => (
+              <SubObjectiveItem key={quest.id} quest={quest} isNext={idx === 0} />
             ))}
           </ul>
         </div>

@@ -82,7 +82,7 @@ describe('ObjectiveTracker (U-078)', () => {
     });
 
     render(<ObjectiveTracker />);
-    expect(screen.getByText('(1/2)')).toBeInTheDocument();
+    expect(screen.getByText('1/2')).toBeInTheDocument();
   });
 
   it('완료된 목표일 때 체크 아이콘을 표시해야 한다', () => {
@@ -101,7 +101,7 @@ describe('ObjectiveTracker (U-078)', () => {
     });
 
     render(<ObjectiveTracker />);
-    expect(screen.getByText('✅')).toBeInTheDocument();
+    expect(screen.getByText('\u25C6')).toBeInTheDocument();
     expect(screen.getByText('완료된 주 목표')).toBeInTheDocument();
   });
 });

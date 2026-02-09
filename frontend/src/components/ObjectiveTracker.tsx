@@ -1,8 +1,13 @@
 /**
- * Unknown World - Objective Tracker (U-078 목표 시스템 강화)
+ * Unknown World - Objective Tracker (U-078, U-023 개선)
  *
  * 화면 상단에 항상 보이는 미니 목표 트래커입니다.
  * 주 목표의 제목과 진행률을 간결하게 표시합니다.
+ *
+ * U-023 변경사항:
+ *   - Quest 패널과 시각적 일관성 확보 (아이콘/glow/색상 통일)
+ *   - 다이아몬드 체크 아이콘 일관성 (◇/◆)
+ *   - 서브 목표 카운트 스타일 개선
  *
  * Q2 결정: Option B - 화면 상단에 미니 트래커 추가 (항상 보임)
  *
@@ -19,7 +24,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useWorldStore, selectMainObjective, selectSubObjectives } from '../stores/worldStore';
 
 /**
- * ObjectiveTracker - 미니 목표 트래커
+ * ObjectiveTracker - 미니 목표 트래커 (U-023 개선)
  *
  * game-center 영역 상단에 배치하여 항상 현재 목표를 확인할 수 있습니다.
  */
@@ -46,7 +51,7 @@ export function ObjectiveTracker() {
       data-ui-importance="critical"
     >
       <div className="objective-tracker__icon" aria-hidden="true">
-        {isComplete ? '✅' : '🎯'}
+        {isComplete ? '\u25C6' : '\u25C7'}
       </div>
       <div className="objective-tracker__content">
         <span className="objective-tracker__title">
@@ -54,7 +59,7 @@ export function ObjectiveTracker() {
         </span>
         {totalCount > 0 && (
           <span className="objective-tracker__sub-count">
-            ({completedCount}/{totalCount})
+            {completedCount}/{totalCount}
           </span>
         )}
       </div>
