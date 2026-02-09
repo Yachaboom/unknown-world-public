@@ -1,5 +1,63 @@
 # 로드맵 변경 이력
 
+## 2026-02-10 - add/log-economy-balance (U-135, U-136, U-137)
+
+### 변경 요약
+
+**MVP 유닛 3건 신규 추가**: (1) 백엔드 로그 영문화(U-135) — 한글/이모지 로그 메시지 전면 영어 전환, (2) Economy 검증 보상 시나리오 수정 + ModelLabel enum 통합(U-136) — `gains` 필드 도입으로 보상이 검증을 통과하도록 수정하고 이중 ModelLabel enum 통합, (3) Signal 획득-소비 밸런스 조정(U-137) — 턴당 기본 보상 도입, 퀘스트/탐색 보상 상향.
+
+**핵심 문제**: 경제 검증 로직이 `expected_signal = max(0, snapshot - cost)`로만 산정하여, GM이 보상을 지급하면(비용 0 + 보상 +5 → balance_after=21) "잔액 불일치" 에러로 Repair Loop 2회 실패 → 폴백 내러티브로 대체되는 치명적 버그 확인. 또한 `ModelLabel` enum이 `config/models.py`(StrEnum)와 `models/turn.py`(str, Enum)에 이중 정의되어 Pydantic 직렬화 경고 발생.
+
+### 영향받은 문서
+
+- ✏️ `vibe/prd.md`: 5.3 획득 루프에 Base Reward/보상 검증 정합성 추가, 8.7 TurnOutput.economy에 `gains` 필드 추가
+- ✏️ `vibe/roadmap.md`: 진행률 재계산(129/143, MVP 93.5%), U-135/U-136/U-137 백로그 추가, R-029/R-030 리스크 추가, 스탠드업 갱신
+- 🆕 `vibe/unit-plans/U-135[Mvp].md`: Backend 로그 영문화 계획서
+- 🆕 `vibe/unit-plans/U-136[Mvp].md`: Economy 검증 보상 수정 + ModelLabel 통합 계획서
+- 🆕 `vibe/unit-plans/U-137[Mvp].md`: Signal 밸런스 조정 계획서
+
+### 백로그 변경
+
+**추가**:
+
+- U-135[Mvp]: Backend 로그 영문화 — 한글 로그 메시지 전면 영어 전환 (12개 파일, 18건 + print 6건)
+- U-136[Mvp]: Economy 검증 보상 시나리오 수정 + ModelLabel enum 통합 — `gains` 필드 도입, 검증 공식 수정, enum 단일 SSOT
+- U-137[Mvp]: Signal 획득-소비 밸런스 조정 — 턴당 Base Reward 도입, 퀘스트/탐색 보상 상향, 초기 Signal 조정
+
+### 의존성 변경
+
+- U-136[Mvp]: Depends=U-079[Mvp] (재화 크레딧 로직 기반)
+- U-137[Mvp]: Depends=U-136[Mvp] (gains 필드 활용)
+- U-135[Mvp]: Depends=None (독립 작업)
+
+### 진행률 변화
+
+- **MVP**: 95.5% (129/135) → 93.5% (129/138) — 새 작업 3개 추가로 인한 감소
+- **MMP**: 0% → 0% (변경 없음)
+- **전체**: 92.1% (129/140) → 90.2% (129/143)
+
+### 품질 검증 결과
+
+- **품질 기준 문서**: U-133[Mvp], U-134[Mvp]
+- **신규 유닛 계획서**: 3개 생성(U-135, U-136, U-137) — 필수 섹션(메타데이터/작업 목표/영향받는 파일/구현 흐름/의존성/주의사항/페어링 질문/참고 자료) 모두 포함 ✅
+- **수정된 문서**: PRD/로드맵 — 기존 섹션 유지, 정보량 감소 없음 ✅
+
+### 리스크 변경
+
+**신규**:
+
+- R-029: 보상 시나리오에서 Economy 검증 실패 → 폴백 — 영향: High — 확률: 60% — 대응: U-136 gains 필드 + 검증 공식 수정
+- R-030: Signal 고갈로 10분 데모 루프 중단 — 영향: High — 확률: 50% — 대응: U-137 밸런스 조정 + 기본 보상 도입
+
+### 주의사항
+
+- U-136은 **Critical** 우선순위: Economy OK Hard Gate 실패가 매 보상 시나리오에서 발생하므로, 데모 안정성에 직결
+- U-136의 `gains` 필드 추가는 TurnOutput JSON Schema 변경이므로, Gemini 구조화 출력의 `response_json_schema`와 프론트엔드 Zod 스키마 동시 업데이트 필요
+- U-137은 U-136 완료 후 순차 진행 (gains 필드 없이는 보상 반영 검증 불가)
+- U-135(로그 영문화)는 독립 작업으로 병렬 진행 가능
+
+---
+
 ## 2026-02-09 - add/panel-corner-fix (U-134)
 
 ### 변경 요약

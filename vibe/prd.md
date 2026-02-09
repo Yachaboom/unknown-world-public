@@ -113,6 +113,8 @@
 ### 5.3 획득 루프(예시)
 
 - 매 턴 생존/진행/목표 달성으로 Signal 획득
+- **(MVP 보강) 턴당 기본 보상(Base Reward)**: 매 턴 1~3 Signal 자동 획득(생존 보상). 위험/고비용 행동 시 2~3, 일반 행동 시 1. ⏸️ (U-137)
+- **(MVP 보강) 보상 검증 정합성**: 경제 검증 로직이 비용 차감 외에 **보상(gains)**도 반영하여, 퀘스트 완료·탐색·이벤트 보상 시 balance_after 계산이 정확함. ⏸️ (U-136)
 - 엔딩 도달 시 리포트 보상(Signal + Memory Shard)
 - 일일 첫 접속 보너스(데모/해커톤 기준 옵션)
 
@@ -389,7 +391,8 @@
     - `image_job?`: `{ should_generate, model, aspect_ratio, image_size, prompt, reference_images? }`
   - `economy`:
     - `cost`: `{ signal, memory_shard }`
-    - `balance_after`: `{ signal, memory_shard }`
+    - `gains`: `{ signal, memory_shard }` — 이번 턴 획득 보상 (퀘스트 완료, 탐색, 이벤트 등, MVP U-136)
+    - `balance_after`: `{ signal, memory_shard }` — 최종 잔액 = snapshot - cost + gains
   - `safety`: `{ blocked: boolean, message?: string|null }`
 - **SaveGame (MVP 제거)**:
   - MVP 데모 안정성을 위해 LocalStorage 기반 영속성을 제거함.
