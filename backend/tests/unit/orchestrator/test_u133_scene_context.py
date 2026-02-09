@@ -35,15 +35,19 @@ def test_build_prompt_includes_scene_context(turn_input_with_scene_context):
     generator = TurnOutputGenerator()
 
     # Mock prompt loaders to avoid file system dependency
-    with patch(
-        "unknown_world.orchestrator.generate_turn_output.load_system_prompt",
-        return_value="System Prompt",
-    ), patch(
-        "unknown_world.orchestrator.generate_turn_output.load_turn_instructions",
-        return_value="Instructions",
-    ), patch(
-        "unknown_world.orchestrator.generate_turn_output.load_image_prompt",
-        side_effect=FileNotFoundError,
+    with (
+        patch(
+            "unknown_world.orchestrator.generate_turn_output.load_system_prompt",
+            return_value="System Prompt",
+        ),
+        patch(
+            "unknown_world.orchestrator.generate_turn_output.load_turn_instructions",
+            return_value="Instructions",
+        ),
+        patch(
+            "unknown_world.orchestrator.generate_turn_output.load_image_prompt",
+            side_effect=FileNotFoundError,
+        ),
     ):
         prompt = generator._build_prompt(turn_input_with_scene_context)
 
@@ -70,15 +74,19 @@ def test_build_system_instruction_not_includes_scene_context(turn_input_with_sce
     """Test that _build_system_instruction does NOT include the scene_context (it should be in contents)."""
     generator = TurnOutputGenerator()
 
-    with patch(
-        "unknown_world.orchestrator.generate_turn_output.load_system_prompt",
-        return_value="System Prompt",
-    ), patch(
-        "unknown_world.orchestrator.generate_turn_output.load_turn_instructions",
-        return_value="Instructions",
-    ), patch(
-        "unknown_world.orchestrator.generate_turn_output.load_image_prompt",
-        side_effect=FileNotFoundError,
+    with (
+        patch(
+            "unknown_world.orchestrator.generate_turn_output.load_system_prompt",
+            return_value="System Prompt",
+        ),
+        patch(
+            "unknown_world.orchestrator.generate_turn_output.load_turn_instructions",
+            return_value="Instructions",
+        ),
+        patch(
+            "unknown_world.orchestrator.generate_turn_output.load_image_prompt",
+            side_effect=FileNotFoundError,
+        ),
     ):
         instruction = generator._build_system_instruction(turn_input_with_scene_context)
 

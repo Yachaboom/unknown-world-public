@@ -1,40 +1,35 @@
 # 프로젝트 진행 상황
 
-## [2026-02-10 11:45] U-133[Mvp]: 프로필 시작 이미지-스토리 정합성 강화 — 첫 턴 맥락 주입 완료
+## [2026-02-10 12:45] U-134[Mvp]: Panel Corner 이미지 방향 수정 — CSS 회전 정합 완료
 
 ### 구현 완료 항목
 
-- **핵심 기능**: 프로필 시작 시 사전 생성 이미지(U-124)의 시각적 요소를 첫 턴 내러티브에 자연스럽게 연결하기 위한 `scene_context` 주입 시스템 구현.
-- **추가 컴포넌트**: `vibe/unit-results/U-133[Mvp].md` (보고서).
-- **달성 요구사항**: [Consistency OK] 이미지-내러티브 정합성 보장, [RULE-007] 프롬프트 내부 맥락 보안 준수.
+- **핵심 기능**: `panel-corner-br.png` 단일 이미지를 활용하여 4개 코너(TL/TR/BL/BR)에 적용되는 CSS `rotate()` 값을 시각적 정합성에 맞게 전면 수정.
+- **추가 컴포넌트**: `vibe/unit-results/U-134[Mvp].md` (보고서).
+- **달성 요구사항**: [Consistency OK] 모든 패널/헤더 코너가 시각적으로 올바른 방향(┌, ┐, └, ┘)을 향함, [RULE-002] 게임 HUD 디자인 완성도 향상.
 
 ### 기술적 구현 세부사항
 
-**첫 턴 맥락 주입 (Contextual Bridging)**:
-- **Scene Description 정의**: `demoProfiles.ts`에 Narrator(서재), Explorer(동굴), Tech(실험실)별 고유한 초기 장면 설명(ko/en) 추가.
-- **Front-end Injection**: `turnRunner.ts`에서 `turnCount === 0` 감지 시 해당 프로필의 설명을 `TurnInput.scene_context` 필드로 자동 주입.
-- **Schema & Model Sync**: `turn_input.schema.json` 및 Pydantic `TurnInput` 모델에 `scene_context` 필드 추가 및 동기화.
-- **GM Instruction**: `turn_output_instructions.{ko,en}.md`에 `scene_context`를 활용하여 장면 기반으로 스토리를 시작하도록 하는 6대 GM 지침 명시.
-- **Prompt Engine Integration**: `generate_turn_output.py`에서 유저 메시지 최상단에 "첫 턴 장면 설명" 시스템 프리픽스를 동적으로 추가하도록 개선.
+**CSS 회전 정합 (Transform Alignment)**:
+- **TL (좌상단)**: `rotate(180deg)` — 브래킷 ┌ 모양 확보.
+- **TR (우상단)**: `rotate(270deg)` — 브래킷 ┐ 모양 확보.
+- **BL (좌하단)**: `rotate(90deg)` — 브래킷 └ 모양 확보.
+- **BR (우하단)**: `rotate(0deg)` — 원본 ┘ 모양 유지.
+- **적용 범위**: Game Header(2곳), Panel Header(2곳), Panel Content Bottom(2곳) 총 6개 지점의 의사 요소(`::before`, `::after`) 동기화.
 
 **코드 구조**:
 repo-root/
-├── shared/schemas/turn/turn_input.schema.json (스키마 필드 추가)
-├── backend/src/unknown_world/models/turn.py (Pydantic 모델 필드 추가)
-├── backend/src/unknown_world/orchestrator/generate_turn_output.py (프롬프트 주입 로직)
-├── backend/prompts/turn/turn_output_instructions.{ko,en}.md (GM 활용 지침)
-├── frontend/src/data/demoProfiles.ts (프로필별 장면 설명 데이터)
-└── frontend/src/turn/turnRunner.ts (첫 턴 감지 및 주입 로직)
+└── frontend/src/style.css (코너별 rotate 값 정정 및 가이드 주석 추가)
 
 ### 성능 및 품질 지표
 
-- **정합성**: 환영 메시지 → 사전 이미지 → 첫 턴 내러티브로 이어지는 경험이 하나의 일관된 장면으로 통합됨을 확인.
-- **보안**: `scene_context`는 Gemini 내부 맥락으로만 사용되며 에이전트 콘솔이나 UI 로그에 원문이 노출되지 않음.
+- **최적화**: 추가 이미지 로드 없이 CSS 속성만으로 4방향 코너를 해결하여 에셋 오버헤드 0건 유지.
+- **일관성**: CRT 테마의 글로우 효과와 함께 모든 패널 경계가 명확하게 시각화됨을 확인.
 
 ### 다음 단계
 
-- **U-134[Mvp]**: Panel Corner 이미지 방향 수정 — CSS 회전 정합
-- **CP-MVP-03**: 10분 데모 루프 통합 검증
+- **U-135[Mvp]**: Backend 로그 영문화
+- **U-119[Mmp]**: Frontend Layout 전체 다듬기 (WIG 폴리시)
 
 ---
 

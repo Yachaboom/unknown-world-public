@@ -41,7 +41,19 @@ vibe/unit-results/U-131[Mvp].md
 
 ---
 
-## 64. 초기 씬 설명 및 맥락 주입 (U-133[Mvp])
+## 65. Panel Corner 이미지 방향 수정 (U-134[Mvp])
+
+1. **CSS 회전 정합성 확보 (Transform Alignment)**:
+    - **Single-Asset Reuse**: `panel-corner-br.png`(우하단 브래킷) 단일 이미지를 재사용하면서, 각 코너 지점에 필요한 정확한 회전값(`rotate`)을 산정하여 적용함.
+    - **Visual Mapping**: BR(0°), BL(90°), TL(180°), TR(270°)의 회전 정책을 수립하여 모든 패널 경계가 ┌, ┐, └, ┘의 올바른 브래킷 모양을 갖추도록 정합함.
+2. **레이아웃 전역 동기화**:
+    - **Game Header**: 상단 헤더 코너(TL/TR)에 180°/270° 회전을 적용하여 최상단 경계 완성.
+    - **Panel HUD**: 사이드바 및 메인 패널의 헤더(TL/TR)와 콘텐츠 하단(BL/BR) 6개 지점의 CSS 의사 요소를 일괄 수정함.
+3. **최적화 및 유지보수**:
+    - **Asset Overhead 0**: 추가 이미지 생성 없이 CSS `transform` 속성만으로 해결하여 에셋 로딩 비용과 관리 복잡도를 최소화함.
+    - **Semantic Comments**: CSS 내에 실제 시각적 결과(예: `→ ┌`)를 명시하여 향후 스타일 수정 시의 가시성을 확보함.
+
+---
 
 1. **시각적-서사적 정합성 강화 (Scene-to-Story Alignment)**:
     - **Initial Scene Description**: 각 프로필의 사전 생성 이미지(U-124)를 텍스트로 정밀하게 묘사한 `initialSceneDescription` 필드를 `demoProfiles.ts`에 도입함.

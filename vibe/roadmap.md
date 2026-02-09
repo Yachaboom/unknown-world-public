@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 129/143 (90.2%) | **MVP**: 129/138 (93.5%) | **MMP**: 0/5 (0%)
+**전체**: 130/143 (90.9%) | **MVP**: 130/138 (94.2%) | **MMP**: 0/5 (0%)
 
 **예상 완료(가정)**: MVP D-1 | MMP(M5 제출): D-1
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**최근 완료**: [U-133[Mvp]](vibe/unit-results/U-133[Mvp].md) (2026-02-10) / [U-132[Mvp]](vibe/unit-results/U-132[Mvp].md) (2026-02-09) / [U-131[Mvp]](vibe/unit-results/U-131[Mvp].md) (2026-02-09) / [U-125[Mvp]](vibe/unit-results/U-125[Mvp].md) (2026-02-09)
+**최근 완료**: [U-134[Mvp]](vibe/unit-results/U-134[Mvp].md) (2026-02-10) / [U-133[Mvp]](vibe/unit-results/U-133[Mvp].md) (2026-02-10) / [U-132[Mvp]](vibe/unit-results/U-132[Mvp].md) (2026-02-09) / [U-131[Mvp]](vibe/unit-results/U-131[Mvp].md) (2026-02-09)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
 
@@ -161,7 +161,6 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 ID=[U-135[Mvp]](unit-plans/U-135[Mvp].md) | Backend 로그 영문화 — 한글 로그 메시지 전면 영어 전환 | Depends=None | ⏸️
 ID=[U-136[Mvp]](unit-plans/U-136[Mvp].md) | ⚡Economy 검증 보상 시나리오 수정 + ModelLabel enum 통합 | Depends=U-079 | ⏸️
 ID=[U-137[Mvp]](unit-plans/U-137[Mvp].md) | Signal 획득-소비 밸런스 조정 — 보상 상향 및 소비 최적화 | Depends=U-136 | ⏸️
-ID=[U-134[Mvp]](unit-plans/U-134[Mvp].md) | Panel Corner 이미지 방향 수정 — CSS 회전 정합 + 필요 시 이미지 신규 생성 | Depends=U-032 | ⏸️
 ID=[U-126[Mvp]](unit-plans/U-126[Mvp].md) | MVP 성능/품질 기본 최적화 (M6 대체, 번들/에셋/CSS/렌더링) | Depends=None | ⏸️
 ID=[U-115[Mvp]](unit-plans/U-115[Mvp].md) | 핫스팟 컴팩트 원형 1~3개 + 우선순위/겹침 방지 | Depends=U-090,U-087,U-116 | ⏸️
 ID=[U-023[Mvp]](unit-plans/U-023[Mvp].md) | ⚡Autopilot 모드 토글 + Goal 입력 + Plan/Queue UI | Depends=U-008,U-013 | ⏸️
@@ -184,8 +183,9 @@ ID=[CP-SUB-01](unit-plans/CP-SUB-01.md) | **⚡체크포인트: 해커톤 제출
 _**[2026-02-08] M6 전체 skip**: 해커톤 일정상 실행 불가. MVP에 U-126(성능/품질 최적화) 1개로 대체. 해커톤 이후 필요 시 재계획._
 _기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-106, U-107, U-108, U-110~112, U-113, CP-MMP-02 — 모두 skip._
 
-### 완료 (129개)
+### 완료 (130개)
 
+- ✅ [U-134[Mvp]](vibe/unit-results/U-134[Mvp].md): Panel Corner 이미지 방향 수정 — CSS 회전 정합 (2026-02-10)
 - ✅ [U-133[Mvp]](vibe/unit-results/U-133[Mvp].md): 프로필 시작 이미지-스토리 정합성 강화 — 첫 턴 맥락 주입 (2026-02-10)
 - ✅ [U-132[Mvp]](vibe/unit-results/U-132[Mvp].md): 영어(en-US) 기본 언어 전환 — Devpost 제출 요건 대응 (2026-02-09)
 - ✅ [U-131[Mvp]](vibe/unit-results/U-131[Mvp].md): 추상적 최종 목표(Overarching Mystery) — Quest/스토리 방향성 정렬 (2026-02-09)

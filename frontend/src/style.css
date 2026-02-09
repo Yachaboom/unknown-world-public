@@ -3765,16 +3765,18 @@ button:disabled,
   z-index: 2;
 }
 
+/* 좌상단 코너 (TL): BR 원본을 180° 회전 → ┌ */
 .game-header.has-chrome::before {
   top: -2px;
   left: -2px;
-  transform: rotate(90deg);
+  transform: rotate(180deg);
 }
 
+/* 우상단 코너 (TR): BR 원본을 270° 회전 → ┐ */
 .game-header.has-chrome::after {
   top: -2px;
   right: -2px;
-  transform: rotate(180deg);
+  transform: rotate(270deg);
 }
 
 /* Panel Header Chrome - 코너 장식 (4방향 CSS transform) */
@@ -3796,18 +3798,18 @@ button:disabled,
   filter: drop-shadow(0 0 4px var(--chrome-glow-color));
 }
 
-/* 좌상단 코너 */
+/* 좌상단 코너 (TL): BR 원본을 180° 회전 → ┌ */
 .panel-header.has-chrome::before {
   top: -2px;
   left: -2px;
-  transform: rotate(90deg);
+  transform: rotate(180deg);
 }
 
-/* 우상단 코너 */
+/* 우상단 코너 (TR): BR 원본을 270° 회전 → ┐ */
 .panel-header.has-chrome::after {
   top: -2px;
   right: -2px;
-  transform: rotate(180deg);
+  transform: rotate(270deg);
 }
 
 /* Panel Chrome - 하단 코너용 래퍼 */
@@ -3833,18 +3835,18 @@ button:disabled,
   filter: drop-shadow(0 0 3px var(--chrome-glow-color));
 }
 
-/* 좌하단 코너 */
+/* 좌하단 코너 (BL): BR 원본을 90° 회전 → └ */
 .panel.has-chrome .panel-content::before {
   bottom: 0;
   left: -2px;
-  transform: rotate(0deg);
+  transform: rotate(90deg);
 }
 
-/* 우하단 코너 (원본 방향) */
+/* 우하단 코너 (BR): 원본 방향 그대로 → ┘ */
 .panel.has-chrome .panel-content::after {
   bottom: 0;
   right: -2px;
-  transform: rotate(270deg);
+  transform: rotate(0deg);
 }
 
 /* Action Card Chrome - 프레임 오버레이 */
