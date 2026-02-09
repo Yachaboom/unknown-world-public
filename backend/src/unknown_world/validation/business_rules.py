@@ -397,7 +397,7 @@ def validate_business_rules(
     if not result.is_valid:
         result.build_summary()
         logger.warning(
-            "[BusinessRules] 검증 실패",
+            "[BusinessRules] Validation failed",
             extra={"error_count": len(result.errors)},
         )
 

@@ -46,7 +46,7 @@ def seed_scene_images() -> None:
     scenes_dir = _FRONTEND_SCENES_DIR
     if not scenes_dir.exists():
         logger.warning(
-            "[Seed] 프론트엔드 씬 디렉터리 없음, 시드 건너뜀",
+            "[Seed] Frontend scene directory not found, skipping seed",
             extra={"path": str(scenes_dir.resolve())},
         )
         return
@@ -60,7 +60,7 @@ def seed_scene_images() -> None:
 
         if not src.exists():
             logger.warning(
-                "[Seed] 소스 WebP 없음",
+                "[Seed] Source WebP not found",
                 extra={"image_id": image_id, "path": str(src)},
             )
             continue
@@ -77,16 +77,16 @@ def seed_scene_images() -> None:
                 img.save(dest, format="PNG")
             converted += 1
             logger.info(
-                "[Seed] 씬 이미지 변환 완료",
+                "[Seed] Scene image converted",
                 extra={"image_id": image_id, "size_bytes": dest.stat().st_size},
             )
         except Exception:
             logger.exception(
-                "[Seed] 씬 이미지 변환 실패",
+                "[Seed] Scene image conversion failed",
                 extra={"image_id": image_id},
             )
 
     logger.info(
-        "[Seed] 씬 이미지 시드 완료",
+        "[Seed] Scene image seeding complete",
         extra={"converted": converted, "skipped": skipped, "total": len(_SCENE_IMAGE_IDS)},
     )

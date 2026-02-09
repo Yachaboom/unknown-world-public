@@ -84,7 +84,7 @@ _environment = os.environ.get("ENVIRONMENT", "development")
 
 if _dotenv_loaded:
     logger.info(
-        "[Config] .env 파일 로드 완료",
+        "[Config] .env file loaded",
         extra={
             "dotenv_path": str(_DOTENV_PATH),
             "UW_MODE": _uw_mode,
@@ -93,7 +93,7 @@ if _dotenv_loaded:
     )
 else:
     logger.debug(
-        "[Config] .env 파일 미존재 또는 로드 실패 (기본값 사용)",
+        "[Config] .env file not found or failed to load (using defaults)",
         extra={
             "UW_MODE": _uw_mode,
             "ENVIRONMENT": _environment,
@@ -118,20 +118,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # =========================================================================
     # Startup
     # =========================================================================
-    logger.info("[Startup] Unknown World 백엔드 시작")
+    logger.info("[Startup] Unknown World backend starting")
 
     # U-124: 사전 생성 씬 이미지를 백엔드 output 디렉터리에 시드
     # 프론트엔드 WebP → 백엔드 PNG 변환 (Gemini 참조 이미지 파이프라인용)
     seed_scene_images()
 
-    logger.info("[Startup] Unknown World 백엔드 시작 완료")
+    logger.info("[Startup] Unknown World backend started")
 
     yield
 
     # =========================================================================
     # Shutdown
     # =========================================================================
-    logger.info("[Shutdown] Unknown World 백엔드 종료")
+    logger.info("[Shutdown] Unknown World backend shutting down")
 
 
 # =============================================================================

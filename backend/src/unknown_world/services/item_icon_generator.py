@@ -188,7 +188,7 @@ class IconCache:
         self._memory_cache: dict[str, str] = {}  # cache_key → icon_url
 
         logger.info(
-            "[IconCache] 초기화 완료",
+            "[IconCache] Initialized",
             extra={"cache_dir": str(self._cache_dir)},
         )
 
@@ -217,7 +217,7 @@ class IconCache:
         # 메모리 캐시 확인
         if cache_key in self._memory_cache:
             logger.debug(
-                "[IconCache] 메모리 캐시 히트",
+                "[IconCache] Memory cache hit",
                 extra={"cache_key": cache_key[:8]},
             )
             return self._memory_cache[cache_key]
@@ -228,7 +228,7 @@ class IconCache:
             icon_url = build_image_url(f"{ICON_CACHE_SUBDIR}/{cache_key}.png", category="generated")
             self._memory_cache[cache_key] = icon_url
             logger.debug(
-                "[IconCache] 파일 캐시 히트",
+                "[IconCache] File cache hit",
                 extra={"cache_key": cache_key[:8]},
             )
             return icon_url
@@ -266,7 +266,7 @@ class IconCache:
                 cache_path.write_bytes(processed_data)
 
                 logger.debug(
-                    "[IconCache] 이미지 리사이징 완료",
+                    "[IconCache] Image resized",
                     extra={
                         "original_size": f"{img.size[0]}x{img.size[1]}",
                         "target_size": f"{ICON_SIZE}x{ICON_SIZE}",
@@ -274,7 +274,7 @@ class IconCache:
                 )
         except Exception as e:
             logger.warning(
-                "[IconCache] 리사이징 실패, 원본 저장",
+                "[IconCache] Resize failed, saving original",
                 extra={"error": str(e)},
             )
             cache_path.write_bytes(image_data)
@@ -285,7 +285,7 @@ class IconCache:
         self._memory_cache[cache_key] = icon_url
 
         logger.info(
-            "[IconCache] 아이콘 캐시 저장",
+            "[IconCache] Icon cached",
             extra={
                 "cache_key": cache_key[:8],
                 "size_bytes": len(processed_data),
@@ -372,7 +372,7 @@ class ItemIconGenerator:
         self._completed_urls: dict[str, str] = {}  # item_id -> icon_url (최근 완료된 항목)
         self._failed_generations: dict[str, str] = {}  # U-097: item_id -> error_message
 
-        logger.info("[ItemIconGenerator] 초기화 완료")
+        logger.info("[ItemIconGenerator] Initialized")
 
     def _get_image_generator(self) -> ImageGeneratorType:
         """이미지 생성기를 lazy 로딩합니다."""
@@ -447,7 +447,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
         desc_hash = hashlib.md5(request.item_description.encode()).hexdigest()[:8]
 
         logger.debug(
-            "[ItemIconGenerator] 아이콘 생성 요청",
+            "[ItemIconGenerator] Icon generation request",
             extra={
                 "item_id": request.item_id,
                 "desc_hash": desc_hash,
@@ -489,13 +489,13 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
                         if result.status == IconGenerationStatus.FAILED:
                             self._failed_generations[item_id] = result.message or "생성 실패"
                             logger.warning(
-                                "[ItemIconGenerator] 백그라운드 아이콘 생성 실패",
+                                "[ItemIconGenerator] Background icon generation failed",
                                 extra={"item_id": item_id, "message": result.message},
                             )
                     except Exception as exc:
                         self._failed_generations[item_id] = str(exc)
                         logger.exception(
-                            "[ItemIconGenerator] 백그라운드 태스크 예외",
+                            "[ItemIconGenerator] Background task exception",
                             extra={"item_id": item_id},
                         )
 
@@ -570,7 +570,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
                             cached_url = self._cache.set(request.item_description, image_data)
                             self._completed_urls[request.item_id] = cached_url
                             logger.info(
-                                "[ItemIconGenerator] 아이콘 생성 완료",
+                                "[ItemIconGenerator] Icon generation complete",
                                 extra={
                                     "item_id": request.item_id,
                                     "desc_hash": desc_hash,
@@ -604,7 +604,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
                 if attempt < max_attempts and _is_retryable_message(last_error_message):
                     delay = ICON_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
                     logger.warning(
-                        "[ItemIconGenerator] 아이콘 생성 실패, 재시도 예정",
+                        "[ItemIconGenerator] Icon generation failed, will retry",
                         extra={
                             "item_id": request.item_id,
                             "desc_hash": desc_hash,
@@ -626,7 +626,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
                 if attempt < max_attempts:
                     delay = ICON_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
                     logger.warning(
-                        "[ItemIconGenerator] 아이콘 생성 타임아웃, 재시도 예정",
+                        "[ItemIconGenerator] Icon generation timeout, will retry",
                         extra={
                             "item_id": request.item_id,
                             "desc_hash": desc_hash,
@@ -647,7 +647,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
                 if attempt < max_attempts and _is_retryable_exception(e):
                     delay = ICON_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
                     logger.warning(
-                        "[ItemIconGenerator] 아이콘 생성 중 오류, 재시도 예정",
+                        "[ItemIconGenerator] Icon generation error, will retry",
                         extra={
                             "item_id": request.item_id,
                             "desc_hash": desc_hash,
@@ -661,7 +661,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
 
                 # 재시도 불가 에러 (로깅 후 종료)
                 logger.exception(
-                    "[ItemIconGenerator] 아이콘 생성 중 복구 불가 오류",
+                    "[ItemIconGenerator] Icon generation unrecoverable error",
                     extra={
                         "item_id": request.item_id,
                         "error_type": error_type,
@@ -672,7 +672,7 @@ Background: solid dark #0d0d0d only. DO NOT use white or bright backgrounds.
         # 모든 시도 실패 → placeholder 유지 (RULE-004: 안전한 폴백)
         elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
         logger.warning(
-            "[ItemIconGenerator] 아이콘 생성 최종 실패",
+            "[ItemIconGenerator] Icon generation final failure",
             extra={
                 "item_id": request.item_id,
                 "desc_hash": desc_hash,

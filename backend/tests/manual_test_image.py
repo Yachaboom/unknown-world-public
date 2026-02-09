@@ -13,7 +13,7 @@ def run_manual_test():
     os.environ["UW_MODE"] = "mock"
     client = TestClient(app)
 
-    print("=== [1] 이미지 생성 요청 테스트 ===")
+    print("=== [1] Image Generation Request Test ===")
     payload = {
         "prompt": "A retro-future computer terminal with green text",
         "aspect_ratio": "1:1",
@@ -29,16 +29,16 @@ def run_manual_test():
         image_url = data["image_url"]
         image_id = data["image_id"]
 
-        print(f"\n=== [2] 정적 파일 서빙 테스트 ({image_url}) ===")
+        print(f"\n=== [2] Static File Serving Test ({image_url}) ===")
         static_resp = client.get(image_url)
         print(f"Static Content-Type: {static_resp.headers.get('content-type')}")
         print(f"Static Success: {static_resp.status_code == 200}")
 
-        print(f"\n=== [3] 이미지 상태 조회 테스트 ({image_id}) ===")
+        print(f"\n=== [3] Image Status Query Test ({image_id}) ===")
         status_resp = client.get(f"/api/image/status/{image_id}")
         print(f"Status Response: {json.dumps(status_resp.json(), indent=2, ensure_ascii=False)}")
 
-        print(f"\n=== [4] 이미지 파일 직접 조회 테스트 (/api/image/file/{image_id}) ===")
+        print(f"\n=== [4] Direct Image File Query Test (/api/image/file/{image_id}) ===")
         file_resp = client.get(f"/api/image/file/{image_id}")
         print(f"File Content-Type: {file_resp.headers.get('content-type')}")
         print(f"File Success: {file_resp.status_code == 200}")

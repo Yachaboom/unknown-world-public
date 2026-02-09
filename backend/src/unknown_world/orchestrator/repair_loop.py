@@ -176,8 +176,8 @@ async def run_repair_loop(
     Example:
         >>> result = await run_repair_loop(turn_input, conversation_history=history)
         >>> if result.is_fallback:
-        ...     print(f"폴백으로 종료 (시도: {result.repair_attempts})")
-        >>> print(f"사용 모델: {result.model_label}, 비용 배수: {result.cost_multiplier}")
+        ...     print(f"Ended with fallback (attempts: {result.repair_attempts})")
+        >>> print(f"Model used: {result.model_label}, cost multiplier: {result.cost_multiplier}")
         >>> print(result.output.narrative)
     """
     generator = get_turn_output_generator(force_mock=force_mock)
@@ -216,7 +216,7 @@ async def run_repair_loop(
 
         # 로그 기록 (프롬프트 노출 금지)
         logger.info(
-            "[RepairLoop] 시도",
+            "[RepairLoop] Attempt",
             extra={
                 "attempt": attempt,
                 "is_repair": is_repair,
@@ -266,7 +266,7 @@ async def run_repair_loop(
                     force_mock=force_mock,
                 )
                 logger.warning(
-                    "[RepairLoop] Pro→Flash 모델 폴백 전환 (U-127)",
+                    "[RepairLoop] Pro->Flash model fallback (U-127)",
                     extra={
                         "attempt": attempt,
                         "from_model": gen_result.model_label,
@@ -281,7 +281,7 @@ async def run_repair_loop(
             # 이미 폴백 상태에서도 실패 → 지수 백오프 대기 후 재시도
             backoff_seconds = 2.0 * (2**attempt)  # 2s → 4s → 8s
             logger.warning(
-                "[RepairLoop] API 에러 (Flash 폴백 후) — %.1fs 대기 후 재시도",
+                "[RepairLoop] API error (after Flash fallback) — %.1fs backoff before retry",
                 backoff_seconds,
                 extra={
                     "attempt": attempt,
@@ -318,7 +318,7 @@ async def run_repair_loop(
                 gen_result.output.agent_console.repair_count = attempt
 
                 logger.info(
-                    "[RepairLoop] 성공",
+                    "[RepairLoop] Succeeded",
                     extra={
                         "total_attempts": attempt + 1,
                         "repair_attempts": attempt,
@@ -351,7 +351,7 @@ async def run_repair_loop(
             badges.append(ValidationBadge.SAFETY_BLOCKED)
             # 안전 차단은 재시도 불가 → 즉시 폴백
             logger.warning(
-                "[RepairLoop] 안전 차단으로 폴백",
+                "[RepairLoop] Safety blocked, using fallback",
                 extra={"attempt": attempt},
             )
             break
@@ -361,7 +361,7 @@ async def run_repair_loop(
 
     # 최종 실패 → 안전한 폴백 반환
     logger.warning(
-        "[RepairLoop] 최종 폴백 반환",
+        "[RepairLoop] Returning final fallback",
         extra={
             "max_attempts": max_attempts,
             "actual_attempts": last_attempt,

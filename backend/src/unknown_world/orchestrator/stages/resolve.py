@@ -140,7 +140,7 @@ async def _execute_vision_analysis(
             ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
 
             logger.info(
-                "[Resolve] 정밀분석 성공 (U-076)",
+                "[Resolve] Detailed analysis succeeded (U-076)",
                 extra={
                     "affordance_count": len(result.affordances),
                     "merged_object_count": len(merged_objects),
@@ -159,7 +159,7 @@ async def _execute_vision_analysis(
             ctx.output = ctx.output.model_copy(update={"narrative": new_narrative})
 
             logger.info(
-                "[Resolve] 정밀분석 결과 없음/실패, 폴백 내러티브 적용 (U-076)",
+                "[Resolve] Detailed analysis empty/failed, fallback narrative applied (U-076)",
                 extra={
                     "success": result.success,
                     "message": result.message,
@@ -169,7 +169,7 @@ async def _execute_vision_analysis(
     except Exception as e:
         # 예외 발생 시 안전한 폴백 (RULE-004)
         logger.error(
-            "[Resolve] 정밀분석 중 예외 발생, 폴백 적용",
+            "[Resolve] Exception during detailed analysis, fallback applied",
             extra={"error_type": type(e).__name__},
         )
         if language == Language.KO:
@@ -227,7 +227,7 @@ async def resolve_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContex
 
         if image_url:
             logger.info(
-                "[Resolve] 정밀분석 트리거 감지, Agentic Vision 실행 (U-076)",
+                "[Resolve] Detailed analysis trigger detected, running Agentic Vision (U-076)",
                 extra={
                     "action_id": ctx.turn_input.action_id,
                     "has_image": True,
@@ -236,7 +236,7 @@ async def resolve_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContex
             ctx = await _execute_vision_analysis(ctx, image_url)
         else:
             logger.info(
-                "[Resolve] 정밀분석 트리거 감지, 그러나 이미지 없음 - 건너뜀",
+                "[Resolve] Detailed analysis trigger detected, but no image - skipping",
             )
     else:
         # 기존 동작: pass-through + 모의 지연
@@ -248,7 +248,7 @@ async def resolve_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContex
         if ctx.output is not None and ctx.output.ui.objects:
             stripped_count = len(ctx.output.ui.objects)
             logger.warning(
-                "[Resolve] U-090: 비정밀분석 턴에서 GM 생성 핫스팟 %d개 제거됨",
+                "[Resolve] U-090: Removed %d GM-generated hotspots from non-analysis turn",
                 stripped_count,
                 extra={
                     "stripped_object_count": stripped_count,

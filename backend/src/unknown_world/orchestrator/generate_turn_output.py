@@ -220,7 +220,7 @@ class TurnOutputGenerator:
         if TextModelTiering.is_quality_trigger(action_id, text):
             model_label = ModelLabel.QUALITY
             logger.info(
-                "[TurnOutputGenerator] QUALITY 트리거 감지 (비용 2x 적용)",
+                "[TurnOutputGenerator] QUALITY trigger detected (cost 2x applied)",
                 extra={
                     "action_id": action_id,
                     "has_trigger_keyword": bool(text),
@@ -282,13 +282,13 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 
 {image_guidelines}"""
             logger.debug(
-                "[TurnOutputGenerator] 이미지 가이드라인 로드 완료",
+                "[TurnOutputGenerator] Image guidelines loaded",
                 extra={"language": turn_input.language.value},
             )
         except FileNotFoundError:
             # 가이드라인 없으면 기본 프롬프트만 사용 (안전한 폴백)
             logger.warning(
-                "[TurnOutputGenerator] 이미지 가이드라인 파일 미존재, 기본 프롬프트 사용",
+                "[TurnOutputGenerator] Image guidelines file not found, using default prompt",
                 extra={"language": turn_input.language.value},
             )
 
@@ -374,7 +374,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 {image_guidelines}"""
         except FileNotFoundError:
             logger.warning(
-                "[TurnOutputGenerator] 이미지 가이드라인 파일 미존재, 기본 프롬프트 사용",
+                "[TurnOutputGenerator] Image guidelines file not found, using default prompt",
                 extra={"language": turn_input.language.value},
             )
 
@@ -481,7 +481,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 
         # 로그에는 메타만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.info(
-            "[TurnOutputGenerator] 생성 요청",
+            "[TurnOutputGenerator] Generation request",
             extra={
                 "language": turn_input.language.value,
                 "model_label": label,
@@ -560,7 +560,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
                     turn_output.economy.balance_after.memory_shard -= additional_shard
 
                     logger.info(
-                        "[TurnOutputGenerator] 비용 배수 적용 (U-069)",
+                        "[TurnOutputGenerator] Cost multiplier applied (U-069)",
                         extra={
                             "original_signal": original_signal,
                             "multiplied_signal": turn_output.economy.cost.signal,
@@ -571,7 +571,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 
                 # 성공
                 logger.info(
-                    "[TurnOutputGenerator] 생성 성공",
+                    "[TurnOutputGenerator] Generation succeeded",
                     extra={
                         "model_label": label,
                         "cost_multiplier": cost_multiplier,
@@ -593,7 +593,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
             except ValidationError as e:
                 # 스키마 검증 실패 (복구 대상 - U-018에서 처리)
                 logger.warning(
-                    "[TurnOutputGenerator] Pydantic 검증 실패 (복구 대상)",
+                    "[TurnOutputGenerator] Pydantic validation failed (repairable)",
                     extra={
                         "error_count": len(e.errors()),
                         "model_label": label,
@@ -616,7 +616,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
             except json.JSONDecodeError as e:
                 # JSON 파싱 실패 (복구 대상)
                 logger.warning(
-                    "[TurnOutputGenerator] JSON 파싱 실패 (복구 대상)",
+                    "[TurnOutputGenerator] JSON parsing failed (repairable)",
                     extra={"error_type": "JSONDecodeError"},
                 )
                 return GenerationResult(
@@ -633,7 +633,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         except RuntimeError as e:
             # API 호출 실패
             logger.error(
-                "[TurnOutputGenerator] API 호출 실패",
+                "[TurnOutputGenerator] API call failed",
                 extra={"error_type": type(e).__name__},
             )
             return GenerationResult(
@@ -649,7 +649,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
         except Exception as e:
             # 예상치 못한 오류
             logger.exception(
-                "[TurnOutputGenerator] 예상치 못한 오류: %s: %s",
+                "[TurnOutputGenerator] Unexpected error: %s: %s",
                 type(e).__name__,
                 str(e)[:500],
             )

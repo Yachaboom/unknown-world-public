@@ -279,3 +279,11 @@ mini API 거부 (U-055 Real 모드 테스트 발견) ✅ 해결됨
 - **현상**: AssertionError (Expected 'generate' to have been called once. Called 0 times.) 등
 - **추정 원인**: U-097에서 이미지 생성을 프론트엔드로 위임하도록 render_stage가 변경되었으나, 기존 단위 테스트들이 이를 반영하지 못함.
 - **보류 사유**: 이번 유닛(U-132) 범위 밖이며, 렌더링 아키텍처 변경에 따른 테스트 코드 전면 수정이 필요함.
+- **U-135 재확인(2026-02-10)**: 동일 실패 지속 확인. U-135 변경(로그 영문화)과 무관한 기존 이슈.
+
+## 2026-02-10 이슈: test_schema_ok_in_successful_turn 간헐적 실패 (Flaky)
+
+- **발견 위치**: `backend/tests/integration/test_real_mode_gate.py::TestHardGateInvariants::test_schema_ok_in_successful_turn`
+- **현상**: 전체 테스트 실행 시 간헐적 실패 (`render.image_url` 필드 관련 검증), 단독 재실행 시 통과
+- **추정 원인**: Mock 모드에서 render_stage의 이미지 판정 타이밍이 테스트 실행 순서나 환경에 따라 달라질 수 있음
+- **보류 사유**: U-135 범위 밖 (로그 영문화와 무관한 간헐적 테스트 안정성 이슈)

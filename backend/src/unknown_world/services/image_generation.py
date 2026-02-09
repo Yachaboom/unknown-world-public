@@ -227,7 +227,7 @@ class MockImageGenerator:
         self._output_dir = output_dir or get_generated_images_dir()
         self._output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(
-            "[ImageGen] Mock 모드로 초기화됨",
+            "[ImageGen] Initialized in mock mode",
             extra={"output_dir": str(self._output_dir)},
         )
 
@@ -245,7 +245,7 @@ class MockImageGenerator:
         # 프롬프트 해시 생성 (원문 로깅 금지 - RULE-007)
         prompt_hash = hashlib.sha256(request.prompt.encode()).hexdigest()[:8]
         logger.debug(
-            "[ImageGen] Mock 이미지 생성 요청",
+            "[ImageGen] Mock image generation request",
             extra={
                 "prompt_hash": prompt_hash,
                 "size": request.image_size,
@@ -280,7 +280,7 @@ class MockImageGenerator:
         elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
         logger.info(
-            "[ImageGen] Mock 이미지 생성 완료",
+            "[ImageGen] Mock image generation complete",
             extra={
                 "image_id": image_id,
                 "elapsed_ms": elapsed_ms,
@@ -360,7 +360,7 @@ class ImageGenerator:
         try:
             if not self._api_key:
                 logger.warning(
-                    "[ImageGen] GOOGLE_API_KEY 환경변수가 설정되지 않음 - Mock 모드 권장",
+                    "[ImageGen] GOOGLE_API_KEY environment variable not set - mock mode recommended",
                 )
                 self._available = False
                 return
@@ -373,7 +373,7 @@ class ImageGenerator:
 
             # 로그에는 모델 ID만 기록 (API 키 노출 금지 - RULE-007)
             logger.info(
-                "[ImageGen] API 키 이미지 생성기 초기화 완료",
+                "[ImageGen] API key image generator initialized",
                 extra={
                     "model": MODEL_IMAGE,
                     "auth": "api_key",
@@ -381,7 +381,7 @@ class ImageGenerator:
             )
         except Exception as e:
             logger.warning(
-                "[ImageGen] API 키 클라이언트 초기화 실패 - Mock 모드 권장",
+                "[ImageGen] API key client initialization failed - mock mode recommended",
                 extra={"error_type": type(e).__name__},
             )
             self._available = False
@@ -401,7 +401,7 @@ class ImageGenerator:
         # 캐시 확인
         if url in self._reference_image_cache:
             logger.debug(
-                "[ImageGen] 참조 이미지 캐시 히트",
+                "[ImageGen] Reference image cache hit",
                 extra={"url_hash": hashlib.sha256(url.encode()).hexdigest()[:8]},
             )
             return self._reference_image_cache[url]
@@ -416,13 +416,13 @@ class ImageGenerator:
                     image_bytes = file_path.read_bytes()
                     self._reference_image_cache[url] = image_bytes
                     logger.debug(
-                        "[ImageGen] 로컬 참조 이미지 로드 성공",
+                        "[ImageGen] Local reference image loaded",
                         extra={"image_id": image_id, "size_bytes": len(image_bytes)},
                     )
                     return image_bytes
                 else:
                     logger.warning(
-                        "[ImageGen] 로컬 참조 이미지 파일 없음",
+                        "[ImageGen] Local reference image file not found",
                         extra={"image_id": image_id},
                     )
                     return None
@@ -437,7 +437,7 @@ class ImageGenerator:
                     image_bytes = response.content
                     self._reference_image_cache[url] = image_bytes
                     logger.debug(
-                        "[ImageGen] HTTP 참조 이미지 로드 성공",
+                        "[ImageGen] HTTP reference image loaded",
                         extra={
                             "url_hash": hashlib.sha256(url.encode()).hexdigest()[:8],
                             "size_bytes": len(image_bytes),
@@ -446,14 +446,14 @@ class ImageGenerator:
                     return image_bytes
 
             logger.warning(
-                "[ImageGen] 지원하지 않는 참조 이미지 URL 형식",
+                "[ImageGen] Unsupported reference image URL format",
                 extra={"url_prefix": url[:20] if len(url) > 20 else url},
             )
             return None
 
         except Exception as e:
             logger.warning(
-                "[ImageGen] 참조 이미지 로드 실패",
+                "[ImageGen] Reference image loading failed",
                 extra={"error_type": type(e).__name__},
             )
             return None
@@ -500,7 +500,7 @@ class ImageGenerator:
             has_reference = reference_image_bytes is not None
 
         logger.debug(
-            "[ImageGen] 이미지 생성 요청",
+            "[ImageGen] Image generation request",
             extra={
                 "prompt_hash": prompt_hash,
                 "size": request.image_size,
@@ -555,7 +555,7 @@ class ImageGenerator:
                 )
 
             logger.debug(
-                "[ImageGen] image_config 적용",
+                "[ImageGen] image_config applied",
                 extra={
                     "aspect_ratio": request.aspect_ratio,
                     "image_size": sdk_image_size if is_pro_model else "(Flash: 고정 1024px)",
@@ -586,7 +586,7 @@ class ImageGenerator:
             if image_bytes is None:
                 elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
                 logger.warning(
-                    "[ImageGen] 이미지 생성 응답에 이미지 데이터가 없음",
+                    "[ImageGen] No image data in generation response",
                     extra={"elapsed_ms": elapsed_ms},
                 )
                 return ImageGenerationResponse(
@@ -614,7 +614,7 @@ class ImageGenerator:
             elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
             logger.info(
-                "[ImageGen] 이미지 생성 완료",
+                "[ImageGen] Image generation complete",
                 extra={
                     "image_id": image_id,
                     "elapsed_ms": elapsed_ms,
@@ -634,7 +634,7 @@ class ImageGenerator:
             # Q1 결정: 60초 타임아웃 초과 시 처리
             elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
             logger.warning(
-                "[ImageGen] 이미지 생성 타임아웃",
+                "[ImageGen] Image generation timeout",
                 extra={
                     "timeout_seconds": IMAGE_GENERATION_TIMEOUT_SECONDS,
                     "elapsed_ms": elapsed_ms,
@@ -653,7 +653,7 @@ class ImageGenerator:
             error_detail = str(e)[:200] if str(e) else "상세 정보 없음"
 
             logger.error(
-                "[ImageGen] 이미지 생성 실패",
+                "[ImageGen] Image generation failed",
                 extra={
                     "error_type": error_type,
                     "error_detail": error_detail,
@@ -694,7 +694,7 @@ class ImageGenerator:
                             part.text[:100] + "..." if len(part.text) > 100 else part.text
                         )
                         logger.debug(
-                            "[ImageGen] 텍스트 응답 (디버깅용)",
+                            "[ImageGen] Text response (for debugging)",
                             extra={"text_preview": text_preview},
                         )
 
@@ -706,7 +706,7 @@ class ImageGenerator:
                         and part.inline_data.data
                     ):
                         logger.debug(
-                            "[ImageGen] 이미지 데이터 추출 성공",
+                            "[ImageGen] Image data extracted successfully",
                             extra={"size_bytes": len(part.inline_data.data)},
                         )
                         return part.inline_data.data
@@ -714,7 +714,7 @@ class ImageGenerator:
             return None
         except Exception as e:
             logger.warning(
-                "[ImageGen] 응답 파싱 중 오류 발생",
+                "[ImageGen] Error during response parsing",
                 extra={"error_type": type(e).__name__, "message": str(e)},
             )
             return None
@@ -767,7 +767,7 @@ def get_image_generator(
         real_gen = ImageGenerator(output_dir)
         # 실제 생성기 초기화 실패 시 Mock으로 폴백
         if not real_gen.is_available():
-            logger.warning("[ImageGen] 실제 생성기 초기화 실패, Mock 모드로 폴백")
+            logger.warning("[ImageGen] Real generator init failed, falling back to mock mode")
             generator = MockImageGenerator(output_dir)
         else:
             generator = real_gen

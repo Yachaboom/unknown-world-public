@@ -275,14 +275,14 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
     if xml_result is not None:
         metadata, content = xml_result
         logger.debug(
-            "[PromptLoader] XML 태그 기반 파싱 완료",
+            "[PromptLoader] XML tag-based parsing complete",
             extra={"format": "xml", "meta_keys": list(metadata.keys())},
         )
         return metadata, content
 
     # 2. 레거시 폴백 (U-046 Q2: Option A)
     logger.debug(
-        "[PromptLoader] 레거시 프론트매터 파싱으로 폴백",
+        "[PromptLoader] Falling back to legacy frontmatter parsing",
         extra={"format": "legacy"},
     )
     return _parse_legacy_frontmatter(text)
@@ -345,7 +345,7 @@ def _load_prompt_file(
 
         if fallback_path.exists():
             logger.warning(
-                "[PromptLoader] 폴백 언어 사용",
+                "[PromptLoader] Using fallback language",
                 extra={
                     "original_language": language.value,
                     "fallback_language": fallback_lang.value,
@@ -406,7 +406,7 @@ def load_prompt(
     """
     # 로그에는 경로/메타만 기록 (원문 금지)
     logger.debug(
-        "[PromptLoader] 프롬프트 로드",
+        "[PromptLoader] Prompt loaded",
         extra={
             "category": category,
             "name": name,
@@ -449,7 +449,7 @@ def load_prompt_with_metadata(
     metadata, content = _parse_frontmatter(raw_text)
 
     logger.debug(
-        "[PromptLoader] 프롬프트 메타데이터 파싱 완료",
+        "[PromptLoader] Prompt metadata parsed",
         extra={
             "category": category,
             "name": name,
@@ -545,7 +545,7 @@ def clear_prompt_cache() -> None:
     개발 중 핫리로드 또는 테스트 시 사용합니다.
     """
     _load_prompt_cached.cache_clear()
-    logger.info("[PromptLoader] 프롬프트 캐시 초기화됨")
+    logger.info("[PromptLoader] Prompt cache cleared")
 
 
 def get_prompt_metadata(

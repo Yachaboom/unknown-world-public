@@ -263,7 +263,7 @@ def decide_image_generation(
     image_job = extract_image_job(turn_output)
 
     if image_job is None:
-        logger.debug("[RenderHelpers] ImageJob 없음, 이미지 생성 건너뜀")
+        logger.debug("[RenderHelpers] No ImageJob, skipping image generation")
         return ImageGenerationDecision(
             should_generate=False,
             reason="no_image_job",
@@ -271,7 +271,7 @@ def decide_image_generation(
 
     # 2. should_generate 플래그 확인
     if not image_job.should_generate:
-        logger.debug("[RenderHelpers] should_generate=false, 이미지 생성 건너뜀")
+        logger.debug("[RenderHelpers] should_generate=false, skipping image generation")
         return ImageGenerationDecision(
             should_generate=False,
             reason="should_generate_false",
@@ -279,7 +279,7 @@ def decide_image_generation(
 
     # 3. 프롬프트 유효성 검사
     if not image_job.prompt or not image_job.prompt.strip():
-        logger.warning("[RenderHelpers] 프롬프트 비어있음, 이미지 생성 건너뜀 (방어)")
+        logger.warning("[RenderHelpers] Prompt is empty, skipping image generation (defensive)")
         return ImageGenerationDecision(
             should_generate=False,
             reason="empty_prompt",
@@ -299,7 +299,7 @@ def decide_image_generation(
     if not can_afford_image_generation(economy_snapshot, IMAGE_GENERATION_COST_SIGNAL):
         # U-079: 잔액 부족 → FAST 모델로 폴백 (비용 0, 무료 기본 이미지)
         logger.info(
-            "[RenderHelpers] 잔액 부족, FAST 모델 폴백 (U-079)",
+            "[RenderHelpers] Low balance, FAST model fallback (U-079)",
             extra={
                 "current_signal": economy_snapshot.signal,
                 "required_signal": IMAGE_GENERATION_COST_SIGNAL,
@@ -321,7 +321,7 @@ def decide_image_generation(
 
     # 모든 조건 통과 - QUALITY 이미지 생성 진행
     logger.info(
-        "[RenderHelpers] 이미지 생성 판정 통과 (QUALITY)",
+        "[RenderHelpers] Image generation decision passed (QUALITY)",
         extra={
             "prompt_hash": prompt_hash,
             "aspect_ratio": image_job.aspect_ratio,

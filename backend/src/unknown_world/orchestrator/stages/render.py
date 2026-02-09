@@ -91,13 +91,13 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
         - RULE-008: 텍스트 우선 + Lazy 이미지 원칙
     """
     if ctx.image_generator is None or ctx.output is None:
-        logger.debug("[Render] 이미지 생성 조건 불충족, 건너뜀")
+        logger.debug("[Render] Image generation conditions not met, skipping")
         return ctx
 
     # ImageJob에서 프롬프트 추출 (판정에서 이미 유효성 검증됨)
     image_job = extract_image_job(ctx.output)
     if image_job is None or not image_job.prompt:
-        logger.warning("[Render] ImageJob 또는 프롬프트 없음, 생성 건너뜀")
+        logger.warning("[Render] No ImageJob or prompt, skipping generation")
         return ctx
 
     # 언어 정보 추출 (폴백 메시지용)
@@ -107,7 +107,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
     start_time = datetime.now(UTC)
 
     logger.info(
-        "[Render] 이미지 생성 시작",
+        "[Render] Image generation started",
         extra={
             "prompt_hash": image_decision.prompt_hash,
             "aspect_ratio": image_decision.aspect_ratio,
@@ -121,7 +121,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
 
     if image_decision.is_low_balance_fallback:
         logger.info(
-            "[Render] U-079: 잔액 부족 FAST 폴백 적용",
+            "[Render] U-079: Low balance FAST fallback applied",
             extra={
                 "model_override": effective_model_label,
                 "estimated_cost": image_decision.estimated_cost_signal,
@@ -151,7 +151,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
         # 결과 처리
         if response.status == ImageGenerationStatus.COMPLETED:
             logger.info(
-                "[Render] 이미지 생성 성공",
+                "[Render] Image generation succeeded",
                 extra={
                     "image_id": response.image_id,
                     "image_url": response.image_url,
@@ -171,7 +171,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
         else:
             # U-054: 이미지 생성 실패 - 즉시 폴백 (재시도 0회, Q1: Option A)
             logger.warning(
-                "[Render] 이미지 생성 실패, 텍스트-only 폴백",
+                "[Render] Image generation failed, text-only fallback",
                 extra={
                     "status": response.status.value,
                     "status_message": response.message,
@@ -192,7 +192,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
         elapsed_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
         logger.warning(
-            "[Render] 이미지 생성 타임아웃, 텍스트-only 폴백",
+            "[Render] Image generation timeout, text-only fallback",
             extra={
                 "elapsed_ms": elapsed_ms,
                 "prompt_hash": image_decision.prompt_hash,
@@ -211,7 +211,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
         error_type = type(e).__name__
 
         logger.warning(
-            "[Render] 이미지 생성 요청 오류, 텍스트-only 폴백",
+            "[Render] Image generation request error, text-only fallback",
             extra={
                 "error_type": error_type,
                 "error_message": str(e),
@@ -232,7 +232,7 @@ async def _execute_image_generation(  # noqa: RUF100  # pyright: ignore[reportUn
         error_type = type(e).__name__
 
         logger.error(
-            "[Render] 이미지 생성 중 예외 발생, 텍스트-only 폴백",
+            "[Render] Exception during image generation, text-only fallback",
             extra={
                 "error_type": error_type,
                 "error_message": str(e),
@@ -271,7 +271,7 @@ def _apply_image_fallback(
         return ctx
 
     logger.info(
-        "[Render] 이미지 폴백 적용",
+        "[Render] Image fallback applied",
         extra={
             "is_safety_blocked": fallback_result.is_safety_blocked,
             "reason": fallback_result.reason,
@@ -327,7 +327,7 @@ def _add_badge(ctx: PipelineContext, badge: ValidationBadge) -> PipelineContext:
     ctx.output = ctx.output.model_copy(update={"agent_console": new_console})
 
     logger.debug(
-        "[Render] 배지 추가됨",
+        "[Render] Badge added",
         extra={"badge": badge.value, "total_badges": len(current_badges)},
     )
 
@@ -379,7 +379,7 @@ def _update_render_output(
     ctx.output = ctx.output.model_copy(update={"render": new_render})
 
     logger.debug(
-        "[Render] TurnOutput.render 업데이트 완료",
+        "[Render] TurnOutput.render updated",
         extra={
             "image_id": image_id,
             "image_url": image_url,
@@ -422,7 +422,7 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
     if ctx.image_generator is not None:
         # 이미지 생성 서비스가 주입됨 - 연결 준비 완료
         logger.debug(
-            "[Render] 이미지 생성 서비스 연결됨",
+            "[Render] Image generation service connected",
             extra={
                 "generator_type": type(ctx.image_generator).__name__,
                 "is_available": ctx.image_generator.is_available(),
@@ -447,7 +447,7 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
 
             # 판정 결과 로깅 (프롬프트 원문 제외 - RULE-007)
             logger.info(
-                "[Render] 이미지 생성 판정 완료",
+                "[Render] Image generation decision complete",
                 extra={
                     "should_generate": image_decision.should_generate,
                     "reason": image_decision.reason,
@@ -476,7 +476,7 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
                     ctx = _adjust_economy_for_fallback(ctx, image_decision)
 
                 logger.info(
-                    "[Render] U-097: 이미지 생성을 프론트엔드에 위임 (text-first delivery)",
+                    "[Render] U-097: Delegating image generation to frontend (text-first delivery)",
                     extra={
                         "should_generate": True,
                         "model_override": image_decision.model_override,
@@ -484,10 +484,10 @@ async def render_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
                     },
                 )
         else:
-            logger.debug("[Render] TurnOutput 없음, 이미지 판정 건너뜀")
+            logger.debug("[Render] No TurnOutput, skipping image decision")
     else:
         # 이미지 생성 서비스 미주입 - pass-through 동작
-        logger.debug("[Render] 이미지 생성 서비스 미주입, pass-through 동작")
+        logger.debug("[Render] Image generation service not injected, pass-through")
 
     # 모의 처리 지연 (기존 동작 보존)
     await asyncio.sleep(RENDER_DELAY_MS / 1000.0)
@@ -523,7 +523,7 @@ def _adjust_economy_for_fallback(
         return ctx
 
     logger.info(
-        "[Render] U-079: 경제 정보 조정 (FAST 폴백 적용)",
+        "[Render] U-079: Economy info adjusted (FAST fallback applied)",
         extra={
             "original_cost": ctx.output.economy.cost.signal,
             "new_cost": image_decision.estimated_cost_signal,

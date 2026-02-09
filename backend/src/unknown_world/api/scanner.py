@@ -191,7 +191,7 @@ async def scan_image(
         content = await file.read()
     except Exception as e:
         logger.error(
-            "[ScannerAPI] 파일 읽기 실패",
+            "[ScannerAPI] File read failed",
             extra={"error_type": type(e).__name__},
         )
         return ScannerResponse(
@@ -211,7 +211,7 @@ async def scan_image(
 
     if validation_error:
         logger.warning(
-            "[ScannerAPI] 파일 검증 실패",
+            "[ScannerAPI] File validation failed",
             extra={"error": validation_error},
         )
         return ScannerResponse(
@@ -223,7 +223,7 @@ async def scan_image(
 
     # 로그: 메타 정보만 기록 (RULE-007: 파일 내용 로깅 금지)
     logger.info(
-        "[ScannerAPI] 스캔 요청",
+        "[ScannerAPI] Scan request",
         extra={
             "filename": file.filename,
             "content_type": content_type,
@@ -261,7 +261,7 @@ async def scan_image(
     except Exception as e:
         error_type = type(e).__name__
         logger.error(
-            "[ScannerAPI] 스캔 중 예외 발생",
+            "[ScannerAPI] Exception during scan",
             extra={"error_type": error_type},
         )
 

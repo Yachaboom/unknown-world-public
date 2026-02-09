@@ -135,7 +135,7 @@ class MockGenAIClient:
     def __init__(self) -> None:
         """MockGenAIClient를 초기화합니다."""
         logger.info(
-            "[GenAI] Mock 모드로 초기화됨 (실제 API 호출 없음)",
+            "[GenAI] Initialized in mock mode (no real API calls)",
             extra={"mode": GenAIMode.MOCK},
         )
 
@@ -155,7 +155,7 @@ class MockGenAIClient:
         """
         # 로그에는 메타 정보만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.debug(
-            "[GenAI] Mock 생성 요청",
+            "[GenAI] Mock generation request",
             extra={
                 "model_label": request.model_label,
                 "max_tokens": request.max_tokens,
@@ -181,7 +181,7 @@ class MockGenAIClient:
             고정된 모의 텍스트 청크
         """
         logger.debug(
-            "[GenAI] Mock 스트리밍 요청",
+            "[GenAI] Mock streaming request",
             extra={"model_label": request.model_label},
         )
 
@@ -238,7 +238,7 @@ class GenAIClient:
         try:
             if not self._api_key:
                 logger.warning(
-                    "[GenAI] GOOGLE_API_KEY 환경변수가 설정되지 않음 - Mock 모드로 전환 권장",
+                    "[GenAI] GOOGLE_API_KEY environment variable not set - mock mode recommended",
                 )
                 self._available = False
                 return
@@ -252,7 +252,7 @@ class GenAIClient:
 
             # 로그에는 초기화 성공 여부만 기록 (API 키 노출 금지 - RULE-007)
             logger.info(
-                "[GenAI] API 키 클라이언트 초기화 완료",
+                "[GenAI] API key client initialized",
                 extra={
                     "mode": GenAIMode.REAL,
                     "auth": "api_key",
@@ -262,7 +262,7 @@ class GenAIClient:
             # 인증 실패 시에도 앱이 멈추지 않도록 로깅만 수행
             # 오류 상세(스택트레이스)에 비밀정보가 포함될 수 있으므로 exc_info=False
             logger.warning(
-                "[GenAI] API 키 클라이언트 초기화 실패 - Mock 모드로 전환 권장",
+                "[GenAI] API key client initialization failed - mock mode recommended",
                 extra={"error_type": type(e).__name__},
             )
             self._available = False
@@ -294,7 +294,7 @@ class GenAIClient:
 
         # 로그에는 메타 정보만 기록 (프롬프트 원문 금지 - RULE-007/008)
         logger.debug(
-            "[GenAI] 생성 요청",
+            "[GenAI] Generation request",
             extra={
                 "model_label": request.model_label,
                 "model_id": model_id,
@@ -400,7 +400,7 @@ class GenAIClient:
         model_id = get_model_id(request.model_label)
 
         logger.debug(
-            "[GenAI] 스트리밍 요청",
+            "[GenAI] Streaming request",
             extra={
                 "model_label": request.model_label,
                 "model_id": model_id,
@@ -490,7 +490,7 @@ def get_genai_client(
         # 실제 클라이언트 초기화 실패 시 Mock으로 폴백
         if not client.is_available():
             logger.warning(
-                "[GenAI] 실제 클라이언트 초기화 실패, Mock 모드로 폴백",
+                "[GenAI] Real client initialization failed, falling back to mock mode",
             )
             client_result = MockGenAIClient()
         else:

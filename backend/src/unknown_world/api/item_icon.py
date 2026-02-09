@@ -118,7 +118,7 @@ async def generate_item_icon(request: GenerateIconRequest) -> IconResponse:
         IconResponse: 아이콘 URL 및 상태
     """
     logger.info(
-        "[ItemIconAPI] 아이콘 생성 요청",
+        "[ItemIconAPI] Icon generation request",
         extra={
             "item_id": request.item_id,
             "language": request.language,

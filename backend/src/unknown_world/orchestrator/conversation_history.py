@@ -127,7 +127,7 @@ class ConversationHistory:
                 self._entries = self._entries[-max_turns:]
 
         logger.debug(
-            "[ConversationHistory] 턴 추가",
+            "[ConversationHistory] Turn added",
             extra={
                 "total_entries": len(self._entries),
                 "has_thought_signature": thought_signature is not None,
@@ -209,7 +209,7 @@ class ConversationHistory:
         """히스토리를 초기화합니다."""
         with self._lock:
             self._entries.clear()
-        logger.info("[ConversationHistory] 히스토리 초기화됨")
+        logger.info("[ConversationHistory] History cleared")
 
     @property
     def turn_count(self) -> int:
@@ -239,7 +239,7 @@ class ConversationHistory:
             removed = entries.pop(0)  # 가장 오래된 턴 제거
             total_chars -= removed.char_count
             logger.debug(
-                "[ConversationHistory] 토큰 예산 초과로 턴 제거",
+                "[ConversationHistory] Turn removed due to token budget exceeded",
                 extra={
                     "removed_chars": removed.char_count,
                     "remaining_chars": total_chars,
@@ -276,7 +276,7 @@ def get_conversation_history(session_id: str = DEFAULT_SESSION_ID) -> Conversati
         if session_id not in _session_histories:
             _session_histories[session_id] = ConversationHistory()
             logger.info(
-                "[ConversationHistory] 새 세션 히스토리 생성",
+                "[ConversationHistory] New session history created",
                 extra={"session_id": session_id},
             )
         return _session_histories[session_id]
@@ -293,7 +293,7 @@ def reset_conversation_history(session_id: str = DEFAULT_SESSION_ID) -> None:
             _session_histories[session_id].clear()
             del _session_histories[session_id]
     logger.info(
-        "[ConversationHistory] 세션 히스토리 리셋",
+        "[ConversationHistory] Session history reset",
         extra={"session_id": session_id},
     )
 
@@ -304,7 +304,7 @@ def reset_all_histories() -> None:
         for history in _session_histories.values():
             history.clear()
         _session_histories.clear()
-    logger.info("[ConversationHistory] 전체 히스토리 리셋")
+    logger.info("[ConversationHistory] All session histories reset")
 
 
 def build_model_content_summary(

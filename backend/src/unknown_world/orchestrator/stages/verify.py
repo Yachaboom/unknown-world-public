@@ -68,7 +68,7 @@ async def verify_stage(ctx: PipelineContext, *, emit: EmitFn) -> PipelineContext
     if not is_vision and ctx.output is not None and ctx.output.ui.objects:
         leaked_count = len(ctx.output.ui.objects)
         logger.error(
-            "[Verify] U-090: 비정밀분석 턴에서 핫스팟 %d개 누출 감지, 강제 제거",
+            "[Verify] U-090: Detected %d hotspot leaks in non-analysis turn, force removing",
             leaked_count,
         )
         new_ui = ctx.output.ui.model_copy(update={"objects": []})

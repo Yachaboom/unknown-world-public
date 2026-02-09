@@ -9,35 +9,61 @@ Unknown World는 **Gemini 기반의 에이전트형 세계 엔진**과 멀티모
 ### 디렉토리 구조
 
 ```text
-backend/prompts/system/game_master.{en,ko}.md (v0.3.0)
-backend/prompts/turn/turn_output_instructions.{en,ko}.md (v0.3.0)
-backend/src/unknown_world/main.py
-backend/src/unknown_world/orchestrator/pipeline.py
-backend/src/unknown_world/orchestrator/generate_turn_output.py
-backend/src/unknown_world/models/turn.py (scene_context 추가)
-frontend/src/App.tsx
-frontend/src/i18n.ts (DEFAULT_LANGUAGE: en-US)
-frontend/src/components/AgentConsole.tsx
-frontend/src/components/NarrativeFeed.tsx
-frontend/src/components/ObjectiveTracker.tsx
-frontend/src/data/demoProfiles.ts (initialSceneDescription 추가)
-frontend/src/turn/turnRunner.ts (첫 턴 맥락 주입 로직)
-shared/schemas/turn/turn_input.schema.json (scene_context 동기화)
-vibe/unit-results/U-133[Mvp].md (신규)
-vibe/unit-results/U-132[Mvp].md
-vibe/unit-results/U-131[Mvp].md
+backend/
+├── prompts/ (XML Tags: meta/body)
+│   ├── system/game_master.{en,ko}.md
+│   ├── turn/turn_output_instructions.{en,ko}.md
+│   └── image/scene_prompt.{en,ko}.md
+├── src/unknown_world/
+│   ├── main.py (Logging refined)
+│   ├── orchestrator/
+│   │   ├── pipeline.py (7-stage pipeline)
+│   │   ├── generate_turn_output.py
+│   │   ├── repair_loop.py (Model fallback)
+│   │   └── conversation_history.py (5-turn sliding window)
+│   ├── services/
+│   │   ├── genai_client.py (API Key Auth)
+│   │   ├── image_generation.py (Late-binding)
+│   │   └── item_icon_generator.py (English logs)
+│   └── validation/
+│       ├── business_rules.py
+│       └── language_gate.py
+└── tests/ (English prints)
+frontend/src/
+├── App.tsx (Input lock & Error guard)
+├── i18n.ts (DEFAULT: en-US)
+├── components/ (HUD-first UI)
+│   ├── ActionDeck.tsx
+│   ├── InventoryPanel.tsx
+│   ├── SceneCanvas.tsx
+│   ├── AgentConsole.tsx
+│   └── NarrativeFeed.tsx (Typing engine)
+├── stores/ (Zustand: world, economy, inventory, agent)
+└── turn/
+    └── turnRunner.ts (Context injection)
 ```
 
 ### 주요 디렉토리 설명
 
-- `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다. `generate_turn_output.py`는 `scene_context`와 같은 입력을 Gemini 프롬프트로 변환하는 핵심 역할을 수행합니다.
-- `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석(`agentic_vision.py`), 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
+- `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 7단계 파이프라인으로 구현되어 있습니다. 영문화된 로그 시스템이 전역적으로 적용되어 디버깅 가시성을 제공합니다.
+- `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석, 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
-- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
-- `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
-- `frontend/public/ui/scenes/`: nanobanana-mcp로 제작된 프로필별 첫 씬 이미지(1024x576 WebP) 에셋들이 위치합니다.
+- `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`) 상태를 도메인별로 격리하여 관리합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 66. Backend 로그 영문화 (U-135[Mvp])
+
+1. **전역 로그 메시지 영어 전환 (Log Englishization)**:
+    - **Uniformity**: 백엔드 Python 코드의 모든 `logger.*()` 및 `print()` 호출 내 한글 메시지를 영어로 전면 전환함.
+    - **Emoji Removal**: 로그 가독성과 파싱 도구의 호환성을 위해 메시지 내 포함된 이모지를 제거함.
+2. **패턴 유지 및 i18n 격리**:
+    - **Structural Consistency**: `[ModuleName]` 형식의 로그 접두사 패턴을 유지하여 모듈별 필터링 편의성을 보존함.
+    - **User-facing Separation**: 사용자에게 노출되는 비즈니스 룰 에러 메시지(`BUSINESS_RULE_MESSAGES`)는 i18n 정책에 따라 한국어를 유지하여 시스템 내부 로그와 명확히 격리함.
+3. **디버깅 및 해커톤 대응**:
+    - **Global Standard**: 영어 로그 통일을 통해 해커톤 심사 및 국제 개발 환경에서의 가독성을 확보하고, 로그 인코딩 문제를 원천 차단함.
 
 ---
 

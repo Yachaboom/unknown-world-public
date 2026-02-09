@@ -199,7 +199,7 @@ async def generate_image(
 
     if validation_error:
         logger.warning(
-            "[ImageAPI] 요청 검증 실패",
+            "[ImageAPI] Request validation failed",
             extra={"error": validation_error},
         )
 
@@ -244,7 +244,7 @@ async def generate_image(
     except Exception as e:
         error_type = type(e).__name__
         logger.error(
-            "[ImageAPI] 이미지 생성 중 예외 발생",
+            "[ImageAPI] Exception during image generation",
             extra={"error_type": error_type},
         )
 

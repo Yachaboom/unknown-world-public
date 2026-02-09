@@ -379,7 +379,7 @@ def _parse_vision_response(
 
     except (json.JSONDecodeError, ValueError) as e:
         logger.warning(
-            "[ImageUnderstanding] JSON 파싱 실패",
+            "[ImageUnderstanding] JSON parsing failed",
             extra={"error": str(e), "error_type": type(e).__name__},
         )
         # 부분 결과로 캡션만 반환 (RULE-004)
@@ -393,7 +393,7 @@ def _parse_vision_response(
         )
     except Exception as e:
         logger.error(
-            "[ImageUnderstanding] 응답 파싱 중 예외",
+            "[ImageUnderstanding] Exception during response parsing",
             extra={"error_type": type(e).__name__},
         )
         return _create_fallback_result(f"응답 처리 중 오류: {type(e).__name__}")
@@ -437,7 +437,7 @@ def _adjust_item_count(result: ScanResult, target_count: int) -> ScanResult:
 
     if len(adjusted) != len(candidates):
         logger.info(
-            "[Scan] 아이템 수 조정: %d → %d (목표: %d)",
+            "[Scan] Item count adjusted: %d -> %d (target: %d)",
             len(candidates),
             len(adjusted),
             target_count,
@@ -547,7 +547,7 @@ class ImageUnderstandingService:
             self._initialize_client()
 
         logger.info(
-            "[ImageUnderstanding] 서비스 초기화",
+            "[ImageUnderstanding] Service initialized",
             extra={"mode": "mock" if self._is_mock else "real"},
         )
 
@@ -560,7 +560,7 @@ class ImageUnderstandingService:
             api_key = os.environ.get("GOOGLE_API_KEY")
             if not api_key:
                 logger.warning(
-                    "[ImageUnderstanding] GOOGLE_API_KEY 환경변수가 설정되지 않음 - Mock 모드로 전환",
+                    "[ImageUnderstanding] GOOGLE_API_KEY environment variable not set - switching to mock mode",
                 )
                 self._is_mock = True
                 self._genai_client = None
@@ -570,14 +570,14 @@ class ImageUnderstandingService:
             self._is_mock = False
 
             logger.info(
-                "[ImageUnderstanding] API 키 클라이언트 초기화 완료",
+                "[ImageUnderstanding] API key client initialized",
                 extra={
                     "auth": "api_key",
                 },
             )
         except Exception as e:
             logger.warning(
-                "[ImageUnderstanding] 클라이언트 초기화 실패 - Mock 모드로 전환",
+                "[ImageUnderstanding] Client initialization failed - switching to mock mode",
                 extra={"error_type": type(e).__name__},
             )
             self._is_mock = True
@@ -636,7 +636,7 @@ class ImageUnderstandingService:
                     original_image_key = put_result.key
                     original_image_url = put_result.url
                     logger.debug(
-                        "[ImageUnderstanding] 원본 이미지 저장 완료",
+                        "[ImageUnderstanding] Original image saved",
                         extra={
                             "key": original_image_key,
                             "size_kb": len(image_content) // 1024,
@@ -645,20 +645,20 @@ class ImageUnderstandingService:
             except Exception as e:
                 # 저장 실패해도 분석은 계속 (RULE-004)
                 logger.warning(
-                    "[ImageUnderstanding] 원본 이미지 저장 실패",
+                    "[ImageUnderstanding] Original image save failed",
                     extra={"error_type": type(e).__name__},
                 )
 
         # U-095: 아이템 생성 개수 랜덤 결정 (서버에서 확정적으로 결정)
         item_count = determine_item_count()
         logger.info(
-            "[ImageUnderstanding] 아이템 생성 개수 결정",
+            "[ImageUnderstanding] Item generation count determined",
             extra={"item_count": item_count},
         )
 
         # Mock 모드 처리
         if self._is_mock:
-            logger.debug("[ImageUnderstanding] Mock 분석 수행")
+            logger.debug("[ImageUnderstanding] Performing mock analysis")
             result = _create_mock_scan_result(language, item_count=item_count)
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
             result.original_image_key = original_image_key
@@ -681,7 +681,7 @@ class ImageUnderstandingService:
         except Exception as e:
             error_type = type(e).__name__
             logger.error(
-                "[ImageUnderstanding] 비전 모델 호출 실패",
+                "[ImageUnderstanding] Vision model call failed",
                 extra={"error_type": error_type},
             )
             # 안전한 폴백 (RULE-004)
@@ -726,7 +726,7 @@ class ImageUnderstandingService:
             if is_retry:
                 backoff_seconds = SCAN_RETRY_BACKOFF_SECONDS[attempt - 1]
                 logger.info(
-                    "[Scan] 파싱 실패, 재시도 %d/%d (백오프 %.1f초)",
+                    "[Scan] Parse failed, retrying %d/%d (backoff %.1fs)",
                     attempt,
                     SCAN_MAX_RETRIES,
                     backoff_seconds,
@@ -746,7 +746,7 @@ class ImageUnderstandingService:
                 if result.status == ScanStatus.COMPLETED:
                     if is_retry:
                         logger.info(
-                            "[Scan] 재시도 성공 (%d/%d 시도)",
+                            "[Scan] Retry succeeded (%d/%d attempts)",
                             attempt + 1,
                             SCAN_MAX_RETRIES + 1,
                         )
@@ -754,13 +754,13 @@ class ImageUnderstandingService:
 
                 # 안전 차단 → 재시도 불가, 즉시 반환
                 if result.status == ScanStatus.BLOCKED:
-                    logger.warning("[Scan] 안전 차단, 재시도 건너뜀")
+                    logger.warning("[Scan] Safety blocked, skipping retry")
                     return result
 
                 # PARTIAL/FAILED → 재시도 대상
                 last_result = result
                 logger.warning(
-                    "[Scan] 파싱 실패 (시도 %d/%d, 상태: %s)",
+                    "[Scan] Parse failed (attempt %d/%d, status: %s)",
                     attempt + 1,
                     SCAN_MAX_RETRIES + 1,
                     result.status.value,
@@ -772,7 +772,7 @@ class ImageUnderstandingService:
                 # 재시도 불가 API 에러 (인증/할당량/권한)
                 if _is_non_retryable_api_error(e):
                     logger.error(
-                        "[Scan] 재시도 불가 API 오류: %s",
+                        "[Scan] Non-retryable API error: %s",
                         error_type,
                     )
                     return _create_fallback_result(
@@ -781,7 +781,7 @@ class ImageUnderstandingService:
 
                 # 기타 예외 → 재시도
                 logger.warning(
-                    "[Scan] API 호출 예외 (시도 %d/%d)",
+                    "[Scan] API call exception (attempt %d/%d)",
                     attempt + 1,
                     SCAN_MAX_RETRIES + 1,
                     extra={"error_type": error_type},
@@ -793,7 +793,7 @@ class ImageUnderstandingService:
         # 모든 재시도 실패 → 폴백 반환
         total_attempts = SCAN_MAX_RETRIES + 1
         logger.error(
-            "[Scan] 모든 재시도 실패 (%d/%d 시도), 폴백 응답 반환",
+            "[Scan] All retries failed (%d/%d attempts), returning fallback response",
             total_attempts,
             total_attempts,
         )
@@ -847,7 +847,7 @@ class ImageUnderstandingService:
         model_id = get_model_id(ModelLabel.VISION)
 
         logger.debug(
-            "[ImageUnderstanding] 비전 모델 호출",
+            "[ImageUnderstanding] Vision model call",
             extra={
                 "model_id": model_id,
                 "language": language.value,

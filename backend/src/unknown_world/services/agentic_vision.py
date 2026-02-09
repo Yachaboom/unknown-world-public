@@ -264,7 +264,7 @@ def _parse_vision_response(
             bbox = _normalize_bbox(bbox_raw)
             if bbox is None:
                 logger.warning(
-                    "[AgenticVision] bbox 정규화 실패, 오브젝트 스킵",
+                    "[AgenticVision] bbox normalization failed, skipping object",
                     extra={"index": i, "label": label},
                 )
                 continue
@@ -288,7 +288,7 @@ def _parse_vision_response(
 
     except (json.JSONDecodeError, ValueError) as e:
         logger.warning(
-            "[AgenticVision] JSON 파싱 실패",
+            "[AgenticVision] JSON parsing failed",
             extra={"error": str(e), "error_type": type(e).__name__},
         )
         return VisionAnalysisResult(
@@ -298,7 +298,7 @@ def _parse_vision_response(
         )
     except Exception as e:
         logger.error(
-            "[AgenticVision] 응답 파싱 중 예외",
+            "[AgenticVision] Exception during response parsing",
             extra={"error_type": type(e).__name__},
         )
         return VisionAnalysisResult(
@@ -372,7 +372,7 @@ class AgenticVisionService:
             self._initialize_client()
 
         logger.info(
-            "[AgenticVision] 서비스 초기화",
+            "[AgenticVision] Service initialized",
             extra={"mode": "mock" if self._is_mock else "real"},
         )
 
@@ -384,7 +384,7 @@ class AgenticVisionService:
             api_key = os.environ.get("GOOGLE_API_KEY")
             if not api_key:
                 logger.warning(
-                    "[AgenticVision] GOOGLE_API_KEY 미설정 - Mock 모드로 전환",
+                    "[AgenticVision] GOOGLE_API_KEY not set - switching to mock mode",
                 )
                 self._is_mock = True
                 self._genai_client = None
@@ -394,12 +394,12 @@ class AgenticVisionService:
             self._is_mock = False
 
             logger.info(
-                "[AgenticVision] API 키 클라이언트 초기화 완료",
+                "[AgenticVision] API key client initialized",
                 extra={"auth": "api_key"},
             )
         except Exception as e:
             logger.warning(
-                "[AgenticVision] 클라이언트 초기화 실패 - Mock 모드로 전환",
+                "[AgenticVision] Client initialization failed - switching to mock mode",
                 extra={"error_type": type(e).__name__},
             )
             self._is_mock = True
@@ -427,7 +427,7 @@ class AgenticVisionService:
         start_time = time.time()
 
         logger.info(
-            "[AgenticVision] 분석 시작",
+            "[AgenticVision] Analysis started",
             extra={
                 "language": language.value,
                 "has_image_url": bool(image_url),
@@ -436,7 +436,7 @@ class AgenticVisionService:
 
         # Mock 모드
         if self._is_mock:
-            logger.debug("[AgenticVision] Mock 분석 수행")
+            logger.debug("[AgenticVision] Performing mock analysis")
             result = _create_mock_result(language)
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
             return result
@@ -445,7 +445,7 @@ class AgenticVisionService:
         image_bytes = self._load_image(image_url)
         if image_bytes is None:
             logger.warning(
-                "[AgenticVision] 이미지 로드 실패, 빈 결과 반환",
+                "[AgenticVision] Image loading failed, returning empty result",
                 extra={"image_url_prefix": image_url[:50] if image_url else ""},
             )
             return VisionAnalysisResult(
@@ -461,7 +461,7 @@ class AgenticVisionService:
             result.analysis_time_ms = int((time.time() - start_time) * 1000)
 
             logger.info(
-                "[AgenticVision] 분석 완료",
+                "[AgenticVision] Analysis complete",
                 extra={
                     "affordance_count": len(result.affordances),
                     "analysis_time_ms": result.analysis_time_ms,
@@ -474,7 +474,7 @@ class AgenticVisionService:
         except Exception as e:
             error_type = type(e).__name__
             logger.error(
-                "[AgenticVision] 비전 모델 호출 실패",
+                "[AgenticVision] Vision model call failed",
                 extra={"error_type": error_type},
             )
             return VisionAnalysisResult(
@@ -521,7 +521,7 @@ class AgenticVisionService:
                         return candidate.read_bytes()
 
                 logger.warning(
-                    "[AgenticVision] 로컬 이미지 파일 미존재",
+                    "[AgenticVision] Local image file not found",
                     extra={"path_prefix": str(data_path)[:80]},
                 )
                 return None
@@ -530,7 +530,7 @@ class AgenticVisionService:
                 # HTTP URL의 경우 - MVP에서는 로컬 파일만 지원
                 # 원격 URL은 MMP에서 구현 예정
                 logger.warning(
-                    "[AgenticVision] HTTP URL은 현재 미지원",
+                    "[AgenticVision] HTTP URLs not currently supported",
                 )
                 return None
             else:
@@ -541,7 +541,7 @@ class AgenticVisionService:
                 return None
         except Exception as e:
             logger.warning(
-                "[AgenticVision] 이미지 로드 실패",
+                "[AgenticVision] Image loading failed",
                 extra={"error_type": type(e).__name__},
             )
             return None
@@ -573,14 +573,14 @@ class AgenticVisionService:
         try:
             prompt_text = _load_prompt(language)
         except FileNotFoundError:
-            logger.warning("[AgenticVision] 프롬프트 파일 미존재, 인라인 폴백 사용")
+            logger.warning("[AgenticVision] Prompt file not found, using inline fallback")
             prompt_text = self._get_inline_prompt(language)
 
         # 모델 ID 조회
         model_id = get_model_id(ModelLabel.VISION)
 
         logger.debug(
-            "[AgenticVision] 비전 모델 호출",
+            "[AgenticVision] Vision model call",
             extra={
                 "model_id": model_id,
                 "language": language.value,

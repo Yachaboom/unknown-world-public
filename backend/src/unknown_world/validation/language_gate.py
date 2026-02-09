@@ -339,7 +339,7 @@ def validate_language_consistency(
     Example:
         >>> result = validate_language_consistency(turn_output, Language.KO)
         >>> if not result.is_valid:
-        ...     print(f"혼합 발견: {len(result.violations)}건")
+        ...     print(f"Mixing detected: {len(result.violations)} violation(s)")
     """
     result = LanguageGateResult(expected_language=expected_language)
 
@@ -353,7 +353,7 @@ def validate_language_consistency(
 
     if not result.is_valid:
         logger.warning(
-            "[LanguageGate] 언어 혼합 감지",
+            "[LanguageGate] Language mixing detected",
             extra={
                 "expected_language": expected_language.value,
                 "violation_count": len(result.violations),
