@@ -163,6 +163,12 @@ export function startSessionFromProfile(args: {
       box_2d: obj.box_2d,
       interaction_hint: t(obj.hintKey),
     })),
+    // U-133: 초기 씬 설명 (첫 턴에서 GM 프롬프트에 주입)
+    initialSceneDescription: profile.initialState.initialSceneDescription
+      ? language === 'ko-KR'
+        ? profile.initialState.initialSceneDescription.ko
+        : profile.initialState.initialSceneDescription.en
+      : null,
     // U-124: 사전 생성 첫 씬 이미지가 있으면 Scene Canvas에 즉시 적용
     // 주의: Zustand setState는 shallow merge이므로 sceneState 전체를 교체함
     // → processingPhase/imageLoading 등 필수 필드를 반드시 포함해야 입력 잠금이 풀림

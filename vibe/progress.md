@@ -1,5 +1,43 @@
 # 프로젝트 진행 상황
 
+## [2026-02-10 11:45] U-133[Mvp]: 프로필 시작 이미지-스토리 정합성 강화 — 첫 턴 맥락 주입 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: 프로필 시작 시 사전 생성 이미지(U-124)의 시각적 요소를 첫 턴 내러티브에 자연스럽게 연결하기 위한 `scene_context` 주입 시스템 구현.
+- **추가 컴포넌트**: `vibe/unit-results/U-133[Mvp].md` (보고서).
+- **달성 요구사항**: [Consistency OK] 이미지-내러티브 정합성 보장, [RULE-007] 프롬프트 내부 맥락 보안 준수.
+
+### 기술적 구현 세부사항
+
+**첫 턴 맥락 주입 (Contextual Bridging)**:
+- **Scene Description 정의**: `demoProfiles.ts`에 Narrator(서재), Explorer(동굴), Tech(실험실)별 고유한 초기 장면 설명(ko/en) 추가.
+- **Front-end Injection**: `turnRunner.ts`에서 `turnCount === 0` 감지 시 해당 프로필의 설명을 `TurnInput.scene_context` 필드로 자동 주입.
+- **Schema & Model Sync**: `turn_input.schema.json` 및 Pydantic `TurnInput` 모델에 `scene_context` 필드 추가 및 동기화.
+- **GM Instruction**: `turn_output_instructions.{ko,en}.md`에 `scene_context`를 활용하여 장면 기반으로 스토리를 시작하도록 하는 6대 GM 지침 명시.
+- **Prompt Engine Integration**: `generate_turn_output.py`에서 유저 메시지 최상단에 "첫 턴 장면 설명" 시스템 프리픽스를 동적으로 추가하도록 개선.
+
+**코드 구조**:
+repo-root/
+├── shared/schemas/turn/turn_input.schema.json (스키마 필드 추가)
+├── backend/src/unknown_world/models/turn.py (Pydantic 모델 필드 추가)
+├── backend/src/unknown_world/orchestrator/generate_turn_output.py (프롬프트 주입 로직)
+├── backend/prompts/turn/turn_output_instructions.{ko,en}.md (GM 활용 지침)
+├── frontend/src/data/demoProfiles.ts (프로필별 장면 설명 데이터)
+└── frontend/src/turn/turnRunner.ts (첫 턴 감지 및 주입 로직)
+
+### 성능 및 품질 지표
+
+- **정합성**: 환영 메시지 → 사전 이미지 → 첫 턴 내러티브로 이어지는 경험이 하나의 일관된 장면으로 통합됨을 확인.
+- **보안**: `scene_context`는 Gemini 내부 맥락으로만 사용되며 에이전트 콘솔이나 UI 로그에 원문이 노출되지 않음.
+
+### 다음 단계
+
+- **U-134[Mvp]**: Panel Corner 이미지 방향 수정 — CSS 회전 정합
+- **CP-MVP-03**: 10분 데모 루프 통합 검증
+
+---
+
 ## [2026-02-09 10:15] U-132[Mvp]: 영어(en-US) 기본 언어 전환 — Devpost 제출 요건 대응 완료
 
 ### 구현 완료 항목

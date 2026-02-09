@@ -293,6 +293,14 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
             )
 
         # 입력 정보 구성 (프롬프트에 포함)
+        # U-133: 첫 턴 씬 설명 맥락이 있으면 입력에 포함
+        scene_context_section = ""
+        if turn_input.scene_context:
+            scene_context_section = f"""
+- scene_context (첫 턴 장면 설명 - 이 장면의 시각적 요소를 기반으로 내러티브를 시작하세요):
+  "{turn_input.scene_context}"
+"""
+
         input_summary = f"""
 ## 현재 턴 입력
 
@@ -302,7 +310,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 - economy_snapshot:
   - signal: {turn_input.economy_snapshot.signal}
   - memory_shard: {turn_input.economy_snapshot.memory_shard}
-"""
+{scene_context_section}"""
 
         # 세계 상태 컨텍스트 (있는 경우)
         world_section = ""
@@ -413,6 +421,14 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
             history_contents = conversation_history.get_contents()
             contents.extend(history_contents)
 
+        # U-133: 첫 턴 씬 설명 맥락이 있으면 입력에 포함
+        scene_context_section = ""
+        if turn_input.scene_context:
+            scene_context_section = f"""
+- scene_context (첫 턴 장면 설명 - 이 장면의 시각적 요소를 기반으로 내러티브를 시작하세요):
+  "{turn_input.scene_context}"
+"""
+
         # 현재 턴 사용자 입력
         user_text = f"""## 현재 턴 입력
 
@@ -422,7 +438,7 @@ LLM이 이미지 모델에 최적화된 고품질 프롬프트를 생성할 수 
 - economy_snapshot:
   - signal: {turn_input.economy_snapshot.signal}
   - memory_shard: {turn_input.economy_snapshot.memory_shard}
-
+{scene_context_section}
 위 입력에 따라 TurnOutput JSON을 생성하세요."""
 
         contents.append(

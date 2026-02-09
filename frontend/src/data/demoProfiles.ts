@@ -94,6 +94,17 @@ export interface DemoProfileInitialState {
    * 프로필 시작 시 Scene Canvas에 즉시 표시됩니다.
    */
   initialSceneImageUrl?: string;
+  /**
+   * 초기 씬 설명 텍스트 (U-133: 이미지-스토리 정합성).
+   * 사전 생성 이미지의 시각적 요소를 텍스트로 기술합니다.
+   * 첫 턴(turnCount===0) 요청 시 GM 프롬프트에 맥락으로 주입되어,
+   * 환영 메시지 → 이미지 → 첫 턴 내러티브가 자연스럽게 이어지게 합니다.
+   * ko/en 양 언어를 포함하여 세션 언어에 따라 적절한 버전이 사용됩니다.
+   */
+  initialSceneDescription?: {
+    ko: string;
+    en: string;
+  };
 }
 
 /**
@@ -178,6 +189,11 @@ export const PROFILE_NARRATOR: DemoProfile = {
     welcomeMessageKey: 'profile.narrator.welcome',
     // U-124: 사전 생성 첫 씬 이미지 (nanobanana mcp, 서재/도서관)
     initialSceneImageUrl: '/ui/scenes/scene-narrator-start.webp',
+    // U-133: 초기 씬 설명 (이미지-스토리 정합성)
+    initialSceneDescription: {
+      ko: '먼지가 쌓인 고풍스러운 서재. 흔들리는 촛불이 수백 권의 고서를 비추고, 큰 참나무 책상 위에 두루마리가 펼쳐져 있다. 달빛이 고딕 양식의 창문을 통해 스며들며, 공기 중에 오래된 양피지와 잉크 냄새가 떠돈다. 서가 사이로 희미한 빛이 맥동하듯 깜빡인다.',
+      en: 'A dust-laden, antiquated study. Flickering candlelight illuminates hundreds of ancient tomes, and a scroll lies unrolled on a great oak desk. Moonlight seeps through gothic windows, and the air carries the scent of aged parchment and ink. Between the shelves, a faint light pulses like a quiet heartbeat.',
+    },
   },
 };
 
@@ -248,6 +264,11 @@ export const PROFILE_EXPLORER: DemoProfile = {
     welcomeMessageKey: 'profile.explorer.welcome',
     // U-124: 사전 생성 첫 씬 이미지 (nanobanana mcp, 동굴 입구)
     initialSceneImageUrl: '/ui/scenes/scene-explorer-start.webp',
+    // U-133: 초기 씬 설명 (이미지-스토리 정합성)
+    initialSceneDescription: {
+      ko: '미지의 동굴 입구. 횃불이 안개 사이로 흔들리고, 신비한 문양이 새겨진 석조 기둥이 양쪽에 서 있다. 동굴 안쪽에서 희미한 바람이 불어오며, 벽면의 이끼 사이로 물방울이 떨어진다. 어둠 너머로 무언가가 반짝이는 듯하다.',
+      en: 'The mouth of an uncharted cave. Torchlight wavers through drifting mist, and stone pillars carved with enigmatic symbols stand on either side. A faint breeze drifts from deeper within, and water droplets fall between patches of moss on the walls. Something seems to glint beyond the darkness.',
+    },
   },
 };
 
@@ -318,6 +339,11 @@ export const PROFILE_TECH: DemoProfile = {
     welcomeMessageKey: 'profile.tech.welcome',
     // U-124: 사전 생성 첫 씬 이미지 (nanobanana mcp, 실험실)
     initialSceneImageUrl: '/ui/scenes/scene-tech-start.webp',
+    // U-133: 초기 씬 설명 (이미지-스토리 정합성)
+    initialSceneDescription: {
+      ko: '첨단 실험실. 홀로그래픽 디스플레이가 공중에 떠 있고, 회로 기판과 빛나는 튜브가 벽을 따라 늘어서 있다. 중앙의 제어 패널이 청록색 빛을 내뿜으며, 기계음이 리듬처럼 울린다. 천장의 데이터 스트림이 폭포처럼 쏟아지고 있다.',
+      en: 'A cutting-edge laboratory. Holographic displays hover in midair, and circuit boards with glowing tubes line the walls. The central control panel emits a teal glow, and the hum of machinery pulses rhythmically. Streams of data cascade from the ceiling like a digital waterfall.',
+    },
   },
 };
 

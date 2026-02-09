@@ -72,6 +72,14 @@
         }
       },
       "required": ["signal", "memory_shard"]
+    },
+    "previous_image_url": {
+      "type": ["string", "null"],
+      "description": "이전 턴 이미지 URL (U-068)"
+    },
+    "scene_context": {
+      "type": ["string", "null"],
+      "description": "첫 턴 씬 설명 맥락 (U-133)"
     }
   },
   "required": ["language", "text", "client", "economy_snapshot"],

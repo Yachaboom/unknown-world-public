@@ -203,6 +203,13 @@ export const TurnInputSchema = z
       .nullable()
       .default(null)
       .describe('이전 턴 이미지 URL (U-068: 참조 이미지로 사용하여 연속성 유지)'),
+    scene_context: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe(
+        '첫 턴 씬 설명 맥락 (U-133: 사전 생성 이미지의 시각적 요소를 텍스트로 기술, 첫 턴에서만 사용)',
+      ),
   })
   .strict();
 export type TurnInput = z.infer<typeof TurnInputSchema>;

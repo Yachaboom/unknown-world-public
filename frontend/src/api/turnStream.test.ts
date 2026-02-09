@@ -74,6 +74,7 @@ describe('executeTurnStream', () => {
     client: { viewport_w: 100, viewport_h: 100, theme: 'dark' as const },
     economy_snapshot: { signal: 100, memory_shard: 0 },
     previous_image_url: null,
+    scene_context: null,
   };
 
   const mockCallbacks = {

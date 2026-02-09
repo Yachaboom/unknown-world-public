@@ -142,6 +142,16 @@ export interface WorldState {
    * null이면 토스트 없음, 값이 있으면 일정 시간 후 자동 사라짐.
    */
   currencyToast: CurrencyToast | null;
+
+  // ============ U-133: 첫 턴 씬 설명 맥락 ============
+
+  /**
+   * 프로필의 초기 씬 설명 텍스트 (U-133).
+   * 세션 언어에 맞게 해석된 텍스트를 저장합니다.
+   * 첫 턴(turnCount===0) 요청 시 TurnInput.scene_context로 전달됩니다.
+   * 첫 턴 전송 후 null로 초기화됩니다.
+   */
+  initialSceneDescription: string | null;
 }
 
 /** World Store 액션 */
@@ -306,6 +316,8 @@ function createInitialState(): WorldState {
     isAnalyzing: false,
     // U-079: 재화 획득 토스트
     currencyToast: null,
+    // U-133: 첫 턴 씬 설명 맥락
+    initialSceneDescription: null,
   };
 }
 
@@ -533,6 +545,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     const updatedTimeline = [...newMutationEvents, ...state.mutationTimeline];
 
     // 8. 상태 업데이트 (RU-003-T1: sceneState 포함, U-013: quest/rules)
+    // U-133: 첫 턴 성공 시 씬 설명 맥락 클리어
     set({
       turnCount: newTurnCount,
       narrativeEntries: newNarrativeEntries,
@@ -543,6 +556,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       quests: newQuests,
       activeRules: newActiveRules,
       mutationTimeline: updatedTimeline,
+      initialSceneDescription: state.turnCount === 0 ? null : state.initialSceneDescription,
     });
 
     // === 향후 확장 슬롯 (RU-003-Q4 Step 4) ===

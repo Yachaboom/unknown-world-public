@@ -24,7 +24,7 @@
     "narrator": {
       "name": "Narrator",
       "description": "Explore diverse stories with abundant resources",
-      "welcome": "Welcome to the Ancient Library. Forgotten tales slumber within these walls...",
+      "welcome": "You awaken among dust-laden tomes. Flickering candlelight illuminates hundreds of ancient books, and the scent of aged parchment fills the air. A mysterious resonance stirs deep within the shelves, reaching for something long forgotten in your soul...",
       "items": {
         "ancient_tome": "Ancient Tome",
         "quill_pen": "Quill Pen",
@@ -52,7 +52,7 @@
     "explorer": {
       "name": "Explorer",
       "description": "Explore unknown territories and uncover secrets",
-      "welcome": "You wake up in a dark maze. You must find the exit and escape...",
+      "welcome": "You awaken at the mouth of a mist-shrouded cave. Stone pillars carved with enigmatic symbols waver in the torchlight, and from the darkness beyond, a melody you shouldn't know drifts on the breeze. It's as if someone is calling your name...",
       "items": {
         "compass": "Compass",
         "rope": "Rope",
@@ -83,7 +83,7 @@
     "tech": {
       "name": "Tech Expert",
       "description": "Strategize efficiently with limited resources",
-      "welcome": "System boot complete. Find the optimal path with limited energy...",
+      "welcome": "System boot complete. Holographic displays flicker to life in midair, and a teal-glowing control panel hums rhythmically. But between the lines of code, an unauthorized pattern emerges—a ghost signal all too familiar to you. You must find the answer before the link fades...",
       "items": {
         "data_core": "Data Core",
         "circuit_board": "Circuit Board",

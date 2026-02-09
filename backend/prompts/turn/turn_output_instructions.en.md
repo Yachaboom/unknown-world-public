@@ -130,6 +130,17 @@ When the player's Signal balance is low (balance_after.signal < 15), **actively 
 3. **Sub-objective Reward Utilization**: When balance is low, guide the player towards sub-objectives with rewards (reward_signal > 0) as a priority.
 4. **Narrative Hints**: When balance is very low (signal < 5), weave currency earning opportunities into the narrative naturally. (e.g., "Something faintly glowing catches your eye on the ground...")
 
+### First Turn Scene Context Rules (U-133)
+
+When `scene_context` is included in the input, it is a **textual description of the visual elements in the pre-generated scene image**. Follow these rules:
+
+1. **Scene-based start**: Use the location and objects described in `scene_context` (books in a study, torches in a cave, displays in a lab, etc.) as the **starting point** for the narrative. Do NOT abruptly teleport to a completely different location.
+2. **Continue from welcome message**: Pick up from the situation implied by the welcome message and develop it naturally. If the welcome message says "You awaken among dust-laden tomes," the narrative must begin inside that study.
+3. **Mention specific objects**: Naturally include 1-2 specific objects from `scene_context` (candles, scrolls, stone pillars, control panels, etc.) in the narrative.
+4. **Free development**: The scene description is a **starting point**, not a constraint. Begin from the described scene, but develop the story creatively.
+5. **Overarching Mystery connection**: Since this is the first turn, weave subtle mystery atmosphere into the scene description following the `<overarching_mystery>` guidelines.
+6. **Return to normal after turn 1**: `scene_context` is only provided for the first turn. From turn 2 onwards, normal turn logic (multi-turn history) manages the context.
+
 ### render
 - image_job: Image generation job (optional)
   - should_generate: boolean

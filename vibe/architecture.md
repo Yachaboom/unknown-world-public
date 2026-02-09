@@ -13,21 +13,24 @@ backend/prompts/system/game_master.{en,ko}.md (v0.3.0)
 backend/prompts/turn/turn_output_instructions.{en,ko}.md (v0.3.0)
 backend/src/unknown_world/main.py
 backend/src/unknown_world/orchestrator/pipeline.py
-backend/src/unknown_world/orchestrator/prompt_loader.py
+backend/src/unknown_world/orchestrator/generate_turn_output.py
+backend/src/unknown_world/models/turn.py (scene_context 추가)
 frontend/src/App.tsx
 frontend/src/i18n.ts (DEFAULT_LANGUAGE: en-US)
 frontend/src/components/AgentConsole.tsx
 frontend/src/components/NarrativeFeed.tsx
 frontend/src/components/ObjectiveTracker.tsx
-frontend/src/data/demoProfiles.ts
-vibe/unit-results/U-132[Mvp].md (신규)
+frontend/src/data/demoProfiles.ts (initialSceneDescription 추가)
+frontend/src/turn/turnRunner.ts (첫 턴 맥락 주입 로직)
+shared/schemas/turn/turn_input.schema.json (scene_context 동기화)
+vibe/unit-results/U-133[Mvp].md (신규)
+vibe/unit-results/U-132[Mvp].md
 vibe/unit-results/U-131[Mvp].md
-vibe/unit-runbooks/U-131-overarching-mystery-runbook.md
 ```
 
 ### 주요 디렉토리 설명
 
-- `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다.
+- `backend/src/unknown_world/orchestrator/`: 게임 마스터의 핵심 추론 및 상태 갱신 로직이 단계별 파이프라인으로 구현되어 있습니다. `generate_turn_output.py`는 `scene_context`와 같은 입력을 Gemini 프롬프트로 변환하는 핵심 역할을 수행합니다.
 - `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석(`agentic_vision.py`), 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
@@ -35,6 +38,20 @@ vibe/unit-runbooks/U-131-overarching-mystery-runbook.md
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
 - `frontend/public/ui/scenes/`: nanobanana-mcp로 제작된 프로필별 첫 씬 이미지(1024x576 WebP) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+
+---
+
+## 64. 초기 씬 설명 및 맥락 주입 (U-133[Mvp])
+
+1. **시각적-서사적 정합성 강화 (Scene-to-Story Alignment)**:
+    - **Initial Scene Description**: 각 프로필의 사전 생성 이미지(U-124)를 텍스트로 정밀하게 묘사한 `initialSceneDescription` 필드를 `demoProfiles.ts`에 도입함.
+    - **Contextual Injection**: `turnRunner.ts`에서 `turnCount === 0`일 때 이를 `TurnInput.scene_context`로 자동 주입하여, GM이 첫 턴부터 현재 장면의 시각적 요소(서재의 책, 동굴의 횃불 등)를 인지하도록 함.
+2. **첫 턴 전용 맥락 지침 (GM Instruction Enrichment)**:
+    - **Instruction Update**: `turn_output_instructions`에 `scene_context` 활용 규칙을 추가하여, 뜬금없는 장소 전환을 금지하고 이미지 속 오브젝트를 내러티브에 1~2개 이상 언급하도록 강제함.
+    - **Narrative Continuity**: 환영 메시지에서 첫 턴 내러티브로 이어지는 경험을 하나의 유기적인 장면으로 통합하여 사용자 몰입감을 극대화함.
+3. **데이터 모델 및 엔진 연동 (E2E Integration)**:
+    - **Schema Synchronization**: `shared/schemas/turn/turn_input.schema.json` 및 Pydantic 모델에 `scene_context` 필드를 동기화하여 유형 안전성을 확보함.
+    - **Prompt Engineering**: `generate_turn_output.py`에서 `scene_context`를 유저 메시지의 최상단 시스템 프리픽스로 포함시켜 Gemini의 초기 추론 방향을 장면 중심적으로 유도함.
 
 ---
 

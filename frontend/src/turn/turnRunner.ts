@@ -114,6 +114,8 @@ export interface BuildTurnInputParams {
   language: Language;
   /** U-068: 이전 턴 이미지 URL (참조 이미지로 사용) */
   previousImageUrl?: string | null;
+  /** U-133: 첫 턴 씬 설명 맥락 (사전 생성 이미지의 시각적 요소 기술) */
+  sceneContext?: string | null;
 }
 
 /** Turn 실행을 위한 파라미터 (App에서 호출 시 사용) */
@@ -148,8 +150,17 @@ export interface TurnRunner {
  * 서버로 전송할 TurnInput을 생성합니다.
  */
 export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
-  const { text, actionId, click, drop, economySnapshot, theme, language, previousImageUrl } =
-    params;
+  const {
+    text,
+    actionId,
+    click,
+    drop,
+    economySnapshot,
+    theme,
+    language,
+    previousImageUrl,
+    sceneContext,
+  } = params;
 
   return {
     language,
@@ -172,6 +183,8 @@ export function buildTurnInput(params: BuildTurnInputParams): TurnInput {
     economy_snapshot: economySnapshot,
     // U-068: 이전 턴 이미지 URL (참조 이미지로 사용하여 연속성 유지)
     previous_image_url: previousImageUrl ?? null,
+    // U-133: 첫 턴 씬 설명 맥락 (사전 생성 이미지의 시각적 요소를 GM에 전달)
+    scene_context: sceneContext ?? null,
   };
 }
 
@@ -270,6 +283,12 @@ export function createTurnRunner(deps: {
       worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl,
     );
 
+    // U-133: 첫 턴(turnCount===0)에서 씬 설명 맥락을 주입
+    let sceneContext: string | null = null;
+    if (worldStore.turnCount === 0 && worldStore.initialSceneDescription) {
+      sceneContext = worldStore.initialSceneDescription;
+    }
+
     // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
     const turnInput = buildTurnInput({
       text:
@@ -282,6 +301,7 @@ export function createTurnRunner(deps: {
       theme,
       language,
       previousImageUrl,
+      sceneContext,
     });
 
     // Agent Store 시작
@@ -581,6 +601,12 @@ export function useTurnRunner(deps: {
         worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl,
       );
 
+      // U-133: 첫 턴(turnCount===0)에서 씬 설명 맥락을 주입
+      let sceneContext: string | null = null;
+      if (worldStore.turnCount === 0 && worldStore.initialSceneDescription) {
+        sceneContext = worldStore.initialSceneDescription;
+      }
+
       // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
       const turnInput = buildTurnInput({
         text:
@@ -593,6 +619,7 @@ export function useTurnRunner(deps: {
         theme,
         language,
         previousImageUrl,
+        sceneContext,
       });
 
       // Agent Store 시작
