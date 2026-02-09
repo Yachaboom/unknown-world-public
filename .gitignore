@@ -182,7 +182,7 @@ generated/
 backend/.data/
 
 # ============================================================================
-# 🗂️ Internal Development Artifacts (excluded from public repo)
+# 📝 Internal Development Artifacts (Public Repo Clean-up)
 # ============================================================================
 vibe/
 test-screenshots/
@@ -190,7 +190,8 @@ test-screenshots/
 .gemini/
 .claude/
 CLAUDE.md
-.geminiignore
+scripts/kill-nuke.sh
+scripts/kill-zombies.sh
 nanobanana-output/
 code-base.xml
 
@@ -202,17 +203,10 @@ temp/
 *.tmp
 *.temp
 .cache/
+vibe/commands.md
 nanobanana-output
 backend/generated_images/
 .img-ref/
 backend/viilab-dev-b43137729c78.json
+vibe/commands-temp.md
 NUL
-nul
-request.json
-
-# ============================================================================
-# 📊 Test Coverage Reports
-# ============================================================================
-coverage/
-frontend/coverage/
-htmlcov/
