@@ -4,13 +4,13 @@
 
 ## 진행 현황
 
-**전체**: 138/142 (97.2%) | **MVP**: 138/138 (100%) | **MMP**: 0/5 (0%)
+**전체**: 139/142 (97.9%) | **MVP**: 138/138 (100%) | **MMP**: 1/5 (20%)
 
 **예상 완료(가정)**: MVP D-0 | MMP(M5 제출): D-1
 _가정: 1인 기준 / 1일 순개발 4h / 유닛 평균 45분 / 버퍼 30% 포함_
 _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하는 완료 유닛(U/RU/CP) 기준._
 
-**최근 완료**: [CP-MVP-03](vibe/unit-results/CP-MVP-03.md) (2026-02-10) / [U-025[Mvp]](vibe/unit-results/U-025[Mvp].md) (2026-02-10) / [U-023[Mvp]](vibe/unit-results/U-023[Mvp].md) (2026-02-10) / [U-115[Mvp]](vibe/unit-results/U-115[Mvp].md) (2026-02-10) / [U-126[Mvp]](vibe/unit-results/U-126[Mvp].md) (2026-02-10) / [U-137[Mvp]](vibe/unit-results/U-137[Mvp].md) (2026-02-10) / [U-136[Mvp]](vibe/unit-results/U-136[Mvp].md) (2026-02-10) / [U-135[Mvp]](vibe/unit-results/U-135[Mvp].md) (2026-02-10) / [U-134[Mvp]](vibe/unit-results/U-134[Mvp].md) (2026-02-10)
+**최근 완료**: [U-119[Mmp]](vibe/unit-results/U-119[Mmp].md) (2026-02-10) / [CP-MVP-03](vibe/unit-results/CP-MVP-03.md) (2026-02-10) / [U-025[Mvp]](vibe/unit-results/U-025[Mvp].md) (2026-02-10) / [U-023[Mvp]](vibe/unit-results/U-023[Mvp].md) (2026-02-10) / [U-115[Mvp]](vibe/unit-results/U-115[Mvp].md) (2026-02-10) / [U-126[Mvp]](vibe/unit-results/U-126[Mvp].md) (2026-02-10) / [U-137[Mvp]](vibe/unit-results/U-137[Mvp].md) (2026-02-10) / [U-136[Mvp]](vibe/unit-results/U-136[Mvp].md) (2026-02-10) / [U-135[Mvp]](vibe/unit-results/U-135[Mvp].md) (2026-02-10) / [U-134[Mvp]](vibe/unit-results/U-134[Mvp].md) (2026-02-10)
 
 **블로커**: 없음 | **마감**: Devpost 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM)
 
@@ -71,7 +71,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 | MVP  | M3        | 세션/데모프로필 + 실모델 + 복구        | 10/10  | ✅   |
 | MVP  | CP-MVP-04~07 | ✓ 실모델/이미지/Scanner/real모드 게이트 | -   | ✅   |
 | MVP  | CP-MVP-03 | **체크포인트: 10분 데모 루프**          | -      | ✅   |
-| MMP  | M5        | ⚡해커톤 제출 준비 (Submission Sprint) | 0/5    | 🚧   |
+| MMP  | M5        | ⚡해커톤 제출 준비 (Submission Sprint) | 1/5    | 🚧   |
 | MMP  | CP-SUB-01 | **체크포인트: 해커톤 제출 완료**       | -      | ⏸️   |
 | ~~MMP~~ | ~~M6~~   | ~~품질 강화/후속 (Post-Submission)~~   | ~~0/16~~ | **skip** (해커톤 이후 재계획) |
 
@@ -86,7 +86,7 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 - **완료 기준**: Action Deck / Inventory(DnD Row) / Scene Canvas(Hotspots) / Economy HUD / Agent Console 상시 노출, 클릭+드래그 동작, 가독성 확보 _(✅ 레이아웃/스크롤/Row 전환/아이콘/소비 로직/디자인 개선/드래그 확장 및 온보딩 제거/핫스팟 원형 필터링 및 렌더링 완료)_
 - **잔여**: 성능 최적화+기술 부채(U-126)
-- **상태**: ✅
+- **상태**: ✅ (U-119 완료로 최종 폴리시 확보)
 
 ### 데모 반복 가능(데모프로필/리셋) + 엔딩 아티팩트
 
@@ -97,39 +97,28 @@ _진행률 산정: `vibe/unit-results/` 또는 `vibe/progress.md`에 존재하�
 
 - **완료 기준**: 예상 비용 노출, 잔액 부족 시 대안, 재화 획득 다양화, 거래 장부 i18n 정합, 보상 검증 정합, 획득-소비 밸런스
 - **잔여**: ~~U-099~~(완료), U-136(경제 검증 보상 수정+ModelLabel 통합), U-137(밸런스 조정)
-- **상태**: 🚧
+- **상태**: ✅ (U-137 완료로 밸런싱 확보)
 
 ### 멀티모달(선택적 이미지 + Scanner 업로드)
 
 - **완료 기준**: 텍스트 우선 + 조건부 이미지, Scanner→아이템화, 정밀분석(Agentic Vision), 지연 흡수/티어링 _(✅ 파이프라인 통합/API키 전환/rembg 제거/아이콘/연결성 완료)_
 - **잔여**: ~~이미지 픽셀 스타일(U-084)~~ (취소됨 — 기존 스타일 유지)
-- **상태**: 🚧
+- **상태**: ✅ (주요 파이프라인 정착)
 
 ### Quest/Rule UI 심플화 + 엔딩 리포트 + 리플레이
 
 - **완료 기준**: Quest UI 개선(겉도는 느낌 해소) + Rule UI 제거(의미 부족) + 엔딩 리포트(요약/타임라인/결산) + 리플레이 하네스
 - **잔여**: U-023(Quest/Rule UI 심플화), U-025(엔딩 리포트+리플레이)
-- **상태**: ⏸️
+- **상태**: ✅ (U-023, U-025 완료로 시스템 완결성 확보)
 
 ## 리스크 (활성만)
 
-_해소 완료: R-005~R-008, R-010~R-018, R-020~R-022, R-027 (대응 유닛 완료). 이력 → `vibe/changelog.md`_
+_해소 완료: R-001~R-030 (대응 유닛 완료). 이력 → `vibe/changelog.md`_
 
 | ID    | 내용                                   | 영향 | 확률 | 대응                                      |
 | ----- | -------------------------------------- | ---- | ---- | ----------------------------------------- |
-| R-001 | 스키마/의미 불일치로 Hard Gate 실패    | High | 35%  | Repair loop + Safe fallback + Mock        |
-| R-002 | 이미지/Thinking로 지연/비용 폭발      | High | 30%  | Economy 정책 + Lazy 이미지 + 티어링       |
-| R-003 | UI가 채팅처럼 보여 제출/데모 실패      | High | 25%  | 고정 HUD + DnD/핫스팟/스캐너/콘솔 강조    |
-| R-004 | CRT 튜닝 ↔ 가독성 균형 붕괴           | Med  | 25%  | 중요도 기반 효과 분리 + 대비 가이드       |
-| R-009 | Agentic Vision 비용/지연 악화          | Med  | 20%  | Economy 게이트 + 텍스트 폴백              |
-| R-019 | 처리 중 입력 허용 → 허위 액션/경합     | Med  | 35%  | U-087 입력 잠금 + U-086 텍스트 우선       |
-| R-023 | 리셋 시 세션 상태 잔재                 | Med  | 40%  | U-116 완전 리셋 + U-099 ledger 정합       |
-| R-024 | 새로고침 시 진행 전량 소실(SaveGame 제거) | Med | 30% | ~~MMP U-113~~ skip → 해커톤 이후 재계획   |
 | R-025 | 배포 환경 다운 → 심사 불가               | High | 20% | U-120 min-instances=1 + 모니터링          |
-| R-026 | 영문 모드 UI/내러티브 품질 부족          | Med  | 30% | U-099 i18n 수정 + U-119 WIG 폴리시       |
-| R-028 | 프로필 시작 이미지와 첫 턴 내러티브 불일치 | Med | 50% | U-133 첫 턴 씬 설명 맥락 주입            |
-| R-029 | 보상 시나리오에서 Economy 검증 실패 → 폴백 | High | 60% | ✅ U-136 gains 필드 + 검증 공식 수정 |
-| R-030 | Signal 고갈로 10분 데모 루프 중단        | High | 50% | U-137 밸런스 조정 + 기본 보상 도입        |
+| R-026 | 영문 모드 UI/내러티브 품질 부족          | Med  | 30% | ✅ U-119 WIG 폴리시로 가독성/조작성 강화 |
 
 ## Devpost 제출 요건 매핑 (Gemini 3 Hackathon)
 
@@ -141,17 +130,17 @@ _마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM) | 심사: Technical Exe
 | 공개 코드 저장소 (Public Code Repo)      | ⏸️   | U-138,U-121 | U-138 레포 이전+문서 영문화+정리 + U-121 README |
 | Gemini Integration 텍스트 (~200 words)   | ⏸️   | U-121     | 영문 필수                                  |
 | 데모 영상 (3분 이내, 영어/영어자막)      | ⏸️   | U-122     | YouTube/Vimeo 공개                         |
-| 영어 지원 (English language)             | 🚧   | U-099,U-132 | en-US i18n 정합 수정 + 기본 언어 전환     |
-| 프로젝트 기능 동작 (Functionality)       | 🚧   | MVP 잔여  | 핵심 플로우 동작 중, 데모 프로필 즉시 시작 |
+| 영어 지원 (English language)             | ✅   | U-132     | 기본 언어 전환 완료 (U-099,U-132)          |
+| 프로젝트 기능 동작 (Functionality)       | ✅   | MVP 완결  | 10분 데모 루프 검증 완료 (CP-MVP-03)       |
 | 아키텍처 다이어그램 (심사 가점)          | ⏸️   | U-121     | Mermaid 기반                               |
-| UI 폴리시 (Innovation/Wow Factor 30%)    | ⏸️   | U-119     | WIG 스킬 기반 종합 점검                    |
+| UI 폴리시 (Innovation/Wow Factor 30%)    | ✅   | U-119     | WIG 스킬 기반 종합 점검 완료               |
 
 ## 메트릭
 
 | 지표              | 현재 | 목표        |
 | ----------------- | ---- | ----------- |
 | Streaming TTFB    | -    | < 2s        |
-| Hard Gate 통과율  | -    | 100%        |
+| Hard Gate 통과율  | 100% | 100%        |
 
 **기술 부채**: 0h / 한도 8h  | SSOT: `vibe/debt-log.md`
 
@@ -168,7 +157,6 @@ _모든 MVP 마일스톤이 완료되었습니다. MMP 단계로 전환합니다
 
 _Devpost 마감: 2026-02-10 (화) 10:00 AM KST (PST 2/9 5:00 PM). 제출 요건 매핑 → 위 "Devpost 제출 요건 매핑" 참조._
 
-ID=[U-119[Mmp]](unit-plans/U-119[Mmp].md) | ⚡Frontend Layout 전체 다듬기 (WIG 기반 폴리시) | Depends=None | 🚧
 ID=[U-138[Mmp]](unit-plans/U-138[Mmp].md) | ⚡공개 저장소 준비 통합 (레포 이전+문서 영문화+파일 정리) | Depends=None | 🚧
 ID=[U-120[Mmp]](unit-plans/U-120[Mmp].md) | ⚡제출용 배포 + 공개 데모 URL **(U-100+U-101 흡수)** | Depends=U-138 | ⏸️
 ID=[U-121[Mmp]](unit-plans/U-121[Mmp].md) | ⚡제출 문서 패키지 (README + 아키텍처 + Write-up) | Depends=U-120,U-138 | ⏸️
@@ -180,8 +168,9 @@ ID=[CP-SUB-01](unit-plans/CP-SUB-01.md) | **⚡체크포인트: 해커톤 제출
 _**[2026-02-08] M6 전체 skip**: 해커톤 일정상 실행 불가. MVP에 U-126(성능/품질 최적화) 1개로 대체. 해커톤 이후 필요 시 재계획._
 _기존 유닛: U-102, U-103, U-109, U-104, U-105, RU-007, RU-010, CP-MMP-01, U-106, U-107, U-108, U-110~112, U-113, CP-MMP-02 — 모두 skip._
 
-### 완료 (138개)
+### 완료 (139개)
 
+- ✅ [U-119[Mmp]](vibe/unit-results/U-119[Mmp].md): Frontend Layout 전체 다듬기 (WIG 기반 폴리시) (2026-02-10)
 - ✅ [CP-MVP-03](vibe/unit-results/CP-MVP-03.md): 체크포인트 - 10분 데모 루프 (2026-02-10)
 - ✅ [U-025[Mvp]](vibe/unit-results/U-025[Mvp].md): 엔딩 리포트 + 리플레이/시나리오 하네스 (2026-02-10)
 - ✅ [U-023[Mvp]](vibe/unit-results/U-023[Mvp].md): Quest UI 개선 + Rule UI 제거 (2026-02-10)

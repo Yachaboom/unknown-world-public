@@ -28,7 +28,8 @@ backend/
 │   │   └── ending_report.py
 │   ├── config/
 │   │   ├── economy.py
-│   │   └── models.py
+│   │   ├── models.py
+│   │   └── settings.py
 │   ├── harness/
 │   │   ├── replay_runner.py
 │   │   └── scenario.py
@@ -50,6 +51,10 @@ backend/
 │   │   ├── image_generation.py
 │   │   ├── image_understanding.py
 │   │   └── item_icon_generator.py
+│   ├── storage/
+│   │   ├── local_storage.py
+│   │   ├── paths.py
+│   │   └── validation.py
 │   └── validation/
 │       ├── business_rules.py
 │       └── language_gate.py
@@ -65,23 +70,50 @@ frontend/src/
 ├── schemas/ (turn, scanner, economy)
 ├── stores/ (world, economy, inventory, agent, artifacts)
 ├── turn/ (turnRunner)
+├── utils/ (box2d, imageSizing)
 ├── App.tsx
 ├── i18n.ts
 ├── main.tsx
 ├── setupTests.ts
 └── style.css
+vibe/
+├── Architecture.md
+├── PRD.md
+├── Progress.md
+├── Roadmap.md
+├── Tech-Stack.md
+├── unit-plans/
+├── unit-results/
+└── unit-runbooks/
 ```
 
 ### 주요 디렉토리 설명
 
 - `backend/src/unknown_world/artifacts/`: 세션 종료 시 생성되는 엔딩 리포트 등 게임 아티팩트 생성 로직이 위치합니다.
+- `backend/src/unknown_world/storage/`: 로컬 및 클라우드 스토리지를 추상화한 인터페이스와 파일 경로/검증 로직이 위치합니다.
 - `backend/src/unknown_world/harness/`: 시나리오 기반의 리플레이 실행 및 Hard Gate 검증 엔진이 위치합니다.
 - `backend/src/unknown_world/orchestrator/stages/`: 게임 마스터의 7단계 파이프라인 개별 단계가 위치합니다.
 - `backend/src/unknown_world/services/`: GenAI 클라이언트, 이미지 생성/편집, 비전 분석, 아이콘 생성 등 핵심 외부 연동 서비스들이 위치합니다.
 - `backend/prompts/`: XML 규격(`prompt_meta`, `prompt_body`)을 따르는 시스템/내러티브/비전 프롬프트 파일들이 관리됩니다.
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트들이 위치합니다.
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드/경제/인벤토리/에이전트/아티팩트 상태를 관리합니다.
-- `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
+- `vibe/`: 프로젝트의 설계 지침, 진행 상황, 로드맵 등 전략적 SSOT 문서들이 관리됩니다.
+
+## 73. Frontend Layout 전체 다듬기 및 WIG 폴리시 반영 (U-119[Mmp])
+
+1. **WIG(Web Interface Guidelines) 기반 레이아웃 리팩토링**:
+    - **Consistent Spacing**: `--panel-gap` 및 `--section-gap` CSS 변수를 도입하여 전역 패널 간격과 섹션 내 여백을 표준화함. 이를 통해 그리드 레이아웃의 시각적 안정성을 확보함.
+    - **Interactive Accessibility**: 모든 인터랙티브 요소에 `min-height: 24px` 터치 타겟을 확보하고, `:focus-visible` 전역 스타일링(마젠타 글로우)을 통해 키보드 접근성을 강화함.
+    - **Typography Hierarchy**: `text-wrap: balance` 및 폰트 스케일 보정을 통해 제목, 본문, 마이크로 텍스트 간의 시각적 위계를 명확히 함.
+2. **CRT 미학 ↔ 가독성 전략적 분리 (Tiered Overlay)**:
+    - **Intensity Tokens**: `--crt-intensity-critical` (0) 및 `--crt-intensity-ambient` (1) 토큰을 도입하여 영역별로 CRT 효과의 강도를 다르게 제어함.
+    - **Critical Protection**: 재화 잔액, 액션 카드 비용, 입력창 등 정보 전달이 핵심인 영역(`[data-ui-importance='critical']`)은 스캔라인과 글로우를 선별적으로 억제하여 선명도를 극대화함.
+    - **Immersive Decoration Layer**: 배경, 타이틀, 장식용 그리드 패턴 등은 CRT 효과를 유지하거나 심화하여 게임의 독특한 레트로 분위기를 보존함.
+3. **반응형 폴리시 고도화**:
+    - **Adaptive Tooltip**: 모바일 해상도에서 툴팁이 화면 상단을 벗어나지 않도록 하단 배치로 자동 전환하고 화살표 방향을 반전시키는 지능형 렌더링 로직 적용.
+    - **Navigation Invariant**: 주요 스크롤 컨테이너에 `overscroll-behavior: contain`을 적용하여 내부 스크롤 시 전체 레이아웃이 흔들리는 현상을 방지함.
+
+---
 
 ## 72. 엔딩 리포트 및 리플레이 하네스 (U-025[Mvp])
 

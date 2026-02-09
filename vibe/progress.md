@@ -1,5 +1,46 @@
 # 프로젝트 진행 상황
 
+## [2026-02-10 11:30] U-119[Mmp]: Frontend Layout 전체 다듬기 (WIG 기반 폴리시) 완료
+
+### 구현 완료 항목
+
+- **핵심 기능**: Web Interface Guidelines(WIG) 기반의 프론트엔드 레이아웃 리팩토링, CRT 테마 가독성/분위기 밸런싱, 접근성(포커스/터치) 강화.
+- **추가 컴포넌트**: `vibe/unit-results/U-119[Mmp].md` (개발 보고서).
+- **달성 요구사항**: [PRD 9.1] CRT 테마 정체성 유지 및 가독성 확보, [RULE-002] 고정 게임 UI 레이아웃 강화, [WIG] 웹 인터페이스 모범 사례 준수.
+
+### 기술적 구현 세부사항
+
+**레이아웃 및 인터랙션 최적화 (WIG Compliance)**:
+- **Consistent Spacing**: `--panel-gap` 및 `--section-gap` 토큰을 도입하여 전역 패널/섹션 간격을 CSS 변수 기반으로 통일, 시각적 일관성 확보.
+- **Enhanced Focus States**: `:focus-visible` 전역 스타일링을 통해 CRT 테마에서도 명확한 포커스 링(Magenta glow)을 제공하여 키보드 접근성 개선.
+- **Touch Targets Mastery**: 인터랙티브 요소에 `min-height/width: 24px` 및 `touch-action: manipulation`을 적용하여 모바일 환경에서의 오동작 방지 및 조작성 향상.
+
+**CRT 미학 ↔ 가독성 밸런싱 (Tiered Visuals)**:
+- **Critical Content Protection**: `[data-ui-importance='critical']` 및 `.ui-critical` 클래스를 도입하여 재화, 비용, 입력창 등 중요 정보 영역의 스캔라인/글로우 효과를 선별적으로 억제(Sharpness 확보).
+- **Ambient Immersive Layer**: 타이틀, 패널 헤더, 배경 장식(CRT 그리드 패턴) 등은 효과를 유지하거나 강화하여 "Wow Factor"를 극대화함.
+- **Typography Hierarchy**: `text-wrap: balance` 및 자간/줄간격 최적화를 통해 복잡한 정보 패널에서도 텍스트 계층이 명확히 보이도록 개선.
+
+**코드 구조**:
+repo-root/
+└── frontend/src/
+    ├── style.css (WIG 폴리시, CRT 강도 토큰, 레이아웃 갭 통일)
+    ├── components/
+    │   ├── GameLayout.tsx (그리드 비율 및 반응형 보강)
+    │   └── ActionDeck.tsx (카드 레이아웃 및 간격 최적화)
+    └── components/EconomyHud.tsx (HUD 영역 정렬 및 여백 개선)
+
+### 성능 및 품질 지표
+
+- **접근성**: WCAG AA 수준의 색상 대비 및 포커스 가시성 확보.
+- **반응형**: 1366x768 뷰포트에서 스크롤 없이 핵심 UI(HUD, Deck, Canvas) 전면 노출 확인.
+
+### 다음 단계
+
+- **U-122[Mmp]**: 다듬어진 UI 기반 데모 영상 제작
+- **U-120[Mmp]**: 제출용 배포 및 공개 데모 URL 생성
+
+---
+
 ## [2026-02-10 10:30] CP-MVP-03: 체크포인트 - 10분 데모 루프 (최종 통합 검증) 완료
 
 ### 구현 완료 항목

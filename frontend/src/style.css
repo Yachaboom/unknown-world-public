@@ -84,6 +84,20 @@
   --hotspot-corner-size: 12px;
   --hotspot-corner-thickness: 2px;
   --hotspot-stroke-width: 1px;
+
+  /* U-119: 패널 갭/섹션 갭 통일 토큰 */
+  --panel-gap: var(--spacing-sm);
+  --section-gap: var(--spacing-xs);
+
+  /* U-119: CRT 강도 토큰 (Critical/Ambient 분리) */
+  --crt-intensity-critical: 0; /* Critical 영역: 스캔라인 효과 없음 */
+  --crt-intensity-ambient: 1; /* Ambient 영역: 스캔라인 효과 전체 */
+
+  /* U-119: 포커스 링 토큰 */
+  --focus-ring-color: var(--accent-color);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-glow: rgba(255, 0, 255, 0.3);
 }
 
 /* ============================================
@@ -133,6 +147,64 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* ── U-119: 글로벌 포커스-비저블 (WIG: Focus States) ── */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 4px var(--focus-ring-glow);
+  transition: outline-offset 0.1s ease-out; /* 미세한 애니메이션 추가 */
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── U-119: 인터랙티브 요소 터치 최적화 (WIG: Touch) ── */
+button,
+[role='button'],
+a,
+input,
+select,
+textarea,
+[tabindex]:not([tabindex='-1']) {
+  touch-action: manipulation;
+  min-height: 24px; /* 최소 터치 영역 확보 */
+  min-width: 24px;
+}
+
+/* ── U-119: 타이포그래피 개선 (WIG: Typography) ── */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.panel-title,
+.section-title {
+  text-wrap: balance;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+h1 {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--spacing-md);
+}
+h2 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-sm);
+}
+h3 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-xs);
+}
+
+.panel-title {
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  color: var(--text-color);
+  letter-spacing: 2px;
 }
 
 html {
@@ -204,6 +276,22 @@ body {
   flex-direction: column;
 }
 
+/* ── U-119: 스크롤 컨테이너 오버스크롤 방지 (WIG: Navigation) ── */
+.panel-content,
+.narrative-feed,
+.quest-list-completed,
+.sub-objective-list--completed,
+.ending-report-content,
+.repair-trace-container,
+.ledger-list {
+  overscroll-behavior: contain;
+}
+
+/* ── U-119: color-scheme 선언 (WIG: Dark Mode) ── */
+:root {
+  color-scheme: dark;
+}
+
 /* ============================================
    4. CRT 오버레이 효과
    ============================================ */
@@ -230,15 +318,29 @@ body {
  * - Ambient: 오버레이 아래에 위치하여 CRT 분위기 적용
  */
 
-/* Critical 보호 레이어 (오버레이 위) */
+/* Critical 보호 레이어 (오버레이 위) - U-119 확장 */
 [data-ui-importance='critical'],
 .ui-critical,
 .phase-item,
 .currency-value,
 .action-card-cost,
-.agent-error {
+.agent-error,
+.narrative-active-text .narrative-text,
+.quest-main-info,
+.inventory-item-name,
+.command-input {
   position: relative;
   z-index: 10000;
+}
+
+/* U-119: Critical 영역 텍스트 선명도 보강 */
+[data-ui-importance='critical'],
+.ui-critical,
+.currency-value,
+.action-card-cost,
+.agent-error {
+  /* CRT 글로우 억제 → 선명한 수치 */
+  -webkit-font-smoothing: subpixel-antialiased;
 }
 
 /* Ambient 분위기 레이어 (오버레이 아래) */
@@ -366,8 +468,8 @@ body {
   /* U-073: 1600px max-width + 중앙 정렬 */
   max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: var(--layout-gap);
-  gap: var(--layout-gap);
+  padding: var(--panel-gap);
+  gap: var(--panel-gap);
   overflow: hidden; /* U-049: 의도치 않은 스크롤 방지 */
   /* U-073: 게임 영역 배경 - 좌우 패턴이 게임 내부에 침범하지 않도록 */
   background-color: var(--bg-color);
@@ -384,19 +486,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--spacing-sm); /* U-119: md→sm - 헤더 여백 축소 */
   border: 1px solid var(--border-color);
   background-color: var(--panel-bg);
+  /* U-119: 내부 그림자 강화 (깊이감) */
   box-shadow:
-    inset 0 0 20px rgba(0, 0, 0, 0.5),
-    0 0 10px var(--text-dim);
+    inset 0 0 15px rgba(0, 0, 0, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .game-title {
   font-size: var(--font-size-2xl);
   color: var(--text-color);
   text-transform: uppercase;
-  letter-spacing: 4px;
+  letter-spacing: 5px; /* U-119: 4→5px - 터미널 헤더 느낌 강화 */
+  /* U-119: 타이틀 글로우 강화 (CRT 몰입) */
+  text-shadow:
+    0 0 6px rgba(51, 255, 0, 0.5),
+    0 0 12px rgba(51, 255, 0, 0.2);
 }
 
 .header-controls {
@@ -460,7 +567,7 @@ body {
   grid-area: sidebar-left;
   display: flex;
   flex-direction: column;
-  gap: var(--layout-gap); /* U-073: 레이아웃 갭 통일 */
+  gap: var(--panel-gap); /* U-119: 레이아웃 갭 통일 */
   min-height: 0; /* U-049: flex 자식 축소 허용 */
   overflow: hidden; /* U-049: 컬럼 전체 스크롤 제거 */
 }
@@ -474,7 +581,7 @@ body {
   grid-area: center;
   display: flex;
   flex-direction: column;
-  gap: var(--layout-gap); /* U-073: 레이아웃 갭 통일 */
+  gap: var(--panel-gap); /* U-119: 레이아웃 갭 통일 */
   overflow: hidden;
 }
 
@@ -1480,6 +1587,8 @@ body {
 
 .narrative-text {
   color: var(--text-color);
+  /* U-119: 내러티브 텍스트 줄간격 개선 (가독성) */
+  line-height: 1.6;
 }
 
 /* ============================================
@@ -1601,7 +1710,7 @@ body {
   grid-area: sidebar-right;
   display: flex;
   flex-direction: column;
-  gap: var(--layout-gap); /* U-073: 레이아웃 갭 통일 */
+  gap: var(--panel-gap); /* U-119: 레이아웃 갭 통일 */
   min-height: 0; /* U-049: flex 자식 축소 허용 */
   overflow: hidden; /* U-049: 컬럼 전체 스크롤 제거 */
 }
@@ -1615,9 +1724,9 @@ body {
   grid-area: footer;
   display: flex;
   flex-direction: column;
-  /* U-050 v5: 카드와 입력창 사이 간격 축소 */
-  gap: 2px;
-  padding: var(--spacing-sm);
+  /* U-119: 카드↔입력 간격 미세 조정 (2→4px, 터치 안정) */
+  gap: 4px;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid var(--border-color);
   background-color: var(--panel-bg);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
@@ -1717,6 +1826,15 @@ body {
   box-shadow:
     0 0 15px var(--accent-color),
     0 4px 20px rgba(0, 0, 0, 0.5);
+  transform: translateY(-4px);
+}
+
+/* U-119: 키보드 포커스 시 hover와 동일한 시각적 피드백 (WIG) */
+.action-card:focus-visible:not(:disabled) {
+  border-color: var(--focus-ring-color);
+  box-shadow:
+    0 0 15px var(--focus-ring-color),
+    0 0 0 4px var(--focus-ring-glow);
   transform: translateY(-4px);
 }
 
@@ -2039,6 +2157,14 @@ body {
   font-size: var(--font-size-lg);
   outline: none;
   text-shadow: 0 0 5px var(--text-dim);
+  /* U-119: caret 색상 CRT 테마 통일 (WIG) */
+  caret-color: var(--text-color);
+}
+
+/* U-119: command-input 포커스 시 입력 영역 전체 하이라이트 */
+.command-input-area:focus-within {
+  border-color: var(--text-color);
+  box-shadow: 0 0 8px rgba(51, 255, 0, 0.2);
 }
 
 .command-input::placeholder {
@@ -2062,8 +2188,10 @@ body {
 
 .panel-header {
   padding: var(--spacing-xs) var(--spacing-sm);
-  border-bottom: 1px solid var(--text-dim);
-  background-color: rgba(0, 0, 0, 0.3);
+  /* U-119: 상단 accent 라인 → 패널 구분 시인성 강화 */
+  border-top: 2px solid var(--text-dim);
+  border-bottom: 1px solid rgba(51, 255, 0, 0.15);
+  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2071,10 +2199,12 @@ body {
 }
 
 .panel-title {
-  font-size: 0.875rem;
+  font-size: 0.8125rem; /* U-119: 12→13px - 살짝 키우되 절제 */
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 3px; /* U-119: 2→3px - 터미널 느낌 강화 */
   color: var(--text-color);
+  /* U-119: 미세한 글로우로 헤더 강조 (CRT 분위기) */
+  text-shadow: 0 0 4px rgba(51, 255, 0, 0.35);
 }
 
 .panel-content {
@@ -2599,13 +2729,16 @@ button:disabled,
   animation: flicker 0.15s infinite;
 }
 
-/* Economy HUD 및 기타 Critical 텍스트 보호 */
+/* Economy HUD 및 기타 Critical 텍스트 보호 - U-119 강화 */
 .currency-value,
 .action-card-cost {
   position: relative;
-  z-index: 2;
+  z-index: 10000; /* U-119: Critical 레이어 통일 */
   font-family: var(--font-micro-en);
-  text-shadow: 0 0 2px rgba(51, 255, 0, 0.3);
+  /* U-119: 글로우 유지하되 배경 대비 강화 */
+  text-shadow:
+    0 0 2px rgba(51, 255, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* U-037: pending 상태 - 밝은 색상 + 배경 대비 */
@@ -3181,6 +3314,16 @@ button:disabled,
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
+  /* U-119: 글로벌 애니메이션/트랜지션 안전망 (WIG) */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   /* 플리커 애니메이션 비활성화 - U-050: opacity 더 낮춤 */
   .crt-overlay {
     animation: none;
@@ -3276,15 +3419,7 @@ button:disabled,
    - RULE-005: 예상 비용/확정 비용/잔액 부족 표시
    ============================================ */
 
-/* Economy HUD 컨테이너 */
-.economy-hud {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--text-dim);
-  background-color: rgba(0, 0, 0, 0.5);
-}
+/* Economy HUD 컨테이너 (U-119: 중복 제거 → 헤더 영역 .economy-hud 기준) */
 
 .economy-hud-full {
   flex: 1; /* U-099: 가용 공간을 채워 하단 여백 과다 해소 */
@@ -4554,7 +4689,7 @@ button:disabled,
   flex-direction: row;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: 6px 12px;
+  padding: var(--spacing-xs) var(--spacing-sm); /* U-119: 변수 기반 패딩 통일 */
   min-height: 48px; /* Q1: Row 48px */
   border-bottom: 1px solid rgba(51, 255, 0, 0.15); /* Q2: 구분선 */
   background: transparent;
