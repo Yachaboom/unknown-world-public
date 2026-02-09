@@ -88,6 +88,12 @@ export interface DemoProfileInitialState {
   }>;
   /** 환영 메시지 i18n 키 */
   welcomeMessageKey: string;
+  /**
+   * 사전 생성 첫 씬 이미지 경로 (U-124).
+   * nanobanana mcp로 제작한 정적 에셋을 가리킵니다.
+   * 프로필 시작 시 Scene Canvas에 즉시 표시됩니다.
+   */
+  initialSceneImageUrl?: string;
 }
 
 /**
@@ -170,6 +176,8 @@ export const PROFILE_NARRATOR: DemoProfile = {
     // U-116: 초기 핫스팟 제거 (U-090 정밀분석 전용 정책 준수)
     sceneObjectDefs: [],
     welcomeMessageKey: 'profile.narrator.welcome',
+    // U-124: 사전 생성 첫 씬 이미지 (nanobanana mcp, 서재/도서관)
+    initialSceneImageUrl: '/ui/scenes/scene-narrator-start.webp',
   },
 };
 
@@ -238,6 +246,8 @@ export const PROFILE_EXPLORER: DemoProfile = {
     // U-116: 초기 핫스팟 제거 (U-090 정밀분석 전용 정책 준수)
     sceneObjectDefs: [],
     welcomeMessageKey: 'profile.explorer.welcome',
+    // U-124: 사전 생성 첫 씬 이미지 (nanobanana mcp, 동굴 입구)
+    initialSceneImageUrl: '/ui/scenes/scene-explorer-start.webp',
   },
 };
 
@@ -306,6 +316,8 @@ export const PROFILE_TECH: DemoProfile = {
     // U-116: 초기 핫스팟 제거 (U-090 정밀분석 전용 정책 준수)
     sceneObjectDefs: [],
     welcomeMessageKey: 'profile.tech.welcome',
+    // U-124: 사전 생성 첫 씬 이미지 (nanobanana mcp, 실험실)
+    initialSceneImageUrl: '/ui/scenes/scene-tech-start.webp',
   },
 };
 

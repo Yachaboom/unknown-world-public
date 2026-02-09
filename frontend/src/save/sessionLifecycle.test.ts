@@ -53,4 +53,19 @@ describe('sessionLifecycle (U-099)', () => {
     // 3. 거래 장부가 비워졌는지 확인
     expect(useEconomyStore.getState().ledger.length).toBe(0);
   });
+
+  it('U-124: 세션 시작 시 프로필의 초기 이미지가 worldStore에 적용되어야 한다', () => {
+    const profile = findProfileById('narrator')!;
+    const t = (key: string) => key;
+
+    // 초기 이미지가 있는지 확인
+    expect(profile.initialState.initialSceneImageUrl).toBeDefined();
+
+    startSessionFromProfile({ profile, t });
+
+    const sceneState = useWorldStore.getState().sceneState;
+    expect(sceneState.status).toBe('scene');
+    expect(sceneState.imageUrl).toBe(profile.initialState.initialSceneImageUrl);
+    expect(sceneState.processingPhase).toBe('idle');
+  });
 });

@@ -33,8 +33,10 @@ backend/src/unknown_world/services/image_generation.py
 backend/src/unknown_world/services/image_understanding.py
 backend/src/unknown_world/services/item_icon_generator.py
 backend/src/unknown_world/storage/paths.py
+backend/src/unknown_world/storage/seed.py
 backend/src/unknown_world/validation/business_rules.py
 frontend/public/ui/items/*.png
+frontend/public/ui/scenes/*.webp
 frontend/src/api/turnStream.ts
 frontend/src/components/ActionDeck.tsx
 frontend/src/components/AgentConsole.tsx
@@ -57,9 +59,11 @@ vibe/unit-results/U-130[Mvp].md
 vibe/unit-results/U-129[Mvp].md
 vibe/unit-results/U-128[Mvp].md
 vibe/unit-results/U-127[Mvp].md
+vibe/unit-results/U-124.md
 vibe/unit-runbooks/U-130[Mvp]-runbook.md
 vibe/unit-runbooks/U-129-item-sell-ux-runbook.md
 vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
+vibe/unit-runbooks/U-124-profile-scene-images-runbook.md
 ```
 
 ### 주요 디렉토리 설명
@@ -70,6 +74,7 @@ vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
 - `frontend/src/components/`: RULE-002(채팅 UI 금지)를 준수하는 고정 게임 HUD 컴포넌트(ActionDeck, Inventory, SceneCanvas, Hotspot 등)들이 위치합니다.
 - `frontend/src/stores/`: Zustand 기반의 전역 상태 관리 레이어로, 월드 데이터(`world`), 재화(`economy`), 인벤토리(`inventory`), 에이전트 진행(`agent`), 온보딩 및 힌트(`onboarding`) 상태를 도메인별로 격리하여 관리합니다.
 - `frontend/public/ui/items/`: nanobanana-mcp로 제작된 초기/공통 아이템 아이콘(64x64 PNG) 에셋들이 위치합니다.
+- `frontend/public/ui/scenes/`: nanobanana-mcp로 제작된 프로필별 첫 씬 이미지(1024x576 WebP) 에셋들이 위치합니다.
 - `shared/schemas/`: 서버와 클라이언트 간의 데이터 계약을 정의하는 JSON Schema가 관리됩니다.
 
 ---
@@ -425,60 +430,18 @@ vibe/unit-runbooks/U-128-vision-card-disable-runbook.md
 
 ---
 
-## 59. Agent Console 배치 재조정 (U-123[Mvp])
+## 63. 프로필별 첫 번째 씬 이미지 사전 생성 (U-124[Mvp])
 
-1. **상시 노출 및 계층 구조 (Fixed Visibility)**:
-    - **Toggle Removal**: U-114에서 도입했던 접기/펼치기 토글을 제거하고, 모든 정보를 한눈에 볼 수 있는 Flat 레이아웃으로 회귀하여 "채팅이 아닌 시스템"임을 강조함.
-    - **Visual Flow**: 실시간 변화를 보여주는 **대기열(Queue)**을 상단에 배치하여 1차 시선을 확보하고, 정적인 검증 결과인 **배지(Badges)**를 하단에 배치하는 자연스러운 시각적 흐름을 구축함.
-2. **공간 최적화 및 구분**:
-    - **Compact Grid**: 배지를 상시 노출하되 공간 점유를 최소화하기 위해 2x2 컴팩트 그리드 레이아웃을 적용함.
-    - **Divider**: 대기열과 배지 사이에 얇은 반투명 구분선을 추가하여 정보의 성격을 명확히 분리함.
-
----
-
-## 60. 정밀분석 완료 상태에서 정밀분석 카드 비활성화 (U-128[Mvp])
-
-1. **중복 분석 및 비용 낭비 방지 (Analysis Lock)**:
-    - **Contextual Guard**: 정밀분석(Agentic Vision)이 이미 수행되어 화면에 핫스팟이 존재하는 상태에서는 "정밀분석" 액션 카드를 비활성화함. 이는 동일 장면의 재분석으로 인한 1.5x 비용 낭비와 핫스팟 데이터 충돌을 원천 차단함.
-    - **SSOT Detection**: `worldStore.sceneObjects.length > 0`을 기준으로 정밀분석 완료 여부를 판별하여 `ActionDeck`의 비활성화 조건(`isDisabled`)에 실시간 반영함.
-2. **시각적 상태 및 사유 전달 (Feedback Hierarchy)**:
-    - **Tiered Disabled Style**: 비활성화된 비전 카드는 일반 비활성화보다 더 낮은 불투명도(`0.4`)와 흐린 테두리 농도(`0.25`)를 적용하여 "이미 수행됨"을 시각적으로 강조함.
-    - **Reason Overlay**: 비활성화 사유로 "이미 분석된 장면입니다" (ko-KR) / "Scene already analyzed" (en-US) 툴팁 및 오버레이 메시지를 제공하여 시스템 상태를 명확히 전달함.
-3. **자동 활성화 및 생명 주기 연동**:
-    - **Zero-touch Reactivation**: U-090 정책(장면 전환 시 핫스팟 초기화)에 의존하여, 새 이미지가 생성되면 별도의 상태 조작 없이 정밀분석 카드가 자동으로 활성 상태로 복원됨.
-    - **Consistency OK**: i18n 정책(RULE-006)을 준수하여 모든 세션 언어에서 일관된 비활성화 피드백을 보장함.
-
----
-
-## 61. 아이템 판매 직관적 UX 개선 (U-129[Mvp])
-
-1. **상시 판매 접근성 보장 (Always-on Sell)**:
-    - **Availability**: 기존의 잔액 부족 시 노출 조건(`isBalanceLow`)을 제거하고, 모든 아이템 Row에 판매 버튼을 상시 배치함. 이를 통해 플레이어는 재화 부족 시뿐만 아니라 전략적인 인벤토리 정리 및 Signal 확보가 언제든 가능해짐.
-2. **인라인 컨펌 및 실수 방지 (Two-Step Inline Verification)**:
-    - **Confirmation Flow**: 판매 버튼 클릭 시 즉시 실행하지 않고 "확인?" 상태로 전환하는 2단계 프로세스를 도입함.
-    - **Auto-reset Timer**: 2초간 추가 입력이 없을 경우 자동으로 원래 상태로 복구되는 타이머 로직을 적용하여 모달 팝업 없이도 실수 판매를 효과적으로 방지함.
-    - **Visual Feedback**: 컨펌 대기 상태 시 레드 펄스 애니메이션과 텍스트 변경을 통해 현재 조작의 위험성을 경고함.
-3. **보상 예측성 강화 (Price Visibility)**:
-    - **Price Labeling**: 버튼 내에 `+5 Signal` 라벨과 번개 아이콘(⚡)을 상시 노출하여, 판매를 통해 획득할 보상을 플레이어가 직관적으로 예측할 수 있게 함.
-4. **조작 충돌 방지 및 안전성**:
-    - **Adaptive Hiding**: 아이템 드래그 중(`isDragging`)이거나 소비 중(`isConsuming`)일 때는 판매 버튼을 자동으로 숨겨 DnD 조작 및 애니메이션과의 시각적/기능적 충돌을 차단함.
-    - **State Synchronization**: `confirmingSellIdRef` (Ref)를 사용하여 React의 비동기 렌더링 사이클 내에서도 최신 컨펌 상태를 정확히 추적함.
-
----
-
-## 62. 429 Rate Limit 에러 시 프론트엔드 재시도 안내 UI (U-130[Mvp])
-
-1. **에러 감지 및 상태 전파 (Error-to-UI Pipeline)**:
-    - **Backend Recognition**: `repair_loop.py`에서 Pro 모델 호출 실패 후 Flash 모델까지 429 에러로 최종 실패할 경우 `RATE_LIMITED` 코드를 결정적으로 식별하여 전송함.
-    - **Streaming Guard**: Rate limit 발생 시 `final` 이벤트를 생략하고 `error` 이벤트만 전송하여 프론트엔드가 폴백 결과를 수용하는 대신 재시도 모드로 즉시 진입하도록 제어함.
-    - **Unified Store State**: `agentStore`에서 `isRateLimited` 플래그를 통해 전역적인 에러 상태를 관리하고, 모든 입력 핸들러와 UI 오버레이가 이를 참조하도록 설계함.
-2. **재시도 안내 및 카운트다운 (RateLimitPanel)**:
-    - **Visual Guidance**: 429 발생 시 CRT 테마의 고대비 경고 패널을 화면 중앙에 노출하여 사용자에게 상황(API 할당량 초과)을 명확히 고지함.
-    - **60s Countdown**: 60초 타이머와 진행 바를 제공하여 사용자에게 명확한 대기 지표를 제시하고, 무분별한 연속 재시도로 인한 에러 누적을 방지함.
-    - **One-click Retry**: 타이머 완료 시 활성화되는 재시도 버튼을 통해, 사용자가 직접 텍스트를 재입력할 필요 없이 마지막 턴 파라미터(`lastTurnParamsRef`)로 즉시 재실행 가능하도록 편의성 제공.
-3. **입력 잠금 및 접근성 (Lock-and-Entry)**:
-    - **Exception Handling**: 전체 입력 잠금(`isInputLocked`) 상태를 유지하면서도 재시도 버튼만은 오버레이 위에 배치하여 물리적 접근성을 보장함.
-    - **i18n Consistency**: 할당량 초과 안내 및 타이머 메시지를 다국어(`ko`/`en`)로 완벽히 지원하여 글로벌 데모 환경에서의 사용자 이탈을 최소화함.
+1. **사전 생성 및 즉시 표시 (Instant Visual Feedback)**:
+    - **Asset Pre-generation**: `nanobanana-mcp`를 활용하여 3종 프로필(서사꾼, 탐험가, 기술 전문가) 각각의 세계관에 맞는 다크 판타지/로그라이크 분위기의 첫 씬 이미지(1024x576 WebP)를 사전 제작함.
+    - **Zero-delay Entry**: 프로필 선택 직후 Scene Canvas에 해당 이미지를 즉시 표시하여, 첫 턴 진행 전 발생하는 이미지 생성 지연(10~20초)을 완전히 제거함.
+    - **Performance Budget**: WebP Q80 포맷을 적용하여 각 이미지 크기를 200KB 이하(실측 43~58KB)로 최적화함으로써 PRD 9.7 에셋 예산을 준수함.
+2. **참조 이미지 파이프라인 연동 (Visual Continuity)**:
+    - **toBackendReferenceUrl**: 프론트엔드의 정적 WebP 경로(`/ui/scenes/...`)를 백엔드 이미지 서비스가 인식하는 API 경로(`/api/image/file/...`)로 자동 변환하는 로직을 `turnRunner.ts`에 도입함.
+    - **Multi-modal Inheritance**: 이를 통해 첫 턴 요청 시 사전 생성 이미지가 Gemini의 `previous_image_url`(참조 이미지)로 전달되어, 게임 시작과 첫 턴 결과 간의 시각적 일관성을 확보함.
+3. **백엔드 자동 시딩 및 동기화 (Automated Seeding)**:
+    - **lifespan Integration**: 백엔드 서버 시작 시(`main.py` lifespan) `seed_scene_images()`를 호출하여 프론트엔드의 WebP 에셋을 백엔드 참조용 PNG 파일로 자동 변환 및 복사함.
+    - **Storage Invariant**: `Pillow` 라이브러리를 사용하여 포맷 변환을 수행하며, 매 서버 재시작 시마다 멱등(idempotent)하게 에셋 정합성을 유지함.
 
     
     ---

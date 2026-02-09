@@ -163,6 +163,28 @@ export function startSessionFromProfile(args: {
       box_2d: obj.box_2d,
       interaction_hint: t(obj.hintKey),
     })),
+    // U-124: 사전 생성 첫 씬 이미지가 있으면 Scene Canvas에 즉시 적용
+    // 주의: Zustand setState는 shallow merge이므로 sceneState 전체를 교체함
+    // → processingPhase/imageLoading 등 필수 필드를 반드시 포함해야 입력 잠금이 풀림
+    sceneState: profile.initialState.initialSceneImageUrl
+      ? {
+          status: 'scene' as const,
+          imageUrl: profile.initialState.initialSceneImageUrl,
+          message: '',
+          processingPhase: 'idle' as const,
+          imageLoading: false,
+          previousImageUrl: undefined,
+          pendingImageTurnId: undefined,
+        }
+      : {
+          status: 'default' as const,
+          message: '',
+          imageUrl: undefined,
+          processingPhase: 'idle' as const,
+          imageLoading: false,
+          previousImageUrl: undefined,
+          pendingImageTurnId: undefined,
+        },
   });
 
   // U-092: 프리셋 아이콘이 있으면 즉시 적용

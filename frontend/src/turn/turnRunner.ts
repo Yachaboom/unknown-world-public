@@ -53,6 +53,30 @@ const VISION_TRIGGER_KEYWORDS = [
 /** U-089: 정밀분석 오버레이 최소 표시 시간 (ms) - 깜빡임 방지 */
 const ANALYZING_MIN_DISPLAY_MS = 500;
 
+// =============================================================================
+// U-124: 사전 생성 이미지 → 백엔드 참조 URL 변환
+// =============================================================================
+
+/**
+ * 프론트엔드 정적 씬 이미지 URL을 백엔드 참조 이미지 URL로 변환합니다.
+ *
+ * 표시용 `/ui/scenes/scene-xxx-start.webp` URL을
+ * 백엔드 이미지 서비스가 인식하는 `/api/image/file/scene-xxx-start` 형식으로 변환합니다.
+ * 이를 통해 첫 턴에서 사전 생성 이미지를 Gemini 참조 이미지로 전달하여
+ * 시각적 연속성을 유지합니다.
+ *
+ * 런타임 생성 이미지 URL(/api/image/file/... 또는 http://...)은 그대로 반환합니다.
+ */
+function toBackendReferenceUrl(displayUrl: string | undefined | null): string | undefined {
+  if (!displayUrl) return undefined;
+  // /ui/scenes/scene-narrator-start.webp → /api/image/file/scene-narrator-start
+  const match = displayUrl.match(/^\/ui\/scenes\/(.+)\.\w+$/);
+  if (match) {
+    return `/api/image/file/${match[1]}`;
+  }
+  return displayUrl;
+}
+
 /**
  * U-089: 정밀분석(Agentic Vision) 트리거 여부를 판단합니다.
  * 백엔드의 ModelConfig.is_vision_trigger()와 동일한 로직입니다.
@@ -241,8 +265,10 @@ export function createTurnRunner(deps: {
     const economySnapshot = { signal, memory_shard };
 
     // U-068: 이전 이미지 URL 가져오기 (참조 이미지로 사용)
-    const previousImageUrl =
-      worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+    // U-124: 사전 생성 정적 이미지 URL을 백엔드 참조 형식으로 변환
+    const previousImageUrl = toBackendReferenceUrl(
+      worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl,
+    );
 
     // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
     const turnInput = buildTurnInput({
@@ -375,8 +401,10 @@ export function createTurnRunner(deps: {
           const currentTurnId = worldStore.turnCount;
 
           // U-068: 이전 장면 이미지 URL 가져오기 (참조 이미지로 사용)
-          const previousImageUrl =
-            worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+          // U-124: 사전 생성 정적 이미지 URL을 백엔드 참조 형식으로 변환
+          const previousImageUrl = toBackendReferenceUrl(
+            worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl,
+          );
 
           // 이전 이미지 잡 취소
           imageJobController?.abort();
@@ -548,8 +576,10 @@ export function useTurnRunner(deps: {
       const economySnapshot = { signal, memory_shard };
 
       // U-068: 이전 이미지 URL 가져오기 (참조 이미지로 사용)
-      const previousImageUrl =
-        worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+      // U-124: 사전 생성 정적 이미지 URL을 백엔드 참조 형식으로 변환
+      const previousImageUrl = toBackendReferenceUrl(
+        worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl,
+      );
 
       // TurnInput 생성 (U-044: 주입된 세션 언어 사용)
       const turnInput = buildTurnInput({
@@ -664,8 +694,10 @@ export function useTurnRunner(deps: {
 
             const worldStore = useWorldStore.getState();
             const currentTurnId = worldStore.turnCount;
-            const previousImageUrl =
-              worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl;
+            // U-124: 사전 생성 정적 이미지 URL을 백엔드 참조 형식으로 변환
+            const previousImageUrl = toBackendReferenceUrl(
+              worldStore.sceneState.imageUrl ?? worldStore.sceneState.previousImageUrl,
+            );
 
             imageJobControllerRef.current?.abort();
             worldStore.setImageLoading(currentTurnId);

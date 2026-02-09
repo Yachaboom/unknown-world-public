@@ -132,3 +132,83 @@ describe('turnRunner (U-089[Mvp])', () => {
     vi.useRealTimers();
   });
 });
+
+describe('turnRunner (U-124[Mvp]: toBackendReferenceUrl)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('프론트엔드 정적 씬 이미지 URL을 백엔드 참조 URL로 변환해야 함', async () => {
+    const { createTurnRunner } = await import('./turnRunner');
+    const runner = createTurnRunner({
+      t: (key: string) => key,
+      theme: 'dark',
+      language: 'ko-KR',
+    });
+
+    const { startTurnStream } = (await import('../api/turnStream')) as unknown as {
+      startTurnStream: Mock;
+    };
+
+    // Narrator 프로필 초기 이미지
+    mockWorldStore.sceneState.imageUrl = '/ui/scenes/scene-narrator-start.webp';
+    runner.runTurn({ text: '테스트' });
+
+    expect(startTurnStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previous_image_url: '/api/image/file/scene-narrator-start',
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('런타임 생성 이미지 URL(/api/image/file/...)은 그대로 유지해야 함', async () => {
+    const { createTurnRunner } = await import('./turnRunner');
+    const runner = createTurnRunner({
+      t: (key: string) => key,
+      theme: 'dark',
+      language: 'ko-KR',
+    });
+
+    const { startTurnStream } = (await import('../api/turnStream')) as unknown as {
+      startTurnStream: Mock;
+    };
+
+    // 런타임 생성 이미지
+    const runtimeUrl = '/api/image/file/gen_12345.png';
+    mockWorldStore.sceneState.imageUrl = runtimeUrl;
+    runner.runTurn({ text: '테스트' });
+
+    expect(startTurnStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previous_image_url: runtimeUrl,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('외부 URL(http://...)은 그대로 유지해야 함', async () => {
+    const { createTurnRunner } = await import('./turnRunner');
+    const runner = createTurnRunner({
+      t: (key: string) => key,
+      theme: 'dark',
+      language: 'ko-KR',
+    });
+
+    const { startTurnStream } = (await import('../api/turnStream')) as unknown as {
+      startTurnStream: Mock;
+    };
+
+    // 외부 URL
+    const externalUrl = 'https://example.com/image.png';
+    mockWorldStore.sceneState.imageUrl = externalUrl;
+    runner.runTurn({ text: '테스트' });
+
+    expect(startTurnStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previous_image_url: externalUrl,
+      }),
+      expect.any(Object),
+    );
+  });
+});

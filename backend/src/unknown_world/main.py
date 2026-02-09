@@ -65,6 +65,7 @@ from pydantic import BaseModel
 from unknown_world import __version__
 from unknown_world.api import image_router, item_icon_router, scanner_router, turn_router
 from unknown_world.storage.paths import BASE_DATA_DIR, STATIC_URL_PREFIX
+from unknown_world.storage.seed import seed_scene_images
 
 # =============================================================================
 # 로거 설정
@@ -118,8 +119,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Startup
     # =========================================================================
     logger.info("[Startup] Unknown World 백엔드 시작")
-    # U-091: rembg preflight 제거 - 런타임에서 rembg를 사용하지 않으므로
-    # 모델 다운로드/사전 점검 불필요. 서버 시작 시간 단축.
+
+    # U-124: 사전 생성 씬 이미지를 백엔드 output 디렉터리에 시드
+    # 프론트엔드 WebP → 백엔드 PNG 변환 (Gemini 참조 이미지 파이프라인용)
+    seed_scene_images()
+
     logger.info("[Startup] Unknown World 백엔드 시작 완료")
 
     yield

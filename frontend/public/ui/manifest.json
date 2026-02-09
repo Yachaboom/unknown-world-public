@@ -1,8 +1,8 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.5.0",
-  "generatedAt": "2026-02-07T21:00:00Z",
-  "totalBytes": 775899,
+  "version": "1.6.0",
+  "generatedAt": "2026-02-09T12:00:00Z",
+  "totalBytes": 931471,
   "budgetBytes": 1572864,
   "assets": [
     {
@@ -476,6 +476,33 @@
       "usedIn": ["InventoryPanel"],
       "bytes": 6368,
       "notes": "U-092: 공통 아이템, nanobanana mcp(pixel-art), rembg(birefnet-general), ImageMagick 64x64"
+    },
+    {
+      "id": "scene-narrator-start",
+      "path": "scenes/scene-narrator-start.webp",
+      "type": "scene",
+      "fallback": "📖",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 55134,
+      "notes": "U-124: Narrator 프로필 첫 씬 (서재/도서관), nanobanana mcp(oil-painting), ImageMagick 1024x576 WebP Q80 (Gemini 1K 16:9 매칭)"
+    },
+    {
+      "id": "scene-explorer-start",
+      "path": "scenes/scene-explorer-start.webp",
+      "type": "scene",
+      "fallback": "🧭",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 42726,
+      "notes": "U-124: Explorer 프로필 첫 씬 (동굴 입구), nanobanana mcp(oil-painting), ImageMagick 1024x576 WebP Q80 (Gemini 1K 16:9 매칭)"
+    },
+    {
+      "id": "scene-tech-start",
+      "path": "scenes/scene-tech-start.webp",
+      "type": "scene",
+      "fallback": "⚙️",
+      "usedIn": ["SceneCanvas"],
+      "bytes": 57712,
+      "notes": "U-124: Tech 프로필 첫 씬 (실험실), nanobanana mcp(oil-painting), ImageMagick 1024x576 WebP Q80 (Gemini 1K 16:9 매칭)"
     }
   ]
 }
