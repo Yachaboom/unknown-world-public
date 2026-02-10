@@ -1,0 +1,58 @@
+# =============================================================================
+# Unknown World - Docker Compose (로컬 개발/검증용)
+# U-120[Mmp]: 프론트엔드(nginx:8001) + 백엔드(uvicorn:8011)
+#
+# 사용법:
+#   docker compose up --build
+#   → http://localhost:8001 에서 게임 접속
+#
+# 환경변수:
+#   backend/.env 파일에 GOOGLE_API_KEY 설정 필요
+#   (cp backend/.env.example backend/.env 후 키 입력)
+#
+# RULE-007: Secret은 이미지에 bake-in 금지 (env_file로 런타임 주입)
+# RULE-011: 프론트 8001, 백엔드 8011
+# =============================================================================
+
+services:
+  # -------------------------------------------------------------------------
+  # Frontend: nginx (정적 서빙 + API 프록시)
+  # -------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      BACKEND_URL: http://backend:8011
+      LISTEN_PORT: "8001"
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Backend: FastAPI + Uvicorn
+  # -------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8011:8011"
+    env_file:
+      - backend/.env
+    environment:
+      UW_MODE: real
+      ENVIRONMENT: production
+      CORS_ORIGINS: "http://localhost:8001,http://frontend:8001"
+    volumes:
+      # 생성된 이미지 등 데이터 영속성 (선택)
+      - backend-data:/app/backend/.data
+    restart: unless-stopped
+
+# 볼륨 정의
+volumes:
+  backend-data:
+    driver: local

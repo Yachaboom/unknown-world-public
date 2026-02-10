@@ -18,8 +18,11 @@ import type { Language } from '../schemas/turn';
 // 상수 정의
 // =============================================================================
 
-/** API 베이스 URL */
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8011';
+/** API 베이스 URL
+ * - 개발: Vite proxy가 /api → localhost:8011로 전달 (vite.config.ts)
+ * - 배포: nginx가 /api → backend로 프록시 (nginx.conf)
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /** 이미지 생성 API 엔드포인트 */
 const IMAGE_GENERATE_ENDPOINT = `${API_BASE_URL}/api/image/generate`;

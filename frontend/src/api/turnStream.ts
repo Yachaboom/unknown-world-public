@@ -352,8 +352,12 @@ function createFallbackTurnOutput(
 // API 설정
 // =============================================================================
 
-/** 백엔드 API URL (RULE-011: 포트 8011) */
-const API_BASE_URL = 'http://localhost:8011';
+/** 백엔드 API URL (RULE-011: 포트 8011)
+ * - 개발: Vite proxy가 /api → localhost:8011로 전달 (vite.config.ts)
+ * - 배포: nginx가 /api → backend로 프록시 (nginx.conf)
+ * - VITE_API_BASE_URL 미설정 시 상대 경로 사용 (프록시 의존)
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /** 턴 스트림 API 엔드포인트 */
 const TURN_ENDPOINT = `${API_BASE_URL}/api/turn`;

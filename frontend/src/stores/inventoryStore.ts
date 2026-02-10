@@ -387,7 +387,7 @@ export async function requestItemIcon(
   description: string,
   language: string = 'en-US',
 ): Promise<{ iconUrl: string; status: IconStatus; isPlaceholder: boolean }> {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
 
   try {
     const response = await fetch(`${apiUrl}/api/item/icon`, {
@@ -427,7 +427,7 @@ export async function requestItemIcon(
  * @returns 현재 상태
  */
 export async function pollIconStatus(itemId: string): Promise<IconStatus> {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8011';
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
 
   try {
     const response = await fetch(`${apiUrl}/api/item/icon/${itemId}/status`);

@@ -1,0 +1,70 @@
+# =============================================================================
+# Unknown World - Docker build context 제외 목록
+# U-120[Mmp]: 빌드 속도 최적화 + 불필요 파일 제외
+# =============================================================================
+
+# Git
+.git
+.gitattributes
+
+# Node modules (빌드 시 새로 설치)
+**/node_modules
+
+# Python 가상환경 (빌드 시 새로 생성)
+**/.venv
+**/venv
+**/__pycache__
+
+# IDE/에디터
+.cursor
+.gemini
+.claude
+.codex
+.vscode
+*.swp
+*.swo
+
+# 문서/기획 (런타임 불필요, 단 backend/prompts는 필요)
+vibe/
+docs/
+
+# 테스트/디버그
+**/tests
+**/coverage
+**/debug_*.py
+**/test_*.py
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+backend/run_full_test.py
+backend/start_and_test.py
+backend/test_api.py
+backend/test_real_vision.json
+
+# 환경/비밀 파일 (RULE-007)
+**/.env
+**/.env.local
+**/.env.production
+
+# 빌드 결과물 (각 스테이지에서 생성)
+frontend/dist
+backend/dist
+backend/build
+backend/.data
+
+# 기타 불필요 파일
+nanobanana-output/
+request.json
+scripts/
+shared/
+.editorconfig
+.prettierignore
+.geminiignore
+prettier.config.cjs
+devpost-*.png
+U-050-*.png
+U-057-*.png
+
+# OS
+.DS_Store
+Thumbs.db

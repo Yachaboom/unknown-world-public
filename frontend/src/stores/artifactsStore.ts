@@ -136,7 +136,8 @@ export interface SessionDataForReport {
 // API 호출
 // =============================================================================
 
-const BACKEND_URL = `http://localhost:${import.meta.env.VITE_BACKEND_PORT ?? '8011'}`;
+/** 백엔드 API URL - 프록시 경유 시 상대 경로, 직접 연결 시 절대 경로 */
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 async function fetchEndingReport(sessionData: SessionDataForReport): Promise<EndingReport> {
   const body = {

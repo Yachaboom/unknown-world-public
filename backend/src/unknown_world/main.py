@@ -163,17 +163,26 @@ BASE_DATA_DIR.mkdir(parents=True, exist_ok=True)
 app.mount(STATIC_URL_PREFIX, StaticFiles(directory=str(BASE_DATA_DIR)), name="static")
 
 # =============================================================================
-# CORS 설정 (개발 환경용)
+# CORS 설정
 # =============================================================================
-# PRD 요구: 로컬 개발에서 프론트와 통신할 수 있도록 CORS 기본 정책 준비
-# RULE-011: 프론트엔드는 8001~8010 포트 사용
-# 주의: 프로덕션에서는 MMP 단계에서 엄격한 정책으로 변경해야 함
+# 개발: 로컬 프론트엔드 포트 범위 (RULE-011: 8001~8010)
+# 배포: CORS_ORIGINS 환경변수로 Cloud Run/배포 도메인 추가
+# Docker Compose: nginx 프록시 경유 → same-origin이므로 CORS 불필요하지만,
+#                 직접 백엔드 접근(/docs 등)을 위해 유지
 
-ALLOWED_ORIGINS = [
+ALLOWED_ORIGINS: list[str] = [
     # 프론트엔드 개발 서버 포트 범위 (RULE-011: 8001~8010)
     *[f"http://localhost:{port}" for port in range(8001, 8011)],
     *[f"http://127.0.0.1:{port}" for port in range(8001, 8011)],
 ]
+
+# U-120: 배포 환경에서 추가 오리진 허용 (CORS_ORIGINS 환경변수)
+# 예: CORS_ORIGINS="https://frontend-xxx.run.app,http://localhost:8001"
+_extra_origins = os.environ.get("CORS_ORIGINS", "")
+if _extra_origins:
+    ALLOWED_ORIGINS.extend(
+        origin.strip() for origin in _extra_origins.split(",") if origin.strip()
+    )
 
 app.add_middleware(
     CORSMiddleware,
