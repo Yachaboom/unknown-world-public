@@ -4,7 +4,7 @@
 
 Unknown World is not a chatbot wrapper. It's a **stateful game system** where an AI Game Master orchestrates world state, economy, rules, and visual scenes — all delivered through a purpose-built game UI with structured outputs, dual validation, and self-repair capabilities.
 
-🔗 **[Live Demo](#live-demo)** · 📐 **[Architecture](docs/architecture.md)** · 🤖 **[Gemini Integration](docs/gemini-integration.md)**
+🔗 **[Live Demo](https://unknown-world-frontend-676511950590.us-central1.run.app)** · 📐 **[Architecture](docs/architecture.md)** · 🤖 **[Gemini Integration](docs/gemini-integration.md)**
 
 ---
 
