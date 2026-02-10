@@ -13,6 +13,9 @@ server {
     listen ${LISTEN_PORT};
     server_name _;
 
+    # DNS resolver (Cloud Run 외부 HTTPS 프록시에 필요)
+    resolver 8.8.8.8 8.8.4.4 valid=30s ipv6=off;
+
     # 정적 파일 루트
     root /usr/share/nginx/html;
     index index.html;
@@ -29,12 +32,18 @@ server {
 
     # ==========================================================================
     # API 프록시 → 백엔드
+    # Cloud Run HTTPS 프록시 필수 설정:
+    #   - proxy_ssl_server_name on → TLS SNI (Cloud Run 라우팅에 필수)
+    #   - proxy_set_header Host $proxy_host → 백엔드 호스트명 전달
+    #   - proxy_http_version 1.1 → upstream HTTP/1.1 고정
     # ==========================================================================
 
     # /api/* → 백엔드 API 엔드포인트
     location /api/ {
         proxy_pass ${BACKEND_URL};
-        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -52,7 +61,9 @@ server {
     # /static/* → 백엔드 정적 파일 (생성된 이미지 등)
     location /static/ {
         proxy_pass ${BACKEND_URL};
-        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
 
         # 이미지 캐싱 (1시간)
@@ -62,23 +73,31 @@ server {
     # /health → 백엔드 헬스체크
     location /health {
         proxy_pass ${BACKEND_URL};
-        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
     }
 
     # /docs, /redoc → 백엔드 API 문서 (개발/디버그용)
     location /docs {
         proxy_pass ${BACKEND_URL};
-        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
     }
 
     location /redoc {
         proxy_pass ${BACKEND_URL};
-        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
     }
 
     location /openapi.json {
         proxy_pass ${BACKEND_URL};
-        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
     }
 
     # ==========================================================================

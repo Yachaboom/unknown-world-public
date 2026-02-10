@@ -157,8 +157,7 @@ uv run uvicorn unknown_world.main:app --reload --port 8011
 
 ## 🎮 Live Demo
 
-<!-- TODO: Replace with actual demo URL from U-120 -->
-🔗 **[Play Unknown World](https://unknown-world.example.com)** — No login required. Choose a demo profile and start playing immediately.
+🔗 **[Play Unknown World](https://unknown-world-frontend-676511950590.us-central1.run.app)** — No login required. Choose a demo profile and start playing immediately.
 
 Three demo profiles are available:
 - **🎭 The Narrator** — Story-driven exploration
