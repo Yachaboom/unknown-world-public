@@ -167,6 +167,17 @@ function HotspotComponent({
   const TOOLTIP_FLIP_THRESHOLD = 80;
   const tooltipBelow = centerPxY - CIRCLE_RADIUS_PX < TOOLTIP_FLIP_THRESHOLD;
 
+  // 화면 좌우 이탈 방지: 핫스팟이 좌우 가장자리에 있으면 툴팁 위치 조정
+  const TOOLTIP_WIDTH = 220; // max-width와 동일
+  const tooltipHalfW = TOOLTIP_WIDTH / 2;
+  const tooltipNudgePx = (() => {
+    const leftOverflow = tooltipHalfW - centerPxX;
+    if (leftOverflow > 0) return leftOverflow + 8; // 왼쪽 이탈 → 오른쪽으로 밀기
+    const rightOverflow = (centerPxX + tooltipHalfW) - canvasSize.width;
+    if (rightOverflow > 0) return -(rightOverflow + 8); // 오른쪽 이탈 → 왼쪽으로 밀기
+    return 0;
+  })();
+
   // CSS 클래스 조합
   const classNames = [
     'hotspot-circle',
@@ -208,7 +219,12 @@ function HotspotComponent({
 
       {/* 호버 또는 드래그 오버 시 툴팁 표시 */}
       {isHighlighted && !disabled && (
-        <div className="hotspot-tooltip">
+        <div
+          className="hotspot-tooltip"
+          style={tooltipNudgePx !== 0 ? {
+            transform: `translateX(calc(-50% + ${tooltipNudgePx}px))`,
+          } : undefined}
+        >
           <span className="hotspot-tooltip-label">{object.label}</span>
 
           {/* 드래그 오버 시 드롭 힌트 표시 */}

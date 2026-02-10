@@ -207,7 +207,30 @@ async def _execute_vision_analysis(
         )
 
         vision_service = get_agentic_vision_service()
+
+        # 핫스팟 1개 미만 시 최대 2회 리트라이
+        MAX_VISION_RETRIES = 2
         result = await vision_service.analyze_scene(image_url, language)
+
+        for retry in range(MAX_VISION_RETRIES):
+            if result.success and result.affordances:
+                logger.info(
+                    f"[Resolve] Vision analysis OK: {len(result.affordances)} hotspots"
+                    f"{f' (after {retry} retries)' if retry > 0 else ''}",
+                )
+                break
+            logger.warning(
+                f"[Resolve] Vision retry {retry + 1}/{MAX_VISION_RETRIES}: "
+                f"success={result.success}, affordances={len(result.affordances) if result.success else 0}, "
+                f"msg={result.message}",
+            )
+            result = await vision_service.analyze_scene(image_url, language)
+        else:
+            # 리트라이 모두 소진 후에도 결과 확인
+            if result.success and result.affordances:
+                logger.info(
+                    f"[Resolve] Vision analysis OK on final attempt: {len(result.affordances)} hotspots",
+                )
 
         if result.success and result.affordances:
             # affordances → SceneObject 변환

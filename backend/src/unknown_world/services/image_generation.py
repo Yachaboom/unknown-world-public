@@ -427,6 +427,26 @@ class ImageGenerator:
                     )
                     return None
 
+            # 정적 서빙 URL 경로 처리 (/static/images/generated/img_xxx.png)
+            if url.startswith("/static/images/"):
+                filename = url.split("/")[-1]
+                # generated/ 하위 파일 → _output_dir에서 탐색
+                file_path = self._output_dir / filename
+                if file_path.exists():
+                    image_bytes = file_path.read_bytes()
+                    self._reference_image_cache[url] = image_bytes
+                    logger.debug(
+                        "[ImageGen] Static URL reference image loaded",
+                        extra={"filename": filename, "size_bytes": len(image_bytes)},
+                    )
+                    return image_bytes
+                else:
+                    logger.warning(
+                        "[ImageGen] Static URL reference image file not found",
+                        extra={"filename": filename, "path": str(file_path)},
+                    )
+                    return None
+
             # HTTP/HTTPS URL 처리
             if url.startswith(("http://", "https://")):
                 import httpx

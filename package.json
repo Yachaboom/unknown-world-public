@@ -16,5 +16,8 @@
     "kill:back": "npx --yes kill-port 8011 8012 8013 8014 8015 8016 8017 8018 8019 8020",
     "dev:back": "cd backend && uv run uvicorn unknown_world.main:app --reload --port 8011",
     "dev:front": "pnpm -C frontend dev"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
   }
 }

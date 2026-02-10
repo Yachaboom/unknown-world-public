@@ -256,7 +256,10 @@
     0 0 8px var(--hotspot-glow),
     0 4px 12px rgba(0, 0, 0, 0.8);
   z-index: 20;
-  white-space: nowrap;
+  /* 텍스트 오버플로: 줄바꿈 허용 + 말줄임 방지 */
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   animation: tooltip-appear 0.15s ease-out;
 }
 

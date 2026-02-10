@@ -214,6 +214,47 @@ def _create_mock_result(language: Language) -> VisionAnalysisResult:
 # =============================================================================
 
 
+def _clean_json_text(raw: str) -> str:
+    """모델이 반환한 불완전한 JSON 텍스트를 클리닝합니다.
+
+    Gemini 모델이 종종 반환하는 잘못된 JSON 패턴을 정리합니다:
+    - 마크다운 코드블록 (```json ... ```)
+    - 트레일링 콤마 (trailing comma)
+    - JavaScript 스타일 주석 (// ...)
+    - 앞뒤 비-JSON 텍스트
+    """
+    import re
+
+    text = raw.strip()
+
+    # 1) 마크다운 코드블록 추출 (```json ... ``` 또는 ``` ... ```)
+    code_block = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL)
+    if code_block:
+        text = code_block.group(1).strip()
+    elif text.startswith("```"):
+        lines = text.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
+    # 2) 앞뒤 비-JSON 텍스트 제거 (첫 '{' ~ 마지막 '}')
+    brace_start = text.find("{")
+    brace_end = text.rfind("}")
+    if brace_start >= 0 and brace_end > brace_start:
+        text = text[brace_start : brace_end + 1]
+
+    # 3) JavaScript 스타일 한 줄 주석 제거 (// ...)
+    text = re.sub(r"//[^\n]*", "", text)
+
+    # 4) 트레일링 콤마 제거 (JSON에서 허용하지 않음)
+    #    예: {"a": 1,} → {"a": 1}  또는  [1, 2,] → [1, 2]
+    text = re.sub(r",\s*([}\]])", r"\1", text)
+
+    return text.strip()
+
+
 def _parse_vision_response(
     response_text: str,
     language: Language,
@@ -228,15 +269,10 @@ def _parse_vision_response(
         파싱된 VisionAnalysisResult
     """
     try:
-        # 마크다운 코드블록 제거
-        text = response_text.strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            text = "\n".join(lines)
+        text = _clean_json_text(response_text)
+
+        if not text or not text.startswith("{"):
+            raise ValueError(f"No valid JSON object found (starts with: {text[:30]!r})")
 
         parsed = json.loads(text)
 
@@ -287,9 +323,12 @@ def _parse_vision_response(
         )
 
     except (json.JSONDecodeError, ValueError) as e:
+        # Cloud Run에서 extra 필드가 누락되므로 메시지에 직접 포함
+        raw_preview = response_text[:500] if response_text else "(empty)"
+        cleaned_preview = _clean_json_text(response_text)[:300] if response_text else "(empty)"
         logger.warning(
-            "[AgenticVision] JSON parsing failed",
-            extra={"error": str(e), "error_type": type(e).__name__},
+            f"[AgenticVision] JSON parsing failed: {type(e).__name__}: {e} "
+            f"| cleaned={cleaned_preview} | raw={raw_preview}",
         )
         return VisionAnalysisResult(
             affordances=[],
@@ -589,7 +628,7 @@ class AgenticVisionService:
         )
 
         # google-genai SDK 호출
-        from google.genai.types import GenerateContentConfig, Part, Tool, ToolCodeExecution
+        from google.genai.types import GenerateContentConfig, Part
 
         # 멀티모달 입력 (이미지 + 텍스트)
         contents = [
@@ -600,11 +639,11 @@ class AgenticVisionService:
             Part.from_text(text=prompt_text),
         ]
 
-        # Structured Outputs + code_execution (Gemini 3 지원)
+        # Structured Outputs (code_execution 제거: response_mime_type과 충돌)
         config = GenerateContentConfig(
             response_mime_type="application/json",
             max_output_tokens=4096,
-            tools=[Tool(code_execution=ToolCodeExecution())],
+            temperature=0.2,  # 낮은 temperature → 더 일관된 JSON 출력
         )
 
         response = await self._genai_client.aio.models.generate_content(  # type: ignore[reportUnknownMemberType]
@@ -613,14 +652,26 @@ class AgenticVisionService:
             config=config,
         )
 
-        # 응답 텍스트 추출
+        # 응답 텍스트 추출: candidates → parts 순회하여 JSON 텍스트 찾기
         response_text: str = ""
-        if hasattr(response, "text") and response.text:
-            response_text = str(response.text)
-        else:
-            response_text = str(response)
+        try:
+            if hasattr(response, "candidates") and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, "content") and candidate.content:
+                    for part in candidate.content.parts or []:
+                        if hasattr(part, "text") and part.text:
+                            response_text = str(part.text)
+                            break  # 첫 번째 텍스트 파트 사용
+        except Exception:
+            pass
+
+        # 폴백: response.text
+        if not response_text:
+            if hasattr(response, "text") and response.text:
+                response_text = str(response.text)
 
         if not response_text:
+            logger.warning("[AgenticVision] Empty response from vision model")
             return VisionAnalysisResult(
                 affordances=[],
                 success=False,
