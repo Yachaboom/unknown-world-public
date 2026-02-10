@@ -1,5 +1,68 @@
 # [Unknown World] Architecture Guide
 
+## System Architecture Diagram
+
+```mermaid
+flowchart TD
+    Player(("🎮 Player")) -->|"Click · Drag · Type · Upload"| UI
+
+    subgraph Client["Frontend — React 19 + Vite 7 + TypeScript"]
+        UI["Game UI<br/><i>Action Deck · Inventory DnD<br/>Scene Canvas · Agent Console</i>"]
+        ZS["Zustand Stores<br/><i>World · Economy · Inventory · Agent</i>"]
+        ZV["Zod Schema Validation"]
+    end
+
+    subgraph Server["Backend — FastAPI + Python 3.14"]
+        API["HTTP Streaming API<br/><code>POST /api/turn</code>"]
+        PIPE["7-Stage Orchestrator"]
+        PV["Pydantic Validation"]
+        RL["Repair Loop<br/><i>Auto-repair + Safe Fallback</i>"]
+    end
+
+    subgraph Pipeline["Orchestrator Pipeline Stages"]
+        direction LR
+        S1["Parse"] --> S2["Validate"] --> S3["Plan"] --> S4["Resolve"] --> S5["Render"] --> S6["Verify"] --> S7["Commit"]
+    end
+
+    subgraph Gemini["Gemini 3 API"]
+        GT["📝 Text Generation<br/><i>gemini-3-pro-preview (QUALITY)<br/>gemini-3-flash-preview (FAST)</i>"]
+        GI["🎨 Image Generation<br/><i>gemini-3-pro-image-preview</i>"]
+        GV["👁️ Vision Analysis<br/><i>gemini-3-flash-preview<br/>+ Code Execution</i>"]
+    end
+
+    UI -->|"TurnInput (JSON)"| API
+    API --> PIPE
+    PIPE --> Pipeline
+    S7 --> PV
+    PV -->|"❌ Schema Fail"| RL
+    RL -->|"🔄 Retry"| PIPE
+    PV -->|"✅ Pass"| API
+    API -->|"NDJSON Stream<br/><i>stages · badges · narrative · final</i>"| UI
+    UI --> ZV
+    ZV --> ZS
+
+    PIPE -.->|"Structured Outputs<br/>(JSON Schema)"| GT
+    PIPE -.->|"Scene Generation"| GI
+    PIPE -.->|"Agentic Vision<br/>(Hotspot Detection)"| GV
+
+    style Client fill:#1a1a2e,stroke:#33ff00,color:#33ff00
+    style Server fill:#1a1a2e,stroke:#ff00ff,color:#ff00ff
+    style Gemini fill:#1a1a2e,stroke:#4285f4,color:#4285f4
+    style Pipeline fill:#0d0d0d,stroke:#33ff00,color:#33ff00
+```
+
+### Data Flow Summary
+
+1. **Player** interacts via clicks, drag-and-drop, text input, or image upload
+2. **Frontend** sends a `TurnInput` JSON to the backend via HTTP POST
+3. **Orchestrator** processes the turn through 7 pipeline stages
+4. **Gemini 3 API** generates text, images, and vision analysis as needed
+5. **Pydantic** validates the output; failures trigger the **Repair Loop**
+6. **Backend** streams results as NDJSON events (stages, badges, narrative, final)
+7. **Frontend** validates with **Zod** and updates **Zustand** stores to render the game UI
+
+---
+
 ## 1. System Overview
 
 **Unknown World** is a roguelike narrative web game powered by an agentic world engine. It combines a stateful orchestrator with a high-fidelity game UI, using Gemini 3's multimodal capabilities to create an infinite, playable universe.
